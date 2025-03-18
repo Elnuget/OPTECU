@@ -40,8 +40,14 @@ class CajaController extends Controller
             'user_email' => 'required|email'
         ]);
 
-        // Ensure value is negative by taking the absolute value and making it negative
-        $valor = -abs($request->valor);
+        // Verificar si es un cuadre de caja (positivo) o un retiro (negativo)
+        if ($request->has('is_positive') && $request->is_positive == 1) {
+            // Para cuadrar caja, aseguramos que sea positivo
+            $valor = abs($request->valor);
+        } else {
+            // Para retiros, aseguramos que sea negativo
+            $valor = -abs($request->valor);
+        }
 
         // Create Caja entry
         $caja = Caja::create([

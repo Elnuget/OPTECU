@@ -123,6 +123,37 @@
                 </form>
             </div>
 
+            @can('admin')
+            <!-- Formulario para cuadrar caja (solo administrador) -->
+            <div class="mb-4">
+                <h4>CUADRAR CAJA</h4>
+                <form action="{{ route('caja.store') }}" method="POST" class="row" id="formCuadrarCaja">
+                    @csrf
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>VALOR</label>
+                            <input type="number" name="valor" id="valorCuadre" class="form-control" step="0.01" min="0.01" required>
+                            <small class="form-text text-muted">SOLO VALORES POSITIVOS</small>
+                            <input type="hidden" name="is_positive" value="1">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>MOTIVO</label>
+                            <input type="text" name="motivo" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button type="submit" class="btn btn-success btn-block">AGREGAR</button>
+                        </div>
+                    </div>
+                    <input type="hidden" name="user_email" value="{{ Auth::user()->email }}">
+                </form>
+            </div>
+            @endcan
+
             <div class="table-responsive">
                 <table id="cajaTable" class="table table-striped table-bordered">
                     <thead>
@@ -190,6 +221,17 @@
                 "language": {
                     "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
                 }
+            });
+
+            // Validación para el formulario de cuadrar caja
+            $('#formCuadrarCaja').submit(function(e) {
+                var valor = parseFloat($('#valorCuadre').val());
+                if (valor <= 0) {
+                    e.preventDefault();
+                    alert('EL VALOR DEBE SER POSITIVO PARA CUADRAR CAJA');
+                    return false;
+                }
+                return true;
             });
         });
     </script>
