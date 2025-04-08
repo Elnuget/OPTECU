@@ -81,7 +81,7 @@
 
             {{-- Tarjetas de Resumen --}}
             <div class="row mb-4">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="info-box bg-success">
                         <span class="info-box-icon"><i class="fas fa-arrow-up"></i></span>
                         <div class="info-box-content">
@@ -90,7 +90,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="info-box bg-danger">
                         <span class="info-box-icon"><i class="fas fa-arrow-down"></i></span>
                         <div class="info-box-content">
@@ -99,7 +99,16 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="info-box bg-purple">
+                        <span class="info-box-icon"><i class="fas fa-sign-out-alt"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text" id="summary-egresos-global-text">Egresos Totales</span>
+                            <span class="info-box-number" id="summary-egresos-global">CARGANDO...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
                     <div class="info-box bg-primary">
                         <span class="info-box-icon"><i class="fas fa-dollar-sign"></i></span>
                         <div class="info-box-content">
@@ -792,7 +801,8 @@
         function updateGananciaNeta() {
             const ingresosGlobal = totalMatriz + totalRocio + totalNorte;
             const retirosGlobal = Math.abs(totalRetirosMatriz) + Math.abs(totalRetirosRocio) + Math.abs(totalRetirosNorte);
-            const gananciaNeta = ingresosGlobal - retirosGlobal;
+            const egresosGlobal = Math.abs(totalEgresosMatriz) + Math.abs(totalEgresosRocio) + Math.abs(totalEgresosNorte);
+            const gananciaNeta = ingresosGlobal - retirosGlobal - egresosGlobal;
             const summarySpan = document.getElementById('summary-ganancia-neta');
             summarySpan.textContent = formatCurrency(gananciaNeta);
         }
@@ -801,7 +811,9 @@
         function updateGlobalEgresos() {
             const totalGlobal = Math.abs(totalEgresosMatriz) + Math.abs(totalEgresosRocio) + Math.abs(totalEgresosNorte);
             const totalSpan = document.getElementById('total-egresos-global');
+            const summarySpan = document.getElementById('summary-egresos-global');
             totalSpan.textContent = formatCurrency(-totalGlobal);
+            summarySpan.textContent = formatCurrency(totalGlobal);
 
             if (totalGlobal > 0) {
                 const porcentajeMatriz = (Math.abs(totalEgresosMatriz) / totalGlobal) * 100;
@@ -828,6 +840,7 @@
                 document.getElementById('progress-egresos-norte').style.width = '0%';
                 document.getElementById('progress-egresos-norte').textContent = 'Norte: $0';
             }
+            updateGananciaNeta();
         }
 
         // Función para obtener y mostrar datos de egresos de la API Matriz
