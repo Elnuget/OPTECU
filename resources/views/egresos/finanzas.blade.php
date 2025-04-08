@@ -79,6 +79,38 @@
                 </div>
             </form>
 
+            {{-- Tarjetas de Resumen --}}
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="info-box bg-success">
+                        <span class="info-box-icon"><i class="fas fa-arrow-up"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Ingresos Totales</span>
+                            <span class="info-box-number" id="summary-ingresos-global">CARGANDO...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-box bg-danger">
+                        <span class="info-box-icon"><i class="fas fa-arrow-down"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Retiros Totales</span>
+                            <span class="info-box-number" id="summary-retiros-global">CARGANDO...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-box bg-primary">
+                        <span class="info-box-icon"><i class="fas fa-dollar-sign"></i></span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">Ganancia Neta</span>
+                            <span class="info-box-number" id="summary-ganancia-neta">CARGANDO...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{-- Fin Tarjetas de Resumen --}}
+
             {{-- Tarjeta de Ingresos Totales --}}
             <div class="card card-outline card-danger mb-4" id="card-ingresos-total">
                 <div class="card-header">
@@ -418,7 +450,9 @@
         function updateGlobalTotal() {
             const totalGlobal = totalMatriz + totalRocio + totalNorte;
             const totalSpan = document.getElementById('total-ingresos-global');
+            const summarySpan = document.getElementById('summary-ingresos-global');
             totalSpan.textContent = formatCurrency(totalGlobal);
+            summarySpan.textContent = formatCurrency(totalGlobal);
 
             // Calcular porcentajes para la barra de progreso
             if (totalGlobal > 0) {
@@ -439,6 +473,7 @@
                 progressRocio.textContent = `Rocío: ${formatCurrency(totalRocio)}`;
                 progressNorte.textContent = `Norte: ${formatCurrency(totalNorte)}`;
             }
+            updateGananciaNeta();
         }
 
         // Función para formatear números como moneda
@@ -600,7 +635,9 @@
         function updateGlobalRetiros() {
             const totalGlobal = Math.abs(totalRetirosMatriz) + Math.abs(totalRetirosRocio) + Math.abs(totalRetirosNorte);
             const totalSpan = document.getElementById('total-retiros-global');
+            const summarySpan = document.getElementById('summary-retiros-global');
             totalSpan.textContent = formatCurrency(-totalGlobal);
+            summarySpan.textContent = formatCurrency(totalGlobal);
 
             if (totalGlobal > 0) {
                 const porcentajeMatriz = (Math.abs(totalRetirosMatriz) / totalGlobal) * 100;
@@ -619,6 +656,7 @@
                 progressRocio.textContent = `Rocío: ${formatCurrency(totalRetirosRocio)}`;
                 progressNorte.textContent = `Norte: ${formatCurrency(totalRetirosNorte)}`;
             }
+            updateGananciaNeta();
         }
 
         // Función para obtener y mostrar datos de retiros de la API Matriz
@@ -748,6 +786,15 @@
                     desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
                     loadingOverlay.style.display = 'none';
                 });
+        }
+
+        // Función para calcular y mostrar la Ganancia Neta Global
+        function updateGananciaNeta() {
+            const ingresosGlobal = totalMatriz + totalRocio + totalNorte;
+            const retirosGlobal = Math.abs(totalRetirosMatriz) + Math.abs(totalRetirosRocio) + Math.abs(totalRetirosNorte);
+            const gananciaNeta = ingresosGlobal - retirosGlobal;
+            const summarySpan = document.getElementById('summary-ganancia-neta');
+            summarySpan.textContent = formatCurrency(gananciaNeta);
         }
 
         // Función para actualizar el total global de egresos y la barra de progreso
