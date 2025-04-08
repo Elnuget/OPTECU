@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CashHistoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmpresaController;
+use App\Http\Controllers\EgresoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -184,6 +185,8 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::get('/recordatorios', [HistorialClinicoController::class, 'recordatoriosConsulta'])
             ->name('mensajes.recordatorios');
     });
+
+    Route::resource('egresos', EgresoController::class);
 });
 
 // Rutas públicas para calificación

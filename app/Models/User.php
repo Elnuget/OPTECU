@@ -58,4 +58,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(CashHistory::class);
     }
+
+    /**
+     * Obtener los egresos registrados por el usuario
+     */
+    public function egresos()
+    {
+        return $this->hasMany(Egreso::class);
+    }
 }

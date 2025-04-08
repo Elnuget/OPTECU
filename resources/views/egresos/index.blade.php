@@ -1,0 +1,247 @@
+@extends('adminlte::page')
+
+@section('title', 'EGRESOS')
+
+@section('content_header')
+    <h1>EGRESOS</h1>
+    <p>ADMINISTRACIÓN DE EGRESOS</p>
+    @if (session('error'))
+        <div class="alert {{ session('tipo') }} alert-dismissible fade show" role="alert">
+            <strong>{{ session('mensaje') }}</strong>
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
+@stop
+
+@section('content')
+    <style>
+        /* Convertir todo el texto a mayúsculas */
+        body, 
+        .content-wrapper, 
+        .main-header, 
+        .main-sidebar, 
+        .card-title,
+        .info-box-text,
+        .info-box-number,
+        .custom-select,
+        .btn,
+        label,
+        input,
+        select,
+        option,
+        datalist,
+        datalist option,
+        .form-control,
+        p,
+        h1, h2, h3, h4, h5, h6,
+        th,
+        td,
+        span,
+        a,
+        .dropdown-item,
+        .alert,
+        .modal-title,
+        .modal-body p,
+        .modal-content,
+        .card-header,
+        .card-footer,
+        button,
+        .close,
+        .table thead th,
+        .table tbody td,
+        .dataTables_filter,
+        .dataTables_info,
+        .paginate_button,
+        .info-box span {
+            text-transform: uppercase !important;
+        }
+    </style>
+
+    <div class="card">
+        <div class="card-body">
+            {{-- Resumen de totales --}}
+            @can('admin')
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="info-box bg-danger">
+                        <div class="info-box-content">
+                            <span class="info-box-text">TOTAL EGRESOS</span>
+                            <span class="info-box-number">${{ number_format($totales['egresos'], 2, ',', '.') }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endcan
+
+            {{-- Agregar formulario de filtro --}}
+            <form method="GET" class="form-row mb-3" id="filterForm">
+                <div class="col-md-2">
+                    <label for="filtroAno">SELECCIONAR AÑO:</label>
+                    <select name="ano" class="form-control custom-select" id="filtroAno">
+                        <option value="">SELECCIONE AÑO</option>
+                        @for ($year = date('Y'); $year >= 2000; $year--)
+                            <option value="{{ $year }}" {{ request('ano') == $year ? 'selected' : '' }}>{{ $year }}</option>
+                        @endfor
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="filtroMes">SELECCIONAR MES:</label>
+                    <select name="mes" class="form-control custom-select" id="filtroMes">
+                        <option value="">SELECCIONE MES</option>
+                        @foreach (['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'] as $index => $month)
+                            <option value="{{ $index + 1 }}" {{ request('mes') == ($index + 1) ? 'selected' : '' }}>
+                                {{ $month }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2 align-self-end">
+                    <button type="button" class="btn btn-primary" id="actualButton">ACTUAL</button>
+                </div>
+            </form>
+
+            {{-- Botón Añadir Egreso --}}
+            <div class="btn-group mb-3">
+                <a type="button" class="btn btn-success" href="{{ route('egresos.create') }}">AÑADIR EGRESO</a>
+            </div>
+
+            <div class="table-responsive">
+                <table id="egresosTable" class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>MOTIVO</th>
+                            <th>VALOR</th>
+                            <th>USUARIO</th>
+                            <th>ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($egresos as $egreso)
+                            <tr>
+                                <td>{{ $egreso->created_at->format('Y-m-d') }}</td>
+                                <td>{{ $egreso->motivo }}</td>
+                                <td>${{ number_format($egreso->valor, 2, ',', '.') }}</td>
+                                <td>{{ $egreso->user->name }}</td>
+                                <td>
+                                    <a href="{{ route('egresos.show', $egreso->id) }}"
+                                        class="btn btn-xs btn-default text-info mx-1 shadow" title="Ver">
+                                        <i class="fa fa-lg fa-fw fa-eye"></i>
+                                    </a>
+                                    @can('admin')
+                                    <a href="{{ route('egresos.edit', $egreso->id) }}"
+                                        class="btn btn-xs btn-default text-primary mx-1 shadow" title="Editar">
+                                        <i class="fa fa-lg fa-fw fa-pen"></i>
+                                    </a>
+
+                                    <a class="btn btn-xs btn-default text-danger mx-1 shadow"
+                                        href="#"
+                                        data-toggle="modal"
+                                        data-target="#confirmarEliminarModal"
+                                        data-id="{{ $egreso->id }}"
+                                        data-url="{{ route('egresos.destroy', $egreso->id) }}">
+                                        <i class="fa fa-lg fa-fw fa-trash"></i>
+                                    </a>
+                                    @endcan
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmar Eliminar -->
+    <div class="modal fade" id="confirmarEliminarModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">CONFIRMAR ELIMINACIÓN</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>¿ESTÁ SEGURO QUE DESEA ELIMINAR ESTE EGRESO?</p>
+                </div>
+                <div class="modal-footer">
+                    <form id="eliminarForm" method="POST">
+                        @csrf
+                        @method('DELETE')
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">CANCELAR</button>
+                        <button type="submit" class="btn btn-danger">ELIMINAR</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+@stop
+
+@section('js')
+@include('atajos')
+    <script>
+        $(document).ready(function() {
+            // Configurar el modal antes de mostrarse
+            $('#confirmarEliminarModal').on('show.bs.modal', function(event) {
+                var button = $(event.relatedTarget);
+                var url = button.data('url');
+                var modal = $(this);
+                modal.find('#eliminarForm').attr('action', url);
+            });
+
+            // Inicializar DataTable
+            var egresosTable = $('#egresosTable').DataTable({
+                "order": [[0, "desc"]],
+                "paging": false,
+                "info": false,
+                "dom": 'Bfrt',
+                "buttons": [
+                    'excelHtml5',
+                    'csvHtml5',
+                    {
+                        "extend": 'print',
+                        "text": 'IMPRIMIR',
+                        "autoPrint": true,
+                        "exportOptions": {
+                            "columns": [0, 1, 2, 3]
+                        },
+                        "customize": function(win) {
+                            $(win.document.body).css('font-size', '16pt');
+                            $(win.document.body).find('table')
+                                .addClass('compact')
+                                .css('font-size', 'inherit');
+                        }
+                    },
+                    {
+                        "extend": 'pdfHtml5',
+                        "text": 'PDF',
+                        "filename": 'Egresos.pdf',
+                        "pageSize": 'LETTER',
+                        "exportOptions": {
+                            "columns": [0, 1, 2, 3]
+                        }
+                    }
+                ],
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
+                }
+            });
+
+            // Manejar cambios en los filtros
+            $('#filtroAno, #filtroMes').change(function() {
+                $('#filterForm').submit();
+            });
+
+            // Botón "Actual"
+            $('#actualButton').click(function() {
+                const now = new Date();
+                $('#filtroAno').val(now.getFullYear());
+                $('#filtroMes').val(now.getMonth() + 1);
+                $('#filterForm').submit();
+            });
+        });
+    </script>
+@stop 
