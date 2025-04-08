@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Pago;
 use App\Models\mediosdepago;
 use App\Models\Pedido;
+use App\Models\Caja;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -47,6 +48,38 @@ class PagoController extends Controller
             'ano' => $ano,
             'total_pagos' => number_format($totalPagos, 2, '.', ''),
             'desglose_por_medio' => $totalesPorMedio
+        ]);
+    }
+
+    public function getRetirosCaja(Request $request)
+    {
+        $mes = $request->query('mes', Carbon::now()->month);
+        $ano = $request->query('ano', Carbon::now()->year);
+
+        // Obtener todos los valores negativos (retiros) del mes y año seleccionado
+        $retiros = Caja::whereYear('created_at', $ano)
+                      ->whereMonth('created_at', $mes)
+                      ->where('valor', '<', 0)
+                      ->get();
+
+        // Calcular el total de retiros
+        $totalRetiros = $retiros->sum('valor');
+
+        // Preparar el listado de retiros
+        $listaRetiros = $retiros->map(function($retiro) {
+            return [
+                'fecha' => $retiro->created_at->format('Y-m-d'),
+                'motivo' => $retiro->motivo,
+                'valor' => number_format($retiro->valor, 2, '.', ''),
+                'usuario' => $retiro->user ? $retiro->user->name : 'N/A'
+            ];
+        });
+
+        return response()->json([
+            'mes' => $mes,
+            'ano' => $ano,
+            'retiro_total' => number_format($totalRetiros, 2, '.', ''),
+            'retiros' => $listaRetiros
         ]);
     }
 } 
