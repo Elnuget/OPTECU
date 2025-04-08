@@ -286,6 +286,14 @@ return [
         ],
 
         [
+            'text' => 'Egresos',
+            'icon' => 'fas fa-file-invoice-dollar',
+            'url' => '/egresos',
+            'active' => ['egresos', 'egresos/*'],
+            'can' => 'admin',
+        ],
+
+        [
             'text' => 'FINANZAS',
             'icon' => 'fas fa-dollar-sign',
             'url' => '/egresos/finanzas',

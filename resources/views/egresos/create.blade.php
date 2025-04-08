@@ -154,8 +154,8 @@
                 $(this).val($(this).val().toUpperCase());
             });
 
-            // Formatear el valor mientras se escribe
-            $('#valor').on('input', function() {
+            // Formatear el valor cuando el campo pierde el foco
+            $('#valor').on('blur', function() {
                 let value = $(this).val();
                 if (value !== '') {
                     value = parseFloat(value);
