@@ -6,6 +6,7 @@ use App\Models\CashHistory;
 use Illuminate\Http\Request;
 use App\Models\Caja;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class CashHistoryController extends Controller
 {
@@ -18,30 +19,55 @@ class CashHistoryController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'monto' => 'required|numeric',
-            'estado' => 'required|in:Apertura,Cierre'
-        ]);
-
-        $lastRecord = CashHistory::latest()->first();
-        $requestedState = $request->estado;
-
-        if ($requestedState === 'Cierre' && (!$lastRecord || $lastRecord->estado !== 'Apertura')) {
-            return redirect()->back()->with('error', 'No se puede cerrar una caja que no ha sido abierta');
-        }
-
         try {
+            $request->validate([
+                'monto' => 'required|numeric',
+                'estado' => 'required|in:Apertura,Cierre'
+            ]);
+
+            $lastRecord = CashHistory::latest()->first();
+            $requestedState = $request->estado;
+
+            if ($requestedState === 'Cierre' && (!$lastRecord || $lastRecord->estado !== 'Apertura')) {
+                $message = 'No se puede cerrar una caja que no ha sido abierta';
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $message
+                    ], 400);
+                }
+                return redirect()->back()->with('error', $message);
+            }
+
             $cashHistory = new CashHistory();
             $cashHistory->monto = $request->monto;
             $cashHistory->estado = $requestedState;
             $cashHistory->user_id = auth()->id();
             $cashHistory->save();
 
-            $mensaje = $requestedState === 'Apertura' ? 'Caja abierta' : 'Caja cerrada';
-            return redirect()->route('cash-histories.index')->with('success', $mensaje . ' exitosamente');
+            $message = $requestedState === 'Apertura' ? 'Caja abierta exitosamente' : 'Caja cerrada exitosamente';
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message
+                ]);
+            }
+
+            return redirect()->route('cash-histories.index')->with('success', $message);
+
         } catch (\Exception $e) {
-            Log::error('Error inserting cash history: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Error al guardar el historial de caja');
+            Log::error('Error en operación de caja: ' . $e->getMessage());
+            $message = 'Error al procesar la operación de caja';
+            
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message
+                ], 500);
+            }
+            
+            return redirect()->back()->with('error', $message);
         }
     }
 

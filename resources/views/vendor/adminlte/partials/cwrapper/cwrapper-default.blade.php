@@ -77,7 +77,7 @@
 
         <div class="card shadow">
             <div class="card-body bg-light">
-                <form action="{{ route('cash-histories.store') }}" method="POST">
+                <form id="closeCashForm" action="{{ route('cash-histories.store') }}" method="POST">
                     @csrf
                     <div class="form-group">
                         <label for="monto_cierre">Monto Final</label>
@@ -100,6 +100,66 @@
                         </button>
                     </div>
                 </form>
+
+                <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                    @csrf
+                </form>
+
+                <script>
+                    document.getElementById('closeCashForm').addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        
+                        // Mostrar indicador de carga
+                        const submitBtn = this.querySelector('button[type="submit"]');
+                        const originalText = submitBtn.innerHTML;
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Procesando...';
+
+                        // Obtener el token CSRF
+                        const token = document.querySelector('input[name="_token"]').value;
+
+                        // Enviar formulario con fetch
+                        fetch(this.action, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': token,
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                monto: document.getElementById('monto_cierre').value,
+                                estado: 'Cierre',
+                                _token: token
+                            })
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Error en la respuesta del servidor');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                // Primero cerrar caja
+                                submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Caja Cerrada';
+                                
+                                // Esperar 1 segundo y luego cerrar sesión
+                                setTimeout(() => {
+                                    submitBtn.innerHTML = '<i class="fas fa-sign-out-alt mr-2"></i>Cerrando Sesión...';
+                                    document.getElementById('logout-form').submit();
+                                }, 1000);
+                            } else {
+                                throw new Error(data.message || 'Error al cerrar la caja');
+                            }
+                        })
+                        .catch(error => {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalText;
+                            alert('Error: ' + error.message);
+                        });
+                    });
+                </script>
             </div>
         </div>
     </div>
@@ -125,3 +185,4 @@
         </div>
     </div>
 </div>
+
