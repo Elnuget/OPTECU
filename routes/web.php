@@ -186,6 +186,11 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
             ->name('mensajes.recordatorios');
     });
 
+    // Mover esta ruta específica antes del resource
+    Route::get('/egresos/finanzas', [EgresoController::class, 'finanzas'])
+        ->name('egresos.finanzas')
+        ->middleware(['auth']); // Mantener middleware auth si es necesario dentro del grupo
+
     Route::resource('egresos', EgresoController::class);
 });
 

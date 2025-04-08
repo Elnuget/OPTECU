@@ -134,4 +134,9 @@ class EgresoController extends Controller
             ]);
         }
     }
+
+    public function finanzas()
+    {
+        return view('egresos.finanzas');
+    }
 } 

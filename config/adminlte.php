@@ -237,22 +237,19 @@ return [
   
 
     'menu' => [
-
-
-
         [
-            'text' => 'Dashboard', // Título del enlace en el menú
-            'icon' => 'fas fa-tachometer-alt', // Icono para el Dashboard. Cambia según tus preferencias
-            'route' => 'dashboard', // La ruta debe coincidir con una ruta nombrada en tus rutas de Laravel
-            'active' => ['dashboard', 'dashboard/*'], // Patrón para definir cuándo este ítem estará activo
+            'text' => 'Dashboard',
+            'icon' => 'fas fa-tachometer-alt',
+            'route' => 'dashboard',
+            'active' => ['dashboard', 'dashboard/*'],
         ],
 
         [
-            'text' => 'Admin', // Título del enlace en el menú
-            'icon' => 'fas fa-user-cog', // Icono para la sección de administración. Cambia según tus preferencias
-            'route' => 'admin.index', // La ruta debe coincidir con una ruta nombrada en tus rutas de Laravel
-            'active' => ['admin', 'admin/*'], // Patrón para definir cuándo este ítem estará activo
-            'can' => 'admin'  // Add this line to check admin permission
+            'text' => 'Admin',
+            'icon' => 'fas fa-user-cog',
+            'route' => 'admin.index',
+            'active' => ['admin', 'admin/*'],
+            'can' => 'admin'
         ],
 
         [
@@ -262,9 +259,6 @@ return [
             'active' => ['Pedidos/*']
         ],
 
-
-
-      
         [
             'text' => 'Inventario',
             'icon' => 'fas fa-file-invoice',
@@ -289,6 +283,13 @@ return [
             'text' => 'Historial de Caja',
             'icon' => 'fas fa-history',
             'route' => 'cash-histories.index',
+        ],
+
+        [
+            'text' => 'FINANZAS',
+            'icon' => 'fas fa-dollar-sign',
+            'url' => '/egresos/finanzas',
+            'active' => ['egresos/finanzas'],
         ],
 
         [
