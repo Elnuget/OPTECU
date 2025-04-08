@@ -79,6 +79,31 @@
                 </div>
             </form>
 
+            {{-- Tarjeta de Ingresos Totales --}}
+            <div class="card card-outline card-danger mb-4" id="card-ingresos-total">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-chart-pie mr-2"></i>
+                        INGRESOS TOTALES DE TODAS LAS SUCURSALES: 
+                        <span id="total-ingresos-global">CARGANDO...</span>
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="progress">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="progress-matriz">
+                            Matriz: $0
+                        </div>
+                        <div class="progress-bar bg-info" role="progressbar" style="width: 0%" id="progress-rocio">
+                            Rocío: $0
+                        </div>
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: 0%" id="progress-norte">
+                            Norte: $0
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{-- Fin Tarjeta de Ingresos Totales --}}
+
             {{-- Tarjeta Plegable Ingresos Matriz --}}
             <div class="card card-outline card-success card-widget collapsed-card" id="card-ingresos-matriz">
                 <div class="card-header">
@@ -150,6 +175,38 @@
 @section('js')
 @include('atajos')
     <script>
+        // Variables globales para almacenar los totales
+        let totalMatriz = 0;
+        let totalRocio = 0;
+        let totalNorte = 0;
+
+        // Función para actualizar el total global y la barra de progreso
+        function updateGlobalTotal() {
+            const totalGlobal = totalMatriz + totalRocio + totalNorte;
+            const totalSpan = document.getElementById('total-ingresos-global');
+            totalSpan.textContent = formatCurrency(totalGlobal);
+
+            // Calcular porcentajes para la barra de progreso
+            if (totalGlobal > 0) {
+                const porcentajeMatriz = (totalMatriz / totalGlobal) * 100;
+                const porcentajeRocio = (totalRocio / totalGlobal) * 100;
+                const porcentajeNorte = (totalNorte / totalGlobal) * 100;
+
+                // Actualizar barras de progreso
+                const progressMatriz = document.getElementById('progress-matriz');
+                const progressRocio = document.getElementById('progress-rocio');
+                const progressNorte = document.getElementById('progress-norte');
+
+                progressMatriz.style.width = porcentajeMatriz + '%';
+                progressRocio.style.width = porcentajeRocio + '%';
+                progressNorte.style.width = porcentajeNorte + '%';
+
+                progressMatriz.textContent = `Matriz: ${formatCurrency(totalMatriz)}`;
+                progressRocio.textContent = `Rocío: ${formatCurrency(totalRocio)}`;
+                progressNorte.textContent = `Norte: ${formatCurrency(totalNorte)}`;
+            }
+        }
+
         // Función para formatear números como moneda
         function formatCurrency(number) {
             return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(number);
@@ -175,8 +232,10 @@
                     return response.json();
                 })
                 .then(data => {
+                    totalMatriz = parseFloat(data.total_pagos) || 0;
                     // Actualizar el total en el encabezado
-                    totalSpan.textContent = formatCurrency(data.total_pagos || 0);
+                    totalSpan.textContent = formatCurrency(totalMatriz);
+                    updateGlobalTotal();
 
                     // Limpiar y llenar el desglose
                     desgloseList.innerHTML = ''; // Limpiar contenido anterior
@@ -223,8 +282,10 @@
                     return response.json();
                 })
                 .then(data => {
+                    totalRocio = parseFloat(data.total_pagos) || 0;
                     // Actualizar el total en el encabezado
-                    totalSpan.textContent = formatCurrency(data.total_pagos || 0);
+                    totalSpan.textContent = formatCurrency(totalRocio);
+                    updateGlobalTotal();
 
                     // Limpiar y llenar el desglose
                     desgloseList.innerHTML = '';
@@ -271,8 +332,10 @@
                     return response.json();
                 })
                 .then(data => {
+                    totalNorte = parseFloat(data.total_pagos) || 0;
                     // Actualizar el total en el encabezado
-                    totalSpan.textContent = formatCurrency(data.total_pagos || 0);
+                    totalSpan.textContent = formatCurrency(totalNorte);
+                    updateGlobalTotal();
 
                     // Limpiar y llenar el desglose
                     desgloseList.innerHTML = '';
