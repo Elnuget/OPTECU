@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\PagoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,3 +14,5 @@ use Illuminate\Support\Facades\Route;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+
+Route::get('/pagos/totales', [PagoController::class, 'getTotalesPorMes']);
