@@ -290,6 +290,7 @@ return [
             'icon' => 'fas fa-dollar-sign',
             'url' => '/egresos/finanzas',
             'active' => ['egresos/finanzas'],
+            'can' => 'admin',
         ],
 
         [
