@@ -164,6 +164,120 @@
             </div>
             {{-- Fin Tarjeta Plegable Norte --}}
 
+            {{-- Tarjeta de Retiros Totales --}}
+            <div class="card card-outline card-danger mb-4" id="card-retiros-total">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-money-bill-wave mr-2"></i>
+                        RETIROS TOTALES DE TODAS LAS SUCURSALES: 
+                        <span id="total-retiros-global">CARGANDO...</span>
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="progress">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="progress-retiros-matriz">
+                            Matriz: $0
+                        </div>
+                        <div class="progress-bar bg-info" role="progressbar" style="width: 0%" id="progress-retiros-rocio">
+                            Rocío: $0
+                        </div>
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: 0%" id="progress-retiros-norte">
+                            Norte: $0
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Tarjeta Plegable Retiros Matriz --}}
+            <div class="card card-outline card-success card-widget collapsed-card" id="card-retiros-matriz">
+                <div class="card-header">
+                    <h3 class="card-title">RETIROS SUCURSAL MATRIZ - TOTAL: <span id="total-retiros-matriz">CARGANDO...</span></h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="card-body" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>FECHA</th>
+                                    <th>MOTIVO</th>
+                                    <th>VALOR</th>
+                                    <th>USUARIO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="desglose-retiros-matriz">
+                                <tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="overlay dark" id="loading-overlay-retiros-matriz" style="display: none;">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+            </div>
+
+            {{-- Tarjeta Plegable Retiros Rocío --}}
+            <div class="card card-outline card-info card-widget collapsed-card" id="card-retiros-rocio">
+                <div class="card-header">
+                    <h3 class="card-title">RETIROS SUCURSAL ROCÍO - TOTAL: <span id="total-retiros-rocio">CARGANDO...</span></h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="card-body" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>FECHA</th>
+                                    <th>MOTIVO</th>
+                                    <th>VALOR</th>
+                                    <th>USUARIO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="desglose-retiros-rocio">
+                                <tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="overlay dark" id="loading-overlay-retiros-rocio" style="display: none;">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+            </div>
+
+            {{-- Tarjeta Plegable Retiros Norte --}}
+            <div class="card card-outline card-warning card-widget collapsed-card" id="card-retiros-norte">
+                <div class="card-header">
+                    <h3 class="card-title">RETIROS SUCURSAL NORTE - TOTAL: <span id="total-retiros-norte">CARGANDO...</span></h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="card-body" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>FECHA</th>
+                                    <th>MOTIVO</th>
+                                    <th>VALOR</th>
+                                    <th>USUARIO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="desglose-retiros-norte">
+                                <tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="overlay dark" id="loading-overlay-retiros-norte" style="display: none;">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+            </div>
+
             <div class="alert alert-info mt-3">
                 <i class="fas fa-info-circle mr-2"></i>
                 AQUÍ SE MOSTRARÁN LAS FINANZAS Y ESTADÍSTICAS FINANCIERAS DE LA EMPRESA
@@ -179,6 +293,9 @@
         let totalMatriz = 0;
         let totalRocio = 0;
         let totalNorte = 0;
+        let totalRetirosMatriz = 0;
+        let totalRetirosRocio = 0;
+        let totalRetirosNorte = 0;
 
         // Función para actualizar el total global y la barra de progreso
         function updateGlobalTotal() {
@@ -362,6 +479,160 @@
                 });
         }
 
+        // Función para actualizar el total global de retiros y la barra de progreso
+        function updateGlobalRetiros() {
+            const totalGlobal = Math.abs(totalRetirosMatriz) + Math.abs(totalRetirosRocio) + Math.abs(totalRetirosNorte);
+            const totalSpan = document.getElementById('total-retiros-global');
+            totalSpan.textContent = formatCurrency(-totalGlobal);
+
+            if (totalGlobal > 0) {
+                const porcentajeMatriz = (Math.abs(totalRetirosMatriz) / totalGlobal) * 100;
+                const porcentajeRocio = (Math.abs(totalRetirosRocio) / totalGlobal) * 100;
+                const porcentajeNorte = (Math.abs(totalRetirosNorte) / totalGlobal) * 100;
+
+                const progressMatriz = document.getElementById('progress-retiros-matriz');
+                const progressRocio = document.getElementById('progress-retiros-rocio');
+                const progressNorte = document.getElementById('progress-retiros-norte');
+
+                progressMatriz.style.width = porcentajeMatriz + '%';
+                progressRocio.style.width = porcentajeRocio + '%';
+                progressNorte.style.width = porcentajeNorte + '%';
+
+                progressMatriz.textContent = `Matriz: ${formatCurrency(totalRetirosMatriz)}`;
+                progressRocio.textContent = `Rocío: ${formatCurrency(totalRetirosRocio)}`;
+                progressNorte.textContent = `Norte: ${formatCurrency(totalRetirosNorte)}`;
+            }
+        }
+
+        // Función para obtener y mostrar datos de retiros de la API Matriz
+        function fetchAndDisplayRetirosMatriz(ano, mes) {
+            const apiUrl = `https://opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`;
+            const totalSpan = document.getElementById('total-retiros-matriz');
+            const desgloseBody = document.getElementById('desglose-retiros-matriz');
+            const loadingOverlay = document.getElementById('loading-overlay-retiros-matriz');
+
+            loadingOverlay.style.display = 'flex';
+            totalSpan.textContent = 'CARGANDO...';
+            desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>';
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                    return response.json();
+                })
+                .then(data => {
+                    totalRetirosMatriz = parseFloat(data.retiro_total) || 0;
+                    totalSpan.textContent = formatCurrency(totalRetirosMatriz);
+                    updateGlobalRetiros();
+
+                    if (data.retiros && data.retiros.length > 0) {
+                        desgloseBody.innerHTML = data.retiros.map(retiro => `
+                            <tr>
+                                <td>${retiro.fecha}</td>
+                                <td>${retiro.motivo}</td>
+                                <td class="text-danger">${formatCurrency(retiro.valor)}</td>
+                                <td>${retiro.usuario}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
+                    }
+                    loadingOverlay.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    totalSpan.textContent = 'ERROR';
+                    desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                    loadingOverlay.style.display = 'none';
+                });
+        }
+
+        // Función para obtener y mostrar datos de retiros de la API Rocío
+        function fetchAndDisplayRetirosRocio(ano, mes) {
+            const apiUrl = `https://escleroptica2.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`;
+            const totalSpan = document.getElementById('total-retiros-rocio');
+            const desgloseBody = document.getElementById('desglose-retiros-rocio');
+            const loadingOverlay = document.getElementById('loading-overlay-retiros-rocio');
+
+            loadingOverlay.style.display = 'flex';
+            totalSpan.textContent = 'CARGANDO...';
+            desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>';
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                    return response.json();
+                })
+                .then(data => {
+                    totalRetirosRocio = parseFloat(data.retiro_total) || 0;
+                    totalSpan.textContent = formatCurrency(totalRetirosRocio);
+                    updateGlobalRetiros();
+
+                    if (data.retiros && data.retiros.length > 0) {
+                        desgloseBody.innerHTML = data.retiros.map(retiro => `
+                            <tr>
+                                <td>${retiro.fecha}</td>
+                                <td>${retiro.motivo}</td>
+                                <td class="text-danger">${formatCurrency(retiro.valor)}</td>
+                                <td>${retiro.usuario}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
+                    }
+                    loadingOverlay.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    totalSpan.textContent = 'ERROR';
+                    desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                    loadingOverlay.style.display = 'none';
+                });
+        }
+
+        // Función para obtener y mostrar datos de retiros de la API Norte
+        function fetchAndDisplayRetirosNorte(ano, mes) {
+            const apiUrl = `https://sucursal3.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`;
+            const totalSpan = document.getElementById('total-retiros-norte');
+            const desgloseBody = document.getElementById('desglose-retiros-norte');
+            const loadingOverlay = document.getElementById('loading-overlay-retiros-norte');
+
+            loadingOverlay.style.display = 'flex';
+            totalSpan.textContent = 'CARGANDO...';
+            desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>';
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                    return response.json();
+                })
+                .then(data => {
+                    totalRetirosNorte = parseFloat(data.retiro_total) || 0;
+                    totalSpan.textContent = formatCurrency(totalRetirosNorte);
+                    updateGlobalRetiros();
+
+                    if (data.retiros && data.retiros.length > 0) {
+                        desgloseBody.innerHTML = data.retiros.map(retiro => `
+                            <tr>
+                                <td>${retiro.fecha}</td>
+                                <td>${retiro.motivo}</td>
+                                <td class="text-danger">${formatCurrency(retiro.valor)}</td>
+                                <td>${retiro.usuario}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
+                    }
+                    loadingOverlay.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    totalSpan.textContent = 'ERROR';
+                    desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                    loadingOverlay.style.display = 'none';
+                });
+        }
+
         $(document).ready(function() {
             const filtroAno = document.getElementById('filtroAno');
             const filtroMes = document.getElementById('filtroMes');
@@ -371,6 +642,9 @@
                 fetchAndDisplayIngresosMatriz(ano, mes);
                 fetchAndDisplayIngresosRocio(ano, mes);
                 fetchAndDisplayIngresosNorte(ano, mes);
+                fetchAndDisplayRetirosMatriz(ano, mes);
+                fetchAndDisplayRetirosRocio(ano, mes);
+                fetchAndDisplayRetirosNorte(ano, mes);
             }
 
             // Carga inicial de datos
