@@ -278,6 +278,120 @@
                 </div>
             </div>
 
+            {{-- Tarjeta de Egresos Totales --}}
+            <div class="card card-outline card-purple mb-4" id="card-egresos-total">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-arrow-down mr-2"></i>
+                        EGRESOS TOTALES DE TODAS LAS SUCURSALES: 
+                        <span id="total-egresos-global">CARGANDO...</span>
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="progress">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="progress-egresos-matriz">
+                            Matriz: $0
+                        </div>
+                        <div class="progress-bar bg-info" role="progressbar" style="width: 0%" id="progress-egresos-rocio">
+                            Rocío: $0
+                        </div>
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: 0%" id="progress-egresos-norte">
+                            Norte: $0
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Tarjeta Plegable Egresos Matriz --}}
+            <div class="card card-outline card-success card-widget collapsed-card" id="card-egresos-matriz">
+                <div class="card-header">
+                    <h3 class="card-title">EGRESOS SUCURSAL MATRIZ - TOTAL: <span id="total-egresos-matriz">CARGANDO...</span></h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="card-body" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>FECHA</th>
+                                    <th>MOTIVO</th>
+                                    <th>VALOR</th>
+                                    <th>USUARIO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="desglose-egresos-matriz">
+                                <tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="overlay dark" id="loading-overlay-egresos-matriz" style="display: none;">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+            </div>
+
+            {{-- Tarjeta Plegable Egresos Rocío --}}
+            <div class="card card-outline card-info card-widget collapsed-card" id="card-egresos-rocio">
+                <div class="card-header">
+                    <h3 class="card-title">EGRESOS SUCURSAL ROCÍO - TOTAL: <span id="total-egresos-rocio">CARGANDO...</span></h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="card-body" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>FECHA</th>
+                                    <th>MOTIVO</th>
+                                    <th>VALOR</th>
+                                    <th>USUARIO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="desglose-egresos-rocio">
+                                <tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="overlay dark" id="loading-overlay-egresos-rocio" style="display: none;">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+            </div>
+
+            {{-- Tarjeta Plegable Egresos Norte --}}
+            <div class="card card-outline card-warning card-widget collapsed-card" id="card-egresos-norte">
+                <div class="card-header">
+                    <h3 class="card-title">EGRESOS SUCURSAL NORTE - TOTAL: <span id="total-egresos-norte">CARGANDO...</span></h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="card-body" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>FECHA</th>
+                                    <th>MOTIVO</th>
+                                    <th>VALOR</th>
+                                    <th>USUARIO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="desglose-egresos-norte">
+                                <tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="overlay dark" id="loading-overlay-egresos-norte" style="display: none;">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+            </div>
+
             <div class="alert alert-info mt-3">
                 <i class="fas fa-info-circle mr-2"></i>
                 AQUÍ SE MOSTRARÁN LAS FINANZAS Y ESTADÍSTICAS FINANCIERAS DE LA EMPRESA
@@ -296,6 +410,9 @@
         let totalRetirosMatriz = 0;
         let totalRetirosRocio = 0;
         let totalRetirosNorte = 0;
+        let totalEgresosMatriz = 0;
+        let totalEgresosRocio = 0;
+        let totalEgresosNorte = 0;
 
         // Función para actualizar el total global y la barra de progreso
         function updateGlobalTotal() {
@@ -633,6 +750,168 @@
                 });
         }
 
+        // Función para actualizar el total global de egresos y la barra de progreso
+        function updateGlobalEgresos() {
+            const totalGlobal = Math.abs(totalEgresosMatriz) + Math.abs(totalEgresosRocio) + Math.abs(totalEgresosNorte);
+            const totalSpan = document.getElementById('total-egresos-global');
+            totalSpan.textContent = formatCurrency(-totalGlobal);
+
+            if (totalGlobal > 0) {
+                const porcentajeMatriz = (Math.abs(totalEgresosMatriz) / totalGlobal) * 100;
+                const porcentajeRocio = (Math.abs(totalEgresosRocio) / totalGlobal) * 100;
+                const porcentajeNorte = (Math.abs(totalEgresosNorte) / totalGlobal) * 100;
+
+                const progressMatriz = document.getElementById('progress-egresos-matriz');
+                const progressRocio = document.getElementById('progress-egresos-rocio');
+                const progressNorte = document.getElementById('progress-egresos-norte');
+
+                progressMatriz.style.width = porcentajeMatriz + '%';
+                progressRocio.style.width = porcentajeRocio + '%';
+                progressNorte.style.width = porcentajeNorte + '%';
+
+                progressMatriz.textContent = `Matriz: ${formatCurrency(totalEgresosMatriz)}`;
+                progressRocio.textContent = `Rocío: ${formatCurrency(totalEgresosRocio)}`;
+                progressNorte.textContent = `Norte: ${formatCurrency(totalEgresosNorte)}`;
+            } else {
+                 // Reset progress bars if total is zero
+                document.getElementById('progress-egresos-matriz').style.width = '0%';
+                document.getElementById('progress-egresos-matriz').textContent = 'Matriz: $0';
+                document.getElementById('progress-egresos-rocio').style.width = '0%';
+                document.getElementById('progress-egresos-rocio').textContent = 'Rocío: $0';
+                document.getElementById('progress-egresos-norte').style.width = '0%';
+                document.getElementById('progress-egresos-norte').textContent = 'Norte: $0';
+            }
+        }
+
+        // Función para obtener y mostrar datos de egresos de la API Matriz
+        function fetchAndDisplayEgresosMatriz(ano, mes) {
+            const apiUrl = `https://opticas.xyz/api/egresos?ano=${ano}&mes=${mes}`;
+            const totalSpan = document.getElementById('total-egresos-matriz');
+            const desgloseBody = document.getElementById('desglose-egresos-matriz');
+            const loadingOverlay = document.getElementById('loading-overlay-egresos-matriz');
+
+            loadingOverlay.style.display = 'flex';
+            totalSpan.textContent = 'CARGANDO...';
+            desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>';
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                    return response.json();
+                })
+                .then(data => {
+                    totalEgresosMatriz = parseFloat(data.total_egresos) || 0;
+                    totalSpan.textContent = formatCurrency(totalEgresosMatriz);
+                    updateGlobalEgresos();
+
+                    if (data.egresos && data.egresos.length > 0) {
+                        desgloseBody.innerHTML = data.egresos.map(egreso => `
+                            <tr>
+                                <td>${egreso.fecha}</td>
+                                <td>${egreso.motivo}</td>
+                                <td class="text-danger">${formatCurrency(egreso.valor)}</td>
+                                <td>${egreso.usuario}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY EGRESOS REGISTRADOS</td></tr>';
+                    }
+                    loadingOverlay.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    totalSpan.textContent = 'ERROR';
+                    desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                    loadingOverlay.style.display = 'none';
+                });
+        }
+
+        // Función para obtener y mostrar datos de egresos de la API Rocío
+        function fetchAndDisplayEgresosRocio(ano, mes) {
+            const apiUrl = `https://escleroptica2.opticas.xyz/api/egresos?ano=${ano}&mes=${mes}`;
+            const totalSpan = document.getElementById('total-egresos-rocio');
+            const desgloseBody = document.getElementById('desglose-egresos-rocio');
+            const loadingOverlay = document.getElementById('loading-overlay-egresos-rocio');
+
+            loadingOverlay.style.display = 'flex';
+            totalSpan.textContent = 'CARGANDO...';
+            desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>';
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                    return response.json();
+                })
+                .then(data => {
+                    totalEgresosRocio = parseFloat(data.total_egresos) || 0;
+                    totalSpan.textContent = formatCurrency(totalEgresosRocio);
+                    updateGlobalEgresos();
+
+                    if (data.egresos && data.egresos.length > 0) {
+                        desgloseBody.innerHTML = data.egresos.map(egreso => `
+                            <tr>
+                                <td>${egreso.fecha}</td>
+                                <td>${egreso.motivo}</td>
+                                <td class="text-danger">${formatCurrency(egreso.valor)}</td>
+                                <td>${egreso.usuario}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY EGRESOS REGISTRADOS</td></tr>';
+                    }
+                    loadingOverlay.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    totalSpan.textContent = 'ERROR';
+                    desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                    loadingOverlay.style.display = 'none';
+                });
+        }
+
+        // Función para obtener y mostrar datos de egresos de la API Norte
+        function fetchAndDisplayEgresosNorte(ano, mes) {
+            const apiUrl = `https://sucursal3.opticas.xyz/api/egresos?ano=${ano}&mes=${mes}`;
+            const totalSpan = document.getElementById('total-egresos-norte');
+            const desgloseBody = document.getElementById('desglose-egresos-norte');
+            const loadingOverlay = document.getElementById('loading-overlay-egresos-norte');
+
+            loadingOverlay.style.display = 'flex';
+            totalSpan.textContent = 'CARGANDO...';
+            desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>';
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                    return response.json();
+                })
+                .then(data => {
+                    totalEgresosNorte = parseFloat(data.total_egresos) || 0;
+                    totalSpan.textContent = formatCurrency(totalEgresosNorte);
+                    updateGlobalEgresos();
+
+                    if (data.egresos && data.egresos.length > 0) {
+                        desgloseBody.innerHTML = data.egresos.map(egreso => `
+                            <tr>
+                                <td>${egreso.fecha}</td>
+                                <td>${egreso.motivo}</td>
+                                <td class="text-danger">${formatCurrency(egreso.valor)}</td>
+                                <td>${egreso.usuario}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY EGRESOS REGISTRADOS</td></tr>';
+                    }
+                    loadingOverlay.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    totalSpan.textContent = 'ERROR';
+                    desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                    loadingOverlay.style.display = 'none';
+                });
+        }
+
         $(document).ready(function() {
             const filtroAno = document.getElementById('filtroAno');
             const filtroMes = document.getElementById('filtroMes');
@@ -645,6 +924,9 @@
                 fetchAndDisplayRetirosMatriz(ano, mes);
                 fetchAndDisplayRetirosRocio(ano, mes);
                 fetchAndDisplayRetirosNorte(ano, mes);
+                fetchAndDisplayEgresosMatriz(ano, mes);
+                fetchAndDisplayEgresosRocio(ano, mes);
+                fetchAndDisplayEgresosNorte(ano, mes);
             }
 
             // Carga inicial de datos
