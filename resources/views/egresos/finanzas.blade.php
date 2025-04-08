@@ -119,6 +119,26 @@
             </div>
             {{-- Fin Tarjeta Plegable Rocio --}}
 
+            {{-- Tarjeta Plegable Ingresos Norte --}}
+            <div class="card card-outline card-warning card-widget collapsed-card" id="card-ingresos-norte">
+                <div class="card-header">
+                    <h3 class="card-title">INGRESOS SUCURSAL NORTE - TOTAL: <span id="total-ingresos-norte">CARGANDO...</span></h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="card-body" style="display: none;">
+                    <h5>DESGLOSE POR MEDIO DE PAGO:</h5>
+                    <ul class="list-group" id="desglose-ingresos-norte">
+                        <li class="list-group-item">CARGANDO DATOS...</li>
+                    </ul>
+                </div>
+                 <div class="overlay dark" id="loading-overlay-norte" style="display: none;">
+                    <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+                </div>
+            </div>
+            {{-- Fin Tarjeta Plegable Norte --}}
+
             <div class="alert alert-info mt-3">
                 <i class="fas fa-info-circle mr-2"></i>
                 AQUÍ SE MOSTRARÁN LAS FINANZAS Y ESTADÍSTICAS FINANCIERAS DE LA EMPRESA
@@ -231,27 +251,76 @@
                 });
         }
 
+        // Función para obtener y mostrar datos de la API Norte
+        function fetchAndDisplayIngresosNorte(ano, mes) {
+            const apiUrl = `https://sucursal3.opticas.xyz/api/pagos/totales?ano=${ano}&mes=${mes}`;
+            const totalSpan = document.getElementById('total-ingresos-norte');
+            const desgloseList = document.getElementById('desglose-ingresos-norte');
+            const loadingOverlay = document.getElementById('loading-overlay-norte');
+
+            // Mostrar overlay de carga
+            loadingOverlay.style.display = 'flex';
+            totalSpan.textContent = 'CARGANDO...';
+            desgloseList.innerHTML = '<li class="list-group-item">CARGANDO DATOS...</li>';
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en la red o respuesta no válida');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Actualizar el total en el encabezado
+                    totalSpan.textContent = formatCurrency(data.total_pagos || 0);
+
+                    // Limpiar y llenar el desglose
+                    desgloseList.innerHTML = '';
+                    if (data.desglose_por_medio && data.desglose_por_medio.length > 0) {
+                        data.desglose_por_medio.forEach(item => {
+                            const listItem = document.createElement('li');
+                            listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                            listItem.innerHTML = `
+                                ${item.medio_de_pago.toUpperCase()}
+                                <span class="badge badge-warning badge-pill">${formatCurrency(item.total || 0)}</span>
+                            `;
+                            desgloseList.appendChild(listItem);
+                        });
+                    } else {
+                        desgloseList.innerHTML = '<li class="list-group-item">NO HAY DATOS DE DESGLOSE DISPONIBLES.</li>';
+                    }
+                    loadingOverlay.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error al obtener datos de la API:', error);
+                    totalSpan.textContent = 'ERROR';
+                    desgloseList.innerHTML = '<li class="list-group-item text-danger">ERROR AL CARGAR LOS DATOS.</li>';
+                    loadingOverlay.style.display = 'none';
+                });
+        }
+
         $(document).ready(function() {
             const filtroAno = document.getElementById('filtroAno');
             const filtroMes = document.getElementById('filtroMes');
 
-            // Función para actualizar ambas tarjetas
-            function updateBothCards(ano, mes) {
+            // Función para actualizar todas las tarjetas
+            function updateAllCards(ano, mes) {
                 fetchAndDisplayIngresosMatriz(ano, mes);
                 fetchAndDisplayIngresosRocio(ano, mes);
+                fetchAndDisplayIngresosNorte(ano, mes);
             }
 
             // Carga inicial de datos
-            updateBothCards(filtroAno.value, filtroMes.value);
+            updateAllCards(filtroAno.value, filtroMes.value);
 
             // Event listener para cambio de año
             filtroAno.addEventListener('change', function() {
-                updateBothCards(this.value, filtroMes.value);
+                updateAllCards(this.value, filtroMes.value);
             });
 
             // Event listener para cambio de mes
             filtroMes.addEventListener('change', function() {
-                updateBothCards(filtroAno.value, this.value);
+                updateAllCards(filtroAno.value, this.value);
             });
 
             // Event listener para el botón "Actual"
@@ -263,7 +332,7 @@
                 filtroAno.value = currentYear;
                 filtroMes.value = currentMonth;
 
-                updateBothCards(currentYear, currentMonth);
+                updateAllCards(currentYear, currentMonth);
             });
         });
     </script>
