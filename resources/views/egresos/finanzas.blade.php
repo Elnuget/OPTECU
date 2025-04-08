@@ -54,7 +54,7 @@
         </div>
         <div class="card-body">
             <form method="GET" class="form-row mb-3" id="filterForm">
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label for="filtroAno">SELECCIONAR AÑO:</label>
                     <select name="ano" class="form-control custom-select" id="filtroAno">
                         <option value="">SELECCIONE AÑO</option>
@@ -63,7 +63,7 @@
                         @endfor
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
                     <label for="filtroMes">SELECCIONAR MES:</label>
                     <select name="mes" class="form-control custom-select" id="filtroMes">
                         <option value="">SELECCIONE MES</option>
@@ -74,8 +74,17 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2 align-self-end">
-                    <button type="button" class="btn btn-primary" id="actualButton">ACTUAL</button>
+                <div class="col-md-3">
+                    <label for="filtroSucursal">SELECCIONAR SUCURSAL:</label>
+                    <select name="sucursal" class="form-control custom-select" id="filtroSucursal">
+                        <option value="">TODAS LAS SUCURSALES</option>
+                        <option value="matriz">MATRIZ</option>
+                        <option value="rocio">ROCÍO</option>
+                        <option value="norte">NORTE</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="button" class="btn btn-primary btn-block" id="actualButton">ACTUAL</button>
                 </div>
             </form>
 
@@ -457,7 +466,19 @@
 
         // Función para actualizar el total global y la barra de progreso
         function updateGlobalTotal() {
-            const totalGlobal = totalMatriz + totalRocio + totalNorte;
+            const sucursal = document.getElementById('filtroSucursal').value;
+            let totalGlobal = 0;
+
+            if (sucursal === '') {
+                totalGlobal = totalMatriz + totalRocio + totalNorte;
+            } else if (sucursal === 'matriz') {
+                totalGlobal = totalMatriz;
+            } else if (sucursal === 'rocio') {
+                totalGlobal = totalRocio;
+            } else if (sucursal === 'norte') {
+                totalGlobal = totalNorte;
+            }
+
             const totalSpan = document.getElementById('total-ingresos-global');
             const summarySpan = document.getElementById('summary-ingresos-global');
             totalSpan.textContent = formatCurrency(totalGlobal);
@@ -465,9 +486,9 @@
 
             // Calcular porcentajes para la barra de progreso
             if (totalGlobal > 0) {
-                const porcentajeMatriz = (totalMatriz / totalGlobal) * 100;
-                const porcentajeRocio = (totalRocio / totalGlobal) * 100;
-                const porcentajeNorte = (totalNorte / totalGlobal) * 100;
+                const porcentajeMatriz = ((sucursal === '' || sucursal === 'matriz' ? totalMatriz : 0) / totalGlobal) * 100;
+                const porcentajeRocio = ((sucursal === '' || sucursal === 'rocio' ? totalRocio : 0) / totalGlobal) * 100;
+                const porcentajeNorte = ((sucursal === '' || sucursal === 'norte' ? totalNorte : 0) / totalGlobal) * 100;
 
                 // Actualizar barras de progreso
                 const progressMatriz = document.getElementById('progress-matriz');
@@ -478,9 +499,9 @@
                 progressRocio.style.width = porcentajeRocio + '%';
                 progressNorte.style.width = porcentajeNorte + '%';
 
-                progressMatriz.textContent = `Matriz: ${formatCurrency(totalMatriz)}`;
-                progressRocio.textContent = `Rocío: ${formatCurrency(totalRocio)}`;
-                progressNorte.textContent = `Norte: ${formatCurrency(totalNorte)}`;
+                progressMatriz.textContent = `Matriz: ${formatCurrency(sucursal === '' || sucursal === 'matriz' ? totalMatriz : 0)}`;
+                progressRocio.textContent = `Rocío: ${formatCurrency(sucursal === '' || sucursal === 'rocio' ? totalRocio : 0)}`;
+                progressNorte.textContent = `Norte: ${formatCurrency(sucursal === '' || sucursal === 'norte' ? totalNorte : 0)}`;
             }
             updateGananciaNeta();
         }
@@ -642,16 +663,28 @@
 
         // Función para actualizar el total global de retiros y la barra de progreso
         function updateGlobalRetiros() {
-            const totalGlobal = Math.abs(totalRetirosMatriz) + Math.abs(totalRetirosRocio) + Math.abs(totalRetirosNorte);
+            const sucursal = document.getElementById('filtroSucursal').value;
+            let totalGlobal = 0;
+
+            if (sucursal === '') {
+                totalGlobal = Math.abs(totalRetirosMatriz) + Math.abs(totalRetirosRocio) + Math.abs(totalRetirosNorte);
+            } else if (sucursal === 'matriz') {
+                totalGlobal = Math.abs(totalRetirosMatriz);
+            } else if (sucursal === 'rocio') {
+                totalGlobal = Math.abs(totalRetirosRocio);
+            } else if (sucursal === 'norte') {
+                totalGlobal = Math.abs(totalRetirosNorte);
+            }
+
             const totalSpan = document.getElementById('total-retiros-global');
             const summarySpan = document.getElementById('summary-retiros-global');
             totalSpan.textContent = formatCurrency(-totalGlobal);
             summarySpan.textContent = formatCurrency(totalGlobal);
 
             if (totalGlobal > 0) {
-                const porcentajeMatriz = (Math.abs(totalRetirosMatriz) / totalGlobal) * 100;
-                const porcentajeRocio = (Math.abs(totalRetirosRocio) / totalGlobal) * 100;
-                const porcentajeNorte = (Math.abs(totalRetirosNorte) / totalGlobal) * 100;
+                const porcentajeMatriz = ((sucursal === '' || sucursal === 'matriz' ? Math.abs(totalRetirosMatriz) : 0) / totalGlobal) * 100;
+                const porcentajeRocio = ((sucursal === '' || sucursal === 'rocio' ? Math.abs(totalRetirosRocio) : 0) / totalGlobal) * 100;
+                const porcentajeNorte = ((sucursal === '' || sucursal === 'norte' ? Math.abs(totalRetirosNorte) : 0) / totalGlobal) * 100;
 
                 const progressMatriz = document.getElementById('progress-retiros-matriz');
                 const progressRocio = document.getElementById('progress-retiros-rocio');
@@ -661,9 +694,9 @@
                 progressRocio.style.width = porcentajeRocio + '%';
                 progressNorte.style.width = porcentajeNorte + '%';
 
-                progressMatriz.textContent = `Matriz: ${formatCurrency(totalRetirosMatriz)}`;
-                progressRocio.textContent = `Rocío: ${formatCurrency(totalRetirosRocio)}`;
-                progressNorte.textContent = `Norte: ${formatCurrency(totalRetirosNorte)}`;
+                progressMatriz.textContent = `Matriz: ${formatCurrency(sucursal === '' || sucursal === 'matriz' ? totalRetirosMatriz : 0)}`;
+                progressRocio.textContent = `Rocío: ${formatCurrency(sucursal === '' || sucursal === 'rocio' ? totalRetirosRocio : 0)}`;
+                progressNorte.textContent = `Norte: ${formatCurrency(sucursal === '' || sucursal === 'norte' ? totalRetirosNorte : 0)}`;
             }
             updateGananciaNeta();
         }
@@ -799,9 +832,29 @@
 
         // Función para calcular y mostrar la Ganancia Neta Global
         function updateGananciaNeta() {
-            const ingresosGlobal = totalMatriz + totalRocio + totalNorte;
-            const retirosGlobal = Math.abs(totalRetirosMatriz) + Math.abs(totalRetirosRocio) + Math.abs(totalRetirosNorte);
-            const egresosGlobal = Math.abs(totalEgresosMatriz) + Math.abs(totalEgresosRocio) + Math.abs(totalEgresosNorte);
+            const sucursal = document.getElementById('filtroSucursal').value;
+            let ingresosGlobal = 0;
+            let retirosGlobal = 0;
+            let egresosGlobal = 0;
+
+            if (sucursal === '') {
+                ingresosGlobal = totalMatriz + totalRocio + totalNorte;
+                retirosGlobal = Math.abs(totalRetirosMatriz) + Math.abs(totalRetirosRocio) + Math.abs(totalRetirosNorte);
+                egresosGlobal = Math.abs(totalEgresosMatriz) + Math.abs(totalEgresosRocio) + Math.abs(totalEgresosNorte);
+            } else if (sucursal === 'matriz') {
+                ingresosGlobal = totalMatriz;
+                retirosGlobal = Math.abs(totalRetirosMatriz);
+                egresosGlobal = Math.abs(totalEgresosMatriz);
+            } else if (sucursal === 'rocio') {
+                ingresosGlobal = totalRocio;
+                retirosGlobal = Math.abs(totalRetirosRocio);
+                egresosGlobal = Math.abs(totalEgresosRocio);
+            } else if (sucursal === 'norte') {
+                ingresosGlobal = totalNorte;
+                retirosGlobal = Math.abs(totalRetirosNorte);
+                egresosGlobal = Math.abs(totalEgresosNorte);
+            }
+
             const gananciaNeta = ingresosGlobal - retirosGlobal - egresosGlobal;
             const summarySpan = document.getElementById('summary-ganancia-neta');
             summarySpan.textContent = formatCurrency(gananciaNeta);
@@ -809,16 +862,28 @@
 
         // Función para actualizar el total global de egresos y la barra de progreso
         function updateGlobalEgresos() {
-            const totalGlobal = Math.abs(totalEgresosMatriz) + Math.abs(totalEgresosRocio) + Math.abs(totalEgresosNorte);
+            const sucursal = document.getElementById('filtroSucursal').value;
+            let totalGlobal = 0;
+
+            if (sucursal === '') {
+                totalGlobal = Math.abs(totalEgresosMatriz) + Math.abs(totalEgresosRocio) + Math.abs(totalEgresosNorte);
+            } else if (sucursal === 'matriz') {
+                totalGlobal = Math.abs(totalEgresosMatriz);
+            } else if (sucursal === 'rocio') {
+                totalGlobal = Math.abs(totalEgresosRocio);
+            } else if (sucursal === 'norte') {
+                totalGlobal = Math.abs(totalEgresosNorte);
+            }
+
             const totalSpan = document.getElementById('total-egresos-global');
             const summarySpan = document.getElementById('summary-egresos-global');
             totalSpan.textContent = formatCurrency(-totalGlobal);
             summarySpan.textContent = formatCurrency(totalGlobal);
 
             if (totalGlobal > 0) {
-                const porcentajeMatriz = (Math.abs(totalEgresosMatriz) / totalGlobal) * 100;
-                const porcentajeRocio = (Math.abs(totalEgresosRocio) / totalGlobal) * 100;
-                const porcentajeNorte = (Math.abs(totalEgresosNorte) / totalGlobal) * 100;
+                const porcentajeMatriz = ((sucursal === '' || sucursal === 'matriz' ? Math.abs(totalEgresosMatriz) : 0) / totalGlobal) * 100;
+                const porcentajeRocio = ((sucursal === '' || sucursal === 'rocio' ? Math.abs(totalEgresosRocio) : 0) / totalGlobal) * 100;
+                const porcentajeNorte = ((sucursal === '' || sucursal === 'norte' ? Math.abs(totalEgresosNorte) : 0) / totalGlobal) * 100;
 
                 const progressMatriz = document.getElementById('progress-egresos-matriz');
                 const progressRocio = document.getElementById('progress-egresos-rocio');
@@ -828,17 +893,9 @@
                 progressRocio.style.width = porcentajeRocio + '%';
                 progressNorte.style.width = porcentajeNorte + '%';
 
-                progressMatriz.textContent = `Matriz: ${formatCurrency(totalEgresosMatriz)}`;
-                progressRocio.textContent = `Rocío: ${formatCurrency(totalEgresosRocio)}`;
-                progressNorte.textContent = `Norte: ${formatCurrency(totalEgresosNorte)}`;
-            } else {
-                 // Reset progress bars if total is zero
-                document.getElementById('progress-egresos-matriz').style.width = '0%';
-                document.getElementById('progress-egresos-matriz').textContent = 'Matriz: $0';
-                document.getElementById('progress-egresos-rocio').style.width = '0%';
-                document.getElementById('progress-egresos-rocio').textContent = 'Rocío: $0';
-                document.getElementById('progress-egresos-norte').style.width = '0%';
-                document.getElementById('progress-egresos-norte').textContent = 'Norte: $0';
+                progressMatriz.textContent = `Matriz: ${formatCurrency(sucursal === '' || sucursal === 'matriz' ? totalEgresosMatriz : 0)}`;
+                progressRocio.textContent = `Rocío: ${formatCurrency(sucursal === '' || sucursal === 'rocio' ? totalEgresosRocio : 0)}`;
+                progressNorte.textContent = `Norte: ${formatCurrency(sucursal === '' || sucursal === 'norte' ? totalEgresosNorte : 0)}`;
             }
             updateGananciaNeta();
         }
@@ -975,18 +1032,62 @@
         $(document).ready(function() {
             const filtroAno = document.getElementById('filtroAno');
             const filtroMes = document.getElementById('filtroMes');
+            const filtroSucursal = document.getElementById('filtroSucursal');
+
+            // Función para mostrar/ocultar tarjetas según la sucursal seleccionada
+            function toggleSucursalCards(sucursal) {
+                const allCards = {
+                    'matriz': ['card-ingresos-matriz', 'card-retiros-matriz', 'card-egresos-matriz'],
+                    'rocio': ['card-ingresos-rocio', 'card-retiros-rocio', 'card-egresos-rocio'],
+                    'norte': ['card-ingresos-norte', 'card-retiros-norte', 'card-egresos-norte']
+                };
+
+                // Mostrar/ocultar tarjetas según la selección
+                if (sucursal === '') {
+                    // Mostrar todas las tarjetas y el resumen global
+                    Object.values(allCards).flat().forEach(cardId => {
+                        document.getElementById(cardId).style.display = 'block';
+                    });
+                    document.getElementById('card-ingresos-total').style.display = 'block';
+                    document.getElementById('card-retiros-total').style.display = 'block';
+                    document.getElementById('card-egresos-total').style.display = 'block';
+                } else {
+                    // Ocultar todas las tarjetas primero
+                    Object.values(allCards).flat().forEach(cardId => {
+                        document.getElementById(cardId).style.display = 'none';
+                    });
+                    // Mostrar solo las tarjetas de la sucursal seleccionada
+                    allCards[sucursal].forEach(cardId => {
+                        document.getElementById(cardId).style.display = 'block';
+                    });
+                    // Ocultar las tarjetas de resumen global
+                    document.getElementById('card-ingresos-total').style.display = 'none';
+                    document.getElementById('card-retiros-total').style.display = 'none';
+                    document.getElementById('card-egresos-total').style.display = 'none';
+                }
+            }
 
             // Función para actualizar todas las tarjetas
             function updateAllCards(ano, mes) {
-                fetchAndDisplayIngresosMatriz(ano, mes);
-                fetchAndDisplayIngresosRocio(ano, mes);
-                fetchAndDisplayIngresosNorte(ano, mes);
-                fetchAndDisplayRetirosMatriz(ano, mes);
-                fetchAndDisplayRetirosRocio(ano, mes);
-                fetchAndDisplayRetirosNorte(ano, mes);
-                fetchAndDisplayEgresosMatriz(ano, mes);
-                fetchAndDisplayEgresosRocio(ano, mes);
-                fetchAndDisplayEgresosNorte(ano, mes);
+                const sucursal = filtroSucursal.value;
+                
+                if (sucursal === '' || sucursal === 'matriz') {
+                    fetchAndDisplayIngresosMatriz(ano, mes);
+                    fetchAndDisplayRetirosMatriz(ano, mes);
+                    fetchAndDisplayEgresosMatriz(ano, mes);
+                }
+                if (sucursal === '' || sucursal === 'rocio') {
+                    fetchAndDisplayIngresosRocio(ano, mes);
+                    fetchAndDisplayRetirosRocio(ano, mes);
+                    fetchAndDisplayEgresosRocio(ano, mes);
+                }
+                if (sucursal === '' || sucursal === 'norte') {
+                    fetchAndDisplayIngresosNorte(ano, mes);
+                    fetchAndDisplayRetirosNorte(ano, mes);
+                    fetchAndDisplayEgresosNorte(ano, mes);
+                }
+
+                toggleSucursalCards(sucursal);
             }
 
             // Carga inicial de datos
@@ -1002,6 +1103,11 @@
                 updateAllCards(filtroAno.value, this.value);
             });
 
+            // Event listener para cambio de sucursal
+            filtroSucursal.addEventListener('change', function() {
+                updateAllCards(filtroAno.value, filtroMes.value);
+            });
+
             // Event listener para el botón "Actual"
             document.getElementById('actualButton').addEventListener('click', function() {
                 const currentDate = new Date();
@@ -1010,6 +1116,7 @@
 
                 filtroAno.value = currentYear;
                 filtroMes.value = currentMonth;
+                filtroSucursal.value = ''; // Resetear el filtro de sucursal
 
                 updateAllCards(currentYear, currentMonth);
             });
