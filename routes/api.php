@@ -17,3 +17,4 @@ use App\Http\Controllers\Api\PagoController;
 
 Route::get('/pagos/totales', [PagoController::class, 'getTotalesPorMes']);
 Route::get('/caja/retiros', [PagoController::class, 'getRetirosCaja']);
+Route::get('/egresos', [PagoController::class, 'getEgresosPorMes']);

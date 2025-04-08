@@ -7,6 +7,7 @@ use App\Models\Pago;
 use App\Models\mediosdepago;
 use App\Models\Pedido;
 use App\Models\Caja;
+use App\Models\Egreso;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -80,6 +81,38 @@ class PagoController extends Controller
             'ano' => $ano,
             'retiro_total' => number_format($totalRetiros, 2, '.', ''),
             'retiros' => $listaRetiros
+        ]);
+    }
+
+    public function getEgresosPorMes(Request $request)
+    {
+        $mes = $request->query('mes', Carbon::now()->month);
+        $ano = $request->query('ano', Carbon::now()->year);
+
+        // Obtener los egresos del mes y año seleccionado
+        $egresos = Egreso::whereYear('created_at', $ano)
+                        ->whereMonth('created_at', $mes)
+                        ->with('user:id,name') // Solo traemos los campos necesarios del usuario
+                        ->get();
+
+        // Calcular el total de egresos
+        $totalEgresos = $egresos->sum('valor');
+
+        // Preparar el listado de egresos
+        $listaEgresos = $egresos->map(function($egreso) {
+            return [
+                'fecha' => $egreso->created_at->format('Y-m-d'),
+                'motivo' => $egreso->motivo,
+                'valor' => number_format($egreso->valor, 2, '.', ''),
+                'usuario' => $egreso->user ? $egreso->user->name : 'N/A'
+            ];
+        });
+
+        return response()->json([
+            'mes' => $mes,
+            'ano' => $ano,
+            'total_egresos' => number_format($totalEgresos, 2, '.', ''),
+            'egresos' => $listaEgresos
         ]);
     }
 } 
