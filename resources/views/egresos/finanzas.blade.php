@@ -140,6 +140,96 @@
             </div>
             {{-- Fin Tarjetas de Resumen --}}
 
+            {{-- Tarjeta de Clasificación de Retiros --}}
+            <div class="card card-outline card-danger mb-4" id="card-clasificacion-retiros">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-chart-pie mr-2"></i>
+                        CLASIFICACIÓN DE RETIROS
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>POR SUCURSAL</h5>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="progress-clasificacion-retiros-matriz">
+                                    Matriz: $0
+                                </div>
+                                <div class="progress-bar bg-info" role="progressbar" style="width: 0%" id="progress-clasificacion-retiros-rocio">
+                                    Rocío: $0
+                                </div>
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: 0%" id="progress-clasificacion-retiros-norte">
+                                    Norte: $0
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>POR MOTIVO</h5>
+                            <div class="row" id="desglose-clasificacion-retiros">
+                                <div class="col-12">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-spinner fa-spin"></i> CARGANDO DATOS...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Tarjeta de Clasificación de Egresos --}}
+            <div class="card card-outline card-purple mb-4" id="card-clasificacion-egresos">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-chart-pie mr-2"></i>
+                        CLASIFICACIÓN DE EGRESOS
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>POR SUCURSAL</h5>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="progress-clasificacion-egresos-matriz">
+                                    Matriz: $0
+                                </div>
+                                <div class="progress-bar bg-info" role="progressbar" style="width: 0%" id="progress-clasificacion-egresos-rocio">
+                                    Rocío: $0
+                                </div>
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: 0%" id="progress-clasificacion-egresos-norte">
+                                    Norte: $0
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>POR MOTIVO</h5>
+                            <div class="row" id="desglose-clasificacion-egresos">
+                                <div class="col-12">
+                                    <div class="card bg-light">
+                                        <div class="card-body text-center">
+                                            <i class="fas fa-spinner fa-spin"></i> CARGANDO DATOS...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {{-- Tarjeta de Ingresos Totales --}}
             <div class="card card-outline card-danger mb-4" id="card-ingresos-total">
                 <div class="card-header">
@@ -707,6 +797,7 @@
                         desgloseList.innerHTML = '<li class="list-group-item">NO HAY DATOS DE DESGLOSE DISPONIBLES.</li>';
                     }
                     loadingOverlay.style.display = 'none';
+                    updateClasificacionRetiros();
                 })
                 .catch(error => {
                     console.error('Error al obtener datos de la API:', error);
@@ -757,6 +848,7 @@
                         desgloseList.innerHTML = '<li class="list-group-item">NO HAY DATOS DE DESGLOSE DISPONIBLES.</li>';
                     }
                     loadingOverlay.style.display = 'none';
+                    updateClasificacionRetiros();
                 })
                 .catch(error => {
                     console.error('Error al obtener datos de la API:', error);
@@ -807,6 +899,7 @@
                         desgloseList.innerHTML = '<li class="list-group-item">NO HAY DATOS DE DESGLOSE DISPONIBLES.</li>';
                     }
                     loadingOverlay.style.display = 'none';
+                    updateClasificacionRetiros();
                 })
                 .catch(error => {
                     console.error('Error al obtener datos de la API:', error);
@@ -898,6 +991,10 @@
                         desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
                     }
                     loadingOverlay.style.display = 'none';
+                    updateClasificacionRetiros();
+                    if (data.retiros) {
+                        updateClasificacionRetirosPorMotivo(data.retiros);
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -941,6 +1038,10 @@
                         desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
                     }
                     loadingOverlay.style.display = 'none';
+                    updateClasificacionRetiros();
+                    if (data.retiros) {
+                        updateClasificacionRetirosPorMotivo(data.retiros);
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -984,6 +1085,10 @@
                         desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
                     }
                     loadingOverlay.style.display = 'none';
+                    updateClasificacionRetiros();
+                    if (data.retiros) {
+                        updateClasificacionRetirosPorMotivo(data.retiros);
+                    }
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -1121,6 +1226,7 @@
                         desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY EGRESOS REGISTRADOS</td></tr>';
                     }
                     loadingOverlay.style.display = 'none';
+                    updateClasificacionEgresos();
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -1164,6 +1270,7 @@
                         desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY EGRESOS REGISTRADOS</td></tr>';
                     }
                     loadingOverlay.style.display = 'none';
+                    updateClasificacionEgresos();
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -1207,6 +1314,7 @@
                         desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY EGRESOS REGISTRADOS</td></tr>';
                     }
                     loadingOverlay.style.display = 'none';
+                    updateClasificacionEgresos();
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -1214,6 +1322,374 @@
                     desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
                     loadingOverlay.style.display = 'none';
                 });
+        }
+
+        // Función para actualizar la clasificación de retiros
+        function updateClasificacionRetiros() {
+            const sucursal = tipoSucursal !== 'todas' ? tipoSucursal : document.getElementById('filtroSucursal').value;
+            let totalGlobal = Math.abs(totalRetirosMatriz) + Math.abs(totalRetirosRocio) + Math.abs(totalRetirosNorte);
+
+            if (totalGlobal > 0) {
+                const porcentajeMatriz = ((sucursal === '' || sucursal === 'matriz' ? Math.abs(totalRetirosMatriz) : 0) / totalGlobal) * 100;
+                const porcentajeRocio = ((sucursal === '' || sucursal === 'rocio' ? Math.abs(totalRetirosRocio) : 0) / totalGlobal) * 100;
+                const porcentajeNorte = ((sucursal === '' || sucursal === 'norte' ? Math.abs(totalRetirosNorte) : 0) / totalGlobal) * 100;
+
+                const progressMatriz = document.getElementById('progress-clasificacion-retiros-matriz');
+                const progressRocio = document.getElementById('progress-clasificacion-retiros-rocio');
+                const progressNorte = document.getElementById('progress-clasificacion-retiros-norte');
+
+                progressMatriz.style.width = porcentajeMatriz + '%';
+                progressRocio.style.width = porcentajeRocio + '%';
+                progressNorte.style.width = porcentajeNorte + '%';
+
+                progressMatriz.textContent = `Matriz: ${formatCurrency(sucursal === '' || sucursal === 'matriz' ? totalRetirosMatriz : 0)}`;
+                progressRocio.textContent = `Rocío: ${formatCurrency(sucursal === '' || sucursal === 'rocio' ? totalRetirosRocio : 0)}`;
+                progressNorte.textContent = `Norte: ${formatCurrency(sucursal === '' || sucursal === 'norte' ? totalRetirosNorte : 0)}`;
+            }
+        }
+
+        // Función para actualizar la clasificación de egresos
+        function updateClasificacionEgresos() {
+            const sucursal = tipoSucursal !== 'todas' ? tipoSucursal : document.getElementById('filtroSucursal').value;
+            let totalGlobal = Math.abs(totalEgresosMatriz) + Math.abs(totalEgresosRocio) + Math.abs(totalEgresosNorte);
+
+            if (totalGlobal > 0) {
+                const porcentajeMatriz = ((sucursal === '' || sucursal === 'matriz' ? Math.abs(totalEgresosMatriz) : 0) / totalGlobal) * 100;
+                const porcentajeRocio = ((sucursal === '' || sucursal === 'rocio' ? Math.abs(totalEgresosRocio) : 0) / totalGlobal) * 100;
+                const porcentajeNorte = ((sucursal === '' || sucursal === 'norte' ? Math.abs(totalEgresosNorte) : 0) / totalGlobal) * 100;
+
+                const progressMatriz = document.getElementById('progress-clasificacion-egresos-matriz');
+                const progressRocio = document.getElementById('progress-clasificacion-egresos-rocio');
+                const progressNorte = document.getElementById('progress-clasificacion-egresos-norte');
+
+                progressMatriz.style.width = porcentajeMatriz + '%';
+                progressRocio.style.width = porcentajeRocio + '%';
+                progressNorte.style.width = porcentajeNorte + '%';
+
+                progressMatriz.textContent = `Matriz: ${formatCurrency(sucursal === '' || sucursal === 'matriz' ? totalEgresosMatriz : 0)}`;
+                progressRocio.textContent = `Rocío: ${formatCurrency(sucursal === '' || sucursal === 'rocio' ? totalEgresosRocio : 0)}`;
+                progressNorte.textContent = `Norte: ${formatCurrency(sucursal === '' || sucursal === 'norte' ? totalEgresosNorte : 0)}`;
+            }
+        }
+
+        // Función para clasificar los motivos de retiros
+        function clasificarMotivoRetiro(motivo) {
+            motivo = motivo.toLowerCase();
+            
+            if (motivo.includes('deposito') || motivo.includes('depósito')) {
+                return 'DEPÓSITOS';
+            } else if (motivo.includes('luz') || motivo.includes('servicios')) {
+                return 'SERVICIOS';
+            } else if (motivo.includes('almuerzo') || motivo.includes('ceviche') || motivo.includes('heladeria') || motivo.includes('gaseosa')) {
+                return 'ALIMENTACIÓN';
+            } else if (motivo.includes('papel') || motivo.includes('caramelos') || motivo.includes('fruta')) {
+                return 'SUMINISTROS';
+            } else if (motivo.includes('bisel') || motivo.includes('importvision') || motivo.includes('santa fe')) {
+                return 'INSUMOS ÓPTICOS';
+            } else if (motivo.includes('parqueadero') || motivo.includes('pasaje')) {
+                return 'TRANSPORTE';
+            } else if (motivo.includes('suelda') || motivo.includes('sueldo')) {
+                return 'PAGOS';
+            } else {
+                return 'OTROS';
+            }
+        }
+
+        // Función para obtener el icono según la categoría
+        function getIconoPorCategoria(categoria) {
+            const iconos = {
+                'DEPÓSITOS': 'fa-money-bill-wave',
+                'SERVICIOS': 'fa-bolt',
+                'ALIMENTACIÓN': 'fa-utensils',
+                'SUMINISTROS': 'fa-box',
+                'INSUMOS ÓPTICOS': 'fa-glasses',
+                'TRANSPORTE': 'fa-car',
+                'PAGOS': 'fa-hand-holding-usd',
+                'OTROS': 'fa-ellipsis-h'
+            };
+            return iconos[categoria] || 'fa-ellipsis-h';
+        }
+
+        // Función para actualizar la clasificación de retiros por motivo
+        function updateClasificacionRetirosPorMotivo(retiros) {
+            const sucursal = tipoSucursal !== 'todas' ? tipoSucursal : document.getElementById('filtroSucursal').value;
+            const clasificacion = {
+                'DEPÓSITOS': 0,
+                'SERVICIOS': 0,
+                'ALIMENTACIÓN': 0,
+                'SUMINISTROS': 0,
+                'INSUMOS ÓPTICOS': 0,
+                'TRANSPORTE': 0,
+                'PAGOS': 0,
+                'OTROS': 0
+            };
+
+            // Filtrar retiros según la sucursal seleccionada
+            const retirosAMostrar = retiros.filter(retiro => {
+                if (sucursal === '') return true;
+                return retiro.sucursal === sucursal;
+            });
+
+            retirosAMostrar.forEach(retiro => {
+                const categoria = clasificarMotivoRetiro(retiro.motivo);
+                clasificacion[categoria] += Math.abs(parseFloat(retiro.valor));
+            });
+
+            const desgloseContainer = document.getElementById('desglose-clasificacion-retiros');
+            desgloseContainer.innerHTML = '';
+
+            let categoriasConDatos = 0;
+            let totalRetiros = 0;
+
+            // Calcular el total según la sucursal seleccionada
+            if (sucursal === '') {
+                totalRetiros = Math.abs(totalRetirosMatriz) + Math.abs(totalRetirosRocio) + Math.abs(totalRetirosNorte);
+            } else if (sucursal === 'matriz') {
+                totalRetiros = Math.abs(totalRetirosMatriz);
+            } else if (sucursal === 'rocio') {
+                totalRetiros = Math.abs(totalRetirosRocio);
+            } else if (sucursal === 'norte') {
+                totalRetiros = Math.abs(totalRetirosNorte);
+            }
+
+            // Ordenar las categorías por monto de mayor a menor
+            const categoriasOrdenadas = Object.entries(clasificacion)
+                .sort(([, a], [, b]) => b - a);
+
+            // Crear un objeto para almacenar los detalles por categoría
+            const detallesPorCategoria = {};
+            retirosAMostrar.forEach(retiro => {
+                const categoria = clasificarMotivoRetiro(retiro.motivo);
+                if (!detallesPorCategoria[categoria]) {
+                    detallesPorCategoria[categoria] = [];
+                }
+                detallesPorCategoria[categoria].push({
+                    motivo: retiro.motivo,
+                    valor: Math.abs(parseFloat(retiro.valor))
+                });
+            });
+
+            categoriasOrdenadas.forEach(([categoria, total]) => {
+                if (total > 0) {
+                    categoriasConDatos++;
+                    const col = document.createElement('div');
+                    col.className = 'col-md-6 mb-3';
+
+                    // Crear el contenido de los detalles
+                    let detallesHTML = '';
+                    if (detallesPorCategoria[categoria]) {
+                        const detallesOrdenados = detallesPorCategoria[categoria]
+                            .sort((a, b) => b.valor - a.valor)
+                            .slice(0, 3); // Mostrar solo los 3 más altos
+
+                        detallesHTML = `
+                            <div class="mt-2 small">
+                                ${detallesOrdenados.map(detalle => `
+                                    <div class="d-flex justify-content-between text-muted">
+                                        <span>${detalle.motivo.substring(0, 20)}${detalle.motivo.length > 20 ? '...' : ''}</span>
+                                        <span>${formatCurrency(detalle.valor)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+
+                    col.innerHTML = `
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="mr-3">
+                                        <i class="fas ${getIconoPorCategoria(categoria)} fa-2x text-danger"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">${categoria}</h6>
+                                        <small class="text-muted">${formatCurrency(total)}</small>
+                                        <div class="progress mt-2" style="height: 5px;">
+                                            <div class="progress-bar bg-danger" role="progressbar" 
+                                                style="width: ${(total / totalRetiros) * 100}%" 
+                                                aria-valuenow="${(total / totalRetiros) * 100}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        ${detallesHTML}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    desgloseContainer.appendChild(col);
+                }
+            });
+
+            // Agregar tarjeta de total
+            const totalCol = document.createElement('div');
+            totalCol.className = 'col-12 mt-3';
+            totalCol.innerHTML = `
+                <div class="card bg-danger text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h5 class="mb-0">TOTAL RETIROS ${sucursal ? `- ${sucursal.toUpperCase()}` : ''}</h5>
+                                <small>${categoriasConDatos} categorías</small>
+                            </div>
+                            <div class="text-right">
+                                <h4 class="mb-0">${formatCurrency(totalRetiros)}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            desgloseContainer.appendChild(totalCol);
+
+            // Actualizar visibilidad de la tarjeta
+            const cardRetiros = document.getElementById('card-clasificacion-retiros');
+            if (tipoSucursal !== 'todas') {
+                cardRetiros.style.display = tipoSucursal === sucursal ? 'block' : 'none';
+            } else {
+                cardRetiros.style.display = 'block';
+            }
+        }
+
+        // Función para actualizar la clasificación de egresos por motivo
+        function updateClasificacionEgresosPorMotivo(egresos) {
+            const sucursal = tipoSucursal !== 'todas' ? tipoSucursal : document.getElementById('filtroSucursal').value;
+            const clasificacion = {
+                'DEPÓSITOS': 0,
+                'SERVICIOS': 0,
+                'ALIMENTACIÓN': 0,
+                'SUMINISTROS': 0,
+                'INSUMOS ÓPTICOS': 0,
+                'TRANSPORTE': 0,
+                'PAGOS': 0,
+                'OTROS': 0
+            };
+
+            // Filtrar egresos según la sucursal seleccionada
+            const egresosAMostrar = egresos.filter(egreso => {
+                if (sucursal === '') return true;
+                return egreso.sucursal === sucursal;
+            });
+
+            egresosAMostrar.forEach(egreso => {
+                const categoria = clasificarMotivoRetiro(egreso.motivo);
+                clasificacion[categoria] += Math.abs(parseFloat(egreso.valor));
+            });
+
+            const desgloseContainer = document.getElementById('desglose-clasificacion-egresos');
+            desgloseContainer.innerHTML = '';
+
+            let categoriasConDatos = 0;
+            let totalEgresos = 0;
+
+            // Calcular el total según la sucursal seleccionada
+            if (sucursal === '') {
+                totalEgresos = Math.abs(totalEgresosMatriz) + Math.abs(totalEgresosRocio) + Math.abs(totalEgresosNorte);
+            } else if (sucursal === 'matriz') {
+                totalEgresos = Math.abs(totalEgresosMatriz);
+            } else if (sucursal === 'rocio') {
+                totalEgresos = Math.abs(totalEgresosRocio);
+            } else if (sucursal === 'norte') {
+                totalEgresos = Math.abs(totalEgresosNorte);
+            }
+
+            // Ordenar las categorías por monto de mayor a menor
+            const categoriasOrdenadas = Object.entries(clasificacion)
+                .sort(([, a], [, b]) => b - a);
+
+            // Crear un objeto para almacenar los detalles por categoría
+            const detallesPorCategoria = {};
+            egresosAMostrar.forEach(egreso => {
+                const categoria = clasificarMotivoRetiro(egreso.motivo);
+                if (!detallesPorCategoria[categoria]) {
+                    detallesPorCategoria[categoria] = [];
+                }
+                detallesPorCategoria[categoria].push({
+                    motivo: egreso.motivo,
+                    valor: Math.abs(parseFloat(egreso.valor))
+                });
+            });
+
+            categoriasOrdenadas.forEach(([categoria, total]) => {
+                if (total > 0) {
+                    categoriasConDatos++;
+                    const col = document.createElement('div');
+                    col.className = 'col-md-6 mb-3';
+
+                    // Crear el contenido de los detalles
+                    let detallesHTML = '';
+                    if (detallesPorCategoria[categoria]) {
+                        const detallesOrdenados = detallesPorCategoria[categoria]
+                            .sort((a, b) => b.valor - a.valor)
+                            .slice(0, 3); // Mostrar solo los 3 más altos
+
+                        detallesHTML = `
+                            <div class="mt-2 small">
+                                ${detallesOrdenados.map(detalle => `
+                                    <div class="d-flex justify-content-between text-muted">
+                                        <span>${detalle.motivo.substring(0, 20)}${detalle.motivo.length > 20 ? '...' : ''}</span>
+                                        <span>${formatCurrency(detalle.valor)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+
+                    col.innerHTML = `
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    <div class="mr-3">
+                                        <i class="fas ${getIconoPorCategoria(categoria)} fa-2x text-purple"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-0">${categoria}</h6>
+                                        <small class="text-muted">${formatCurrency(total)}</small>
+                                        <div class="progress mt-2" style="height: 5px;">
+                                            <div class="progress-bar bg-purple" role="progressbar" 
+                                                style="width: ${(total / totalEgresos) * 100}%" 
+                                                aria-valuenow="${(total / totalEgresos) * 100}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        ${detallesHTML}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    desgloseContainer.appendChild(col);
+                }
+            });
+
+            // Agregar tarjeta de total
+            const totalCol = document.createElement('div');
+            totalCol.className = 'col-12 mt-3';
+            totalCol.innerHTML = `
+                <div class="card bg-purple text-white">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h5 class="mb-0">TOTAL EGRESOS ${sucursal ? `- ${sucursal.toUpperCase()}` : ''}</h5>
+                                <small>${categoriasConDatos} categorías</small>
+                            </div>
+                            <div class="text-right">
+                                <h4 class="mb-0">${formatCurrency(totalEgresos)}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            desgloseContainer.appendChild(totalCol);
+
+            // Actualizar visibilidad de la tarjeta
+            const cardEgresos = document.getElementById('card-clasificacion-egresos');
+            if (tipoSucursal !== 'todas') {
+                cardEgresos.style.display = tipoSucursal === sucursal ? 'block' : 'none';
+            } else {
+                cardEgresos.style.display = 'block';
+            }
         }
     </script>
 @stop 
