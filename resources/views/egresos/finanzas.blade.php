@@ -974,19 +974,31 @@
                     return response.json();
                 })
                 .then(data => {
-                    totalRetirosMatriz = parseFloat(data.retiro_total) || 0;
+                    // Filtrar los retiros que no son depósitos para el cálculo del total
+                    const retirosFiltered = data.retiros ? data.retiros.filter(retiro => {
+                        const motivo = retiro.motivo.toLowerCase();
+                        return !motivo.includes('deposito') && !motivo.includes('depósito');
+                    }) : [];
+                    
+                    // Calcular el total solo con los retiros filtrados
+                    const totalFiltrado = retirosFiltered.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
+                    
+                    totalRetirosMatriz = totalFiltrado; // Usar el total filtrado sin depósitos
                     totalSpan.textContent = formatCurrency(totalRetirosMatriz);
                     updateGlobalRetiros();
 
                     if (data.retiros && data.retiros.length > 0) {
-                        desgloseBody.innerHTML = data.retiros.map(retiro => `
-                            <tr>
-                                <td>${retiro.fecha}</td>
-                                <td>${retiro.motivo}</td>
-                                <td class="text-danger">${formatCurrency(retiro.valor)}</td>
-                                <td>${retiro.usuario}</td>
-                            </tr>
-                        `).join('');
+                        desgloseBody.innerHTML = data.retiros.map(retiro => {
+                            const esDeposito = retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito');
+                            return `
+                                <tr ${esDeposito ? 'class="bg-light"' : ''}>
+                                    <td>${retiro.fecha}</td>
+                                    <td>${retiro.motivo} ${esDeposito ? '<span class="badge badge-info">DEPÓSITO</span>' : ''}</td>
+                                    <td class="text-danger">${formatCurrency(retiro.valor)}</td>
+                                    <td>${retiro.usuario}</td>
+                                </tr>
+                            `;
+                        }).join('');
                     } else {
                         desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
                     }
@@ -1021,19 +1033,31 @@
                     return response.json();
                 })
                 .then(data => {
-                    totalRetirosRocio = parseFloat(data.retiro_total) || 0;
+                    // Filtrar los retiros que no son depósitos para el cálculo del total
+                    const retirosFiltered = data.retiros ? data.retiros.filter(retiro => {
+                        const motivo = retiro.motivo.toLowerCase();
+                        return !motivo.includes('deposito') && !motivo.includes('depósito');
+                    }) : [];
+                    
+                    // Calcular el total solo con los retiros filtrados
+                    const totalFiltrado = retirosFiltered.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
+                    
+                    totalRetirosRocio = totalFiltrado; // Usar el total filtrado sin depósitos
                     totalSpan.textContent = formatCurrency(totalRetirosRocio);
                     updateGlobalRetiros();
 
                     if (data.retiros && data.retiros.length > 0) {
-                        desgloseBody.innerHTML = data.retiros.map(retiro => `
-                            <tr>
-                                <td>${retiro.fecha}</td>
-                                <td>${retiro.motivo}</td>
-                                <td class="text-danger">${formatCurrency(retiro.valor)}</td>
-                                <td>${retiro.usuario}</td>
-                            </tr>
-                        `).join('');
+                        desgloseBody.innerHTML = data.retiros.map(retiro => {
+                            const esDeposito = retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito');
+                            return `
+                                <tr ${esDeposito ? 'class="bg-light"' : ''}>
+                                    <td>${retiro.fecha}</td>
+                                    <td>${retiro.motivo} ${esDeposito ? '<span class="badge badge-info">DEPÓSITO</span>' : ''}</td>
+                                    <td class="text-danger">${formatCurrency(retiro.valor)}</td>
+                                    <td>${retiro.usuario}</td>
+                                </tr>
+                            `;
+                        }).join('');
                     } else {
                         desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
                     }
@@ -1068,19 +1092,31 @@
                     return response.json();
                 })
                 .then(data => {
-                    totalRetirosNorte = parseFloat(data.retiro_total) || 0;
+                    // Filtrar los retiros que no son depósitos para el cálculo del total
+                    const retirosFiltered = data.retiros ? data.retiros.filter(retiro => {
+                        const motivo = retiro.motivo.toLowerCase();
+                        return !motivo.includes('deposito') && !motivo.includes('depósito');
+                    }) : [];
+                    
+                    // Calcular el total solo con los retiros filtrados
+                    const totalFiltrado = retirosFiltered.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
+                    
+                    totalRetirosNorte = totalFiltrado; // Usar el total filtrado sin depósitos
                     totalSpan.textContent = formatCurrency(totalRetirosNorte);
                     updateGlobalRetiros();
 
                     if (data.retiros && data.retiros.length > 0) {
-                        desgloseBody.innerHTML = data.retiros.map(retiro => `
-                            <tr>
-                                <td>${retiro.fecha}</td>
-                                <td>${retiro.motivo}</td>
-                                <td class="text-danger">${formatCurrency(retiro.valor)}</td>
-                                <td>${retiro.usuario}</td>
-                            </tr>
-                        `).join('');
+                        desgloseBody.innerHTML = data.retiros.map(retiro => {
+                            const esDeposito = retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito');
+                            return `
+                                <tr ${esDeposito ? 'class="bg-light"' : ''}>
+                                    <td>${retiro.fecha}</td>
+                                    <td>${retiro.motivo} ${esDeposito ? '<span class="badge badge-info">DEPÓSITO</span>' : ''}</td>
+                                    <td class="text-danger">${formatCurrency(retiro.valor)}</td>
+                                    <td>${retiro.usuario}</td>
+                                </tr>
+                            `;
+                        }).join('');
                     } else {
                         desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
                     }
@@ -1424,12 +1460,13 @@
                 'OTROS': 0
             };
 
-            // Filtrar retiros según la sucursal seleccionada
-            const retirosAMostrar = retiros.filter(retiro => {
+            // Filtrar retiros según la sucursal seleccionada y excluir depósitos del cálculo del total
+            let retirosAMostrar = retiros.filter(retiro => {
                 if (sucursal === '') return true;
                 return retiro.sucursal === sucursal;
             });
 
+            // Para la visualización mostraremos todos, pero marcaremos los depósitos
             retirosAMostrar.forEach(retiro => {
                 const categoria = clasificarMotivoRetiro(retiro.motivo);
                 clasificacion[categoria] += Math.abs(parseFloat(retiro.valor));
@@ -1441,7 +1478,7 @@
             let categoriasConDatos = 0;
             let totalRetiros = 0;
 
-            // Calcular el total según la sucursal seleccionada
+            // Calcular el total según la sucursal seleccionada (ya excluyendo depósitos)
             if (sucursal === '') {
                 totalRetiros = Math.abs(totalRetirosMatriz) + Math.abs(totalRetirosRocio) + Math.abs(totalRetirosNorte);
             } else if (sucursal === 'matriz') {
@@ -1465,12 +1502,16 @@
                 }
                 detallesPorCategoria[categoria].push({
                     motivo: retiro.motivo,
-                    valor: Math.abs(parseFloat(retiro.valor))
+                    valor: Math.abs(parseFloat(retiro.valor)),
+                    esDeposito: retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito')
                 });
             });
 
             categoriasOrdenadas.forEach(([categoria, total]) => {
                 if (total > 0) {
+                    // Para los depósitos, usar un estilo especial
+                    const esCategoriaDeDEpositos = categoria === 'DEPÓSITOS';
+                    
                     categoriasConDatos++;
                     const col = document.createElement('div');
                     col.className = 'col-md-6 mb-3';
@@ -1495,19 +1536,19 @@
                     }
 
                     col.innerHTML = `
-                        <div class="card h-100">
+                        <div class="card h-100 ${esCategoriaDeDEpositos ? 'border-info' : ''}">
                             <div class="card-body">
                                 <div class="d-flex align-items-center">
                                     <div class="mr-3">
-                                        <i class="fas ${getIconoPorCategoria(categoria)} fa-2x text-danger"></i>
+                                        <i class="fas ${getIconoPorCategoria(categoria)} fa-2x ${esCategoriaDeDEpositos ? 'text-info' : 'text-danger'}"></i>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <h6 class="mb-0">${categoria}</h6>
+                                        <h6 class="mb-0">${categoria} ${esCategoriaDeDEpositos ? '<span class="badge badge-info">NO CONTABILIZADO</span>' : ''}</h6>
                                         <small class="text-muted">${formatCurrency(total)}</small>
                                         <div class="progress mt-2" style="height: 5px;">
-                                            <div class="progress-bar bg-danger" role="progressbar" 
-                                                style="width: ${(total / totalRetiros) * 100}%" 
-                                                aria-valuenow="${(total / totalRetiros) * 100}" 
+                                            <div class="progress-bar ${esCategoriaDeDEpositos ? 'bg-info' : 'bg-danger'}" role="progressbar" 
+                                                style="width: ${esCategoriaDeDEpositos ? '100' : (total / totalRetiros) * 100}%" 
+                                                aria-valuenow="${esCategoriaDeDEpositos ? '100' : (total / totalRetiros) * 100}" 
                                                 aria-valuemin="0" 
                                                 aria-valuemax="100">
                                             </div>
@@ -1522,7 +1563,7 @@
                 }
             });
 
-            // Agregar tarjeta de total
+            // Agregar tarjeta de total (ya excluyendo depósitos)
             const totalCol = document.createElement('div');
             totalCol.className = 'col-12 mt-3';
             totalCol.innerHTML = `
@@ -1531,7 +1572,7 @@
                         <div class="d-flex align-items-center justify-content-between">
                             <div>
                                 <h5 class="mb-0">TOTAL RETIROS ${sucursal ? `- ${sucursal.toUpperCase()}` : ''}</h5>
-                                <small>${categoriasConDatos} categorías</small>
+                                <small>${categoriasConDatos} categorías (DEPÓSITOS NO INCLUIDOS EN EL TOTAL)</small>
                             </div>
                             <div class="text-right">
                                 <h4 class="mb-0">${formatCurrency(totalRetiros)}</h4>
