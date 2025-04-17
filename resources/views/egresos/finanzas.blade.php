@@ -621,6 +621,12 @@
                 }
 
                 toggleSucursalCards(sucursal);
+                
+                // Actualizar todas las clasificaciones cada vez que se cambie la sucursal
+                setTimeout(() => {
+                    actualizarClasificacionRetiros();
+                    actualizarClasificacionEgresos();
+                }, 1000); // Dar tiempo a que se carguen los datos
             }
 
             // Modificar la función toggleSucursalCards para respetar el tipo de sucursal global
@@ -1004,9 +1010,8 @@
                     }
                     loadingOverlay.style.display = 'none';
                     updateClasificacionRetiros();
-                    if (data.retiros) {
-                        updateClasificacionRetirosPorMotivo(data.retiros);
-                    }
+                    // Ya no llamamos a updateClasificacionRetirosPorMotivo aquí,
+                    // se hará centralizadamente desde actualizarClasificacionRetiros
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -1063,9 +1068,8 @@
                     }
                     loadingOverlay.style.display = 'none';
                     updateClasificacionRetiros();
-                    if (data.retiros) {
-                        updateClasificacionRetirosPorMotivo(data.retiros);
-                    }
+                    // Ya no llamamos a updateClasificacionRetirosPorMotivo aquí,
+                    // se hará centralizadamente desde actualizarClasificacionRetiros
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -1122,9 +1126,8 @@
                     }
                     loadingOverlay.style.display = 'none';
                     updateClasificacionRetiros();
-                    if (data.retiros) {
-                        updateClasificacionRetirosPorMotivo(data.retiros);
-                    }
+                    // Ya no llamamos a updateClasificacionRetirosPorMotivo aquí,
+                    // se hará centralizadamente desde actualizarClasificacionRetiros
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -1263,6 +1266,8 @@
                     }
                     loadingOverlay.style.display = 'none';
                     updateClasificacionEgresos();
+                    // Ya no llamamos a updateClasificacionEgresosPorMotivo aquí,
+                    // se hará centralizadamente desde actualizarClasificacionEgresos
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -1307,6 +1312,8 @@
                     }
                     loadingOverlay.style.display = 'none';
                     updateClasificacionEgresos();
+                    // Ya no llamamos a updateClasificacionEgresosPorMotivo aquí,
+                    // se hará centralizadamente desde actualizarClasificacionEgresos
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -1351,6 +1358,8 @@
                     }
                     loadingOverlay.style.display = 'none';
                     updateClasificacionEgresos();
+                    // Ya no llamamos a updateClasificacionEgresosPorMotivo aquí,
+                    // se hará centralizadamente desde actualizarClasificacionEgresos
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -1731,6 +1740,54 @@
             } else {
                 cardEgresos.style.display = 'block';
             }
+        }
+
+        // Nueva función para actualizar clasificación de retiros con datos de todas las APIs
+        function actualizarClasificacionRetiros() {
+            const ano = document.getElementById('filtroAno').value;
+            const mes = document.getElementById('filtroMes').value;
+            
+            // Obtener datos de retiros de todas las sucursales
+            Promise.all([
+                fetch(`https://opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`).then(r => r.json()).catch(() => ({ retiros: [] })),
+                fetch(`https://escleroptica2.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`).then(r => r.json()).catch(() => ({ retiros: [] })),
+                fetch(`https://sucursal3.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`).then(r => r.json()).catch(() => ({ retiros: [] }))
+            ]).then(([dataMatriz, dataRocio, dataNorte]) => {
+                // Agregar la información de sucursal a cada retiro
+                const retirosMatriz = dataMatriz.retiros ? dataMatriz.retiros.map(r => ({...r, sucursal: 'matriz'})) : [];
+                const retirosRocio = dataRocio.retiros ? dataRocio.retiros.map(r => ({...r, sucursal: 'rocio'})) : [];
+                const retirosNorte = dataNorte.retiros ? dataNorte.retiros.map(r => ({...r, sucursal: 'norte'})) : [];
+                
+                // Combinar todos los retiros
+                const todosLosRetiros = [...retirosMatriz, ...retirosRocio, ...retirosNorte];
+                
+                // Actualizar clasificación por motivo
+                updateClasificacionRetirosPorMotivo(todosLosRetiros);
+            });
+        }
+
+        // Nueva función para actualizar clasificación de egresos con datos de todas las APIs
+        function actualizarClasificacionEgresos() {
+            const ano = document.getElementById('filtroAno').value;
+            const mes = document.getElementById('filtroMes').value;
+            
+            // Obtener datos de egresos de todas las sucursales
+            Promise.all([
+                fetch(`https://opticas.xyz/api/egresos?ano=${ano}&mes=${mes}`).then(r => r.json()).catch(() => ({ egresos: [] })),
+                fetch(`https://escleroptica2.opticas.xyz/api/egresos?ano=${ano}&mes=${mes}`).then(r => r.json()).catch(() => ({ egresos: [] })),
+                fetch(`https://sucursal3.opticas.xyz/api/egresos?ano=${ano}&mes=${mes}`).then(r => r.json()).catch(() => ({ egresos: [] }))
+            ]).then(([dataMatriz, dataRocio, dataNorte]) => {
+                // Agregar la información de sucursal a cada egreso
+                const egresosMatriz = dataMatriz.egresos ? dataMatriz.egresos.map(e => ({...e, sucursal: 'matriz'})) : [];
+                const egresosRocio = dataRocio.egresos ? dataRocio.egresos.map(e => ({...e, sucursal: 'rocio'})) : [];
+                const egresosNorte = dataNorte.egresos ? dataNorte.egresos.map(e => ({...e, sucursal: 'norte'})) : [];
+                
+                // Combinar todos los egresos
+                const todosLosEgresos = [...egresosMatriz, ...egresosRocio, ...egresosNorte];
+                
+                // Actualizar clasificación por motivo
+                updateClasificacionEgresosPorMotivo(todosLosEgresos);
+            });
         }
     </script>
 @stop 
