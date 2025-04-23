@@ -11,6 +11,10 @@ class PedidosController extends Controller
 {
     public function __construct()
     {
+        // Aplicar middleware de autenticación a todas las rutas excepto las públicas
+        $this->middleware('auth')->except(['calificarPublico', 'guardarCalificacionPublica']);
+        
+        // Aplicar middleware de administrador solo a estas rutas
         $this->middleware('can:admin')->only(['edit', 'update', 'destroy']);
     }
 
