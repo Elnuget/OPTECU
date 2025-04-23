@@ -395,7 +395,7 @@
                             mensajeSaludo + "\n\n" + 
                             mensajeLentes + "\n" + 
                             mensajeEncuesta + "\n\n" + 
-                            response.texto_amigable + "\n" + 
+                            "Copia y pega el siguiente enlace en tu navegador para completar la encuesta:" + "\n" + 
                             response.url
                         );
                         
