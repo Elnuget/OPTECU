@@ -101,6 +101,13 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::patch('/pedidos/{id}/approve', [PedidosController::class, 'approve'])->name('pedidos.approve');
     Route::put('pedidos/{id}/calificar', [PedidosController::class, 'calificar'])
         ->name('pedidos.calificar');
+    Route::post('/pedidos/{id}/enviar-encuesta', [PedidosController::class, 'enviarEncuesta'])
+        ->name('pedidos.enviar-encuesta')
+        ->middleware('web');
+    
+    Route::post('/pedidos/{id}/actualizar-estado-encuesta/{estado?}', [PedidosController::class, 'actualizarEstadoEncuesta'])
+        ->name('pedidos.actualizar-estado-encuesta')
+        ->middleware('web');
 
     // Historiales Clinicos
     Route::prefix('historiales_clinicos')->group(function () {
@@ -195,7 +202,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 });
 
 // Rutas públicas para calificación
-Route::get('/pedidos/{id}/calificar/{token}', [App\Http\Controllers\PedidosController::class, 'calificarPublico'])
+Route::get('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'calificarPublico'])
     ->name('pedidos.calificar-publico');
-Route::post('/pedidos/{id}/calificar/{token}', [App\Http\Controllers\PedidosController::class, 'guardarCalificacionPublica'])
+Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guardarCalificacionPublica'])
     ->name('pedidos.guardar-calificacion-publica');

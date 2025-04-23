@@ -125,15 +125,18 @@
                         <td>
                             {{ $pedido->celular }}
                             @if($pedido->celular)
-                                @php
-                                    $mensaje = urlencode("Estimado(a) paciente, le informamos que sus lentes recetados ya están listos para ser recogidos en ESCLERÓPTICA. Puede pasar a retirarlos cuando le sea más conveniente. ¡Lo esperamos pronto! Muchas gracias por confiar en nosotros.");
-                                @endphp
-                                <a href="https://api.whatsapp.com/send?phone=593{{ ltrim($pedido->celular, '0') }}&text={{ $mensaje }}" 
-                                   target="_blank" 
-                                   class="btn btn-success btn-sm ml-1"
-                                   title="Enviar WhatsApp">
+                                <button 
+                                    class="btn {{ trim($pedido->encuesta) === 'enviado' ? 'btn-warning' : 'btn-success' }} btn-sm ml-1 btn-whatsapp-mensaje"
+                                    data-pedido-id="{{ $pedido->id }}"
+                                    data-celular="{{ ltrim($pedido->celular, '0') }}"
+                                    data-cliente="{{ $pedido->cliente }}"
+                                    data-estado-actual="{{ trim($pedido->encuesta) }}"
+                                    title="{{ trim($pedido->encuesta) === 'enviado' ? 'Volver a enviar mensaje y encuesta' : 'Enviar mensaje y encuesta' }}">
                                     <i class="fab fa-whatsapp"></i>
-                                </a>
+                                    <span class="button-text">
+                                        {{ trim($pedido->encuesta) === 'enviado' ? 'Volver a enviar' : 'Enviar' }}
+                                    </span>
+                                </button>
                             @endif
                         </td>
                         <td>{{ $pedido->paciente }}</td>
@@ -248,6 +251,17 @@
 .rating label:hover ~ label {
     color: #ffd700;
 }
+
+/* Estilos para el botón de WhatsApp */
+.btn-whatsapp-mensaje {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-whatsapp-mensaje .button-text {
+    font-size: 0.875rem;
+}
 </style>
 @endpush
 @stop
@@ -347,6 +361,56 @@
                 },
                 error: function(xhr) {
                     alert('Error al eliminar el pedido');
+                }
+            });
+        });
+
+        // Manejar el envío del mensaje de WhatsApp con encuesta
+        $('.btn-whatsapp-mensaje').click(function(e) {
+            e.preventDefault();
+            var button = $(this);
+            var pedidoId = button.data('pedido-id');
+            var celular = button.data('celular');
+            var cliente = button.data('cliente');
+            var estadoActual = button.data('estado-actual');
+
+            // Primero obtener la URL de la encuesta y actualizar estado
+            $.ajax({
+                url: '/pedidos/' + pedidoId + '/enviar-encuesta',
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Construir mensaje con saludo personalizado al cliente
+                        var mensajeSaludo = "Estimado(a) cliente " + cliente + ",";
+                        var mensajeLentes = "Le informamos que sus lentes recetados ya están listos para ser recogidos en ESCLERÓPTICA. Puede pasar a retirarlos cuando le sea más conveniente. ¡Lo esperamos pronto!";
+                        
+                        // El enlace debe ir por separado, para que WhatsApp lo reconozca como clicable
+                        var mensajeEncuesta = "\n\nNos gustaría conocer su opinión. Por favor, complete nuestra breve encuesta de satisfacción:";
+                        
+                        // Crear el mensaje completo con texto amigable para el enlace
+                        var mensajeCompleto = encodeURIComponent(
+                            mensajeSaludo + "\n\n" + 
+                            mensajeLentes + "\n" + 
+                            mensajeEncuesta + "\n\n" + 
+                            response.texto_amigable + "\n" + 
+                            response.url
+                        );
+                        
+                        // Abrir WhatsApp con el mensaje completo
+                        window.open("https://api.whatsapp.com/send?phone=593" + celular + "&text=" + mensajeCompleto, '_blank');
+
+                        // Actualizar el estado visual del botón solo si fue exitoso
+                        button.removeClass('btn-success').addClass('btn-warning');
+                        button.attr('title', 'Volver a enviar mensaje y encuesta');
+                        button.find('.button-text').text('Volver a enviar');
+                        button.data('estado-actual', 'enviado');
+                    }
+                },
+                error: function(xhr) {
+                    alert('Error al generar el enlace de la encuesta: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Error desconocido'));
                 }
             });
         });

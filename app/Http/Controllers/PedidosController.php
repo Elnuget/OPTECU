@@ -47,10 +47,23 @@ class PedidosController extends Controller
                 'total',
                 'saldo',
                 'fact',
-                'usuario'
+                'usuario',
+                'encuesta' // Asegurarnos de que la columna encuesta se cargue explícitamente
             ])
             ->orderBy('numero_orden', 'desc')
             ->get();
+
+            // Log para debugging
+            \Log::info('Pedidos cargados:', [
+                'count' => $pedidos->count(),
+                'muestra' => $pedidos->take(3)->map(function($p) {
+                    return [
+                        'id' => $p->id,
+                        'cliente' => $p->cliente,
+                        'encuesta' => $p->encuesta
+                    ];
+                })
+            ]);
 
             // Calcular totales de los pedidos filtrados
             $totales = [
@@ -227,10 +240,10 @@ class PedidosController extends Controller
 
             \DB::commit();
 
-            // Enviar correo de calificación si hay correo electrónico
-            if ($pedido->correo_electronico) {
-                \Mail::to($pedido->correo_electronico)->send(new \App\Mail\CalificacionPedido($pedido));
-            }
+            // Eliminar el envío de correo electrónico
+            // if ($pedido->correo_electronico) {
+            //     \Mail::to($pedido->correo_electronico)->send(new \App\Mail\CalificacionPedido($pedido));
+            // }
 
             return redirect('/Pedidos')->with([
                 'error' => 'Exito',
@@ -416,53 +429,190 @@ class PedidosController extends Controller
         return view('pedidos.inventario-historial', compact('inventario'));
     }
 
+    public function enviarEncuesta($id)
+    {
+        try {
+            // Log del inicio del proceso
+            \Log::info('Iniciando generación de encuesta para pedido ID: ' . $id);
+
+            $pedido = Pedido::findOrFail($id);
+            \Log::info('Pedido encontrado:', [
+                'id' => $pedido->id,
+                'created_at' => $pedido->created_at,
+                'cliente' => $pedido->cliente,
+                'estado_encuesta' => $pedido->encuesta
+            ]);
+            
+            // Verificar si el pedido tiene los datos necesarios
+            if (!$pedido->created_at) {
+                \Log::error('El pedido no tiene fecha de creación');
+                throw new \Exception('El pedido no tiene fecha de creación');
+            }
+
+            if (!$pedido->id) {
+                \Log::error('El pedido no tiene ID válido');
+                throw new \Exception('El pedido no tiene ID válido');
+            }
+            
+            // Generar el token usando una cadena más simple
+            try {
+                $token = hash('sha256', $pedido->id . $pedido->created_at->timestamp);
+                \Log::info('Token generado exitosamente');
+            } catch (\Exception $e) {
+                \Log::error('Error al generar token: ' . $e->getMessage());
+                throw new \Exception('Error al generar el token de la encuesta: ' . $e->getMessage());
+            }
+            
+            // Verificar la configuración de la URL
+            $baseUrl = config('app.url');
+            \Log::info('URL base de la aplicación: ' . $baseUrl);
+            
+            if (!$baseUrl) {
+                $baseUrl = request()->getSchemeAndHttpHost();
+                \Log::info('Usando URL alternativa: ' . $baseUrl);
+            }
+            
+            try {
+                // Construir la URL de la encuesta
+                $urlEncuesta = route('pedidos.calificar-publico', [
+                    'id' => $pedido->id, 
+                    'token' => $token
+                ], true);
+                
+                // Crear un texto amigable para el enlace
+                $textoAmigable = "➡️ *CLICK AQUÍ PARA COMPLETAR LA ENCUESTA* ⬅️";
+                
+                \Log::info('URL de encuesta generada:', ['url' => $urlEncuesta]);
+            } catch (\Exception $e) {
+                \Log::error('Error al generar URL de encuesta: ' . $e->getMessage());
+                throw new \Exception('Error al generar la URL de la encuesta: ' . $e->getMessage());
+            }
+            
+            try {
+                // Actualizar el estado de la encuesta usando el valor correcto del enum
+                $pedido->encuesta = 'enviado';
+                $pedido->save();
+                \Log::info('Estado de encuesta actualizado a enviado');
+            } catch (\Exception $e) {
+                \Log::error('Error al actualizar estado de encuesta: ' . $e->getMessage());
+                throw new \Exception('Error al actualizar el estado de la encuesta: ' . $e->getMessage());
+            }
+
+            return response()->json([
+                'success' => true,
+                'url' => $urlEncuesta,
+                'texto_amigable' => $textoAmigable,
+                'estado' => 'enviado',
+                'mensaje' => 'Encuesta enviada exitosamente'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error completo al generar enlace de encuesta: ' . $e->getMessage(), [
+                'pedido_id' => $id,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al generar el enlace de la encuesta: ' . $e->getMessage(),
+                'details' => [
+                    'pedido_id' => $id,
+                    'error_type' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
+            ], 500);
+        }
+    }
+
     public function calificarPublico($id, $token)
     {
-        $pedido = Pedido::findOrFail($id);
-        
-        // Verificar que el token sea válido
-        if ($token !== hash('sha256', $pedido->id . $pedido->created_at)) {
-            abort(403, 'Token inválido');
-        }
+        try {
+            $pedido = Pedido::findOrFail($id);
+            
+            // Generar el token de la misma manera que en enviarEncuesta
+            $tokenEsperado = hash('sha256', $pedido->id . $pedido->created_at->timestamp);
+            
+            // Verificar que el token sea válido
+            if ($token !== $tokenEsperado) {
+                abort(403, 'Token inválido');
+            }
 
-        // Si ya está calificado, mostrar mensaje
-        if ($pedido->calificacion) {
-            return view('pedidos.calificacion-completa');
-        }
+            // Si ya está calificado, mostrar mensaje
+            if ($pedido->calificacion) {
+                return view('pedidos.calificacion-completa');
+            }
 
-        return view('pedidos.calificar-publico', compact('pedido', 'token'));
+            return view('pedidos.calificar-publico', compact('pedido', 'token'));
+        } catch (\Exception $e) {
+            \Log::error('Error en calificarPublico: ' . $e->getMessage());
+            abort(500, 'Error al procesar la encuesta');
+        }
     }
 
     public function guardarCalificacionPublica(Request $request, $id, $token)
     {
-        $pedido = Pedido::findOrFail($id);
-        
-        // Verificar que el token sea válido
-        if ($token !== hash('sha256', $pedido->id . $pedido->created_at)) {
-            abort(403, 'Token inválido');
+        try {
+            $pedido = Pedido::findOrFail($id);
+            
+            // Generar el token de la misma manera que en enviarEncuesta
+            $tokenEsperado = hash('sha256', $pedido->id . $pedido->created_at->timestamp);
+            
+            // Verificar que el token sea válido
+            if ($token !== $tokenEsperado) {
+                abort(403, 'Token inválido');
+            }
+
+            // Si ya está calificado, mostrar error
+            if ($pedido->calificacion) {
+                return redirect()->back()->with('error', 'Este pedido ya ha sido calificado');
+            }
+
+            $request->validate([
+                'calificacion' => 'required|integer|min:1|max:5',
+                'comentario' => 'nullable|string|max:1000'
+            ]);
+
+            $comentarioFinal = $request->comentario 
+                ? $pedido->cliente . ': ' . $request->comentario
+                : $pedido->cliente;
+
+            $pedido->update([
+                'calificacion' => $request->calificacion,
+                'comentario_calificacion' => $comentarioFinal,
+                'fecha_calificacion' => now()
+            ]);
+
+            return view('pedidos.gracias-calificacion');
+        } catch (\Exception $e) {
+            \Log::error('Error en guardarCalificacionPublica: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error al guardar la calificación');
         }
+    }
 
-        // Si ya está calificado, mostrar error
-        if ($pedido->calificacion) {
-            return redirect()->back()->with('error', 'Este pedido ya ha sido calificado');
+    public function actualizarEstadoEncuesta($id, $estado = 'enviado')
+    {
+        try {
+            $pedido = Pedido::findOrFail($id);
+            
+            // Actualizar estado
+            $pedido->encuesta = $estado;
+            $pedido->save();
+            
+            // Verificar que se haya guardado correctamente
+            $pedidoActualizado = Pedido::find($id);
+            
+            return response()->json([
+                'success' => true,
+                'estadoOriginal' => $estado,
+                'estadoActual' => $pedidoActualizado->encuesta,
+                'mensaje' => 'Estado actualizado a ' . $estado
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar estado: ' . $e->getMessage()
+            ], 500);
         }
-
-        $request->validate([
-            'calificacion' => 'required|integer|min:1|max:5',
-            'comentario' => 'nullable|string|max:1000'
-        ]);
-
-        $comentarioFinal = $request->comentario 
-            ? $pedido->cliente . ': ' . $request->comentario
-            : $pedido->cliente;
-
-        $pedido->update([
-            'calificacion' => $request->calificacion,
-            'comentario_calificacion' => $comentarioFinal,
-            'fecha_calificacion' => now()
-        ]);
-
-        return view('pedidos.gracias-calificacion');
     }
 
 }
