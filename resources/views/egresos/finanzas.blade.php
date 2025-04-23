@@ -1423,18 +1423,21 @@
             
             if (motivo.includes('deposito') || motivo.includes('depósito')) {
                 return 'DEPÓSITOS';
-            } else if (motivo.includes('luz') || motivo.includes('servicios')) {
+            } else if (motivo.includes('luz') || motivo.includes('servicios') || motivo.includes('internet')) {
                 return 'SERVICIOS';
-            } else if (motivo.includes('almuerzo') || motivo.includes('ceviche') || motivo.includes('heladeria') || motivo.includes('gaseosa')) {
+            } else if (motivo.includes('almuerzo') || motivo.includes('ceviche') || motivo.includes('heladeria') || 
+                      motivo.includes('gaseosa') || motivo.includes('alimentacion') || motivo.includes('hogar alimentacion')) {
                 return 'ALIMENTACIÓN';
             } else if (motivo.includes('papel') || motivo.includes('caramelos') || motivo.includes('fruta')) {
                 return 'SUMINISTROS';
             } else if (motivo.includes('bisel') || motivo.includes('importvision') || motivo.includes('santa fe')) {
                 return 'INSUMOS ÓPTICOS';
-            } else if (motivo.includes('parqueadero') || motivo.includes('pasaje')) {
+            } else if (motivo.includes('parqueadero') || motivo.includes('pasaje') || motivo.includes('gasolina')) {
                 return 'TRANSPORTE';
-            } else if (motivo.includes('suelda') || motivo.includes('sueldo')) {
+            } else if (motivo.includes('suelda') || motivo.includes('sueldo') || motivo.includes('abraham')) {
                 return 'PAGOS';
+            } else if (motivo.includes('prestamo') || motivo.includes('tarjeta')) {
+                return 'PRÉSTAMOS';
             } else {
                 return 'OTROS';
             }
@@ -1450,6 +1453,10 @@
                 'INSUMOS ÓPTICOS': 'fa-glasses',
                 'TRANSPORTE': 'fa-car',
                 'PAGOS': 'fa-hand-holding-usd',
+                'PAGOS DE PERSONAL': 'fa-user-tie',
+                'PRÉSTAMOS': 'fa-credit-card',
+                'PRÉSTAMOS Y TARJETAS': 'fa-credit-card',
+                'FAMILIA': 'fa-users',
                 'OTROS': 'fa-ellipsis-h'
             };
             return iconos[categoria] || 'fa-ellipsis-h';
@@ -1601,6 +1608,47 @@
             }
         }
 
+        // Función para clasificar los motivos de egresos
+        function clasificarMotivoEgreso(motivo) {
+            motivo = motivo.toLowerCase();
+            
+            // Verificar si el motivo comienza con un nombre de persona
+            if (/^(abraham|wendy|rogger|carlos|maría|jose|juan|ana|luis|pedro|jorge|laura|sofia)/i.test(motivo)) {
+                // Si está junto a "pago" o "sueldo", es pago de personal
+                if (motivo.includes("pago") || motivo.includes("sueldo")) {
+                    return 'PAGOS DE PERSONAL';
+                }
+                // De lo contrario, es familia
+                return 'FAMILIA';
+            } else if (motivo.includes('deposito') || motivo.includes('depósito')) {
+                return 'DEPÓSITOS';
+            } else if (motivo.includes('luz') || motivo.includes('servicios') || motivo.includes('internet')) {
+                return 'SERVICIOS';
+            } else if (motivo.includes('almuerzo') || motivo.includes('ceviche') || 
+                      motivo.includes('heladeria') || motivo.includes('gaseosa') || 
+                      motivo.includes('alimentacion') || motivo.includes('hogar alimentacion')) {
+                return 'ALIMENTACIÓN';
+            } else if (motivo.includes('papel') || motivo.includes('caramelos') || 
+                      motivo.includes('fruta') || motivo.includes('suministros')) {
+                return 'SUMINISTROS';
+            } else if (motivo.includes('bisel') || motivo.includes('importvision') || 
+                      motivo.includes('santa fe') || motivo.includes('médicos') || 
+                      motivo.includes('medicos') || motivo.includes('ópticos')) {
+                return 'INSUMOS ÓPTICOS';
+            } else if (motivo.includes('parqueadero') || motivo.includes('pasaje') || 
+                      motivo.includes('gasolina')) {
+                return 'TRANSPORTE';
+            } else if (motivo.includes('suelda') || motivo.includes('sueldo') || 
+                      motivo.includes('pago')) {
+                return 'PAGOS DE PERSONAL';
+            } else if (motivo.includes('prestamo') || motivo.includes('tarjeta de credito') || 
+                      motivo.includes('tarjeta madre') || motivo.includes('tarjeta wendy')) {
+                return 'PRÉSTAMOS Y TARJETAS';
+            } else {
+                return 'OTROS';
+            }
+        }
+
         // Función para actualizar la clasificación de egresos por motivo
         function updateClasificacionEgresosPorMotivo(egresos) {
             const sucursal = tipoSucursal !== 'todas' ? tipoSucursal : document.getElementById('filtroSucursal').value;
@@ -1611,7 +1659,9 @@
                 'SUMINISTROS': 0,
                 'INSUMOS ÓPTICOS': 0,
                 'TRANSPORTE': 0,
-                'PAGOS': 0,
+                'PAGOS DE PERSONAL': 0,
+                'PRÉSTAMOS Y TARJETAS': 0,
+                'FAMILIA': 0,
                 'OTROS': 0
             };
 
@@ -1622,7 +1672,7 @@
             });
 
             egresosAMostrar.forEach(egreso => {
-                const categoria = clasificarMotivoRetiro(egreso.motivo);
+                const categoria = clasificarMotivoEgreso(egreso.motivo);
                 clasificacion[categoria] += Math.abs(parseFloat(egreso.valor));
             });
 
@@ -1650,7 +1700,7 @@
             // Crear un objeto para almacenar los detalles por categoría
             const detallesPorCategoria = {};
             egresosAMostrar.forEach(egreso => {
-                const categoria = clasificarMotivoRetiro(egreso.motivo);
+                const categoria = clasificarMotivoEgreso(egreso.motivo);
                 if (!detallesPorCategoria[categoria]) {
                     detallesPorCategoria[categoria] = [];
                 }
@@ -1747,6 +1797,18 @@
             const ano = document.getElementById('filtroAno').value;
             const mes = document.getElementById('filtroMes').value;
             
+            // Mostrar mensaje de carga en el contenedor de clasificación de retiros
+            const desgloseContainer = document.getElementById('desglose-clasificacion-retiros');
+            desgloseContainer.innerHTML = `
+                <div class="col-12">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <i class="fas fa-spinner fa-spin"></i> CARGANDO DATOS DE CLASIFICACIÓN...
+                        </div>
+                    </div>
+                </div>
+            `;
+            
             // Obtener datos de retiros de todas las sucursales
             Promise.all([
                 fetch(`https://opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`).then(r => r.json()).catch(() => ({ retiros: [] })),
@@ -1763,6 +1825,17 @@
                 
                 // Actualizar clasificación por motivo
                 updateClasificacionRetirosPorMotivo(todosLosRetiros);
+            }).catch(error => {
+                console.error('Error al obtener datos de retiros:', error);
+                desgloseContainer.innerHTML = `
+                    <div class="col-12">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-exclamation-triangle"></i> ERROR AL CARGAR LOS DATOS DE CLASIFICACIÓN
+                            </div>
+                        </div>
+                    </div>
+                `;
             });
         }
 
@@ -1770,6 +1843,18 @@
         function actualizarClasificacionEgresos() {
             const ano = document.getElementById('filtroAno').value;
             const mes = document.getElementById('filtroMes').value;
+            
+            // Mostrar mensaje de carga en el contenedor de clasificación de egresos
+            const desgloseContainer = document.getElementById('desglose-clasificacion-egresos');
+            desgloseContainer.innerHTML = `
+                <div class="col-12">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <i class="fas fa-spinner fa-spin"></i> CARGANDO DATOS DE CLASIFICACIÓN...
+                        </div>
+                    </div>
+                </div>
+            `;
             
             // Obtener datos de egresos de todas las sucursales
             Promise.all([
@@ -1785,8 +1870,19 @@
                 // Combinar todos los egresos
                 const todosLosEgresos = [...egresosMatriz, ...egresosRocio, ...egresosNorte];
                 
-                // Actualizar clasificación por motivo
+                // Actualizar clasificación por motivo usando la función específica para egresos
                 updateClasificacionEgresosPorMotivo(todosLosEgresos);
+            }).catch(error => {
+                console.error('Error al obtener datos de egresos:', error);
+                desgloseContainer.innerHTML = `
+                    <div class="col-12">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-exclamation-triangle"></i> ERROR AL CARGAR LOS DATOS DE CLASIFICACIÓN
+                            </div>
+                        </div>
+                    </div>
+                `;
             });
         }
     </script>
