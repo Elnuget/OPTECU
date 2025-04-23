@@ -353,6 +353,7 @@ class HistorialClinicoController extends Controller
                         'id' => $paciente->id,
                         'nombres' => $paciente->nombres,
                         'apellidos' => $paciente->apellidos,
+                        'nombre_completo' => strtoupper($paciente->nombres . ' ' . $paciente->apellidos),
                         'fecha_nacimiento' => $fechaNacimiento->format('d/m/Y'),
                         'dia_cumpleanos' => $fechaNacimiento->format('d'),
                         'dia_nombre' => $fechaNacimiento->locale('es')->format('l'), // Nombre del día
@@ -363,8 +364,22 @@ class HistorialClinicoController extends Controller
                     ];
                 });
             
+            // Eliminar duplicados basados en nombre completo, conservando el registro más reciente (ID mayor)
+            $nombresCumpleaneros = [];
+            $cumpleanerosFiltrados = collect();
+            
+            foreach ($cumpleaneros->sortByDesc('id') as $cumpleanero) {
+                if (!in_array($cumpleanero['nombre_completo'], $nombresCumpleaneros)) {
+                    $nombresCumpleaneros[] = $cumpleanero['nombre_completo'];
+                    $cumpleanerosFiltrados->push($cumpleanero);
+                }
+            }
+            
+            // Reordenar por día de cumpleaños
+            $cumpleanerosFiltrados = $cumpleanerosFiltrados->sortBy('dia_cumpleanos')->values();
+            
             return view('historiales_clinicos.cumpleanos', [
-                'cumpleaneros' => $cumpleaneros,
+                'cumpleaneros' => $cumpleanerosFiltrados,
                 'mes_actual' => now()->formatLocalized('%B')
             ]);
             
@@ -557,21 +572,34 @@ class HistorialClinicoController extends Controller
                         'id' => $historial->id,
                         'nombres' => $historial->nombres,
                         'apellidos' => $historial->apellidos,
+                        'nombre_completo' => strtoupper($historial->nombres . ' ' . $historial->apellidos),
                         'celular' => $historial->celular,
                         'fecha_consulta' => $proximaConsulta->format('d/m/Y'),
                         'dias_restantes' => max(0, $diasRestantes),
                         'ultima_consulta' => $historial->fecha ? \Carbon\Carbon::parse($historial->fecha)->format('d/m/Y') : 'SIN CONSULTAS',
                         'motivo_consulta' => $historial->motivo_consulta
                     ];
-                })
-                ->sortBy('dias_restantes')
-                ->values();
+                });
+            
+            // Eliminar duplicados basados en nombre completo, conservando el registro más reciente
+            $nombresConsultas = [];
+            $consultasFiltradas = collect();
+            
+            foreach ($consultas->sortByDesc('id') as $consulta) {
+                if (!in_array($consulta['nombre_completo'], $nombresConsultas)) {
+                    $nombresConsultas[] = $consulta['nombre_completo'];
+                    $consultasFiltradas->push($consulta);
+                }
+            }
+            
+            // Reordenar por días restantes
+            $consultasFiltradas = $consultasFiltradas->sortBy('dias_restantes')->values();
             
             // Obtener el nombre del mes actual
             $mesActual = $hoy->formatLocalized('%B');
             
             return view('mensajes.recordatorios', [
-                'consultas' => $consultas,
+                'consultas' => $consultasFiltradas,
                 'mes_actual' => strtoupper($mesActual)
             ]);
                 
