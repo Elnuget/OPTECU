@@ -78,9 +78,10 @@
                                 <div class="btn-group">
                                     @if($paciente['celular'])
                                         @php
+                                            $mesActual = now()->format('Y-m');
                                             $mensajeEnviado = \App\Models\MensajesEnviados::where('historial_id', $paciente['id'])
                                                 ->where('tipo', 'cumpleanos')
-                                                ->whereDate('fecha_envio', today())
+                                                ->whereRaw('DATE_FORMAT(fecha_envio, "%Y-%m") = ?', [$mesActual])
                                                 ->exists();
                                         @endphp
                                         
@@ -242,7 +243,8 @@ function enviarMensaje() {
         data: {
             _token: $('meta[name="csrf-token"]').attr('content'),
             mensaje: mensaje,
-            tipo: 'cumpleanos'
+            tipo: 'cumpleanos',
+            forzar_envio: false
         },
         success: function(response) {
             // Actualizar el botón inmediatamente
@@ -267,6 +269,59 @@ function enviarMensaje() {
             let mensaje = 'Error al enviar el mensaje';
             if (xhr.responseJSON && xhr.responseJSON.error) {
                 mensaje = xhr.responseJSON.error;
+            }
+            
+            // Si requiere confirmación para reenviar en el mismo mes
+            if (xhr.responseJSON && xhr.responseJSON.requiere_confirmacion) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Atención',
+                    text: mensaje,
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, enviar de todos modos',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Reenviar con forzado
+                        $.ajax({
+                            url: `/historiales_clinicos/${pacienteId}/enviar-mensaje`,
+                            method: 'POST',
+                            data: {
+                                _token: $('meta[name="csrf-token"]').attr('content'),
+                                mensaje: mensaje,
+                                tipo: 'cumpleanos',
+                                forzar_envio: true
+                            },
+                            success: function(response) {
+                                // Abrir WhatsApp en nueva pestaña
+                                window.open(response.url, '_blank');
+                                
+                                // Cerrar el modal
+                                $('#enviarMensajeModal').modal('hide');
+                                
+                                // Mostrar mensaje de éxito
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡WhatsApp Abierto!',
+                                    text: 'Se ha abierto WhatsApp Web con el mensaje.'
+                                });
+                            },
+                            error: function(xhr) {
+                                let mensaje = 'Error al enviar el mensaje';
+                                if (xhr.responseJSON && xhr.responseJSON.error) {
+                                    mensaje = xhr.responseJSON.error;
+                                }
+                                
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: mensaje
+                                });
+                            }
+                        });
+                    }
+                });
+                return;
             }
             
             Swal.fire({

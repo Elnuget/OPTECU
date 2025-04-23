@@ -472,15 +472,17 @@ class HistorialClinicoController extends Controller
         try {
             $historial = HistorialClinico::findOrFail($id);
             
-            // Verificar si ya se envió un mensaje hoy
+            // Verificar si ya se envió un mensaje este mes
+            $mesActual = now()->format('Y-m');
             $mensajeEnviado = MensajesEnviados::where('historial_id', $id)
                 ->where('tipo', $request->tipo)
-                ->whereDate('fecha_envio', today())
+                ->whereRaw('DATE_FORMAT(fecha_envio, "%Y-%m") = ?', [$mesActual])
                 ->exists();
                 
-            if ($mensajeEnviado) {
+            if ($mensajeEnviado && $request->has('forzar_envio') && !$request->forzar_envio) {
                 return response()->json([
-                    'error' => 'Ya se envió un mensaje hoy a este paciente'
+                    'error' => 'Ya se envió un mensaje este mes a este paciente',
+                    'requiere_confirmacion' => true
                 ], 422);
             }
 
