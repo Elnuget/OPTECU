@@ -192,6 +192,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::get('/recordatorios', [HistorialClinicoController::class, 'recordatoriosConsulta'])
             ->name('mensajes.recordatorios');
     });
+    
+    // Ruta para configurar mensajes predeterminados
+    Route::post('/configuraciones/mensajes-predeterminados', [HistorialClinicoController::class, 'guardarMensajePredeterminado'])
+        ->name('configuraciones.mensajes-predeterminados');
 
     // Mover esta ruta específica antes del resource
     Route::get('/egresos/finanzas', [EgresoController::class, 'finanzas'])

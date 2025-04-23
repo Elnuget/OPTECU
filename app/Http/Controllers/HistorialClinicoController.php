@@ -505,6 +505,36 @@ class HistorialClinicoController extends Controller
         }
     }
 
+    /**
+     * Guarda un mensaje predeterminado en la sesión
+     */
+    public function guardarMensajePredeterminado(Request $request)
+    {
+        try {
+            $request->validate([
+                'tipo' => 'required|string',
+                'mensaje' => 'required|string'
+            ]);
+            
+            // Guardar en la sesión según el tipo
+            if ($request->tipo == 'cumpleanos') {
+                session(['mensaje_predeterminado' => $request->mensaje]);
+            } else if ($request->tipo == 'consulta') {
+                session(['mensaje_predeterminado_consulta' => $request->mensaje]);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Mensaje predeterminado guardado correctamente'
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function recordatoriosConsulta()
     {
         try {

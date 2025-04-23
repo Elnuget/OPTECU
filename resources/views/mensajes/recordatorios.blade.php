@@ -74,11 +74,19 @@
                             <td>
                                 <div class="btn-group">
                                     @if($consulta['celular'])
+                                        @php
+                                            $mensajeEnviado = \App\Models\MensajesEnviados::where('historial_id', $consulta['id'])
+                                                ->where('tipo', 'consulta')
+                                                ->whereDate('fecha_envio', today())
+                                                ->exists();
+                                        @endphp
+                                        
                                         <button type="button" 
-                                            class="btn btn-success btn-sm btn-enviar-mensaje"
+                                            class="btn {{ $mensajeEnviado ? 'btn-warning' : 'btn-success' }} btn-sm btn-enviar-mensaje"
                                             data-paciente-id="{{ $consulta['id'] }}"
                                             onclick="mostrarModalMensaje({{ $consulta['id'] }}, '{{ $consulta['nombres'] }}', '{{ $consulta['fecha_consulta'] }}')">
-                                            <i class="fab fa-whatsapp"></i> ENVIAR RECORDATORIO
+                                            <i class="fab fa-whatsapp"></i> 
+                                            {{ $mensajeEnviado ? 'VOLVER A ENVIAR' : 'ENVIAR RECORDATORIO' }}
                                         </button>
                                     @endif
                                 </div>
@@ -106,13 +114,13 @@
                 <form id="mensajePredeterminadoForm">
                     <div class="form-group">
                         <label>MENSAJE DE RECORDATORIO:</label>
-                        <textarea class="form-control" id="mensajePredeterminado" rows="6">Estimado/a [NOMBRE],
+                        <textarea class="form-control" id="mensajePredeterminado" rows="6">{{ session('mensaje_predeterminado_consulta', 'Estimado/a [NOMBRE],
 
 Le recordamos su cita programada para el [FECHA].
 
 Por favor, confirme su asistencia.
 
-¡Le esperamos!</textarea>
+¡Le esperamos!') }}</textarea>
                     </div>
                 </form>
             </div>
@@ -178,11 +186,6 @@ Por favor, confirme su asistencia.
 @section('js')
 <script>
 function mostrarModalMensaje(pacienteId, nombrePaciente, fechaConsulta) {
-    // Verificar si ya se envió mensaje hoy
-    const mensajesEnviados = JSON.parse(localStorage.getItem('mensajesEnviados') || '{}');
-    const fechaHoy = new Date().toISOString().split('T')[0];
-    const mensajeEnviado = mensajesEnviados[pacienteId];
-
     $('#pacienteId').val(pacienteId);
     $('#nombrePaciente').text(nombrePaciente);
     let mensaje = $('#mensajePredeterminado').val()
@@ -194,12 +197,36 @@ function mostrarModalMensaje(pacienteId, nombrePaciente, fechaConsulta) {
 
 function guardarMensajePredeterminado() {
     const mensaje = $('#mensajePredeterminado').val();
-    localStorage.setItem('mensajePredeterminadoConsulta', mensaje);
-    $('#editarMensajeModal').modal('hide');
-    Swal.fire({
-        icon: 'success',
-        title: '¡Guardado!',
-        text: 'El mensaje predeterminado ha sido actualizado.'
+    
+    // Guardar mensaje en la base de datos
+    $.ajax({
+        url: '/configuraciones/mensajes-predeterminados',
+        method: 'POST',
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            tipo: 'consulta',
+            mensaje: mensaje
+        },
+        success: function(response) {
+            $('#editarMensajeModal').modal('hide');
+            Swal.fire({
+                icon: 'success',
+                title: '¡Guardado!',
+                text: 'El mensaje predeterminado ha sido actualizado.'
+            });
+        },
+        error: function(xhr) {
+            let mensaje = 'Error al guardar el mensaje';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                mensaje = xhr.responseJSON.error;
+            }
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: mensaje
+            });
+        }
     });
 }
 
@@ -221,14 +248,6 @@ function enviarMensaje() {
         return;
     }
 
-    // Formatear el número para WhatsApp
-    let numeroWhatsapp = celular;
-    if (celular.startsWith('0')) {
-        numeroWhatsapp = '593' + celular.substring(1);
-    } else if (!celular.startsWith('593')) {
-        numeroWhatsapp = '593' + celular;
-    }
-
     // Registrar el mensaje como enviado
     $.ajax({
         url: `/historiales_clinicos/${pacienteId}/enviar-mensaje`,
@@ -239,14 +258,6 @@ function enviarMensaje() {
             tipo: 'consulta'
         },
         success: function(response) {
-            // Guardar en localStorage que el mensaje fue enviado
-            const mensajesEnviados = JSON.parse(localStorage.getItem('mensajesEnviados') || '{}');
-            mensajesEnviados[pacienteId] = {
-                fecha: new Date().toISOString().split('T')[0],
-                tipo: 'consulta'
-            };
-            localStorage.setItem('mensajesEnviados', JSON.stringify(mensajesEnviados));
-
             // Actualizar el botón inmediatamente
             const boton = $(`button[data-paciente-id="${pacienteId}"]`);
             boton.removeClass('btn-success')
@@ -281,29 +292,9 @@ function enviarMensaje() {
     });
 }
 
-// Cargar mensaje predeterminado y verificar mensajes enviados al iniciar la página
+// Cargar mensaje predeterminado al iniciar la página
 $(document).ready(function() {
-    const mensajeGuardado = localStorage.getItem('mensajePredeterminadoConsulta');
-    if (mensajeGuardado) {
-        $('#mensajePredeterminado').val(mensajeGuardado);
-    }
-
-    // Verificar mensajes enviados y actualizar botones
-    const mensajesEnviados = JSON.parse(localStorage.getItem('mensajesEnviados') || '{}');
-    const fechaHoy = new Date().toISOString().split('T')[0];
-    
-    // Recorrer todos los botones de enviar mensaje
-    $('.btn-enviar-mensaje').each(function() {
-        const pacienteId = $(this).data('paciente-id');
-        const mensajeEnviado = mensajesEnviados[pacienteId];
-        
-        // Si el mensaje fue enviado hoy, cambiar el botón a "Volver a enviar"
-        if (mensajeEnviado && mensajeEnviado.fecha === fechaHoy && mensajeEnviado.tipo === 'consulta') {
-            $(this).removeClass('btn-success')
-                .addClass('btn-warning')
-                .html('<i class="fab fa-whatsapp"></i> VOLVER A ENVIAR');
-        }
-    });
+    // No necesitamos verificar mensajes enviados aquí ya que lo hacemos en el servidor con @php
 });
 </script>
 @stop 

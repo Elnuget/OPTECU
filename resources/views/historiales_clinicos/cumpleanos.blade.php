@@ -197,12 +197,36 @@ function mostrarModalMensaje(pacienteId, nombrePaciente) {
 
 function guardarMensajePredeterminado() {
     const mensaje = $('#mensajePredeterminado').val();
-    localStorage.setItem('mensajePredeterminado', mensaje);
-    $('#editarMensajeModal').modal('hide');
-    Swal.fire({
-        icon: 'success',
-        title: '¡Guardado!',
-        text: 'El mensaje predeterminado ha sido actualizado.'
+    
+    // Guardar mensaje en la base de datos en lugar de localStorage
+    $.ajax({
+        url: '/configuraciones/mensajes-predeterminados',
+        method: 'POST',
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            tipo: 'cumpleanos',
+            mensaje: mensaje
+        },
+        success: function(response) {
+            $('#editarMensajeModal').modal('hide');
+            Swal.fire({
+                icon: 'success',
+                title: '¡Guardado!',
+                text: 'El mensaje predeterminado ha sido actualizado.'
+            });
+        },
+        error: function(xhr) {
+            let mensaje = 'Error al guardar el mensaje';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                mensaje = xhr.responseJSON.error;
+            }
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: mensaje
+            });
+        }
     });
 }
 
@@ -211,75 +235,52 @@ function enviarMensaje() {
     const mensaje = $('#mensajePersonalizado').val();
     const boton = $(`.btn-enviar-mensaje[data-paciente-id="${pacienteId}"]`);
     
-    // Obtener el número de teléfono del paciente de la tabla
-    const celular = $(`button[data-paciente-id="${pacienteId}"]`).closest('tr').find('td:eq(4)').text().trim();
-    
-    // Formatear el número de teléfono (eliminar espacios y caracteres especiales)
-    let numeroFormateado = celular.replace(/\D/g, '');
-    
-    // Agregar el código de país si no lo tiene
-    if (numeroFormateado.startsWith('0')) {
-        numeroFormateado = '593' + numeroFormateado.substring(1);
-    } else if (!numeroFormateado.startsWith('593')) {
-        numeroFormateado = '593' + numeroFormateado;
-    }
-    
-    // Codificar el mensaje para la URL
-    const mensajeCodificado = encodeURIComponent(mensaje);
-    
-    // Crear el enlace de WhatsApp
-    const whatsappUrl = `https://api.whatsapp.com/send?phone=${numeroFormateado}&text=${mensajeCodificado}`;
-    
-    // Guardar en localStorage que el mensaje fue enviado
-    const mensajesEnviados = JSON.parse(localStorage.getItem('mensajesEnviados') || '{}');
-    mensajesEnviados[pacienteId] = {
-        fecha: new Date().toISOString().split('T')[0],
-        tipo: 'cumpleanos'
-    };
-    localStorage.setItem('mensajesEnviados', JSON.stringify(mensajesEnviados));
-    
-    // Abrir WhatsApp Web en una nueva pestaña
-    window.open(whatsappUrl, '_blank');
-
-    // Marcar el botón como enviado
-    boton.removeClass('btn-success')
-         .addClass('btn-warning')
-         .html('<i class="fab fa-whatsapp"></i> VOLVER A ENVIAR');
-    
-    // Cerrar el modal
-    $('#enviarMensajeModal').modal('hide');
-    
-    // Mostrar mensaje de éxito
-    Swal.fire({
-        icon: 'success',
-        title: '¡WhatsApp Abierto!',
-        text: 'Se ha abierto WhatsApp Web con el mensaje predeterminado.'
+    // Registrar el mensaje en la base de datos y enviar
+    $.ajax({
+        url: `/historiales_clinicos/${pacienteId}/enviar-mensaje`,
+        method: 'POST',
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            mensaje: mensaje,
+            tipo: 'cumpleanos'
+        },
+        success: function(response) {
+            // Actualizar el botón inmediatamente
+            boton.removeClass('btn-success')
+                 .addClass('btn-warning')
+                 .html('<i class="fab fa-whatsapp"></i> VOLVER A ENVIAR');
+            
+            // Abrir WhatsApp en nueva pestaña
+            window.open(response.url, '_blank');
+            
+            // Cerrar el modal
+            $('#enviarMensajeModal').modal('hide');
+            
+            // Mostrar mensaje de éxito
+            Swal.fire({
+                icon: 'success',
+                title: '¡WhatsApp Abierto!',
+                text: 'Se ha abierto WhatsApp Web con el mensaje.'
+            });
+        },
+        error: function(xhr) {
+            let mensaje = 'Error al enviar el mensaje';
+            if (xhr.responseJSON && xhr.responseJSON.error) {
+                mensaje = xhr.responseJSON.error;
+            }
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: mensaje
+            });
+        }
     });
 }
 
-// Agregar esta función para verificar mensajes enviados al cargar la página
+// Cargar mensaje predeterminado al iniciar la página
 $(document).ready(function() {
-    const mensajeGuardado = localStorage.getItem('mensajePredeterminado');
-    if (mensajeGuardado) {
-        $('#mensajePredeterminado').val(mensajeGuardado);
-    }
-
-    // Verificar mensajes enviados
-    const mensajesEnviados = JSON.parse(localStorage.getItem('mensajesEnviados') || '{}');
-    const fechaHoy = new Date().toISOString().split('T')[0];
-    
-    // Recorrer todos los botones de enviar mensaje
-    $('.btn-enviar-mensaje').each(function() {
-        const pacienteId = $(this).data('paciente-id');
-        const mensajeEnviado = mensajesEnviados[pacienteId];
-        
-        // Si el mensaje fue enviado hoy, cambiar el botón a "Volver a enviar"
-        if (mensajeEnviado && mensajeEnviado.fecha === fechaHoy && mensajeEnviado.tipo === 'cumpleanos') {
-            $(this).removeClass('btn-success')
-                  .addClass('btn-warning')
-                  .html('<i class="fab fa-whatsapp"></i> VOLVER A ENVIAR');
-        }
-    });
+    // No necesitamos verificar mensajes enviados aquí ya que lo hacemos en el servidor con @php
 });
 </script>
 @stop 
