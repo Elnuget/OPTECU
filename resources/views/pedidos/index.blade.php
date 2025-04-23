@@ -384,8 +384,8 @@
                 success: function(response) {
                     if (response.success) {
                         // Construir mensaje con saludo personalizado al cliente
-                        var mensajeSaludo = "Estimado(a) cliente " + cliente + ",";
-                        var mensajeLentes = "Le informamos que sus lentes recetados ya están listos para ser recogidos en ESCLERÓPTICA. Puede pasar a retirarlos cuando le sea más conveniente. ¡Lo esperamos pronto!";
+                        var mensajeSaludo = "Estimado(a) paciente " + cliente + ",";
+                        var mensajeLentes = "Le informamos que sus lentes recetados ya están listos para ser recogidos en ESCLERÓPTICA 👀👁. Puede pasar a retirarlos cuando le sea más conveniente. ¡Lo esperamos pronto! Muchas gracias por confiar en nosotros. 🤓👓😊";
                         
                         // El enlace debe ir por separado, para que WhatsApp lo reconozca como clicable
                         var mensajeEncuesta = "\n\nNos gustaría conocer su opinión. Por favor, complete nuestra breve encuesta de satisfacción:";

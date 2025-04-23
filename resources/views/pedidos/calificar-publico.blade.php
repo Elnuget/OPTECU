@@ -44,7 +44,7 @@
                 <h3>Califica tu Experiencia</h3>
             </div>
             <div class="card-body">
-                <h5 class="text-center mb-4">Hola {{ $pedido->cliente }}, nos gustaría conocer tu opinión</h5>
+                <h5 class="text-center mb-4">Hola {{ $pedido->cliente }}, nos gustaría conocer tu opinión acerca de la atención brindada por {{ $pedido->usuario }}</h5>
 
                 <form action="{{ route('pedidos.guardar-calificacion-publica', ['id' => $pedido->id, 'token' => $token]) }}" method="POST">
                     @csrf
