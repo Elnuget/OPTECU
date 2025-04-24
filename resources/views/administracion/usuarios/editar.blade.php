@@ -37,6 +37,11 @@
                                 <input name="email" required type="text" class="form-control" value = "{{$usuario->email}}">
                         </div>
                         <div class ="form-group">
+                                <label>CONTRASEÑA</label>
+                                <input name="password" type="password" class="form-control" placeholder="Dejar vacío para mantener la contraseña actual">
+                                <small class="text-muted">Ingrese una nueva contraseña solo si desea cambiarla</small>
+                        </div>
+                        <div class ="form-group">
                                 <label>ACTIVO</label>
                                 <select id="activo" name="activo" class="form-control">
                                 @if ($usuario->active === 1)

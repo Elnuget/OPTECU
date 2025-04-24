@@ -56,6 +56,12 @@ class UsuariosController extends Controller
         $usuario->email = $request->email;
         $usuario->active = $request->activo;
         $usuario->is_admin = $request->is_admin;
+        
+        // Actualizar la contraseña solo si se proporciona una nueva
+        if ($request->filled('password')) {
+            $usuario->password = Hash::make($request->password);
+        }
+        
         try {
             $usuario->save();
             return redirect()->route('configuracion.usuarios.index')->with([
