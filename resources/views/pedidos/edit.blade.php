@@ -193,12 +193,12 @@
                                 <div class="row">
                                     <div class="col-md-12">
                                         <label>Armazón (Inventario)</label>
-                                        <select name="a_inventario_id[]" class="form-control">
+                                        <select name="a_inventario_id[]" class="form-control selectpicker" data-live-search="true">
                                             <option value="">Seleccione un armazón</option>
                                             @foreach($inventarioItems as $item)
                                                 <option value="{{ $item->id }}" 
                                                     {{ $inventario->id == $item->id ? 'selected' : '' }}>
-                                                    {{ $item->codigo }}
+                                                    {{ $item->codigo }} - {{ $item->lugar ?? '' }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -208,12 +208,12 @@
                                     <div class="col-md-6">
                                         <label>Precio</label>
                                         <input type="number" name="a_precio[]" class="form-control" 
-                                            value="{{ $inventario->pivot->precio }}" step="0.01">
+                                            value="{{ $inventario->pivot->precio }}" step="0.01" oninput="calculateTotal()">
                                     </div>
                                     <div class="col-md-6">
                                         <label>Descuento (%)</label>
                                         <input type="number" name="a_precio_descuento[]" class="form-control" 
-                                            value="{{ $inventario->pivot->descuento }}" min="0" max="100">
+                                            value="{{ $inventario->pivot->descuento }}" min="0" max="100" oninput="calculateTotal()">
                                     </div>
                                 </div>
                                 @if($index > 0)
@@ -405,6 +405,42 @@
         Editar Pedido
     </div>
     <!-- /.card-footer-->
+
+    {{-- Datalists para las opciones --}}
+    <datalist id="tipo_lente_options">
+        <option value="Monofocal">
+        <option value="Bifocal">
+        <option value="Progresivo">
+        <option value="Ocupacional">
+        <option value="Contacto">
+    </datalist>
+    
+    <datalist id="material_options">
+        <option value="Policarbonato">
+        <option value="CR-39">
+        <option value="Cristal">
+        <option value="1.56">
+        <option value="1.61">
+        <option value="1.67">
+        <option value="1.74">
+        <option value="GX7">
+        <option value="Crizal">
+    </datalist>
+    
+    <datalist id="filtro_options">
+        <option value="Antireflejo">
+        <option value="UV">
+        <option value="Filtro azul AR verde">
+        <option value="Filtro azul AR azul">
+        <option value="Fotocromatico">
+        <option value="Blancas">
+        <option value="Fotocromatico AR">
+        <option value="Fotocromatico filtro azul">
+        <option value="Fotocromatico a colores">
+        <option value="Tinturado">
+        <option value="Polarizado">
+        <option value="Transitions">
+    </datalist>
 @stop
 
 @section('js')
@@ -417,10 +453,10 @@
                 <div class="row">
                     <div class="col-md-12">
                         <label>Armazón (Inventario)</label>
-                        <select name="a_inventario_id[]" class="form-control">
+                        <select name="a_inventario_id[]" class="form-control selectpicker" data-live-search="true">
                             <option value="">Seleccione un armazón</option>
                             @foreach($inventarioItems as $item)
-                                <option value="{{ $item->id }}">{{ $item->codigo }}</option>
+                                <option value="{{ $item->id }}">{{ $item->codigo }} - {{ $item->lugar ?? '' }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -428,11 +464,11 @@
                 <div class="row mt-2">
                     <div class="col-md-6">
                         <label>Precio</label>
-                        <input type="number" name="a_precio[]" class="form-control" value="0" step="0.01">
+                        <input type="number" name="a_precio[]" class="form-control" value="0" step="0.01" oninput="calculateTotal()">
                     </div>
                     <div class="col-md-6">
                         <label>Descuento (%)</label>
-                        <input type="number" name="a_precio_descuento[]" class="form-control" value="0" min="0" max="100">
+                        <input type="number" name="a_precio_descuento[]" class="form-control" value="0" min="0" max="100" oninput="calculateTotal()">
                     </div>
                 </div>
                 <div class="row mt-2">
@@ -445,6 +481,7 @@
             </div>
         `;
         container.insertAdjacentHTML('beforeend', template);
+        $('.selectpicker').selectpicker('refresh'); // Inicializar el nuevo select
     });
 
     document.addEventListener('click', function(e) {
@@ -541,6 +578,22 @@
 
         // Calcular total inicial
         calculateTotal();
+
+        // Hacer que todo el header sea clickeable
+        document.querySelectorAll('.card-header').forEach(header => {
+            header.addEventListener('click', function(e) {
+                // Si el clic no fue en un botón dentro del header
+                if (!e.target.closest('.btn-tool')) {
+                    const collapseButton = this.querySelector('.btn-tool');
+                    if (collapseButton) {
+                        collapseButton.click();
+                    }
+                }
+            });
+        });
+
+        // Inicializar selectpicker
+        $('.selectpicker').selectpicker();
     });
 
     // Mostrar todas las opciones del datalist al hacer clic en el input
@@ -647,20 +700,7 @@
             this.submit();
         }
     });
-
-    // Hacer que todo el header sea clickeable
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.card-header').forEach(header => {
-            header.addEventListener('click', function(e) {
-                // Si el clic no fue en un botón dentro del header
-                if (!e.target.closest('.btn-tool')) {
-                    const collapseButton = this.querySelector('.btn-tool');
-                    if (collapseButton) {
-                        collapseButton.click();
-                    }
-                }
-            });
-        });
-});
 </script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/css/bootstrap-select.min.css">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/js/bootstrap-select.min.js"></script>
 @stop

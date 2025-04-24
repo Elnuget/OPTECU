@@ -305,7 +305,12 @@ class PedidosController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            \DB::beginTransaction();
+            
             $pedido = Pedido::findOrFail($id);
+            
+            // Guardar los IDs de inventario actuales antes de actualizarlos
+            $inventariosAnteriores = $pedido->inventarios->pluck('id')->toArray();
             
             // Update basic pedido information including cedula
             $pedido->fill($request->except(['a_inventario_id', 'a_precio', 'a_precio_descuento', 'd_inventario_id', 'd_precio', 'd_precio_descuento']));
@@ -314,6 +319,9 @@ class PedidosController extends Controller
             // Update pedido_inventario relationships
             $pedido->inventarios()->detach(); // Remove existing relationships
 
+            // Array para almacenar los nuevos IDs de inventario
+            $nuevosInventarioIds = [];
+
             if ($request->has('a_inventario_id')) {
                 foreach ($request->a_inventario_id as $index => $inventarioId) {
                     if (!empty($inventarioId)) {
@@ -321,6 +329,8 @@ class PedidosController extends Controller
                             'precio' => $request->a_precio[$index] ?? 0,
                             'descuento' => $request->a_precio_descuento[$index] ?? 0,
                         ]);
+                        
+                        $nuevosInventarioIds[] = $inventarioId;
                     }
                 }
             }
@@ -331,9 +341,34 @@ class PedidosController extends Controller
                     if (!empty($accesorioId)) {
                         $pedido->inventarios()->attach($accesorioId, [
                             'precio' => $request->d_precio[$index] ?? 0,
-                            'descuento' => $request->d_precio[$index] ?? 0,
+                            'descuento' => $request->d_precio_descuento[$index] ?? 0,
                         ]);
+                        
+                        $nuevosInventarioIds[] = $accesorioId;
                     }
+                }
+            }
+
+            // Actualizar el estado del inventario
+            // 1. Restaurar la cantidad para artículos eliminados del pedido
+            $inventariosEliminados = array_diff($inventariosAnteriores, $nuevosInventarioIds);
+            foreach ($inventariosEliminados as $inventarioId) {
+                $inventario = Inventario::find($inventarioId);
+                if ($inventario) {
+                    $inventario->cantidad += 1; // Aumentar la cantidad al quitar del pedido
+                    $inventario->orden = null; // Quitar la referencia al pedido
+                    $inventario->save();
+                }
+            }
+            
+            // 2. Actualizar o reducir cantidad para nuevos artículos añadidos
+            $inventariosNuevos = array_diff($nuevosInventarioIds, $inventariosAnteriores);
+            foreach ($inventariosNuevos as $inventarioId) {
+                $inventario = Inventario::find($inventarioId);
+                if ($inventario) {
+                    $inventario->cantidad -= 1; // Disminuir la cantidad al añadir al pedido
+                    $inventario->orden = $pedido->numero_orden; // Asignar referencia al pedido
+                    $inventario->save();
                 }
             }
 
@@ -355,12 +390,15 @@ class PedidosController extends Controller
                 }
             }
 
+            \DB::commit();
+
             return redirect('/Pedidos')->with([
                 'error' => 'Exito',
                 'mensaje' => 'Pedido actualizado exitosamente',
                 'tipo' => 'alert-success'
             ]);
         } catch (\Exception $e) {
+            \DB::rollback();
             return redirect('/Pedidos')->with([
                 'error' => 'Error',
                 'mensaje' => 'Pedido no se ha actualizado: ' . $e->getMessage(),
