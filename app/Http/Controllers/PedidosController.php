@@ -291,8 +291,9 @@ class PedidosController extends Controller
         $pedido = Pedido::with(['inventarios', 'lunas', 'pagos'])->findOrFail($id);
         $inventarioItems = Inventario::all();
         $totalPagado = $pedido->pagos->sum('pago'); // Suma todos los pagos realizados
+        $usuarios = \App\Models\User::all(); // Obtener todos los usuarios
 
-        return view('pedidos.edit', compact('pedido', 'inventarioItems', 'totalPagado'));
+        return view('pedidos.edit', compact('pedido', 'inventarioItems', 'totalPagado', 'usuarios'));
     }
 
     /**
