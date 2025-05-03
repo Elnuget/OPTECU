@@ -342,35 +342,27 @@
                                                                                 @endif
                                                                             </td>
                                                                             <td class="editable text-center" data-field="lugar">
-                                                                                <span class="display-value">{{ $item->lugar ?? '-' }}</span>
+                                                                                <span class="display-value">{{ $item->lugar ?? $lugar }}</span>
                                                                                 @if($item)
                                                                                     <input type="text" class="form-control edit-input" style="display: none;" value="{{ $item->lugar }}">
-                                                                                @else
-                                                                                    <span class="text-muted">-</span>
                                                                                 @endif
                                                                             </td>
                                                                             <td class="editable text-center" data-field="columna">
                                                                                 <span class="display-value">{{ $item->columna ?? $columna }}</span>
                                                                                 @if($item)
                                                                                     <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->columna }}">
-                                                                                @else
-                                                                                    <span class="text-muted">-</span>
                                                                                 @endif
                                                                             </td>
                                                                             <td class="editable" data-field="codigo">
                                                                                 <span class="display-value">{{ $item->codigo ?? '-' }}</span>
                                                                                 @if($item)
                                                                                     <input type="text" class="form-control edit-input" style="display: none;" value="{{ $item->codigo }}">
-                                                                                @else
-                                                                                    <span class="text-muted">-</span>
                                                                                 @endif
                                                                             </td>
                                                                             <td class="editable text-center" data-field="cantidad">
                                                                                 <span class="display-value">{{ $item->cantidad ?? '-' }}</span>
                                                                                 @if($item)
                                                                                     <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->cantidad }}">
-                                                                                @else
-                                                                                    <span class="text-muted">-</span>
                                                                                 @endif
                                                                             </td>
                                                                             @can('admin')
@@ -444,19 +436,19 @@
                                                                                 @endif
                                                                             </td>
                                                                             <td class="editable text-center" data-field="lugar">
-                                                                                <span class="display-value">{{ $i->lugar }}</span>
+                                                                                <span class="display-value">{{ $i->lugar ?? $lugar }}</span>
                                                                                 <input type="text" class="form-control edit-input" style="display: none;" value="{{ $i->lugar }}">
                                                                             </td>
                                                                             <td class="editable text-center" data-field="columna">
-                                                                                <span class="display-value">{{ $i->columna }}</span>
+                                                                                <span class="display-value">{{ $i->columna ?? $columna }}</span>
                                                                                 <input type="number" class="form-control edit-input" style="display: none;" value="{{ $i->columna }}">
                                                                             </td>
                                                                             <td class="editable" data-field="codigo">
-                                                                                <span class="display-value">{{ $i->codigo }}</span>
+                                                                                <span class="display-value">{{ $i->codigo ?? '-' }}</span>
                                                                                 <input type="text" class="form-control edit-input" style="display: none;" value="{{ $i->codigo }}">
                                                                             </td>
                                                                             <td class="editable text-center" data-field="cantidad">
-                                                                                <span class="display-value">{{ $i->cantidad }}</span>
+                                                                                <span class="display-value">{{ $i->cantidad ?? '-' }}</span>
                                                                                 <input type="number" class="form-control edit-input" style="display: none;" value="{{ $i->cantidad }}">
                                                                             </td>
                                                                             @can('admin')
@@ -734,6 +726,144 @@
                         input.hide();
                     }
                 });
+            });
+
+            // Función para manejar la edición en línea de celdas vacías o con guión
+            $('.table').on('click', 'td.editable', function() {
+                const cell = $(this);
+                const displayValue = cell.find('.display-value');
+                const currentValue = displayValue.text().trim();
+                
+                // Si el valor actual es '-' o está vacío, tratarlo como editable
+                if (currentValue === '-' || currentValue === '') {
+                    const row = cell.closest('tr');
+                    const field = cell.data('field');
+                    
+                    // Crear input según el tipo de campo
+                    let input;
+                    if (field === 'cantidad' || field === 'numero' || field === 'columna') {
+                        input = $('<input type="number" class="form-control" value="1">');
+                    } else {
+                        input = $('<input type="text" class="form-control">');
+                    }
+                    
+                    // Reemplazar el contenido de la celda con el input
+                    displayValue.hide();
+                    cell.append(input);
+                    input.focus();
+                    
+                    // Manejar la pérdida de foco
+                    input.on('blur', function() {
+                        const value = $(this).val();
+                        if (!value) {
+                            displayValue.text('-').show();
+                            input.remove();
+                            return;
+                        }
+                        
+                        // Obtener la fecha actual en formato YYYY-MM-DD
+                        const today = new Date();
+                        const fecha = today.getFullYear() + '-' + 
+                                    String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                                    String(today.getDate()).padStart(2, '0');
+                        
+                        // Recopilar datos para el nuevo artículo
+                        const articleData = {
+                            fecha: fecha, // Agregar la fecha actual
+                            numero: row.find('td[data-field="numero"] .display-value').text().trim() === '-' ? 
+                                   row.find('td[data-field="numero"] input').val() || 1 : 
+                                   row.find('td[data-field="numero"] .display-value').text().trim(),
+                            lugar: row.find('td[data-field="lugar"] .display-value').text().trim() === '-' ? 
+                                  row.find('td[data-field="lugar"] input').val() || 'SOPORTE 1' : 
+                                  row.find('td[data-field="lugar"] .display-value').text().trim(),
+                            columna: row.find('td[data-field="columna"] .display-value').text().trim() === '-' ? 
+                                    row.find('td[data-field="columna"] input').val() || 1 : 
+                                    row.find('td[data-field="columna"] .display-value').text().trim(),
+                            codigo: row.find('td[data-field="codigo"] .display-value').text().trim() === '-' ? 
+                                   row.find('td[data-field="codigo"] input').val() : 
+                                   row.find('td[data-field="codigo"] .display-value').text().trim(),
+                            cantidad: row.find('td[data-field="cantidad"] .display-value').text().trim() === '-' ? 
+                                     row.find('td[data-field="cantidad"] input').val() || 1 : 
+                                     row.find('td[data-field="cantidad"] .display-value').text().trim()
+                        };
+
+                        // Actualizar el campo actual con el nuevo valor
+                        articleData[field] = value;
+                        
+                        // Asegurarse de que todos los campos requeridos tengan valores válidos
+                        if (!articleData.numero || !articleData.lugar || !articleData.columna || !articleData.codigo || !articleData.cantidad) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error de validación',
+                                text: 'Todos los campos son requeridos'
+                            });
+                            displayValue.text('-').show();
+                            input.remove();
+                            return;
+                        }
+                        
+                        // Verificar si tenemos suficientes datos para crear el artículo
+                        $.ajax({
+                            url: '{{ route("inventario.store") }}',
+                            method: 'POST',
+                            data: {
+                                _token: '{{ csrf_token() }}',
+                                ...articleData
+                            },
+                            success: function(response) {
+                                // Actualizar todas las celdas de la fila
+                                Object.keys(articleData).forEach(key => {
+                                    if (key !== 'fecha') { // No mostrar la fecha en la tabla
+                                        const targetCell = row.find(`td[data-field="${key}"] .display-value`);
+                                        targetCell.text(articleData[key]).show();
+                                    }
+                                });
+                                
+                                // Remover los inputs
+                                row.find('input').remove();
+                                
+                                // Actualizar el ID de la fila con el nuevo ID del artículo
+                                if (response.id) {
+                                    row.attr('data-id', response.id);
+                                }
+                                
+                                // Mostrar mensaje de éxito
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Artículo creado exitosamente',
+                                    showConfirmButton: false,
+                                    timer: 1500
+                                });
+                            },
+                            error: function(xhr) {
+                                console.error('Error response:', xhr.responseJSON);
+                                // Mostrar mensaje de error
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error al crear el artículo',
+                                    text: xhr.responseJSON?.message || 'Error desconocido',
+                                });
+                                displayValue.text('-').show();
+                                input.remove();
+                            }
+                        });
+                    });
+                    
+                    // Manejar la tecla Enter
+                    input.on('keypress', function(e) {
+                        if (e.which === 13) {
+                            $(this).blur();
+                        }
+                    });
+                    
+                    // Manejar la tecla Escape
+                    input.on('keyup', function(e) {
+                        if (e.key === 'Escape') {
+                            displayValue.show();
+                            input.remove();
+                        }
+                    });
+                }
             });
         });
     </script>
