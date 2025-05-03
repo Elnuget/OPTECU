@@ -328,9 +328,27 @@
                                                             </thead>
                                                             <tbody>
                                                                 @if(Str::startsWith(strtoupper($lugar), 'SOPORTE'))
+                                                                    @php
+                                                                        // Agrupar items por número para detectar duplicados
+                                                                        $itemsByNumber = $items->groupBy('numero');
+                                                                        // Obtener números duplicados
+                                                                        $duplicateNumbers = $itemsByNumber->filter(function($group) {
+                                                                            return $group->count() > 1;
+                                                                        })->keys();
+                                                                        
+                                                                        // Separar items únicos y duplicados
+                                                                        $uniqueItems = $items->filter(function($item) use ($duplicateNumbers) {
+                                                                            return !$duplicateNumbers->contains($item->numero);
+                                                                        });
+                                                                        $duplicateItems = $items->filter(function($item) use ($duplicateNumbers) {
+                                                                            return $duplicateNumbers->contains($item->numero);
+                                                                        })->sortBy('numero');
+                                                                    @endphp
+
+                                                                    {{-- Mostrar primero las filas del 1 al 14 que no están duplicadas --}}
                                                                     @for($n = 1; $n <= 14; $n++)
                                                                         @php
-                                                                            $item = $items->firstWhere('numero', $n);
+                                                                            $item = $uniqueItems->firstWhere('numero', $n);
                                                                         @endphp
                                                                         <tr @if($item && $item->cantidad == 0) class="table-danger" @endif data-id="{{ $item->id ?? '' }}">
                                                                             <td class="editable text-center" data-field="numero">
@@ -385,8 +403,49 @@
                                                                             @endcan
                                                                         </tr>
                                                                     @endfor
-                                                                    {{-- Mostrar artículos con número mayor a 14 --}}
-                                                                    @foreach($items->filter(function($itm){ return $itm->numero > 14; })->sortBy('numero') as $item)
+
+                                                                    {{-- Mostrar los artículos duplicados al final --}}
+                                                                    @foreach($duplicateItems->sortBy('numero') as $item)
+                                                                        <tr @if($item->cantidad == 0) class="table-danger" @endif data-id="{{ $item->id }}" class="duplicate-row">
+                                                                            <td class="editable text-center" data-field="numero">
+                                                                                <span class="display-value">{{ $item->numero }}</span>
+                                                                                <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->numero }}">
+                                                                            </td>
+                                                                            <td class="editable text-center" data-field="lugar">
+                                                                                <span class="display-value">{{ $item->lugar }}</span>
+                                                                                <input type="text" class="form-control edit-input" style="display: none;" value="{{ $item->lugar }}">
+                                                                            </td>
+                                                                            <td class="editable text-center" data-field="columna">
+                                                                                <span class="display-value">{{ $item->columna }}</span>
+                                                                                <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->columna }}">
+                                                                            </td>
+                                                                            <td class="editable" data-field="codigo">
+                                                                                <span class="display-value">{{ $item->codigo }}</span>
+                                                                                <input type="text" class="form-control edit-input" style="display: none;" value="{{ $item->codigo }}">
+                                                                            </td>
+                                                                            <td class="editable text-center" data-field="cantidad">
+                                                                                <span class="display-value">{{ $item->cantidad }}</span>
+                                                                                <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->cantidad }}">
+                                                                            </td>
+                                                                            @can('admin')
+                                                                            <td class="text-center">
+                                                                                <div class="btn-group">
+                                                                                    <form action="{{ route('inventario.destroy', $item->id) }}" method="POST" class="d-inline">
+                                                                                        @csrf
+                                                                                        @method('DELETE')
+                                                                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"
+                                                                                                onclick="return confirm('¿Está seguro de que desea eliminar este artículo?')">
+                                                                                            <i class="fa fa-trash"></i>
+                                                                                        </button>
+                                                                                    </form>
+                                                                                </div>
+                                                                            </td>
+                                                                            @endcan
+                                                                        </tr>
+                                                                    @endforeach
+
+                                                                    {{-- Mostrar artículos con número mayor a 14 que no están duplicados --}}
+                                                                    @foreach($uniqueItems->filter(function($item){ return $item->numero > 14; })->sortBy('numero') as $item)
                                                                         <tr @if($item->cantidad == 0) class="table-danger" @endif data-id="{{ $item->id }}">
                                                                             <td class="editable text-center" data-field="numero">
                                                                                 <span class="display-value">{{ $item->numero }}</span>
@@ -1181,6 +1240,14 @@
         .btn-xs {
             padding: 2px 6px;
             font-size: 0.875rem;
+        }
+
+        /* Estilo para resaltar las filas duplicadas */
+        .duplicate-row {
+            background-color: #fff3cd !important;
+        }
+        .duplicate-row:hover {
+            background-color: #ffeeba !important;
         }
     </style>
 @stop
