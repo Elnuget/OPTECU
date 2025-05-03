@@ -327,44 +327,116 @@
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
-                                                                @foreach($items->sortBy('numero') as $i)
-                                                                    <tr @if($i->cantidad == 0) class="table-danger" @endif data-id="{{ $i->id }}">
-                                                                        <td class="editable text-center" data-field="numero">
-                                                                            <span class="display-value">{{ $i->numero }}</span>
-                                                                            <input type="number" class="form-control edit-input" style="display: none;" value="{{ $i->numero }}">
-                                                                        </td>
-                                                                        <td class="editable text-center" data-field="lugar">
-                                                                            <span class="display-value">{{ $i->lugar }}</span>
-                                                                            <input type="text" class="form-control edit-input" style="display: none;" value="{{ $i->lugar }}">
-                                                                        </td>
-                                                                        <td class="editable text-center" data-field="columna">
-                                                                            <span class="display-value">{{ $i->columna }}</span>
-                                                                            <input type="number" class="form-control edit-input" style="display: none;" value="{{ $i->columna }}">
-                                                                        </td>
-                                                                        <td class="editable" data-field="codigo">
-                                                                            <span class="display-value">{{ $i->codigo }}</span>
-                                                                            <input type="text" class="form-control edit-input" style="display: none;" value="{{ $i->codigo }}">
-                                                                        </td>
-                                                                        <td class="editable text-center" data-field="cantidad">
-                                                                            <span class="display-value">{{ $i->cantidad }}</span>
-                                                                            <input type="number" class="form-control edit-input" style="display: none;" value="{{ $i->cantidad }}">
-                                                                        </td>
-                                                                        @can('admin')
-                                                                        <td class="text-center">
-                                                                            <div class="btn-group">
-                                                                                <form action="{{ route('inventario.destroy', $i->id) }}" method="POST" class="d-inline">
-                                                                                    @csrf
-                                                                                    @method('DELETE')
-                                                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"
-                                                                                            onclick="return confirm('¿Está seguro de que desea eliminar este artículo?')">
-                                                                                        <i class="fa fa-trash"></i>
-                                                                                    </button>
-                                                                                </form>
-                                                                            </div>
-                                                                        </td>
-                                                                        @endcan
-                                                                    </tr>
-                                                                @endforeach
+                                                                @if(Str::startsWith(strtoupper($lugar), 'SOPORTE'))
+                                                                    @for($n = 1; $n <= 14; $n++)
+                                                                        @php
+                                                                            $item = $items->firstWhere('numero', $n);
+                                                                        @endphp
+                                                                        <tr @if($item && $item->cantidad == 0) class="table-danger" @endif data-id="{{ $item->id ?? '' }}">
+                                                                            <td class="editable text-center" data-field="numero">
+                                                                                @if($item)
+                                                                                    <span class="display-value">{{ $item->numero }}</span>
+                                                                                    <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->numero }}">
+                                                                                @else
+                                                                                    <span class="display-value" title="NO EXISTE">{{ $n }}</span>
+                                                                                @endif
+                                                                            </td>
+                                                                            <td class="editable text-center" data-field="lugar">
+                                                                                <span class="display-value">{{ $item->lugar ?? 'NO EXISTE' }}</span>
+                                                                                @if($item)
+                                                                                    <input type="text" class="form-control edit-input" style="display: none;" value="{{ $item->lugar }}">
+                                                                                @else
+                                                                                    <span class="text-muted">-</span>
+                                                                                @endif
+                                                                            </td>
+                                                                            <td class="editable text-center" data-field="columna">
+                                                                                <span class="display-value">{{ $item->columna ?? $columna }}</span>
+                                                                                @if($item)
+                                                                                    <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->columna }}">
+                                                                                @else
+                                                                                    <span class="text-muted">-</span>
+                                                                                @endif
+                                                                            </td>
+                                                                            <td class="editable" data-field="codigo">
+                                                                                <span class="display-value">{{ $item->codigo ?? 'NO EXISTE' }}</span>
+                                                                                @if($item)
+                                                                                    <input type="text" class="form-control edit-input" style="display: none;" value="{{ $item->codigo }}">
+                                                                                @else
+                                                                                    <span class="text-muted">-</span>
+                                                                                @endif
+                                                                            </td>
+                                                                            <td class="editable text-center" data-field="cantidad">
+                                                                                <span class="display-value">{{ $item->cantidad ?? 'NO EXISTE' }}</span>
+                                                                                @if($item)
+                                                                                    <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->cantidad }}">
+                                                                                @else
+                                                                                    <span class="text-muted">-</span>
+                                                                                @endif
+                                                                            </td>
+                                                                            @can('admin')
+                                                                            <td class="text-center">
+                                                                                @if($item)
+                                                                                    <div class="btn-group">
+                                                                                        <form action="{{ route('inventario.destroy', $item->id) }}" method="POST" class="d-inline">
+                                                                                            @csrf
+                                                                                            @method('DELETE')
+                                                                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"
+                                                                                                    onclick="return confirm('¿Está seguro de que desea eliminar este artículo?')">
+                                                                                                <i class="fa fa-trash"></i>
+                                                                                            </button>
+                                                                                        </form>
+                                                                                    </div>
+                                                                                @else
+                                                                                    <span class="text-muted">-</span>
+                                                                                @endif
+                                                                            </td>
+                                                                            @endcan
+                                                                        </tr>
+                                                                    @endfor
+                                                                @else
+                                                                    @foreach($items->sortBy('numero') as $i)
+                                                                        <tr @if($i->cantidad == 0) class="table-danger" @endif data-id="{{ $i->id }}">
+                                                                            <td class="editable text-center" data-field="numero">
+                                                                                @if($i)
+                                                                                    <span class="display-value">{{ $i->numero }}</span>
+                                                                                    <input type="number" class="form-control edit-input" style="display: none;" value="{{ $i->numero }}">
+                                                                                @else
+                                                                                    <span class="display-value" title="NO EXISTE">{{ $i->numero }}</span>
+                                                                                @endif
+                                                                            </td>
+                                                                            <td class="editable text-center" data-field="lugar">
+                                                                                <span class="display-value">{{ $i->lugar }}</span>
+                                                                                <input type="text" class="form-control edit-input" style="display: none;" value="{{ $i->lugar }}">
+                                                                            </td>
+                                                                            <td class="editable text-center" data-field="columna">
+                                                                                <span class="display-value">{{ $i->columna }}</span>
+                                                                                <input type="number" class="form-control edit-input" style="display: none;" value="{{ $i->columna }}">
+                                                                            </td>
+                                                                            <td class="editable" data-field="codigo">
+                                                                                <span class="display-value">{{ $i->codigo }}</span>
+                                                                                <input type="text" class="form-control edit-input" style="display: none;" value="{{ $i->codigo }}">
+                                                                            </td>
+                                                                            <td class="editable text-center" data-field="cantidad">
+                                                                                <span class="display-value">{{ $i->cantidad }}</span>
+                                                                                <input type="number" class="form-control edit-input" style="display: none;" value="{{ $i->cantidad }}">
+                                                                            </td>
+                                                                            @can('admin')
+                                                                            <td class="text-center">
+                                                                                <div class="btn-group">
+                                                                                    <form action="{{ route('inventario.destroy', $i->id) }}" method="POST" class="d-inline">
+                                                                                        @csrf
+                                                                                        @method('DELETE')
+                                                                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"
+                                                                                                onclick="return confirm('¿Está seguro de que desea eliminar este artículo?')">
+                                                                                            <i class="fa fa-trash"></i>
+                                                                                        </button>
+                                                                                    </form>
+                                                                                </div>
+                                                                            </td>
+                                                                            @endcan
+                                                                        </tr>
+                                                                    @endforeach
+                                                                @endif
                                                             </tbody>
                                                         </table>
                                                     </div>
@@ -410,7 +482,13 @@
                     search: "Buscar:",
                     zeroRecords: "No se encontraron registros coincidentes",
                     searchPlaceholder: "Buscar en esta columna..."
-                }
+                },
+                columnDefs: [
+                    {
+                        targets: 0, // Primera columna (NÚMERO)
+                        type: 'num',
+                    }
+                ]
             });
 
             // Variable para controlar el estado de expansión
