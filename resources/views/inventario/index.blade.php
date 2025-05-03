@@ -213,19 +213,29 @@
 
     <div class="card">
         <div class="card-body">
-            <form method="GET" class="form-row mb-3">
-                <div class="col-md-4">
-                    <label for="filtroFecha">Seleccionar Fecha:</label>
-                    <input type="month" name="fecha" class="form-control"
-                           value="{{ request('fecha') ?? now()->format('Y-m') }}" />
+            <form method="GET" class="mb-3">
+                <div class="row mb-3">
+                    <div class="col-md-10">
+                        <label for="filtroFecha">Seleccionar Fecha:</label>
+                        <input type="month" name="fecha" class="form-control"
+                               value="{{ request('fecha') ?? now()->format('Y-m') }}" />
+                    </div>
+                    <div class="col-md-2">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary form-control" type="submit">Filtrar</button>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <label for="busqueda">Buscar Artículo:</label>
-                    <input type="text" id="busquedaGlobal" class="form-control" placeholder="BUSCAR POR NÚMERO, CÓDIGO O LUGAR...">
-                </div>
-                <div class="col-md-2">
-                    <label>&nbsp;</label>
-                    <button class="btn btn-primary form-control" type="submit">Filtrar</button>
+                <div class="row">
+                    <div class="col-md-10">
+                        <label for="busqueda">Buscar Artículo:</label>
+                        <input type="text" id="busquedaGlobal" class="form-control" placeholder="BUSCAR POR NÚMERO, CÓDIGO O LUGAR...">
+                    </div>
+                    <div class="col-md-2">
+                        <label>&nbsp;</label>
+                        <button type="button" class="btn btn-secondary form-control" id="buscarExpandir">
+                            <i class="fas fa-search"></i> BUSCAR
+                        </button>
+                    </div>
                 </div>
             </form>
 
@@ -594,6 +604,21 @@
                     $('.collapse').collapse('hide');
                     $('.transition-icon').removeClass('fa-rotate-180');
                 }
+            });
+
+            // Botón buscar y expandir
+            $('#buscarExpandir').on('click', function() {
+                // Expandir todas las tarjetas
+                $('.collapse').collapse('show');
+                $('.transition-icon').addClass('fa-rotate-180');
+                allExpanded = true;
+                
+                // Realizar la búsqueda
+                let searchTerm = $('#busquedaGlobal').val().toLowerCase();
+                $('.table').each(function() {
+                    let table = $(this).DataTable();
+                    table.search(searchTerm).draw();
+                });
             });
 
             // Búsqueda global
