@@ -18,13 +18,13 @@ class EgresoController extends Controller
         try {
             $query = Egreso::with('user');
 
-            // Solo aplicar filtros si se proporcionan año y mes
-            if ($request->filled('ano') && $request->filled('mes')) {
-                $query->whereYear('created_at', $request->ano)
-                      ->whereMonth('created_at', $request->mes);
-            } else if ($request->filled('ano')) {
-                $query->whereYear('created_at', $request->ano);
-            }
+            // Obtener año y mes actual como valores por defecto
+            $ano = $request->get('ano', date('Y'));
+            $mes = $request->get('mes', date('n'));
+
+            // Aplicar filtros usando los valores por defecto o los proporcionados
+            $query->whereYear('created_at', $ano)
+                  ->whereMonth('created_at', $mes);
 
             $egresos = $query->orderBy('created_at', 'desc')->get();
 

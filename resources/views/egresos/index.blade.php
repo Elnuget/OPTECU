@@ -81,8 +81,12 @@
                     <label for="filtroAno">SELECCIONAR AÑO:</label>
                     <select name="ano" class="form-control custom-select" id="filtroAno">
                         <option value="">SELECCIONE AÑO</option>
+                        @php
+                            $currentYear = date('Y');
+                            $selectedYear = request('ano', $currentYear);
+                        @endphp
                         @for ($year = date('Y'); $year >= 2000; $year--)
-                            <option value="{{ $year }}" {{ request('ano') == $year ? 'selected' : '' }}>{{ $year }}</option>
+                            <option value="{{ $year }}" {{ $selectedYear == $year ? 'selected' : '' }}>{{ $year }}</option>
                         @endfor
                     </select>
                 </div>
@@ -90,8 +94,12 @@
                     <label for="filtroMes">SELECCIONAR MES:</label>
                     <select name="mes" class="form-control custom-select" id="filtroMes">
                         <option value="">SELECCIONE MES</option>
+                        @php
+                            $currentMonth = date('n');
+                            $selectedMonth = request('mes', $currentMonth);
+                        @endphp
                         @foreach (['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'] as $index => $month)
-                            <option value="{{ $index + 1 }}" {{ request('mes') == ($index + 1) ? 'selected' : '' }}>
+                            <option value="{{ $index + 1 }}" {{ $selectedMonth == ($index + 1) ? 'selected' : '' }}>
                                 {{ $month }}
                             </option>
                         @endforeach
