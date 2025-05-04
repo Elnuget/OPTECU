@@ -128,14 +128,24 @@
         
         @if($lastCashHistory && $lastCashHistory->estado === 'Apertura')
             <li class="nav-item">
-                <form action="{{ route('show-closing-card') }}" method="POST" style="display: inline;">
-                    @csrf
-                    <button type="submit" class="btn btn-outline-danger nav-link d-flex align-items-center" 
-                            style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
-                        <i class="fas fa-cash-register mr-2" style="font-size: 1.1em;"></i>
-                        <span style="font-weight: 500;">CERRAR CAJA</span>
-                    </button>
-                </form>
+                @auth
+                    <form action="{{ route('show-closing-card') }}" method="POST" style="display: inline;">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-danger nav-link d-flex align-items-center" 
+                                style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
+                            <i class="fas fa-cash-register mr-2" style="font-size: 1.1em;"></i>
+                            <span class="d-none d-sm-inline" style="font-weight: 500;">CERRAR CAJA ({{ Auth::user()->name }})</span>
+                            <span class="d-inline d-sm-none" style="font-weight: 500;">CERRAR</span>
+                        </button>
+                    </form>
+                @else
+                    <a href="{{ route('login') }}" class="btn btn-outline-danger nav-link d-flex align-items-center" 
+                       style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
+                        <i class="fas fa-sign-in-alt mr-2" style="font-size: 1.1em;"></i>
+                        <span class="d-none d-sm-inline" style="font-weight: 500;">INICIAR SESIÓN</span>
+                        <span class="d-inline d-sm-none" style="font-weight: 500;">LOGIN</span>
+                    </a>
+                @endauth
             </li>
         @endif
 
@@ -187,5 +197,12 @@
     .alert-info:hover, .alert-warning:hover {
         transform: translateY(-2px);
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    /* Ajustes responsivos para el botón */
+    @media (max-width: 576px) {
+        .btn-outline-danger {
+            padding: 8px 15px !important;
+        }
     }
 </style>
