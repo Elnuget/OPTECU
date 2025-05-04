@@ -54,18 +54,19 @@ class EgresoController extends Controller
         try {
             $request->validate([
                 'valor' => 'required|numeric|min:0',
-                'motivo' => 'required|string|max:255'
+                'motivo' => 'required|string|max:255',
+                'usuario' => 'required_if:motivo,PAGO DE SUELDO|exists:users,id'
             ]);
 
             $egreso = new Egreso();
-            $egreso->user_id = auth()->id();
+            $egreso->user_id = $request->motivo === 'PAGO DE SUELDO' ? $request->usuario : auth()->id();
             $egreso->valor = $request->valor;
             $egreso->motivo = strtoupper($request->motivo);
             $egreso->save();
 
             return redirect()->route('egresos.index')->with([
                 'error' => 'Exito',
-                'mensaje' => 'Egreso registrado exitosamente',
+                'mensaje' => $request->motivo === 'PAGO DE SUELDO' ? 'Sueldo pagado exitosamente' : 'Egreso registrado exitosamente',
                 'tipo' => 'alert-success'
             ]);
         } catch (\Exception $e) {

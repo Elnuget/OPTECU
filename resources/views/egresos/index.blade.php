@@ -113,6 +113,9 @@
             {{-- Botón Añadir Egreso --}}
             <div class="btn-group mb-3">
                 <a type="button" class="btn btn-success" href="{{ route('egresos.create') }}">AÑADIR EGRESO</a>
+                <button type="button" class="btn btn-primary ml-2" data-toggle="modal" data-target="#pagarSueldoModal">
+                    <i class="fas fa-money-bill-wave mr-2"></i>PAGAR SUELDO
+                </button>
             </div>
 
             <div class="table-responsive">
@@ -186,6 +189,43 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Pagar Sueldo -->
+    <div class="modal fade" id="pagarSueldoModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">PAGAR SUELDO</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="{{ route('egresos.store') }}" method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="usuario">SELECCIONAR USUARIO:</label>
+                            <select name="usuario" id="usuario" class="form-control" required>
+                                <option value="">SELECCIONE UN USUARIO</option>
+                                @foreach(\App\Models\User::all() as $user)
+                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="valor">VALOR DEL SUELDO:</label>
+                            <input type="number" class="form-control" id="valor" name="valor" required step="0.01" min="0">
+                        </div>
+                        <input type="hidden" name="motivo" value="PAGO DE SUELDO">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">CANCELAR</button>
+                        <button type="submit" class="btn btn-primary">PAGAR SUELDO</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @stop
 
 @section('js')
@@ -249,6 +289,20 @@
                 $('#filtroAno').val(now.getFullYear());
                 $('#filtroMes').val(now.getMonth() + 1);
                 $('#filterForm').submit();
+            });
+
+            // Inicializar select2 para el combobox de usuarios
+            $('#usuario').select2({
+                theme: 'bootstrap4',
+                placeholder: 'SELECCIONE UN USUARIO',
+                allowClear: true,
+                width: '100%'
+            });
+
+            // Limpiar el formulario cuando se cierre el modal
+            $('#pagarSueldoModal').on('hidden.bs.modal', function () {
+                $(this).find('form').trigger('reset');
+                $('#usuario').val('').trigger('change');
             });
         });
     </script>
