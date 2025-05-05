@@ -72,43 +72,17 @@
                         </div>
                     </div>
                 </div>
+                <div class="col-md-4">
+                    <div class="info-box bg-info">
+                        <div class="info-box-content">
+                            <span class="info-box-text">PRÉSTAMOS EN EGRESOS</span>
+                            <span class="info-box-number">${{ number_format($prestamosEnEgresos['total'] ?? 0, 2, ',', '.') }}</span>
+                            <span class="info-box-text">CANTIDAD: {{ $prestamosEnEgresos['cantidad'] ?? 0 }}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             @endcan
-
-            {{-- Agregar formulario de filtro --}}
-            <form method="GET" class="form-row mb-3" id="filterForm">
-                <div class="col-md-2">
-                    <label for="filtroAno">SELECCIONAR AÑO:</label>
-                    <select name="ano" class="form-control custom-select" id="filtroAno">
-                        <option value="">SELECCIONE AÑO</option>
-                        @php
-                            $currentYear = date('Y');
-                            $selectedYear = request('ano', $currentYear);
-                        @endphp
-                        @for ($year = date('Y'); $year >= 2000; $year--)
-                            <option value="{{ $year }}" {{ $selectedYear == $year ? 'selected' : '' }}>{{ $year }}</option>
-                        @endfor
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="filtroMes">SELECCIONAR MES:</label>
-                    <select name="mes" class="form-control custom-select" id="filtroMes">
-                        <option value="">SELECCIONE MES</option>
-                        @php
-                            $currentMonth = date('n');
-                            $selectedMonth = request('mes', $currentMonth);
-                        @endphp
-                        @foreach (['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'] as $index => $month)
-                            <option value="{{ $index + 1 }}" {{ $selectedMonth == ($index + 1) ? 'selected' : '' }}>
-                                {{ $month }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2 align-self-end">
-                    <button type="button" class="btn btn-primary" id="actualButton">ACTUAL</button>
-                </div>
-            </form>
 
             {{-- Botón Añadir Préstamo --}}
             <div class="btn-group mb-3">
@@ -172,6 +146,37 @@
         </div>
     </div>
 
+    <!-- Sección de Préstamos en Egresos -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3 class="card-title">PRÉSTAMOS REGISTRADOS EN EGRESOS</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="prestamosEgresosTable" class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>MOTIVO</th>
+                            <th>VALOR</th>
+                            <th>USUARIO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($prestamosEnEgresos['items'] ?? [] as $egreso)
+                            <tr>
+                                <td>{{ $egreso->created_at->format('Y-m-d') }}</td>
+                                <td>{{ $egreso->motivo }}</td>
+                                <td>${{ number_format($egreso->valor, 2, ',', '.') }}</td>
+                                <td>{{ $egreso->user->name }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Crear Préstamo -->
     <div class="modal fade" id="crearPrestamoModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
@@ -190,7 +195,7 @@
                             <select name="user_id" id="user_id" class="form-control" required>
                                 <option value="">SELECCIONE UN USUARIO</option>
                                 @foreach(\App\Models\User::all() as $user)
-                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                    <option value="{{ $user->id }}" {{ auth()->id() == $user->id ? 'selected' : '' }}>{{ $user->name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -344,17 +349,42 @@
                 }
             });
 
-            // Manejar cambios en los filtros
-            $('#filtroAno, #filtroMes').change(function() {
-                $('#filterForm').submit();
-            });
-
-            // Botón "Actual"
-            $('#actualButton').click(function() {
-                const now = new Date();
-                $('#filtroAno').val(now.getFullYear());
-                $('#filtroMes').val(now.getMonth() + 1);
-                $('#filterForm').submit();
+            // Inicializar DataTable para préstamos en egresos
+            var prestamosEgresosTable = $('#prestamosEgresosTable').DataTable({
+                "order": [[0, "desc"]],
+                "paging": false,
+                "info": false,
+                "dom": 'Bfrt',
+                "buttons": [
+                    'excelHtml5',
+                    'csvHtml5',
+                    {
+                        "extend": 'print',
+                        "text": 'IMPRIMIR',
+                        "autoPrint": true,
+                        "exportOptions": {
+                            "columns": [0, 1, 2, 3]
+                        },
+                        "customize": function(win) {
+                            $(win.document.body).css('font-size', '16pt');
+                            $(win.document.body).find('table')
+                                .addClass('compact')
+                                .css('font-size', 'inherit');
+                        }
+                    },
+                    {
+                        "extend": 'pdfHtml5',
+                        "text": 'PDF',
+                        "filename": 'PrestamosEnEgresos.pdf',
+                        "pageSize": 'LETTER',
+                        "exportOptions": {
+                            "columns": [0, 1, 2, 3]
+                        }
+                    }
+                ],
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
+                }
             });
 
             // Inicializar select2 para los combobox de usuarios
