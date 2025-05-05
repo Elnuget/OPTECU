@@ -141,6 +141,9 @@
     {{-- Fin Tarjeta Plegable Egresos Mes Actual --}}
 
     <div class="card">
+        <div class="card-header bg-primary">
+            <h3 class="card-title">LISTA DE PRÉSTAMOS (VALORES NETOS CALCULADOS)</h3>
+        </div>
         <div class="card-body">
             {{-- Botón Añadir Préstamo --}}
             <div class="btn-group mb-3">
@@ -156,17 +159,19 @@
                             <th>FECHA</th>
                             <th>USUARIO</th>
                             <th>MOTIVO</th>
-                            <th>VALOR</th>
+                            <th>VALOR NETO</th>
+                            <th>DEDUCCIONES</th>
                             <th>ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($prestamos as $prestamo)
-                            <tr>
+                            <tr data-prestamo-id="{{ $prestamo->id }}" data-original-valor="{{ $prestamo->valor }}">
                                 <td>{{ $prestamo->created_at->format('Y-m-d') }}</td>
-                                <td>{{ $prestamo->user->name }}</td>
-                                <td>{{ $prestamo->motivo }}</td>
-                                <td>${{ number_format($prestamo->valor, 2, ',', '.') }}</td>
+                                <td class="prestamo-usuario">{{ $prestamo->user->name }}</td>
+                                <td class="prestamo-motivo">{{ $prestamo->motivo }}</td>
+                                <td class="prestamo-valor">${{ number_format($prestamo->valor, 2, ',', '.') }} <i class="fas fa-spinner fa-spin text-muted ml-1"></i></td>
+                                <td class="prestamo-deducciones">-</td>
                                 <td>
                                     <button type="button" 
                                         class="btn btn-xs btn-default text-info mx-1 shadow" 
@@ -267,6 +272,11 @@
 @section('js')
 @include('atajos')
     <script>
+        let detallesRetirosGlobal = [];
+        let detallesEgresosGlobal = [];
+        let retirosCargados = false;
+        let egresosCargados = false;
+
         // Función para formatear números como moneda
         function formatCurrency(number) {
             return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(number);
@@ -367,7 +377,8 @@
                     if (data.retiros && data.retiros.length > 0) {
                         const retirosConSucursal = data.retiros.map(retiro => ({
                             ...retiro,
-                            sucursal: data.sucursal
+                            sucursal: data.sucursal,
+                            valorAbs: Math.abs(parseFloat(retiro.valor || 0))
                         }));
                         todosLosRetiros = todosLosRetiros.concat(retirosConSucursal);
                     }
@@ -377,6 +388,10 @@
                 const retirosFiltrados = todosLosRetiros.filter(retiro =>
                     retiro.motivo.toLowerCase().includes('prestamo')
                 );
+
+                detallesRetirosGlobal = retirosFiltrados;
+                retirosCargados = true;
+                checkIfBothLoaded();
 
                 // Ordenar por fecha descendente
                 retirosFiltrados.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
@@ -476,7 +491,8 @@
                     if (data.egresos && data.egresos.length > 0) {
                         const egresosConSucursal = data.egresos.map(egreso => ({
                             ...egreso,
-                            sucursal: data.sucursal
+                            sucursal: data.sucursal,
+                            valorAbs: parseFloat(egreso.valor || 0)
                         }));
                         todosLosEgresos = todosLosEgresos.concat(egresosConSucursal);
                     }
@@ -486,6 +502,10 @@
                 const egresosFiltrados = todosLosEgresos.filter(egreso =>
                     egreso.motivo.toLowerCase().includes('prestamo')
                 );
+
+                detallesEgresosGlobal = egresosFiltrados;
+                egresosCargados = true;
+                checkIfBothLoaded();
 
                  // Ordenar por fecha descendente
                  egresosFiltrados.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
@@ -511,11 +531,119 @@
             }
         }
 
+        // Función para verificar si ambos detalles (retiros y egresos) han cargado
+        function checkIfBothLoaded() {
+            if (retirosCargados && egresosCargados) {
+                actualizarValoresNetosPrestamos();
+            }
+        }
+
+        // Función auxiliar para normalizar texto (simple: minúsculas, sin acentos)
+        function normalizarTexto(texto) {
+            if (!texto) return '';
+            return texto.toLowerCase()
+                .replace(/[áäâà]/g, 'a')
+                .replace(/[éëêè]/g, 'e')
+                .replace(/[íïîì]/g, 'i')
+                .replace(/[óöôò]/g, 'o')
+                .replace(/[úüûù]/g, 'u');
+        }
+
+        // Función auxiliar para obtener palabras clave significativas
+        function obtenerPalabrasClave(texto) {
+            const textoNormalizado = normalizarTexto(texto);
+            // Lista simple de stopwords (palabras comunes a ignorar)
+            const stopwords = ['de', 'para', 'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'con', 'por', 'en', 'a', 'y', 'o', 'q', 'que', 'del', 'al', 'mi', 'su'];
+            return textoNormalizado
+                .split(/[^a-z0-9]+/) // Dividir por cualquier cosa que no sea letra o número
+                .filter(palabra => palabra.length > 3 && !stopwords.includes(palabra) && isNaN(palabra)); // Ignorar stopwords, palabras cortas y números puros
+        }
+
+        // Función para calcular y actualizar los valores netos en la tabla de préstamos
+        function actualizarValoresNetosPrestamos() {
+            const prestamosTable = $('#prestamosTable').DataTable(); // Obtener instancia de DataTable
+
+            prestamosTable.rows().every(function() {
+                const rowNode = this.node();
+                const rowData = this.data(); // Obtener datos de la fila si DataTable los tiene cacheados
+                const $rowNode = $(rowNode);
+
+                const originalValor = parseFloat($rowNode.data('original-valor'));
+                const usuarioNombre = $rowNode.find('td.prestamo-usuario').text().trim(); // Obtenemos el nombre tal cual
+                const usuarioNombreNormalizado = normalizarTexto(usuarioNombre);
+                const motivoPrestamoOriginalText = $rowNode.find('td.prestamo-motivo').text().trim();
+                const palabrasClavePrestamo = obtenerPalabrasClave(motivoPrestamoOriginalText);
+
+                const $valorCell = $rowNode.find('td.prestamo-valor');
+                const $deduccionesCell = $rowNode.find('td.prestamo-deducciones'); // Celda para deducciones
+
+                let totalDeducciones = 0;
+                let deduccionesAplicadas = []; // Para tooltip
+
+                // Función interna para verificar relación y sumar deducción
+                const verificarYSumar = (item, tipo) => {
+                    const motivoItemNormalizado = normalizarTexto(item.motivo);
+                    let relacionado = false;
+
+                    // Opción 1: Contiene nombre de usuario?
+                    if (usuarioNombreNormalizado.length > 0 && motivoItemNormalizado.includes(usuarioNombreNormalizado)) {
+                        relacionado = true;
+                    }
+                    // Opción 2: Comparte palabra clave?
+                    if (!relacionado && palabrasClavePrestamo.length > 0) {
+                        const palabrasClaveItem = obtenerPalabrasClave(item.motivo);
+                        if (palabrasClavePrestamo.some(p => palabrasClaveItem.includes(p))) {
+                            relacionado = true;
+                        }
+                    }
+
+                    if (relacionado) {
+                        totalDeducciones += item.valorAbs;
+                        deduccionesAplicadas.push(`${tipo}: ${item.motivo} (${formatCurrency(item.valorAbs)})`);
+                    }
+                };
+
+                // Sumar deducciones de Retiros
+                detallesRetirosGlobal.forEach(retiro => {
+                    verificarYSumar(retiro, 'Retiro');
+                });
+
+                // Sumar deducciones de Egresos
+                detallesEgresosGlobal.forEach(egreso => {
+                    verificarYSumar(egreso, 'Egreso');
+                });
+
+                const valorNeto = originalValor - totalDeducciones;
+
+                // Actualizar celdas
+                const formattedNeto = formatCurrency(valorNeto);
+                const formattedDeducciones = formatCurrency(totalDeducciones);
+                const tooltipNeto = `Original: ${formatCurrency(originalValor)}`;
+                const tooltipDeducciones = deduccionesAplicadas.length > 0 ? deduccionesAplicadas.join('\n') : 'Sin deducciones aplicadas';
+
+                $valorCell.html(formattedNeto)
+                         .attr('title', tooltipNeto)
+                         .tooltip('dispose') // Eliminar tooltip anterior si existe
+                         .tooltip(); // Inicializar nuevo tooltip
+
+                $deduccionesCell.html(formattedDeducciones)
+                               .attr('title', tooltipDeducciones)
+                               .tooltip('dispose') // Eliminar tooltip anterior si existe
+                               .tooltip(); // Inicializar nuevo tooltip
+
+                // Opcional: Invalidar las celdas para que DataTables actualice su caché de ordenación/filtrado
+                // prestamosTable.cell($valorCell).invalidate();
+                // prestamosTable.cell($deduccionesCell).invalidate();
+            });
+            // Opcional: Redibujar la tabla si se invalidaron celdas
+            // prestamosTable.draw(false);
+        }
 
         $(document).ready(function() {
             // Inicializar DataTable
             var prestamosTable = $('#prestamosTable').DataTable({
                 "order": [[0, "desc"]],
+                "paging": false,
                 "language": {
                     "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
                 }
