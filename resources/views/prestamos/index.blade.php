@@ -59,7 +59,7 @@
             <div class="info-box bg-danger">
                 <span class="info-box-icon"><i class="fas fa-arrow-down"></i></span>
                 <div class="info-box-content">
-                    <span class="info-box-text">RETIROS TOTALES (DESDE ENE 2025)</span>
+                    <span class="info-box-text">RETIROS (PRÉSTAMOS DESDE ENE 2025)</span>
                     <span class="info-box-number" id="summary-retiros-mes-actual">CARGANDO...</span>
                 </div>
             </div>
@@ -68,7 +68,7 @@
             <div class="info-box bg-purple">
                 <span class="info-box-icon"><i class="fas fa-sign-out-alt"></i></span>
                 <div class="info-box-content">
-                    <span class="info-box-text">EGRESOS TOTALES (DESDE ENE 2025)</span>
+                    <span class="info-box-text">EGRESOS (PRÉSTAMOS DESDE ENE 2025)</span>
                     <span class="info-box-number" id="summary-egresos-mes-actual">CARGANDO...</span>
                 </div>
             </div>
@@ -79,7 +79,7 @@
     {{-- Tarjeta Plegable Retiros Mes Actual --}}
     <div class="card card-outline card-danger card-widget collapsed-card" id="card-retiros-mes-actual">
         <div class="card-header">
-            <h3 class="card-title">DETALLE RETIROS (DESDE ENE 2025)</h3>
+            <h3 class="card-title">DETALLE RETIROS (PRÉSTAMOS DESDE ENE 2025)</h3>
             <div class="card-tools">
                 <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
             </div>
@@ -111,7 +111,7 @@
     {{-- Tarjeta Plegable Egresos Mes Actual --}}
     <div class="card card-outline card-purple card-widget collapsed-card" id="card-egresos-mes-actual">
         <div class="card-header">
-            <h3 class="card-title">DETALLE EGRESOS (DESDE ENE 2025)</h3>
+            <h3 class="card-title">DETALLE EGRESOS (PRÉSTAMOS DESDE ENE 2025)</h3>
             <div class="card-tools">
                 <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
             </div>
@@ -297,7 +297,7 @@
             return months;
         }
 
-        // Función para obtener y sumar retiros (resumen)
+        // Función para obtener y sumar retiros (resumen filtrado por préstamo)
         async function fetchAndDisplayRetirosSummary(monthsToFetch) {
             const urls = [];
             const sucursales = [
@@ -317,24 +317,25 @@
 
             try {
                 const results = await Promise.all(urls.map(url => fetch(url).then(resp => resp.ok ? resp.json() : {retiros: []}).catch(() => ({ retiros: [] }))));
-                let totalRetiros = 0;
+                let totalRetirosPrestamo = 0;
                 results.forEach(data => {
                     if (data.retiros && data.retiros.length > 0) {
                         const retirosFiltrados = data.retiros.filter(retiro => {
                             const motivo = retiro.motivo.toLowerCase();
-                            return !motivo.includes('deposito') && !motivo.includes('depósito');
+                            // Filtrar por motivo que incluya "prestamo" y no sea depósito
+                            return motivo.includes('prestamo') && !motivo.includes('deposito') && !motivo.includes('depósito');
                         });
-                        totalRetiros += retirosFiltrados.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
+                        totalRetirosPrestamo += retirosFiltrados.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
                     }
                 });
-                summarySpan.textContent = formatCurrency(totalRetiros);
+                summarySpan.textContent = formatCurrency(totalRetirosPrestamo);
             } catch (error) {
-                console.error('Error al obtener retiros (resumen):', error);
+                console.error('Error al obtener retiros (resumen préstamo):', error);
                 summarySpan.textContent = 'ERROR';
             }
         }
 
-        // Función para obtener y mostrar detalles de retiros (tabla)
+        // Función para obtener y mostrar detalles de retiros (tabla filtrada por préstamo)
         async function fetchAndDisplayDetallesRetiros(monthsToFetch) {
             const urls = [];
              const sucursales = [
@@ -372,11 +373,18 @@
                     }
                 });
 
-                todosLosRetiros.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
+                // Filtrar por motivo que contenga "prestamo"
+                const retirosFiltrados = todosLosRetiros.filter(retiro =>
+                    retiro.motivo.toLowerCase().includes('prestamo')
+                );
 
-                if (todosLosRetiros.length > 0) {
-                    desgloseBody.innerHTML = todosLosRetiros.map(retiro => {
+                // Ordenar por fecha descendente
+                retirosFiltrados.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
+
+                if (retirosFiltrados.length > 0) {
+                    desgloseBody.innerHTML = retirosFiltrados.map(retiro => {
                          const esDeposito = retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito');
+                         // Aunque filtramos por préstamo, mantenemos la marca de depósito si existe
                          return `
                             <tr ${esDeposito ? 'class="bg-light text-muted"' : ''}>
                                 <td>${retiro.fecha}</td>
@@ -388,18 +396,18 @@
                          `;
                     }).join('');
                 } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY RETIROS REGISTRADOS DESDE ENE 2025.</td></tr>';
+                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY RETIROS DE PRÉSTAMOS REGISTRADOS DESDE ENE 2025.</td></tr>';
                 }
             } catch (error) {
-                console.error('Error al obtener detalles de retiros:', error);
-                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DETALLES DE RETIROS.</td></tr>';
+                console.error('Error al obtener detalles de retiros (préstamo):', error);
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DETALLES DE RETIROS DE PRÉSTAMOS.</td></tr>';
             } finally {
                  loadingOverlay.style.display = 'none';
             }
         }
 
 
-        // Función para obtener y sumar egresos (resumen)
+        // Función para obtener y sumar egresos (resumen filtrado por préstamo)
         async function fetchAndDisplayEgresosSummary(monthsToFetch) {
              const urls = [];
              const sucursales = [
@@ -419,18 +427,24 @@
 
              try {
                 const results = await Promise.all(urls.map(url => fetch(url).then(resp => resp.ok ? resp.json() : {total_egresos: 0, egresos: []}).catch(() => ({ total_egresos: 0, egresos: [] }))));
-                let totalEgresos = 0;
+                let totalEgresosPrestamo = 0;
                 results.forEach(data => {
-                    totalEgresos += parseFloat(data.total_egresos) || 0;
+                    // Sumar solo los egresos cuyo motivo incluya "prestamo"
+                    if(data.egresos && data.egresos.length > 0) {
+                        const egresosFiltrados = data.egresos.filter(egreso =>
+                            egreso.motivo.toLowerCase().includes('prestamo')
+                        );
+                        totalEgresosPrestamo += egresosFiltrados.reduce((sum, egreso) => sum + parseFloat(egreso.valor || 0), 0);
+                    }
                 });
-                summarySpan.textContent = formatCurrency(totalEgresos);
+                summarySpan.textContent = formatCurrency(totalEgresosPrestamo);
             } catch (error) {
-                console.error('Error al obtener egresos (resumen):', error);
+                console.error('Error al obtener egresos (resumen préstamo):', error);
                 summarySpan.textContent = 'ERROR';
             }
         }
 
-        // Función para obtener y mostrar detalles de egresos (tabla)
+        // Función para obtener y mostrar detalles de egresos (tabla filtrada por préstamo)
         async function fetchAndDisplayDetallesEgresos(monthsToFetch) {
              const urls = [];
              const sucursales = [
@@ -468,10 +482,16 @@
                     }
                 });
 
-                 todosLosEgresos.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
+                // Filtrar por motivo que contenga "prestamo"
+                const egresosFiltrados = todosLosEgresos.filter(egreso =>
+                    egreso.motivo.toLowerCase().includes('prestamo')
+                );
 
-                if (todosLosEgresos.length > 0) {
-                    desgloseBody.innerHTML = todosLosEgresos.map(egreso => `
+                 // Ordenar por fecha descendente
+                 egresosFiltrados.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
+
+                if (egresosFiltrados.length > 0) {
+                    desgloseBody.innerHTML = egresosFiltrados.map(egreso => `
                         <tr>
                             <td>${egreso.fecha}</td>
                             <td>${egreso.sucursal}</td>
@@ -481,11 +501,11 @@
                         </tr>
                     `).join('');
                 } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY EGRESOS REGISTRADOS DESDE ENE 2025.</td></tr>';
+                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY EGRESOS DE PRÉSTAMOS REGISTRADOS DESDE ENE 2025.</td></tr>';
                 }
             } catch (error) {
-                console.error('Error al obtener detalles de egresos:', error);
-                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DETALLES DE EGRESOS.</td></tr>';
+                console.error('Error al obtener detalles de egresos (préstamo):', error);
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DETALLES DE EGRESOS DE PRÉSTAMOS.</td></tr>';
             } finally {
                  loadingOverlay.style.display = 'none';
             }
