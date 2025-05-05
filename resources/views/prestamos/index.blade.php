@@ -113,18 +113,14 @@
                                     <button type="button" 
                                         class="btn btn-xs btn-default text-info mx-1 shadow" 
                                         title="Ver"
-                                        data-toggle="modal"
-                                        data-target="#verPrestamoModal"
-                                        data-prestamo="{{ json_encode($prestamo) }}">
+                                        onclick="window.location.href='{{ route('prestamos.show', $prestamo->id) }}'">
                                         <i class="fa fa-lg fa-fw fa-eye"></i>
                                     </button>
                                     @can('admin')
                                     <button type="button"
                                         class="btn btn-xs btn-default text-primary mx-1 shadow"
                                         title="Editar"
-                                        data-toggle="modal"
-                                        data-target="#editarPrestamoModal"
-                                        data-prestamo="{{ json_encode($prestamo) }}">
+                                        onclick="window.location.href='{{ route('prestamos.edit', $prestamo->id) }}'">
                                         <i class="fa fa-lg fa-fw fa-pen"></i>
                                     </button>
 

@@ -45,7 +45,12 @@ class PrestamoController extends Controller
 
     public function show(Prestamo $prestamo)
     {
-        return response()->json($prestamo->load('user'));
+        return view('prestamos.show', compact('prestamo'));
+    }
+
+    public function edit(Prestamo $prestamo)
+    {
+        return view('prestamos.edit', compact('prestamo'));
     }
 
     public function update(Request $request, Prestamo $prestamo)
