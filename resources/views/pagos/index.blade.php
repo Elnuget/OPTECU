@@ -134,9 +134,25 @@
                 </div>
             </form>
 
-            {{-- Botón Añadir Pago --}}
-            <div class="btn-group mb-3">
-                <a type="button" class="btn btn-success" href="{{ route('pagos.create') }}">AÑADIR PAGO</a>
+            {{-- Botones de Filtro TC y Añadir Pago --}}
+            <div class="btn-toolbar mb-3" role="toolbar" aria-label="Toolbar with button groups">
+                <div class="btn-group mr-2" role="group" aria-label="Grupo Filtro TC">
+                    <a href="{{ route('pagos.index', ['tc_status' => 'pendientes']) }}" 
+                       class="btn {{ request('tc_status') === 'pendientes' ? 'btn-warning active' : 'btn-outline-warning' }}">
+                       PAGOS PENDIENTES TC
+                    </a>
+                    <a href="{{ route('pagos.index', ['tc_status' => 'pagados']) }}" 
+                       class="btn {{ request('tc_status') === 'pagados' ? 'btn-success active' : 'btn-outline-success' }}">
+                       PAGOS RECIBIDOS TC
+                    </a>
+                    <a href="{{ route('pagos.index', request()->except('tc_status')) }}" 
+                       class="btn {{ !request('tc_status') ? 'btn-secondary active' : 'btn-outline-secondary' }}">
+                       TODOS
+                    </a>
+                </div>
+                <div class="btn-group" role="group" aria-label="Grupo Añadir">
+                    <a type="button" class="btn btn-success" href="{{ route('pagos.create') }}">AÑADIR PAGO</a>
+                </div>
             </div>
 
             <div class="table-responsive">

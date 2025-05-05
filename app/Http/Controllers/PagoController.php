@@ -47,6 +47,20 @@ class PagoController extends Controller
             $query->where('mediodepago_id', '=', $request->metodo_pago);
         }
 
+        // Nuevo filtro por estado TC
+        if ($request->filled('tc_status')) {
+            // Filtrar siempre por Tarjeta de Crédito (ID 4) cuando se usa el filtro TC
+            $query->where('mediodepago_id', 4);
+
+            if ($request->tc_status === 'pendientes') {
+                $query->where(function ($q) {
+                    $q->where('TC', false)->orWhereNull('TC');
+                });
+            } elseif ($request->tc_status === 'pagados') {
+                $query->where('TC', true);
+            }
+        }
+
         // Solo incluir pagos que tienen pedidos asociados y válidos
         $query->whereHas('pedido', function($q) {
             $q->whereNotNull('id');
@@ -57,7 +71,10 @@ class PagoController extends Controller
         // Calcular el total solo de pagos con pedidos válidos
         $totalPagos = $pagos->sum('pago');
 
-        return view('pagos.index', compact('pagos', 'mediosdepago', 'totalPagos'));
+        // Pasar el estado actual del filtro TC a la vista
+        $tcStatus = $request->input('tc_status');
+
+        return view('pagos.index', compact('pagos', 'mediosdepago', 'totalPagos', 'tcStatus'));
     }
 
     /**
