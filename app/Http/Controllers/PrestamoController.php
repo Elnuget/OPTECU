@@ -70,10 +70,30 @@ class PrestamoController extends Controller
 
     public function destroy(Prestamo $prestamo)
     {
-        $prestamo->delete();
+        try {
+            $prestamo->delete();
 
-        return redirect()->route('prestamos.index')
-            ->with('mensaje', 'PRÉSTAMO ELIMINADO EXITOSAMENTE')
-            ->with('tipo', 'alert-success');
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'PRÉSTAMO ELIMINADO EXITOSAMENTE'
+                ]);
+            }
+
+            return redirect()->route('prestamos.index')
+                ->with('mensaje', 'PRÉSTAMO ELIMINADO EXITOSAMENTE')
+                ->with('tipo', 'alert-success');
+        } catch (\Exception $e) {
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ERROR AL ELIMINAR EL PRÉSTAMO'
+                ], 500);
+            }
+
+            return redirect()->route('prestamos.index')
+                ->with('mensaje', 'ERROR AL ELIMINAR EL PRÉSTAMO')
+                ->with('tipo', 'alert-danger');
+        }
     }
 } 

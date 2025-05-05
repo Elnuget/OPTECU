@@ -126,9 +126,7 @@
 
                                     <button type="button"
                                         class="btn btn-xs btn-default text-danger mx-1 shadow"
-                                        data-toggle="modal"
-                                        data-target="#confirmarEliminarModal"
-                                        data-id="{{ $prestamo->id }}"
+                                        onclick="eliminarPrestamo({{ $prestamo->id }})"
                                         title="Eliminar">
                                         <i class="fa fa-lg fa-fw fa-trash"></i>
                                     </button>
@@ -429,5 +427,24 @@
                 $(this).find('select').val('').trigger('change');
             });
         });
+
+        function eliminarPrestamo(id) {
+            if (confirm('¿ESTÁ SEGURO DE ELIMINAR ESTE PRÉSTAMO?')) {
+                $.ajax({
+                    url: '/prestamos/' + id,
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        _method: 'DELETE'
+                    },
+                    success: function(response) {
+                        window.location.reload();
+                    },
+                    error: function(xhr) {
+                        alert('Error al eliminar el préstamo');
+                    }
+                });
+            }
+        }
     </script>
 @stop 
