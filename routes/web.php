@@ -159,6 +159,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('Pagos/{id}/editar', [PagoController::class, 'edit'])->name('pagos.edit');
     Route::put('Pagos/{id}', [PagoController::class, 'update'])->name('pagos.update');
     Route::delete('Pagos/{id}', [PagoController::class, 'destroy'])->name('pagos.destroy');
+    Route::post('/pagos/{id}/update-tc', [PagoController::class, 'updateTC'])->name('pagos.updateTC');
 
     Route::resource('caja', 'App\Http\Controllers\CajaController');
 

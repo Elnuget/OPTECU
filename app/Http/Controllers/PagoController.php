@@ -288,4 +288,29 @@ class PagoController extends Controller
             ]);
         }
     }
+
+    /**
+     * Update TC status for a payment
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function updateTC($id)
+    {
+        try {
+            $pago = Pago::findOrFail($id);
+            $pago->TC = true;
+            $pago->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Estado TC actualizado correctamente'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar estado TC'
+            ], 500);
+        }
+    }
 }

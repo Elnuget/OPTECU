@@ -192,8 +192,15 @@
                                     @endcan
 
                                     @if(!$pago->TC && $pago->mediodepago->medio_de_pago === 'Tarjeta Crédito')
-                                    <button class="btn btn-xs btn-warning mx-1 shadow" title="Pendiente">
+                                    <button class="btn btn-xs btn-warning mx-1 shadow tc-button" 
+                                        data-id="{{ $pago->id }}"
+                                        data-status="pending"
+                                        onclick="updateTC({{ $pago->id }}, this)">
                                         PENDIENTE
+                                    </button>
+                                    @elseif($pago->TC && $pago->mediodepago->medio_de_pago === 'Tarjeta Crédito')
+                                    <button class="btn btn-xs btn-success mx-1 shadow" disabled>
+                                        RECIBIDO
                                     </button>
                                     @endif
                                 </td>
@@ -239,6 +246,38 @@
 @include('atajos')
 
     <script>
+        function updateTC(id, button) {
+            if (!confirm('¿Está seguro de marcar este pago como recibido?')) {
+                return;
+            }
+
+            $.ajax({
+                url: `/pagos/${id}/update-tc`,
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Cambiar el botón a "RECIBIDO"
+                        $(button).replaceWith(`
+                            <button class="btn btn-xs btn-success mx-1 shadow" disabled>
+                                RECIBIDO
+                            </button>
+                        `);
+                        
+                        // Actualizar la celda oculta de TC
+                        $(button).closest('tr').find('td:nth-child(8)').text('SÍ');
+                    } else {
+                        alert('Error al actualizar el estado');
+                    }
+                },
+                error: function() {
+                    alert('Error al procesar la solicitud');
+                }
+            });
+        }
+
         $(document).ready(function() {
 
             // Configurar el modal antes de mostrarse
