@@ -154,6 +154,7 @@
                             <td>MÉTODO DE PAGO</td>
                             <td>SALDO</td>
                             <td>PAGO</td>
+                            <td style="display: none;">TC</td>
                             <td>ACCIONES</td>
                         </tr>
                     </thead>
@@ -168,7 +169,7 @@
                                 <td>{{ $pago->mediodepago->medio_de_pago }}</td>
                                 <td>{{ $pago->pedido->saldo }}</td> <!-- Updated to access saldo from pedido -->
                                 <td>{{ $pago->pago }}</td>
-
+                                <td style="display: none;">{{ $pago->TC ? 'SÍ' : 'NO' }}</td>
                                 <td>
                                     <a href="{{ route('pagos.show', $pago->id) }}"
                                         class="btn btn-xs btn-default text-info mx-1 shadow" title="Ver">
@@ -189,6 +190,12 @@
                                         <i class="fa fa-lg fa-fw fa-trash"></i>
                                     </a>
                                     @endcan
+
+                                    @if(!$pago->TC && $pago->mediodepago->medio_de_pago === 'Tarjeta Crédito')
+                                    <button class="btn btn-xs btn-warning mx-1 shadow" title="Pendiente">
+                                        PENDIENTE
+                                    </button>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
@@ -252,6 +259,11 @@
                     "targets": [2],
                     "visible": true,
                     "searchable": true,
+                },
+                {
+                    "targets": [7], // Índice de la columna TC
+                    "visible": false,
+                    "searchable": false
                 }],
                 "dom": 'Bfrt',      // Modified to remove pagination and info elements
                 "buttons": [
@@ -262,7 +274,7 @@
                         "text": 'IMPRIMIR',
                         "autoPrint": true,
                         "exportOptions": {
-                            "columns": [0, 1, 2, 3, 4, 5, 6] // Incluir nueva columna
+                            "columns": [0, 1, 2, 3, 4, 5, 6]
                         },
                         "customize": function(win) {
                             $(win.document.body).css('font-size', '16pt');
@@ -277,7 +289,7 @@
                         "filename": 'Pagos.pdf',
                         "pageSize": 'LETTER',
                         "exportOptions": {
-                            "columns": [0, 1, 2, 3, 4, 5, 6] // Incluir nueva columna
+                            "columns": [0, 1, 2, 3, 4, 5, 6]
                         }
                     }
                 ],
