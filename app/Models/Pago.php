@@ -17,11 +17,13 @@ class Pago extends Model
         'pedido_id',
         'mediodepago_id',
         'pago',
-        'created_at'
+        'created_at',
+        'TC'
     ];
 
     protected $casts = [
-        'pago' => 'decimal:2'
+        'pago' => 'decimal:2',
+        'TC' => 'boolean'
     ];
 
     public function setPagoAttribute($value)

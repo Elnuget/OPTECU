@@ -87,6 +87,7 @@ class PagoController extends Controller
             'mediodepago_id' => 'required|exists:mediosdepagos,id',
             'pago' => 'required|regex:/^\d+(\.\d{1,2})?$/',
             'created_at' => 'sometimes|nullable|date',
+            'TC' => 'sometimes|nullable|boolean',
         ]);
 
         try {
@@ -132,7 +133,11 @@ class PagoController extends Controller
                 Log::error('Failed to send email for payment ID: ' . $nuevoPago->id . '. Error: ' . $e->getMessage());
             }
 
-            return redirect()->route('pagos.index')->with([
+            // Obtener el año y mes actual
+            $currentYear = date('Y');
+            $currentMonth = date('m');
+
+            return redirect("/Pagos?ano={$currentYear}&mes={$currentMonth}")->with([
                 'error' => 'Exito',
                 'mensaje' => 'Pago creado exitosamente',
                 'tipo' => 'alert-success'
@@ -190,6 +195,7 @@ class PagoController extends Controller
             'mediodepago_id' => 'nullable|exists:mediosdepagos,id',
             'pago' => 'nullable|regex:/^\d+(\.\d{1,2})?$/',
             'created_at' => 'sometimes|nullable|date',
+            'TC' => 'sometimes|nullable|boolean',
         ]);
 
         // Format pago to ensure exact decimal

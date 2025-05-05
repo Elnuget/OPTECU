@@ -249,7 +249,11 @@ class PedidosController extends Controller
             //     \Mail::to($pedido->correo_electronico)->send(new \App\Mail\CalificacionPedido($pedido));
             // }
 
-            return redirect('/Pedidos')->with([
+            // Obtener el año y mes actual
+            $currentYear = date('Y');
+            $currentMonth = date('m');
+
+            return redirect("/Pedidos?ano={$currentYear}&mes={$currentMonth}")->with([
                 'error' => 'Exito',
                 'mensaje' => 'Pedido creado exitosamente',
                 'tipo' => 'alert-success'
