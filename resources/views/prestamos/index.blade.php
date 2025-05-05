@@ -59,7 +59,7 @@
             <div class="info-box bg-danger">
                 <span class="info-box-icon"><i class="fas fa-arrow-down"></i></span>
                 <div class="info-box-content">
-                    <span class="info-box-text">RETIROS TOTALES (MES ACTUAL)</span>
+                    <span class="info-box-text">RETIROS TOTALES (DESDE ENE 2025)</span>
                     <span class="info-box-number" id="summary-retiros-mes-actual">CARGANDO...</span>
                 </div>
             </div>
@@ -68,13 +68,77 @@
             <div class="info-box bg-purple">
                 <span class="info-box-icon"><i class="fas fa-sign-out-alt"></i></span>
                 <div class="info-box-content">
-                    <span class="info-box-text">EGRESOS TOTALES (MES ACTUAL)</span>
+                    <span class="info-box-text">EGRESOS TOTALES (DESDE ENE 2025)</span>
                     <span class="info-box-number" id="summary-egresos-mes-actual">CARGANDO...</span>
                 </div>
             </div>
         </div>
     </div>
     {{-- Fin Tarjetas de Resumen --}}
+
+    {{-- Tarjeta Plegable Retiros Mes Actual --}}
+    <div class="card card-outline card-danger card-widget collapsed-card" id="card-retiros-mes-actual">
+        <div class="card-header">
+            <h3 class="card-title">DETALLE RETIROS (DESDE ENE 2025)</h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>SUCURSAL</th>
+                            <th>MOTIVO</th>
+                            <th>VALOR</th>
+                            <th>USUARIO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desglose-retiros-mes-actual">
+                        <tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="overlay dark" id="loading-overlay-retiros-mes" style="display: none;">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+        </div>
+    </div>
+    {{-- Fin Tarjeta Plegable Retiros Mes Actual --}}
+
+    {{-- Tarjeta Plegable Egresos Mes Actual --}}
+    <div class="card card-outline card-purple card-widget collapsed-card" id="card-egresos-mes-actual">
+        <div class="card-header">
+            <h3 class="card-title">DETALLE EGRESOS (DESDE ENE 2025)</h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>SUCURSAL</th>
+                            <th>MOTIVO</th>
+                            <th>VALOR</th>
+                            <th>USUARIO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desglose-egresos-mes-actual">
+                        <tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="overlay dark" id="loading-overlay-egresos-mes" style="display: none;">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+        </div>
+    </div>
+    {{-- Fin Tarjeta Plegable Egresos Mes Actual --}}
 
     <div class="card">
         <div class="card-body">
@@ -208,59 +272,225 @@
             return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(number);
         }
 
-        // Función para obtener y sumar retiros del mes actual
-        function fetchAndDisplayRetirosMesActual(ano, mes) {
-            const urls = [
-                `https://opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`,
-                `https://escleroptica2.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`,
-                `https://sucursal3.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`
+        // Genera una lista de meses/años desde Enero 2025 hasta la fecha actual
+        function getMonthsToFetch() {
+            const months = [];
+            const startYear = 2025;
+            const startMonth = 1; // Enero
+            const currentDate = new Date();
+            const endYear = currentDate.getFullYear();
+            const endMonth = currentDate.getMonth() + 1;
+
+            for (let year = startYear; year <= endYear; year++) {
+                const monthStart = (year === startYear) ? startMonth : 1;
+                const monthEnd = (year === endYear) ? endMonth : 12;
+                for (let month = monthStart; month <= monthEnd; month++) {
+                    months.push({ year, month });
+                }
+            }
+            // Asegurarse de que al menos el mes actual se incluya si estamos antes de 2025
+            if (months.length === 0 && endYear < startYear) {
+                 months.push({ year: endYear, month: endMonth });
+            } else if (months.length === 0 && endYear === startYear && endMonth < startMonth) {
+                 months.push({ year: endYear, month: endMonth });
+            }
+            return months;
+        }
+
+        // Función para obtener y sumar retiros (resumen)
+        async function fetchAndDisplayRetirosSummary(monthsToFetch) {
+            const urls = [];
+            const sucursales = [
+                { domain: 'opticas.xyz', name: 'MATRIZ' },
+                { domain: 'escleroptica2.opticas.xyz', name: 'ROCÍO' },
+                { domain: 'sucursal3.opticas.xyz', name: 'NORTE' }
             ];
+
+            monthsToFetch.forEach(({ year, month }) => {
+                sucursales.forEach(suc => {
+                    urls.push(`https://${suc.domain}/api/caja/retiros?ano=${year}&mes=${month}`);
+                });
+            });
+
             const summarySpan = document.getElementById('summary-retiros-mes-actual');
             summarySpan.textContent = 'CARGANDO...';
 
-            Promise.all(urls.map(url => fetch(url).then(resp => resp.ok ? resp.json() : {retiros: []}).catch(() => ({ retiros: [] }))))
-                .then(results => {
-                    let totalRetiros = 0;
-                    results.forEach(data => {
-                        if (data.retiros && data.retiros.length > 0) {
-                            const retirosFiltrados = data.retiros.filter(retiro => {
-                                const motivo = retiro.motivo.toLowerCase();
-                                return !motivo.includes('deposito') && !motivo.includes('depósito');
-                            });
-                            totalRetiros += retirosFiltrados.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
-                        }
-                    });
-                    summarySpan.textContent = formatCurrency(totalRetiros);
-                })
-                .catch(error => {
-                    console.error('Error al obtener retiros:', error);
-                    summarySpan.textContent = 'ERROR';
+            try {
+                const results = await Promise.all(urls.map(url => fetch(url).then(resp => resp.ok ? resp.json() : {retiros: []}).catch(() => ({ retiros: [] }))));
+                let totalRetiros = 0;
+                results.forEach(data => {
+                    if (data.retiros && data.retiros.length > 0) {
+                        const retirosFiltrados = data.retiros.filter(retiro => {
+                            const motivo = retiro.motivo.toLowerCase();
+                            return !motivo.includes('deposito') && !motivo.includes('depósito');
+                        });
+                        totalRetiros += retirosFiltrados.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
+                    }
                 });
+                summarySpan.textContent = formatCurrency(totalRetiros);
+            } catch (error) {
+                console.error('Error al obtener retiros (resumen):', error);
+                summarySpan.textContent = 'ERROR';
+            }
         }
 
-        // Función para obtener y sumar egresos del mes actual
-        function fetchAndDisplayEgresosMesActual(ano, mes) {
-            const urls = [
-                `https://opticas.xyz/api/egresos?ano=${ano}&mes=${mes}`,
-                `https://escleroptica2.opticas.xyz/api/egresos?ano=${ano}&mes=${mes}`,
-                `https://sucursal3.opticas.xyz/api/egresos?ano=${ano}&mes=${mes}`
+        // Función para obtener y mostrar detalles de retiros (tabla)
+        async function fetchAndDisplayDetallesRetiros(monthsToFetch) {
+            const urls = [];
+             const sucursales = [
+                { domain: 'opticas.xyz', name: 'MATRIZ' },
+                { domain: 'escleroptica2.opticas.xyz', name: 'ROCÍO' },
+                { domain: 'sucursal3.opticas.xyz', name: 'NORTE' }
             ];
+
+            monthsToFetch.forEach(({ year, month }) => {
+                sucursales.forEach(suc => {
+                     urls.push({ url: `https://${suc.domain}/api/caja/retiros?ano=${year}&mes=${month}`, sucursal: suc.name });
+                });
+            });
+
+            const desgloseBody = document.getElementById('desglose-retiros-mes-actual');
+            const loadingOverlay = document.getElementById('loading-overlay-retiros-mes');
+
+            desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
+            loadingOverlay.style.display = 'flex';
+
+            try {
+                const results = await Promise.all(urls.map(item => fetch(item.url)
+                                            .then(resp => resp.ok ? resp.json() : {retiros: []})
+                                            .then(data => ({ ...data, sucursal: item.sucursal }))
+                                            .catch(() => ({ retiros: [], sucursal: item.sucursal }))));
+
+                let todosLosRetiros = [];
+                results.forEach(data => {
+                    if (data.retiros && data.retiros.length > 0) {
+                        const retirosConSucursal = data.retiros.map(retiro => ({
+                            ...retiro,
+                            sucursal: data.sucursal
+                        }));
+                        todosLosRetiros = todosLosRetiros.concat(retirosConSucursal);
+                    }
+                });
+
+                todosLosRetiros.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
+
+                if (todosLosRetiros.length > 0) {
+                    desgloseBody.innerHTML = todosLosRetiros.map(retiro => {
+                         const esDeposito = retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito');
+                         return `
+                            <tr ${esDeposito ? 'class="bg-light text-muted"' : ''}>
+                                <td>${retiro.fecha}</td>
+                                <td>${retiro.sucursal}</td>
+                                <td>${retiro.motivo} ${esDeposito ? '<span class="badge badge-info">DEPÓSITO</span>' : ''}</td>
+                                <td class="text-danger">${formatCurrency(retiro.valor)}</td>
+                                <td>${retiro.usuario}</td>
+                            </tr>
+                         `;
+                    }).join('');
+                } else {
+                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY RETIROS REGISTRADOS DESDE ENE 2025.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error al obtener detalles de retiros:', error);
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DETALLES DE RETIROS.</td></tr>';
+            } finally {
+                 loadingOverlay.style.display = 'none';
+            }
+        }
+
+
+        // Función para obtener y sumar egresos (resumen)
+        async function fetchAndDisplayEgresosSummary(monthsToFetch) {
+             const urls = [];
+             const sucursales = [
+                { domain: 'opticas.xyz', name: 'MATRIZ' },
+                { domain: 'escleroptica2.opticas.xyz', name: 'ROCÍO' },
+                { domain: 'sucursal3.opticas.xyz', name: 'NORTE' }
+            ];
+
+            monthsToFetch.forEach(({ year, month }) => {
+                sucursales.forEach(suc => {
+                    urls.push(`https://${suc.domain}/api/egresos?ano=${year}&mes=${month}`);
+                });
+            });
+
             const summarySpan = document.getElementById('summary-egresos-mes-actual');
             summarySpan.textContent = 'CARGANDO...';
 
-            Promise.all(urls.map(url => fetch(url).then(resp => resp.ok ? resp.json() : {total_egresos: 0}).catch(() => ({ total_egresos: 0 }))))
-                .then(results => {
-                    let totalEgresos = 0;
-                    results.forEach(data => {
-                        totalEgresos += parseFloat(data.total_egresos) || 0;
-                    });
-                    summarySpan.textContent = formatCurrency(totalEgresos);
-                })
-                .catch(error => {
-                    console.error('Error al obtener egresos:', error);
-                    summarySpan.textContent = 'ERROR';
+             try {
+                const results = await Promise.all(urls.map(url => fetch(url).then(resp => resp.ok ? resp.json() : {total_egresos: 0, egresos: []}).catch(() => ({ total_egresos: 0, egresos: [] }))));
+                let totalEgresos = 0;
+                results.forEach(data => {
+                    totalEgresos += parseFloat(data.total_egresos) || 0;
                 });
+                summarySpan.textContent = formatCurrency(totalEgresos);
+            } catch (error) {
+                console.error('Error al obtener egresos (resumen):', error);
+                summarySpan.textContent = 'ERROR';
+            }
         }
+
+        // Función para obtener y mostrar detalles de egresos (tabla)
+        async function fetchAndDisplayDetallesEgresos(monthsToFetch) {
+             const urls = [];
+             const sucursales = [
+                { domain: 'opticas.xyz', name: 'MATRIZ' },
+                { domain: 'escleroptica2.opticas.xyz', name: 'ROCÍO' },
+                { domain: 'sucursal3.opticas.xyz', name: 'NORTE' }
+            ];
+
+             monthsToFetch.forEach(({ year, month }) => {
+                sucursales.forEach(suc => {
+                     urls.push({ url: `https://${suc.domain}/api/egresos?ano=${year}&mes=${month}`, sucursal: suc.name });
+                });
+            });
+
+            const desgloseBody = document.getElementById('desglose-egresos-mes-actual');
+            const loadingOverlay = document.getElementById('loading-overlay-egresos-mes');
+
+            desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
+            loadingOverlay.style.display = 'flex';
+
+            try {
+                 const results = await Promise.all(urls.map(item => fetch(item.url)
+                                            .then(resp => resp.ok ? resp.json() : {egresos: []})
+                                            .then(data => ({ ...data, sucursal: item.sucursal }))
+                                            .catch(() => ({ egresos: [], sucursal: item.sucursal }))));
+
+                let todosLosEgresos = [];
+                results.forEach(data => {
+                    if (data.egresos && data.egresos.length > 0) {
+                        const egresosConSucursal = data.egresos.map(egreso => ({
+                            ...egreso,
+                            sucursal: data.sucursal
+                        }));
+                        todosLosEgresos = todosLosEgresos.concat(egresosConSucursal);
+                    }
+                });
+
+                 todosLosEgresos.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
+
+                if (todosLosEgresos.length > 0) {
+                    desgloseBody.innerHTML = todosLosEgresos.map(egreso => `
+                        <tr>
+                            <td>${egreso.fecha}</td>
+                            <td>${egreso.sucursal}</td>
+                            <td>${egreso.motivo}</td>
+                            <td class="text-danger">${formatCurrency(egreso.valor)}</td>
+                            <td>${egreso.usuario}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY EGRESOS REGISTRADOS DESDE ENE 2025.</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error al obtener detalles de egresos:', error);
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DETALLES DE EGRESOS.</td></tr>';
+            } finally {
+                 loadingOverlay.style.display = 'none';
+            }
+        }
+
 
         $(document).ready(function() {
             // Inicializar DataTable
@@ -271,14 +501,14 @@
                 }
             });
 
-            // Obtener fecha actual
-            const currentDate = new Date();
-            const currentYear = currentDate.getFullYear();
-            const currentMonth = currentDate.getMonth() + 1;
+            // Obtener lista de meses a consultar (desde Ene 2025 hasta actual)
+            const monthsToFetch = getMonthsToFetch();
 
-            // Cargar datos de retiros y egresos del mes actual
-            fetchAndDisplayRetirosMesActual(currentYear, currentMonth);
-            fetchAndDisplayEgresosMesActual(currentYear, currentMonth);
+            // Cargar datos de retiros y egresos para el rango de fechas
+            fetchAndDisplayRetirosSummary(monthsToFetch);
+            fetchAndDisplayEgresosSummary(monthsToFetch);
+            fetchAndDisplayDetallesRetiros(monthsToFetch);
+            fetchAndDisplayDetallesEgresos(monthsToFetch);
 
             // Inicializar select2 para los combobox de usuarios
             $('#user_id').select2({
