@@ -53,6 +53,29 @@
         }
     </style>
 
+    {{-- Tarjetas de Resumen de Retiros y Egresos --}}
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="info-box bg-danger">
+                <span class="info-box-icon"><i class="fas fa-arrow-down"></i></span>
+                <div class="info-box-content">
+                    <span class="info-box-text">RETIROS TOTALES (MES ACTUAL)</span>
+                    <span class="info-box-number" id="summary-retiros-mes-actual">CARGANDO...</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="info-box bg-purple">
+                <span class="info-box-icon"><i class="fas fa-sign-out-alt"></i></span>
+                <div class="info-box-content">
+                    <span class="info-box-text">EGRESOS TOTALES (MES ACTUAL)</span>
+                    <span class="info-box-number" id="summary-egresos-mes-actual">CARGANDO...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{-- Fin Tarjetas de Resumen --}}
+
     <div class="card">
         <div class="card-body">
             {{-- Botón Añadir Préstamo --}}
@@ -180,6 +203,65 @@
 @section('js')
 @include('atajos')
     <script>
+        // Función para formatear números como moneda
+        function formatCurrency(number) {
+            return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(number);
+        }
+
+        // Función para obtener y sumar retiros del mes actual
+        function fetchAndDisplayRetirosMesActual(ano, mes) {
+            const urls = [
+                `https://opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`,
+                `https://escleroptica2.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`,
+                `https://sucursal3.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`
+            ];
+            const summarySpan = document.getElementById('summary-retiros-mes-actual');
+            summarySpan.textContent = 'CARGANDO...';
+
+            Promise.all(urls.map(url => fetch(url).then(resp => resp.ok ? resp.json() : {retiros: []}).catch(() => ({ retiros: [] }))))
+                .then(results => {
+                    let totalRetiros = 0;
+                    results.forEach(data => {
+                        if (data.retiros && data.retiros.length > 0) {
+                            const retirosFiltrados = data.retiros.filter(retiro => {
+                                const motivo = retiro.motivo.toLowerCase();
+                                return !motivo.includes('deposito') && !motivo.includes('depósito');
+                            });
+                            totalRetiros += retirosFiltrados.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
+                        }
+                    });
+                    summarySpan.textContent = formatCurrency(totalRetiros);
+                })
+                .catch(error => {
+                    console.error('Error al obtener retiros:', error);
+                    summarySpan.textContent = 'ERROR';
+                });
+        }
+
+        // Función para obtener y sumar egresos del mes actual
+        function fetchAndDisplayEgresosMesActual(ano, mes) {
+            const urls = [
+                `https://opticas.xyz/api/egresos?ano=${ano}&mes=${mes}`,
+                `https://escleroptica2.opticas.xyz/api/egresos?ano=${ano}&mes=${mes}`,
+                `https://sucursal3.opticas.xyz/api/egresos?ano=${ano}&mes=${mes}`
+            ];
+            const summarySpan = document.getElementById('summary-egresos-mes-actual');
+            summarySpan.textContent = 'CARGANDO...';
+
+            Promise.all(urls.map(url => fetch(url).then(resp => resp.ok ? resp.json() : {total_egresos: 0}).catch(() => ({ total_egresos: 0 }))))
+                .then(results => {
+                    let totalEgresos = 0;
+                    results.forEach(data => {
+                        totalEgresos += parseFloat(data.total_egresos) || 0;
+                    });
+                    summarySpan.textContent = formatCurrency(totalEgresos);
+                })
+                .catch(error => {
+                    console.error('Error al obtener egresos:', error);
+                    summarySpan.textContent = 'ERROR';
+                });
+        }
+
         $(document).ready(function() {
             // Inicializar DataTable
             var prestamosTable = $('#prestamosTable').DataTable({
@@ -188,6 +270,15 @@
                     "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
                 }
             });
+
+            // Obtener fecha actual
+            const currentDate = new Date();
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = currentDate.getMonth() + 1;
+
+            // Cargar datos de retiros y egresos del mes actual
+            fetchAndDisplayRetirosMesActual(currentYear, currentMonth);
+            fetchAndDisplayEgresosMesActual(currentYear, currentMonth);
 
             // Inicializar select2 para los combobox de usuarios
             $('#user_id').select2({
