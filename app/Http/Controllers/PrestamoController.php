@@ -4,28 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Prestamo;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 
 class PrestamoController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        $query = Prestamo::with('user');
-
-        // Filtrar por año y mes si se proporcionan
-        if ($request->filled('ano') && $request->filled('mes')) {
-            $query->whereYear('created_at', $request->ano)
-                  ->whereMonth('created_at', $request->mes);
-        }
-
-        $prestamos = $query->latest()->get();
-
-        // Calcular totales para el período seleccionado
-        $totales = [
-            'prestamos' => $prestamos->sum('valor')
-        ];
-
-        return view('prestamos.index', compact('prestamos', 'totales'));
+        $prestamos = Prestamo::with('user')->latest()->get();
+        return view('prestamos.index', compact('prestamos'));
     }
 
     public function store(Request $request)
@@ -72,25 +57,10 @@ class PrestamoController extends Controller
     {
         try {
             $prestamo->delete();
-
-            if (request()->ajax()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'PRÉSTAMO ELIMINADO EXITOSAMENTE'
-                ]);
-            }
-
             return redirect()->route('prestamos.index')
                 ->with('mensaje', 'PRÉSTAMO ELIMINADO EXITOSAMENTE')
                 ->with('tipo', 'alert-success');
         } catch (\Exception $e) {
-            if (request()->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'ERROR AL ELIMINAR EL PRÉSTAMO'
-                ], 500);
-            }
-
             return redirect()->route('prestamos.index')
                 ->with('mensaje', 'ERROR AL ELIMINAR EL PRÉSTAMO')
                 ->with('tipo', 'alert-danger');
