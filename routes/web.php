@@ -12,6 +12,7 @@ use App\Http\Controllers\CashHistoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EgresoController;
+use App\Http\Controllers\PrestamoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -204,6 +205,8 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         ->middleware(['auth']); // Mantener middleware auth si es necesario dentro del grupo
 
     Route::resource('egresos', EgresoController::class);
+
+    Route::resource('prestamos', PrestamoController::class);
 });
 
 // Rutas públicas para calificación

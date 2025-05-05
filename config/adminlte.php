@@ -294,6 +294,14 @@ return [
         ],
 
         [
+            'text' => 'PRÉSTAMOS',
+            'icon' => 'fas fa-hand-holding-usd',
+            'url' => '/prestamos',
+            'active' => ['prestamos', 'prestamos/*'],
+            'can' => 'admin',
+        ],
+
+        [
             'text' => 'FINANZAS',
             'icon' => 'fas fa-dollar-sign',
             'url' => '/egresos/finanzas',
