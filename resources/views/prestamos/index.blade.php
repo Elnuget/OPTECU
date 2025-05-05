@@ -159,6 +159,7 @@
                             <th>FECHA</th>
                             <th>USUARIO</th>
                             <th>MOTIVO</th>
+                            <th>VALOR ORIGINAL</th>
                             <th>VALOR NETO</th>
                             <th>DEDUCCIONES</th>
                             <th>ACCIONES</th>
@@ -170,7 +171,8 @@
                                 <td>{{ $prestamo->created_at->format('Y-m-d') }}</td>
                                 <td class="prestamo-usuario">{{ $prestamo->user->name }}</td>
                                 <td class="prestamo-motivo">{{ $prestamo->motivo }}</td>
-                                <td class="prestamo-valor">${{ number_format($prestamo->valor, 2, ',', '.') }} <i class="fas fa-spinner fa-spin text-muted ml-1"></i></td>
+                                <td class="prestamo-valor-original">${{ number_format($prestamo->valor, 2, ',', '.') }}</td>
+                                <td class="prestamo-valor-neto">CALCULANDO...</td>
                                 <td class="prestamo-deducciones">-</td>
                                 <td>
                                     <button type="button" 
@@ -574,14 +576,14 @@
                 const motivoPrestamoOriginalText = $rowNode.find('td.prestamo-motivo').text().trim();
                 const palabrasClavePrestamo = obtenerPalabrasClave(motivoPrestamoOriginalText);
 
-                const $valorCell = $rowNode.find('td.prestamo-valor');
+                const $valorNetoCell = $rowNode.find('td.prestamo-valor-neto'); // Celda para valor neto
                 const $deduccionesCell = $rowNode.find('td.prestamo-deducciones'); // Celda para deducciones
 
                 let totalDeducciones = 0;
-                let deduccionesAplicadas = []; // Para tooltip
+                let deduccionesDetalladas = []; // Para la lista en la celda
 
-                // Función interna para verificar relación y sumar deducción
-                const verificarYSumar = (item, tipo) => {
+                // Función interna para verificar relación y guardar deducción
+                const verificarYGuardarDeduccion = (item, tipo) => {
                     const motivoItemNormalizado = normalizarTexto(item.motivo);
                     let relacionado = false;
 
@@ -598,41 +600,67 @@
                     }
 
                     if (relacionado) {
-                        totalDeducciones += item.valorAbs;
-                        deduccionesAplicadas.push(`${tipo}: ${item.motivo} (${formatCurrency(item.valorAbs)})`);
+                        // Guardar detalles para la lista
+                        deduccionesDetalladas.push({
+                            fecha: item.fecha,
+                            tipo: tipo,
+                            valor: item.valorAbs,
+                            motivo: item.motivo // Podríamos mostrarlo en el tooltip si es muy largo
+                        });
                     }
                 };
 
-                // Sumar deducciones de Retiros
+                // Procesar Retiros
                 detallesRetirosGlobal.forEach(retiro => {
-                    verificarYSumar(retiro, 'Retiro');
+                    verificarYGuardarDeduccion(retiro, 'Retiro');
                 });
 
-                // Sumar deducciones de Egresos
+                // Procesar Egresos
                 detallesEgresosGlobal.forEach(egreso => {
-                    verificarYSumar(egreso, 'Egreso');
+                    verificarYGuardarDeduccion(egreso, 'Egreso');
                 });
 
+                // Calcular total y valor neto
+                totalDeducciones = deduccionesDetalladas.reduce((sum, d) => sum + d.valor, 0);
                 const valorNeto = originalValor - totalDeducciones;
 
                 // Actualizar celdas
                 const formattedNeto = formatCurrency(valorNeto);
-                const formattedDeducciones = formatCurrency(totalDeducciones);
-                const tooltipNeto = `Original: ${formatCurrency(originalValor)}`;
-                const tooltipDeducciones = deduccionesAplicadas.length > 0 ? deduccionesAplicadas.join('\n') : 'Sin deducciones aplicadas';
+                const tooltipNeto = `Original: ${formatCurrency(originalValor)}\nDeducciones Totales: ${formatCurrency(totalDeducciones)}`;
 
-                $valorCell.html(formattedNeto)
-                         .attr('title', tooltipNeto)
-                         .tooltip('dispose') // Eliminar tooltip anterior si existe
-                         .tooltip(); // Inicializar nuevo tooltip
+                $valorNetoCell.html(formattedNeto)
+                              .attr('title', tooltipNeto)
+                              .tooltip('dispose') // Eliminar tooltip anterior si existe
+                              .tooltip(); // Inicializar nuevo tooltip
 
-                $deduccionesCell.html(formattedDeducciones)
-                               .attr('title', tooltipDeducciones)
-                               .tooltip('dispose') // Eliminar tooltip anterior si existe
-                               .tooltip(); // Inicializar nuevo tooltip
+                // Construir lista HTML para deducciones
+                let deduccionesHtml = '<span class="text-muted">NINGUNA</span>';
+                if (deduccionesDetalladas.length > 0) {
+                     // Ordenar deducciones por fecha para mostrarlas cronológicamente
+                    deduccionesDetalladas.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+                    deduccionesHtml = '<ul class="list-unstyled mb-0" style="font-size: 0.8em;">';
+                    deduccionesDetalladas.forEach(d => {
+                        deduccionesHtml += `
+                            <li class="mb-1">
+                                <div><strong>${d.fecha}</strong> (${d.tipo}): ${formatCurrency(d.valor)}</div>
+                                <div class="text-muted" style="font-size: 0.9em;">Motivo: ${d.motivo}</div>
+                            </li>`;
+                    });
+                    // Agregar línea separadora y total
+                    deduccionesHtml += `
+                        <li class="mt-2 pt-2 border-top">
+                            <strong>TOTAL DEDUCCIONES: ${formatCurrency(totalDeducciones)}</strong>
+                        </li>
+                    </ul>`;
+                }
+
+                $deduccionesCell.html(deduccionesHtml);
+                // Ya no necesitamos tooltip en deducciones ya que se muestra la lista
+                $deduccionesCell.tooltip('dispose');
 
                 // Opcional: Invalidar las celdas para que DataTables actualice su caché de ordenación/filtrado
-                // prestamosTable.cell($valorCell).invalidate();
+                // prestamosTable.cell($valorNetoCell).invalidate();
                 // prestamosTable.cell($deduccionesCell).invalidate();
             });
             // Opcional: Redibujar la tabla si se invalidaron celdas
