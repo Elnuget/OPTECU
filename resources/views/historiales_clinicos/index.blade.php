@@ -89,6 +89,11 @@
                         </td>
                         <td>{{ strtoupper($historial->usuario->name ?? 'N/A') }}</td>
                         <td>
+                            <a href="{{ route('historiales_clinicos.show', $historial->id) }}"
+                               class="btn btn-xs btn-default text-primary mx-1 shadow"
+                               title="VER">
+                                <i class="fa fa-lg fa-fw fa-eye"></i>
+                            </a>
                             <a href="{{ route('historiales_clinicos.edit', $historial->id) }}"
                                 class="btn btn-xs btn-default text-warning mx-1 shadow" 
                                 title="EDITAR">

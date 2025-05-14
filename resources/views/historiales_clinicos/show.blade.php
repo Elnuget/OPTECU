@@ -1,213 +1,174 @@
 @extends('adminlte::page')
 
-@section('title', 'Ver Historial Clínico')
+@section('title', 'DETALLE DEL HISTORIAL CLÍNICO')
 
 @section('content_header')
-<h1 class="mb-3">Ver Historial Clínico</h1>
+    <h1>DETALLE DEL HISTORIAL CLÍNICO</h1>
+    <p>Información detallada del historial clínico.</p>
 @stop
 
 @section('content')
 <div class="card">
+    <div class="card-header">
+        <h3 class="card-title">HISTORIAL N°: {{ $historialClinico->id }}</h3>
+    </div>
     <div class="card-body">
-        <form>
-            {{-- DATOS DEL PACIENTE --}}
-            <div class="mb-4">
-                <h5 class="text-primary">Datos del Paciente</h5>
-                <hr>
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label for="nombres">Nombres</label>
-                        <input type="text" id="nombres" class="form-control" value="{{ $historialClinico->nombres }}" readonly>
-                    </div>
-                    <div class="form-group col-md-6">
-                        <label for="apellidos">Apellidos</label>
-                        <input type="text" id="apellidos" class="form-control" value="{{ $historialClinico->apellidos }}" readonly>
-                    </div>
-                    <div class="form-group col-md-6">
-                        <label for="edad">Edad</label>
-                        <input type="number" id="edad" class="form-control" value="{{ $historialClinico->edad }}" readonly>
-                    </div>
-                    <div class="form-group col-md-6">
-                        <label for="fecha_nacimiento">Fecha de Nacimiento</label>
-                        <input type="date" id="fecha_nacimiento" class="form-control" value="{{ $historialClinico->fecha_nacimiento }}" readonly>
-                    </div>
-                    <div class="form-group col-md-6">
-                        <label for="celular">Celular</label>
-                        <input type="text" id="celular" class="form-control" value="{{ $historialClinico->celular }}" readonly>
-                    </div>
-                    <div class="form-group col-md-6">
-                        <label for="ocupacion">Ocupación</label>
-                        <input type="text" id="ocupacion" class="form-control" value="{{ $historialClinico->ocupacion }}" readonly>
-                    </div>
-                    <div class="form-group col-md-6">
-                        <label for="fecha">Fecha</label>
-                        <input type="date" id="fecha" class="form-control" value="{{ $historialClinico->fecha }}" readonly>
-                    </div>
-                </div>
+        <div class="row">
+            <div class="col-md-6">
+                <h4>INFORMACIÓN DEL PACIENTE</h4>
+                <dl class="row">
+                    <dt class="col-sm-4">NOMBRES:</dt>
+                    <dd class="col-sm-8">{{ strtoupper($historialClinico->nombres) }}</dd>
+                    <dt class="col-sm-4">APELLIDOS:</dt>
+                    <dd class="col-sm-8">{{ strtoupper($historialClinico->apellidos) }}</dd>
+                    <dt class="col-sm-4">EDAD:</dt>
+                    <dd class="col-sm-8">{{ $historialClinico->edad }} AÑOS</dd>
+                    <dt class="col-sm-4">FECHA NACIMIENTO:</dt>
+                    <dd class="col-sm-8">{{ $historialClinico->fecha_nacimiento ? \Carbon\Carbon::parse($historialClinico->fecha_nacimiento)->format('d/m/Y') : 'N/A' }}</dd>
+                    <dt class="col-sm-4">CÉDULA:</dt>
+                    <dd class="col-sm-8">{{ $historialClinico->cedula ?? 'N/A' }}</dd>
+                    <dt class="col-sm-4">CELULAR:</dt>
+                    <dd class="col-sm-8">{{ $historialClinico->celular }}</dd>
+                    <dt class="col-sm-4">OCUPACIÓN:</dt>
+                    <dd class="col-sm-8">{{ strtoupper($historialClinico->ocupacion) }}</dd>
+                </dl>
             </div>
-
-            {{-- MOTIVO DE CONSULTA / ENFERMEDAD ACTUAL --}}
-            <div class="mb-4">
-                <h5 class="text-primary">Motivo de Consulta</h5>
-                <hr>
-                <div class="form-row">
-                    <div class="form-group col-12 col-sm-6">
-                        <label for="motivo_consulta">Motivo de la Consulta</label>
-                        <input type="text" id="motivo_consulta" class="form-control" value="{{ $historialClinico->motivo_consulta }}" readonly>
-                    </div>
-                    <div class="form-group col-12 col-sm-6">
-                        <label for="enfermedad_actual">Enfermedad Actual</label>
-                        <input type="text" id="enfermedad_actual" class="form-control" value="{{ $historialClinico->enfermedad_actual }}" readonly>
-                    </div>
-                </div>
+            <div class="col-md-6">
+                <h4>INFORMACIÓN DE LA CONSULTA</h4>
+                <dl class="row">
+                    <dt class="col-sm-4">FECHA CONSULTA:</dt>
+                    <dd class="col-sm-8">{{ \Carbon\Carbon::parse($historialClinico->fecha)->format('d/m/Y') }}</dd>
+                    <dt class="col-sm-4">PRÓXIMA CONSULTA:</dt>
+                    <dd class="col-sm-8">{{ $historialClinico->proxima_consulta ? \Carbon\Carbon::parse($historialClinico->proxima_consulta)->format('d/m/Y') : 'NO PROGRAMADA' }}</dd>
+                    <dt class="col-sm-4">USUARIO REGISTRO:</dt>
+                    <dd class="col-sm-8">{{ strtoupper($historialClinico->usuario->name ?? 'N/A') }}</dd>
+                </dl>
             </div>
+        </div>
 
-            {{-- ANTECEDENTES --}}
-            <div class="mb-4">
-                <h5 class="text-primary">Antecedentes</h5>
-                <hr>
-                <div class="form-group">
-                    <label for="antecedentes_personales_oculares">Antecedentes Personales Oculares</label>
-                    <textarea id="antecedentes_personales_oculares" class="form-control" rows="2" readonly>{{ $historialClinico->antecedentes_personales_oculares }}</textarea>
-                </div>
-                <div class="form-group">
-                    <label for="antecedentes_personales_generales">Antecedentes Personales Generales</label>
-                    <textarea id="antecedentes_personales_generales" class="form-control" rows="2" readonly>{{ $historialClinico->antecedentes_personales_generales }}</textarea>
-                </div>
-                <div class="form-group">
-                    <label for="antecedentes_familiares_oculares">Antecedentes Familiares Oculares</label>
-                    <textarea id="antecedentes_familiares_oculares" class="form-control" rows="2" readonly>{{ $historialClinico->antecedentes_familiares_oculares }}</textarea>
-                </div>
-                <div class="form-group">
-                    <label for="antecedentes_familiares_generales">Antecedentes Familiares Generales</label>
-                    <textarea id="antecedentes_familiares_generales" class="form-control" rows="2" readonly>{{ $historialClinico->antecedentes_familiares_generales }}</textarea>
-                </div>
+        <hr>
+        <h4>MOTIVO DE CONSULTA Y ENFERMEDAD ACTUAL</h4>
+        <dl class="row">
+            <dt class="col-sm-3">MOTIVO CONSULTA:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->motivo_consulta) }}</dd>
+            <dt class="col-sm-3">ENFERMEDAD ACTUAL:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->enfermedad_actual) }}</dd>
+        </dl>
+
+        <hr>
+        <h4>ANTECEDENTES</h4>
+        <dl class="row">
+            <dt class="col-sm-3">PERSONALES OCULARES:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->antecedentes_personales_oculares) }}</dd>
+            <dt class="col-sm-3">PERSONALES GENERALES:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->antecedentes_personales_generales) }}</dd>
+            <dt class="col-sm-3">FAMILIARES OCULARES:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->antecedentes_familiares_oculares) }}</dd>
+            <dt class="col-sm-3">FAMILIARES GENERALES:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->antecedentes_familiares_generales) }}</dd>
+        </dl>
+
+        <hr>
+        <h4>AGUDEZA VISUAL SIN CORRECCIÓN</h4>
+        <div class="row">
+            <div class="col-md-4">
+                <p><strong>OJO DERECHO (OD):</strong> {{ strtoupper($historialClinico->agudeza_visual_vl_sin_correccion_od) }} (VL) / {{ strtoupper($historialClinico->agudeza_visual_vp_sin_correccion_od) }} (VP)</p>
             </div>
-
-            {{-- AGUDEZA VISUAL --}}
-            <div class="mb-4">
-                <h5 class="text-primary">Agudeza Visual (sin Corrección)</h5>
-                <hr>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="agudeza_visual_vl_sin_correccion_od">VL OD</label>
-                        <input type="text" id="agudeza_visual_vl_sin_correccion_od" class="form-control" value="{{ $historialClinico->agudeza_visual_vl_sin_correccion_od }}" readonly>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="agudeza_visual_vl_sin_correccion_oi">VL OI</label>
-                        <input type="text" id="agudeza_visual_vl_sin_correccion_oi" class="form-control" value="{{ $historialClinico->agudeza_visual_vl_sin_correccion_oi }}" readonly>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="agudeza_visual_vl_sin_correccion_ao">VL AO</label>
-                        <input type="text" id="agudeza_visual_vl_sin_correccion_ao" class="form-control" value="{{ $historialClinico->agudeza_visual_vl_sin_correccion_ao }}" readonly>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="agudeza_visual_vp_sin_correccion_od">VP OD</label>
-                        <input type="text" id="agudeza_visual_vp_sin_correccion_od" class="form-control" value="{{ $historialClinico->agudeza_visual_vp_sin_correccion_od }}" readonly>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="agudeza_visual_vp_sin_correccion_oi">VP OI</label>
-                        <input type="text" id="agudeza_visual_vp_sin_correccion_oi" class="form-control" value="{{ $historialClinico->agudeza_visual_vp_sin_correccion_oi }}" readonly>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="agudeza_visual_vp_sin_correccion_ao">VP AO</label>
-                        <input type="text" id="agudeza_visual_vp_sin_correccion_ao" class="form-control" value="{{ $historialClinico->agudeza_visual_vp_sin_correccion_ao }}" readonly>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="optotipo">Optotipo</label>
-                    <textarea id="optotipo" class="form-control" rows="2" readonly>{{ $historialClinico->optotipo }}</textarea>
-                </div>
+            <div class="col-md-4">
+                <p><strong>OJO IZQUIERDO (OI):</strong> {{ strtoupper($historialClinico->agudeza_visual_vl_sin_correccion_oi) }} (VL) / {{ strtoupper($historialClinico->agudeza_visual_vp_sin_correccion_oi) }} (VP)</p>
             </div>
-
-            {{-- LENSOMETRÍA --}}
-            <div class="mb-4">
-                <h5 class="text-primary">Lensometría</h5>
-                <hr>
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label for="lensometria_od">Lensometría OD</label>
-                        <input type="text" id="lensometria_od" class="form-control" value="{{ $historialClinico->lensometria_od }}" readonly>
-                    </div>
-                    <div class="form-group col-md-6">
-                        <label for="lensometria_oi">Lensometría OI</label>
-                        <input type="text" id="lensometria_oi" class="form-control" value="{{ $historialClinico->lensometria_oi }}" readonly>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="tipo_lente">Tipo de Lente</label>
-                        <input type="text" id="tipo_lente" class="form-control" value="{{ $historialClinico->tipo_lente }}" readonly>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="material">Material</label>
-                        <input type="text" id="material" class="form-control" value="{{ $historialClinico->material }}" readonly>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="filtro">Filtro</label>
-                        <input type="text" id="filtro" class="form-control" value="{{ $historialClinico->filtro }}" readonly>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="tiempo_uso">Tiempo de Uso</label>
-                    <input type="text" id="tiempo_uso" class="form-control" value="{{ $historialClinico->tiempo_uso }}" readonly>
-                </div>
+            <div class="col-md-4">
+                <p><strong>AMBOS OJOS (AO):</strong> {{ strtoupper($historialClinico->agudeza_visual_vl_sin_correccion_ao) }} (VL) / {{ strtoupper($historialClinico->agudeza_visual_vp_sin_correccion_ao) }} (VP)</p>
             </div>
+        </div>
+        <dl class="row">
+            <dt class="col-sm-3">PH OD:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->ph_od) }}</dd>
+            <dt class="col-sm-3">PH OI:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->ph_oi) }}</dd>
+            <dt class="col-sm-3">OPTOTIPO:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->optotipo ?? 'N/A') }}</dd>
+        </dl>
 
-            {{-- REFRACCIÓN --}}
-            <div class="mb-4">
-                <h5 class="text-primary">Refracción</h5>
-                <hr>
-                <div class="form-row">
-                    <div class="form-group col-md-6">
-                        <label for="refraccion_od">Refracción OD</label>
-                        <input type="text" id="refraccion_od" class="form-control" value="{{ $historialClinico->refraccion_od }}" readonly>
-                    </div>
-                    <div class="form-group col-md-6">
-                        <label for="refraccion_oi">Refracción OI</label>
-                        <input type="text" id="refraccion_oi" class="form-control" value="{{ $historialClinico->refraccion_oi }}" readonly>
-                    </div>
-                </div>
+        <hr>
+        <h4>LENSOMETRÍA (SI APLICA)</h4>
+        <dl class="row">
+            <dt class="col-sm-3">LENSOMETRÍA OD:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->lensometria_od ?? 'N/A') }}</dd>
+            <dt class="col-sm-3">LENSOMETRÍA OI:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->lensometria_oi ?? 'N/A') }}</dd>
+            <dt class="col-sm-3">TIPO DE LENTE:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->tipo_lente ?? 'N/A') }}</dd>
+            <dt class="col-sm-3">MATERIAL:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->material ?? 'N/A') }}</dd>
+            <dt class="col-sm-3">FILTRO:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->filtro ?? 'N/A') }}</dd>
+            <dt class="col-sm-3">TIEMPO DE USO:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->tiempo_uso ?? 'N/A') }}</dd>
+        </dl>
+
+        <hr>
+        <h4>REFRACCIÓN Y RX FINAL</h4>
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>REFRACCIÓN OD:</strong> {{ strtoupper($historialClinico->refraccion_od) }}</p>
+                <p><strong>RX FINAL DP OD:</strong> {{ strtoupper($historialClinico->rx_final_dp_od) }}</p>
+                <p><strong>RX FINAL AV VL OD:</strong> {{ strtoupper($historialClinico->rx_final_av_vl_od) }}</p>
+                <p><strong>RX FINAL AV VP OD:</strong> {{ strtoupper($historialClinico->rx_final_av_vp_od) }}</p>
             </div>
-
-            {{-- RX FINAL --}}
-            <div class="mb-4">
-                <h5 class="text-primary">RX Final</h5>
-                <hr>
-                <div class="form-row">
-                    <div class="form-group col-md-4">
-                        <label for="rx_final_dp">DP</label>
-                        <input type="text" id="rx_final_dp" class="form-control" value="{{ $historialClinico->rx_final_dp }}" readonly>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="rx_final_av_vl">AV VL</label>
-                        <input type="text" id="rx_final_av_vl" class="form-control" value="{{ $historialClinico->rx_final_av_vl }}" readonly>
-                    </div>
-                    <div class="form-group col-md-4">
-                        <label for="rx_final_av_vp">AV VP</label>
-                        <input type="text" id="rx_final_av_vp" class="form-control" value="{{ $historialClinico->rx_final_av_vp }}" readonly>
-                    </div>
-                </div>
+            <div class="col-md-6">
+                <p><strong>REFRACCIÓN OI:</strong> {{ strtoupper($historialClinico->refraccion_oi) }}</p>
+                <p><strong>RX FINAL DP OI:</strong> {{ strtoupper($historialClinico->rx_final_dp_oi) }}</p>
+                <p><strong>RX FINAL AV VL OI:</strong> {{ strtoupper($historialClinico->rx_final_av_vl_oi) }}</p>
+                <p><strong>RX FINAL AV VP OI:</strong> {{ strtoupper($historialClinico->rx_final_av_vp_oi) }}</p>
             </div>
+        </div>
+        <dl class="row">
+            <dt class="col-sm-3">ADD (SI APLICA):</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->add ?? 'N/A') }}</dd>
+        </dl>
+        
+        <hr>
+        <h4>DIAGNÓSTICO Y TRATAMIENTO</h4>
+        <dl class="row">
+            <dt class="col-sm-3">DIAGNÓSTICO:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->diagnostico) }}</dd>
+            <dt class="col-sm-3">TRATAMIENTO:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->tratamiento) }}</dd>
+            <dt class="col-sm-3">COTIZACIÓN:</dt>
+            <dd class="col-sm-9">{{ strtoupper($historialClinico->cotizacion ?? 'N/A') }}</dd>
+        </dl>
 
-            {{-- DIAGNÓSTICO Y TRATAMIENTO --}}
-            <div class="mb-4">
-                <h5 class="text-primary">Diagnóstico y Tratamiento</h5>
-                <hr>
-                <div class="form-group">
-                    <label for="diagnostico">Diagnóstico</label>
-                    <textarea id="diagnostico" class="form-control" rows="2" readonly>{{ $historialClinico->diagnostico }}</textarea>
-                </div>
-                <div class="form-group">
-                    <label for="tratamiento">Tratamiento</label>
-                    <textarea id="tratamiento" class="form-control" rows="2" readonly>{{ $historialClinico->tratamiento }}</textarea>
-                </div>
-            </div>
-
-            <a href="{{ route('historiales_clinicos.index') }}" class="btn btn-secondary">Volver</a>
-        </form>
+    </div>
+    <div class="card-footer">
+        <a href="{{ route('historiales_clinicos.index') }}" class="btn btn-secondary">VOLVER AL LISTADO</a>
+        @if ($historialClinico && $historialClinico->id)
+            <a href="{{ route('historiales_clinicos.edit', ['historial' => $historialClinico->id]) }}" class="btn btn-warning">EDITAR</a>
+        @else
+            <a href="#" class="btn btn-warning disabled" aria-disabled="true">EDITAR (ID NO DISPONIBLE)</a>
+        @endif
     </div>
 </div>
+@stop
+
+@section('css')
+<style>
+    /* Convertir todo el texto a mayúsculas */
+    .card-title,
+    .card-header h3,
+    dt,
+    h4,
+    .btn {
+        text-transform: uppercase !important;
+    }
+    dd {
+        font-weight: normal; /* Para que el contenido del dd no esté en negrita por defecto */
+    }
+</style>
+@stop
+
+@section('js')
+<script>
+    // No se necesita JS específico para esta vista por ahora
+</script>
 @stop
