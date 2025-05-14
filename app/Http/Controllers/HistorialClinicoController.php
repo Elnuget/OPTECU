@@ -185,8 +185,9 @@ class HistorialClinicoController extends Controller
         }
     }
 
-    public function show(HistorialClinico $historialClinico)
+    public function show($id)
     {
+        $historialClinico = HistorialClinico::findOrFail($id);
         return view('historiales_clinicos.show', compact('historialClinico'));
     }
 
