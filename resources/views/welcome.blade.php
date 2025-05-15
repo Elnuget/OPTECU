@@ -2,6 +2,11 @@
 
 @section('title', 'Dashboard')
 
+@php
+    use Illuminate\Support\Facades\Auth;
+    use App\Models\CashHistory;
+@endphp
+
 @section('content_header')
     <h1 class="text-primary">
         <i class="fas fa-home"></i> Bienvenido al Sistema de Gestión ÓPTICA
@@ -9,6 +14,12 @@
 @stop
 
 @section('content')
+    {{-- Verificar autenticación --}}
+    @if(!Auth::check())
+        <script>
+            window.location.href = "{{ route('login') }}";
+        </script>
+    @else
     {{-- Sección de Atajos --}}
     <div class="row mb-4">
         <div class="col-md-6">
@@ -46,7 +57,6 @@
     <div class="row">
         <div class="col-12">
             @php
-                use App\Models\CashHistory;
                 $cashHistories = CashHistory::with('user')->latest()->get();
                 $lastCashHistory = CashHistory::latest()->first();
             @endphp
@@ -95,6 +105,7 @@
             </div>
         </div>
     </div>
+    @endif
 @stop
 
 @section('css')
