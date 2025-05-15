@@ -2,6 +2,10 @@
 
 @section('title', 'CUMPLEAÑOS DEL MES')
 
+@php
+use App\Models\MensajePredeterminado;
+@endphp
+
 @section('content_header')
 <div class="row mb-2">
     <div class="col-sm-6">
@@ -118,12 +122,7 @@
                 <form id="mensajePredeterminadoForm">
                     <div class="form-group">
                         <label>MENSAJE DE FELICITACIÓN:</label>
-                        <textarea class="form-control" id="mensajePredeterminado" rows="6">{{ session('mensaje_predeterminado', '¡Feliz Cumpleaños! 🎉
-Queremos desearte un día muy especial.
-
-Te recordamos que puedes aprovechar nuestro descuento especial de cumpleaños en tu próxima compra.
-
-¡Que tengas un excelente día!') }}</textarea>
+                        <textarea class="form-control" id="mensajePredeterminado" rows="6">{{ MensajePredeterminado::obtenerMensaje('cumpleanos') }}</textarea>
                     </div>
                 </form>
             </div>

@@ -334,60 +334,23 @@ class HistorialClinicoController extends Controller
         }
     }
 
+    /**
+     * Muestra la vista de cumpleaños del mes.
+     *
+     * @return \Illuminate\Http\Response
+     */
     public function cumpleanos()
     {
-        try {
-            $mesActual = now()->format('m');
-            $añoActual = now()->format('Y');
-            
-            $cumpleaneros = HistorialClinico::whereRaw('MONTH(fecha_nacimiento) = ?', [$mesActual])
-                ->orderByRaw('DAY(fecha_nacimiento)')
-                ->get()
-                ->map(function ($paciente) use ($añoActual) {
-                    $fechaNacimiento = \Carbon\Carbon::parse($paciente->fecha_nacimiento);
-                    // Calcular la edad actual
-                    $edadActual = $fechaNacimiento->age;
-                    // La edad que cumplirá será la actual + 1
-                    $edadCumplir = $edadActual + 1;
-                    
-                    return [
-                        'id' => $paciente->id,
-                        'nombres' => $paciente->nombres,
-                        'apellidos' => $paciente->apellidos,
-                        'nombre_completo' => strtoupper($paciente->nombres . ' ' . $paciente->apellidos),
-                        'fecha_nacimiento' => $fechaNacimiento->format('d/m/Y'),
-                        'dia_cumpleanos' => $fechaNacimiento->format('d'),
-                        'dia_nombre' => $fechaNacimiento->locale('es')->format('l'), // Nombre del día
-                        'edad_actual' => $edadActual,
-                        'edad_cumplir' => $edadCumplir,
-                        'celular' => $paciente->celular,
-                        'ultima_consulta' => $paciente->fecha ? \Carbon\Carbon::parse($paciente->fecha)->format('d/m/Y') : 'SIN CONSULTAS'
-                    ];
-                });
-            
-            // Eliminar duplicados basados en nombre completo, conservando el registro más reciente (ID mayor)
-            $nombresCumpleaneros = [];
-            $cumpleanerosFiltrados = collect();
-            
-            foreach ($cumpleaneros->sortByDesc('id') as $cumpleanero) {
-                if (!in_array($cumpleanero['nombre_completo'], $nombresCumpleaneros)) {
-                    $nombresCumpleaneros[] = $cumpleanero['nombre_completo'];
-                    $cumpleanerosFiltrados->push($cumpleanero);
-                }
-            }
-            
-            // Reordenar por día de cumpleaños
-            $cumpleanerosFiltrados = $cumpleanerosFiltrados->sortBy('dia_cumpleanos')->values();
-            
-            return view('historiales_clinicos.cumpleanos', [
-                'cumpleaneros' => $cumpleanerosFiltrados,
-                'mes_actual' => now()->formatLocalized('%B')
-            ]);
-            
-        } catch (\Exception $e) {
-            Log::error('Error al obtener cumpleañeros: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Error al cargar los cumpleañeros.');
-        }
+        // Obtener mes actual
+        $mes_actual = now()->translatedFormat('F');
+        
+        // Obtener los pacientes que cumplen años este mes
+        $cumpleaneros = $this->obtenerCumpleanerosMes();
+        
+        return view('historiales_clinicos.cumpleanos', [
+            'cumpleaneros' => $cumpleaneros,
+            'mes_actual' => $mes_actual
+        ]);
     }
 
     public function listaCumpleanos()
@@ -605,6 +568,61 @@ class HistorialClinicoController extends Controller
                 'success' => false,
                 'mensaje' => 'Error al obtener historiales relacionados: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Obtiene los pacientes que cumplen años en el mes actual.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    private function obtenerCumpleanerosMes()
+    {
+        try {
+            $mesActual = now()->format('m');
+            $añoActual = now()->format('Y');
+            
+            $cumpleaneros = HistorialClinico::whereRaw('MONTH(fecha_nacimiento) = ?', [$mesActual])
+                ->orderByRaw('DAY(fecha_nacimiento)')
+                ->get()
+                ->map(function ($paciente) use ($añoActual) {
+                    $fechaNacimiento = \Carbon\Carbon::parse($paciente->fecha_nacimiento);
+                    // Calcular la edad actual
+                    $edadActual = $fechaNacimiento->age;
+                    // La edad que cumplirá será la actual + 1
+                    $edadCumplir = $edadActual + 1;
+                    
+                    return [
+                        'id' => $paciente->id,
+                        'nombres' => $paciente->nombres,
+                        'apellidos' => $paciente->apellidos,
+                        'nombre_completo' => strtoupper($paciente->nombres . ' ' . $paciente->apellidos),
+                        'fecha_nacimiento' => $fechaNacimiento->format('d/m/Y'),
+                        'dia_cumpleanos' => $fechaNacimiento->format('d'),
+                        'dia_nombre' => $fechaNacimiento->locale('es')->format('l'), // Nombre del día
+                        'edad_actual' => $edadActual,
+                        'edad_cumplir' => $edadCumplir,
+                        'celular' => $paciente->celular,
+                        'ultima_consulta' => $paciente->fecha ? \Carbon\Carbon::parse($paciente->fecha)->format('d/m/Y') : 'SIN CONSULTAS'
+                    ];
+                });
+            
+            // Eliminar duplicados basados en nombre completo, conservando el registro más reciente (ID mayor)
+            $nombresCumpleaneros = [];
+            $cumpleanerosFiltrados = collect();
+            
+            foreach ($cumpleaneros->sortByDesc('id') as $cumpleanero) {
+                if (!in_array($cumpleanero['nombre_completo'], $nombresCumpleaneros)) {
+                    $nombresCumpleaneros[] = $cumpleanero['nombre_completo'];
+                    $cumpleanerosFiltrados->push($cumpleanero);
+                }
+            }
+            
+            // Reordenar por día de cumpleaños
+            return $cumpleanerosFiltrados->sortBy('dia_cumpleanos')->values();
+        } catch (\Exception $e) {
+            \Log::error('Error al obtener cumpleañeros: ' . $e->getMessage());
+            return collect(); // Devolver colección vacía
         }
     }
 }
