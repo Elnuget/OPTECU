@@ -517,16 +517,18 @@ class HistorialClinicoController extends Controller
 
     public function recordatoriosConsulta()
     {
-        // Obtener todas las próximas consultas de los próximos 7 días
+        // Obtener el mes y año actuales
         $fechaActual = now();
-        $fechaLimite = now()->addDays(7);
+        $mesActual = $fechaActual->format('m');
+        $anoActual = $fechaActual->format('Y');
         
-        // Obtener el mes actual en formato localizado en español
+        // Obtener el nombre del mes en español
         $mes_actual = $fechaActual->locale('es')->format('F Y');
         
+        // Obtener todas las consultas programadas para el mes actual
         $proximasConsultas = HistorialClinico::whereNotNull('proxima_consulta')
-            ->whereDate('proxima_consulta', '>=', $fechaActual)
-            ->whereDate('proxima_consulta', '<=', $fechaLimite)
+            ->whereMonth('proxima_consulta', $mesActual)
+            ->whereYear('proxima_consulta', $anoActual)
             ->orderBy('proxima_consulta', 'asc')
             ->get();
             
@@ -545,11 +547,9 @@ class HistorialClinicoController extends Controller
                 'ultima_consulta' => $consulta->fecha ? \Carbon\Carbon::parse($consulta->fecha)->format('d/m/Y') : 'SIN CONSULTAS'
             ];
         });
-            
-        // Obtener mensajes predeterminados de la sesión o usar valor por defecto
-        $mensajePredeterminado = session('mensaje_recordatorio', 
-            "Hola [NOMBRE], le recordamos su cita oftalmológica programada para el [FECHA]. " .
-            "Si necesita reagendarla, por favor contáctenos. ¡Le esperamos!");
+        
+        // Obtener mensajes predeterminados usando el modelo
+        $mensajePredeterminado = \App\Models\MensajePredeterminado::obtenerMensaje('consulta');
 
         return view('mensajes.recordatorios', compact('consultas', 'mes_actual', 'mensajePredeterminado'));
     }

@@ -10,7 +10,7 @@ use App\Models\MensajePredeterminado;
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <div class="row mb-2">
     <div class="col-sm-6">
-        <h1>RECORDATORIOS DE CONSULTAS - {{ $mes_actual }}</h1>
+        <h1>RECORDATORIOS DE CONSULTAS - {{ strtoupper($mes_actual) }}</h1>
     </div>
 </div>
 @if (session('error'))
@@ -26,7 +26,7 @@ use App\Models\MensajePredeterminado;
 @section('content')
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h3 class="card-title">PACIENTES CON CONSULTAS PROGRAMADAS PARA {{ $mes_actual }}</h3>
+        <h3 class="card-title">CONSULTAS PROGRAMADAS PARA {{ strtoupper($mes_actual) }}</h3>
         <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#editarMensajeModal">
             <i class="fas fa-edit"></i> EDITAR MENSAJE PREDETERMINADO
         </button>
