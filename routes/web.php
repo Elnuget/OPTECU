@@ -126,6 +126,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::get('/cumpleanos', [HistorialClinicoController::class, 'cumpleanos'])
             ->name('historiales_clinicos.cumpleanos');
         
+        // Ruta para obtener historiales relacionados por nombre y apellido
+        Route::get('/relacionados', [HistorialClinicoController::class, 'historialesRelacionados'])
+            ->name('historiales_clinicos.relacionados');
+        
         // Rutas con parámetros después
         Route::get('/{historial}/edit', [HistorialClinicoController::class, 'edit'])
             ->name('historiales_clinicos.edit');

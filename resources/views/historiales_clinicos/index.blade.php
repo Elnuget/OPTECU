@@ -99,6 +99,15 @@
                                 title="EDITAR">
                                 <i class="fa fa-lg fa-fw fa-pen"></i>
                             </a>
+                            <button type="button" 
+                                class="btn btn-xs btn-info mx-1 shadow ver-historiales-relacionados" 
+                                data-nombres="{{ $historial->nombres }}" 
+                                data-apellidos="{{ $historial->apellidos }}"
+                                data-toggle="modal" 
+                                data-target="#historialesRelacionadosModal"
+                                title="VER HISTORIALES">
+                                <i class="fa fa-lg fa-fw fa-history"></i>
+                            </button>
                             <a class="btn btn-xs btn-default text-danger mx-1 shadow" 
                                href="#" 
                                data-toggle="modal"
@@ -137,6 +146,49 @@
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">CANCELAR</button>
                     <button type="submit" class="btn btn-danger">ELIMINAR</button>
                 </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal para Historiales Relacionados --}}
+<div class="modal fade" id="historialesRelacionadosModal" tabindex="-1" role="dialog" aria-labelledby="historialesRelacionadosModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="historialesRelacionadosModalLabel">HISTORIALES CLÍNICOS DEL PACIENTE</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center" id="historialesLoader">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">CARGANDO...</span>
+                    </div>
+                </div>
+                <div id="historialesRelacionadosContent">
+                    <h4 id="pacienteNombre" class="mb-3"></h4>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered dt-responsive nowrap" id="tablaHistorialesRelacionados" width="100%">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>FECHA</th>
+                                    <th>MOTIVO CONSULTA</th>
+                                    <th>PRÓXIMA CONSULTA</th>
+                                    <th>ACCIONES</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historialesRelacionadosBody">
+                                <!-- Los historiales relacionados se cargarán aquí dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">CERRAR</button>
             </div>
         </div>
     </div>
@@ -255,6 +307,99 @@
             $('#mes').val('');
             $('#ano').val('');
             $(this).closest('form').submit();
+        });
+
+        // Manejo del botón de ver historiales relacionados
+        $('.ver-historiales-relacionados').click(function() {
+            const nombres = $(this).data('nombres');
+            const apellidos = $(this).data('apellidos');
+            
+            $('#pacienteNombre').text(nombres.toUpperCase() + ' ' + apellidos.toUpperCase());
+            $('#historialesLoader').show();
+            $('#historialesRelacionadosContent').hide();
+            
+            // Hacer la solicitud AJAX para obtener los historiales relacionados
+            $.ajax({
+                url: '{{ route("historiales_clinicos.relacionados") }}',
+                method: 'GET',
+                data: {
+                    nombres: nombres,
+                    apellidos: apellidos
+                },
+                success: function(response) {
+                    // Llenar la tabla con los datos recibidos
+                    const historialesBody = $('#historialesRelacionadosBody');
+                    historialesBody.empty();
+                    
+                    if (response.historiales && response.historiales.length > 0) {
+                        // Ordenar por ID de forma descendente
+                        const historialesOrdenados = response.historiales.sort((a, b) => b.id - a.id);
+                        
+                        historialesOrdenados.forEach(function(historial) {
+                            const fechaConsulta = new Date(historial.fecha);
+                            const fechaFormateada = ('0' + fechaConsulta.getDate()).slice(-2) + '/' +
+                                                  ('0' + (fechaConsulta.getMonth() + 1)).slice(-2) + '/' +
+                                                  fechaConsulta.getFullYear();
+                            
+                            let proximaConsultaHtml = '<span class="badge badge-secondary">NO PROGRAMADA</span>';
+                            if (historial.proxima_consulta) {
+                                const proximaFecha = new Date(historial.proxima_consulta);
+                                const esPasada = proximaFecha < new Date();
+                                const badgeClass = esPasada ? 'badge-danger' : 'badge-success';
+                                const proximaFormateada = ('0' + proximaFecha.getDate()).slice(-2) + '/' +
+                                                         ('0' + (proximaFecha.getMonth() + 1)).slice(-2) + '/' +
+                                                         proximaFecha.getFullYear();
+                                proximaConsultaHtml = `<span class="badge ${badgeClass}">${proximaFormateada}</span>`;
+                            }
+                            
+                            const row = `
+                                <tr>
+                                    <td>${historial.id}</td>
+                                    <td>${fechaFormateada}</td>
+                                    <td>${historial.motivo_consulta.toUpperCase()}</td>
+                                    <td>${proximaConsultaHtml}</td>
+                                    <td>
+                                        <a href="/historiales_clinicos/${historial.id}" class="btn btn-xs btn-default text-primary mx-1 shadow" title="VER">
+                                            <i class="fa fa-lg fa-fw fa-eye"></i>
+                                        </a>
+                                        <a href="/historiales_clinicos/${historial.id}/edit" class="btn btn-xs btn-default text-warning mx-1 shadow" title="EDITAR">
+                                            <i class="fa fa-lg fa-fw fa-pen"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            `;
+                            historialesBody.append(row);
+                        });
+                        
+                        // Inicializar DataTable en la tabla de historiales relacionados
+                        if ($.fn.DataTable.isDataTable('#tablaHistorialesRelacionados')) {
+                            $('#tablaHistorialesRelacionados').DataTable().destroy();
+                        }
+                        
+                        $('#tablaHistorialesRelacionados').DataTable({
+                            "responsive": true,
+                            "order": [[0, "desc"]], // Ordenar por ID descendente
+                            "language": {
+                                "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
+                            },
+                            "paging": false,
+                            "searching": false,
+                            "info": false
+                        });
+                        
+                    } else {
+                        historialesBody.append('<tr><td colspan="5" class="text-center">NO SE ENCONTRARON HISTORIALES ADICIONALES</td></tr>');
+                    }
+                    
+                    $('#historialesLoader').hide();
+                    $('#historialesRelacionadosContent').show();
+                },
+                error: function() {
+                    $('#historialesRelacionadosBody').html('<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS HISTORIALES</td></tr>');
+                    $('#historialesLoader').hide();
+                    $('#historialesRelacionadosContent').show();
+                }
+            });
         });
     });
 </script>

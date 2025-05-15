@@ -555,63 +555,56 @@ class HistorialClinicoController extends Controller
 
     public function recordatoriosConsulta()
     {
+        // Obtener todas las próximas consultas de los próximos 7 días
+        $fechaActual = now();
+        $fechaLimite = now()->addDays(7);
+        
+        $proximasConsultas = HistorialClinico::whereNotNull('proxima_consulta')
+            ->whereDate('proxima_consulta', '>=', $fechaActual)
+            ->whereDate('proxima_consulta', '<=', $fechaLimite)
+            ->orderBy('proxima_consulta', 'asc')
+            ->get();
+            
+        // Obtener mensajes predeterminados de la sesión o usar valor por defecto
+        $mensajePredeterminado = session('mensaje_recordatorio', 
+            "Hola [NOMBRE], le recordamos su cita oftalmológica programada para el [FECHA]. " .
+            "Si necesita reagendarla, por favor contáctenos. ¡Le esperamos!");
+
+        return view('mensajes.recordatorios', compact('proximasConsultas', 'mensajePredeterminado'));
+    }
+
+    /**
+     * Obtiene los historiales clínicos relacionados por nombres y apellidos
+     */
+    public function historialesRelacionados(Request $request)
+    {
         try {
-            // Obtener el mes actual
-            $hoy = now();
-            $inicioMes = $hoy->startOfMonth();
-            $finMes = $hoy->copy()->endOfMonth();
-            
-            // Obtener historiales con próxima consulta en el mes actual
-            $consultas = HistorialClinico::whereNotNull('proxima_consulta')
-                ->whereDate('proxima_consulta', '>=', $inicioMes)
-                ->whereDate('proxima_consulta', '<=', $finMes)
-                ->orderBy('proxima_consulta')
-                ->get()
-                ->map(function ($historial) use ($hoy) {
-                    $proximaConsulta = \Carbon\Carbon::parse($historial->proxima_consulta);
-                    $diasRestantes = $hoy->diffInDays($proximaConsulta, false);
-                    
-                    return [
-                        'id' => $historial->id,
-                        'nombres' => $historial->nombres,
-                        'apellidos' => $historial->apellidos,
-                        'nombre_completo' => strtoupper($historial->nombres . ' ' . $historial->apellidos),
-                        'celular' => $historial->celular,
-                        'fecha_consulta' => $proximaConsulta->format('d/m/Y'),
-                        'dias_restantes' => max(0, $diasRestantes),
-                        'ultima_consulta' => $historial->fecha ? \Carbon\Carbon::parse($historial->fecha)->format('d/m/Y') : 'SIN CONSULTAS',
-                        'motivo_consulta' => $historial->motivo_consulta
-                    ];
-                });
-            
-            // Eliminar duplicados basados en nombre completo, conservando el registro más reciente
-            $nombresConsultas = [];
-            $consultasFiltradas = collect();
-            
-            foreach ($consultas->sortByDesc('id') as $consulta) {
-                if (!in_array($consulta['nombre_completo'], $nombresConsultas)) {
-                    $nombresConsultas[] = $consulta['nombre_completo'];
-                    $consultasFiltradas->push($consulta);
-                }
-            }
-            
-            // Reordenar por días restantes
-            $consultasFiltradas = $consultasFiltradas->sortBy('dias_restantes')->values();
-            
-            // Obtener el nombre del mes actual
-            $mesActual = $hoy->formatLocalized('%B');
-            
-            return view('mensajes.recordatorios', [
-                'consultas' => $consultasFiltradas,
-                'mes_actual' => strtoupper($mesActual)
+            // Validar los datos de entrada
+            $request->validate([
+                'nombres' => 'required|string',
+                'apellidos' => 'required|string',
             ]);
-                
+
+            $nombres = $request->get('nombres');
+            $apellidos = $request->get('apellidos');
+
+            // Buscar historiales con el mismo nombre y apellido, ordenados por fecha descendente
+            $historiales = HistorialClinico::where('nombres', 'like', "%{$nombres}%")
+                                         ->where('apellidos', 'like', "%{$apellidos}%")
+                                         ->orderBy('fecha', 'desc')
+                                         ->get();
+
+            // Retornar los historiales en formato JSON
+            return response()->json([
+                'success' => true,
+                'historiales' => $historiales
+            ]);
         } catch (\Exception $e) {
-            Log::error('Error al obtener próximas consultas: ' . $e->getMessage());
-            return redirect()->back()->with([
-                'error' => 'Error al cargar las próximas consultas.',
-                'tipo' => 'alert-danger'
-            ]);
+            Log::error('Error al obtener historiales relacionados: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'Error al obtener historiales relacionados: ' . $e->getMessage()
+            ], 500);
         }
     }
 }
