@@ -2,6 +2,10 @@
 
 @section('title', 'RECORDATORIOS DE CONSULTA')
 
+@php
+use App\Models\MensajePredeterminado;
+@endphp
+
 @section('content_header')
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <div class="row mb-2">
@@ -115,13 +119,13 @@
                 <form id="mensajePredeterminadoForm">
                     <div class="form-group">
                         <label>MENSAJE DE RECORDATORIO:</label>
-                        <textarea class="form-control" id="mensajePredeterminado" rows="6">{{ session('mensaje_predeterminado_consulta', 'Estimado/a [NOMBRE],
+                        <textarea class="form-control" id="mensajePredeterminado" rows="6">{{ MensajePredeterminado::obtenerMensaje('consulta') ?: 'Estimado/a [NOMBRE],
 
 Le recordamos su cita programada para el [FECHA].
 
 Por favor, confirme su asistencia.
 
-¡Le esperamos!') }}</textarea>
+¡Le esperamos!' }}</textarea>
                     </div>
                 </form>
             </div>

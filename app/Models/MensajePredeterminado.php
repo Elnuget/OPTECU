@@ -36,6 +36,16 @@ Te recordamos que puedes aprovechar nuestro descuento especial de cumpleaños en
 ¡Que tengas un excelente día!';
         }
         
+        if ($tipo === 'consulta' && !$mensaje) {
+            return 'Estimado/a [NOMBRE],
+
+Le recordamos su cita oftalmológica programada para el [FECHA].
+
+Por favor confirme su asistencia o comuníquese con nosotros si necesita reagendarla.
+
+¡Le esperamos!';
+        }
+        
         return $mensaje ? $mensaje->mensaje : null;
     }
 } 

@@ -487,7 +487,7 @@ class HistorialClinicoController extends Controller
     }
 
     /**
-     * Guarda un mensaje predeterminado en la sesión
+     * Guarda un mensaje predeterminado en la base de datos
      */
     public function guardarMensajePredeterminado(Request $request)
     {
@@ -497,12 +497,11 @@ class HistorialClinicoController extends Controller
                 'mensaje' => 'required|string'
             ]);
             
-            // Guardar en la sesión según el tipo
-            if ($request->tipo == 'cumpleanos') {
-                session(['mensaje_predeterminado' => $request->mensaje]);
-            } else if ($request->tipo == 'consulta') {
-                session(['mensaje_predeterminado_consulta' => $request->mensaje]);
-            }
+            // Guardar en la base de datos
+            \App\Models\MensajePredeterminado::create([
+                'tipo' => $request->tipo,
+                'mensaje' => $request->mensaje
+            ]);
             
             return response()->json([
                 'success' => true,
@@ -522,18 +521,37 @@ class HistorialClinicoController extends Controller
         $fechaActual = now();
         $fechaLimite = now()->addDays(7);
         
+        // Obtener el mes actual en formato localizado en español
+        $mes_actual = $fechaActual->locale('es')->format('F Y');
+        
         $proximasConsultas = HistorialClinico::whereNotNull('proxima_consulta')
             ->whereDate('proxima_consulta', '>=', $fechaActual)
             ->whereDate('proxima_consulta', '<=', $fechaLimite)
             ->orderBy('proxima_consulta', 'asc')
             ->get();
             
+        // Estructurar datos para la vista
+        $consultas = $proximasConsultas->map(function($consulta) use ($fechaActual) {
+            $fechaConsulta = \Carbon\Carbon::parse($consulta->proxima_consulta);
+            $diasRestantes = $fechaActual->diffInDays($fechaConsulta, false);
+            
+            return [
+                'id' => $consulta->id,
+                'nombres' => $consulta->nombres,
+                'apellidos' => $consulta->apellidos,
+                'celular' => $consulta->celular,
+                'fecha_consulta' => $fechaConsulta->format('d/m/Y'),
+                'dias_restantes' => $diasRestantes,
+                'ultima_consulta' => $consulta->fecha ? \Carbon\Carbon::parse($consulta->fecha)->format('d/m/Y') : 'SIN CONSULTAS'
+            ];
+        });
+            
         // Obtener mensajes predeterminados de la sesión o usar valor por defecto
         $mensajePredeterminado = session('mensaje_recordatorio', 
             "Hola [NOMBRE], le recordamos su cita oftalmológica programada para el [FECHA]. " .
             "Si necesita reagendarla, por favor contáctenos. ¡Le esperamos!");
 
-        return view('mensajes.recordatorios', compact('proximasConsultas', 'mensajePredeterminado'));
+        return view('mensajes.recordatorios', compact('consultas', 'mes_actual', 'mensajePredeterminado'));
     }
 
     /**
