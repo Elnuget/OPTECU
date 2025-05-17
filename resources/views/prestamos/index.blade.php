@@ -53,18 +53,9 @@
         }
     </style>
 
-    {{-- Tarjetas de Resumen de Retiros y Egresos --}}
+    {{-- Tarjetas de Resumen de Egresos --}}
     <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="info-box bg-danger">
-                <span class="info-box-icon"><i class="fas fa-arrow-down"></i></span>
-                <div class="info-box-content">
-                    <span class="info-box-text">RETIROS (PRÉSTAMOS DESDE ENE 2025)</span>
-                    <span class="info-box-number" id="summary-retiros-mes-actual">CARGANDO...</span>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
+        <div class="col-md-12">
             <div class="info-box bg-purple">
                 <span class="info-box-icon"><i class="fas fa-sign-out-alt"></i></span>
                 <div class="info-box-content">
@@ -75,38 +66,6 @@
         </div>
     </div>
     {{-- Fin Tarjetas de Resumen --}}
-
-    {{-- Tarjeta Plegable Retiros Mes Actual --}}
-    <div class="card card-outline card-danger card-widget collapsed-card" id="card-retiros-mes-actual">
-        <div class="card-header">
-            <h3 class="card-title">DETALLE RETIROS (PRÉSTAMOS DESDE ENE 2025)</h3>
-            <div class="card-tools">
-                <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
-            </div>
-        </div>
-        <div class="card-body" style="display: none;">
-            <div class="table-responsive">
-                <table class="table table-striped table-sm">
-                    <thead>
-                        <tr>
-                            <th>FECHA</th>
-                            <th>SUCURSAL</th>
-                            <th>MOTIVO</th>
-                            <th>VALOR</th>
-                            <th>USUARIO</th>
-                        </tr>
-                    </thead>
-                    <tbody id="desglose-retiros-mes-actual">
-                        <tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="overlay dark" id="loading-overlay-retiros-mes" style="display: none;">
-            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
-        </div>
-    </div>
-    {{-- Fin Tarjeta Plegable Retiros Mes Actual --}}
 
     {{-- Tarjeta Plegable Egresos Mes Actual --}}
     <div class="card card-outline card-purple card-widget collapsed-card" id="card-egresos-mes-actual">
@@ -274,9 +233,7 @@
 @section('js')
 @include('atajos')
     <script>
-        let detallesRetirosGlobal = [];
         let detallesEgresosGlobal = [];
-        let retirosCargados = false;
         let egresosCargados = false;
 
         // Función para formatear números como moneda
@@ -308,121 +265,6 @@
             }
             return months;
         }
-
-        // Función para obtener y sumar retiros (resumen filtrado por préstamo)
-        async function fetchAndDisplayRetirosSummary(monthsToFetch) {
-            const urls = [];
-            const sucursales = [
-                { domain: 'opticas.xyz', name: 'MATRIZ' },
-                { domain: 'escleroptica2.opticas.xyz', name: 'ROCÍO' },
-                { domain: 'sucursal3.opticas.xyz', name: 'NORTE' }
-            ];
-
-            monthsToFetch.forEach(({ year, month }) => {
-                sucursales.forEach(suc => {
-                    urls.push(`https://${suc.domain}/api/caja/retiros?ano=${year}&mes=${month}`);
-                });
-            });
-
-            const summarySpan = document.getElementById('summary-retiros-mes-actual');
-            summarySpan.textContent = 'CARGANDO...';
-
-            try {
-                const results = await Promise.all(urls.map(url => fetch(url).then(resp => resp.ok ? resp.json() : {retiros: []}).catch(() => ({ retiros: [] }))));
-                let totalRetirosPrestamo = 0;
-                results.forEach(data => {
-                    if (data.retiros && data.retiros.length > 0) {
-                        const retirosFiltrados = data.retiros.filter(retiro => {
-                            const motivo = retiro.motivo.toLowerCase();
-                            // Filtrar por motivo que incluya "prestamo" y no sea depósito
-                            return motivo.includes('prestamo') && !motivo.includes('deposito') && !motivo.includes('depósito');
-                        });
-                        totalRetirosPrestamo += retirosFiltrados.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
-                    }
-                });
-                summarySpan.textContent = formatCurrency(totalRetirosPrestamo);
-            } catch (error) {
-                console.error('Error al obtener retiros (resumen préstamo):', error);
-                summarySpan.textContent = 'ERROR';
-            }
-        }
-
-        // Función para obtener y mostrar detalles de retiros (tabla filtrada por préstamo)
-        async function fetchAndDisplayDetallesRetiros(monthsToFetch) {
-            const urls = [];
-             const sucursales = [
-                { domain: 'opticas.xyz', name: 'MATRIZ' },
-                { domain: 'escleroptica2.opticas.xyz', name: 'ROCÍO' },
-                { domain: 'sucursal3.opticas.xyz', name: 'NORTE' }
-            ];
-
-            monthsToFetch.forEach(({ year, month }) => {
-                sucursales.forEach(suc => {
-                     urls.push({ url: `https://${suc.domain}/api/caja/retiros?ano=${year}&mes=${month}`, sucursal: suc.name });
-                });
-            });
-
-            const desgloseBody = document.getElementById('desglose-retiros-mes-actual');
-            const loadingOverlay = document.getElementById('loading-overlay-retiros-mes');
-
-            desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
-            loadingOverlay.style.display = 'flex';
-
-            try {
-                const results = await Promise.all(urls.map(item => fetch(item.url)
-                                            .then(resp => resp.ok ? resp.json() : {retiros: []})
-                                            .then(data => ({ ...data, sucursal: item.sucursal }))
-                                            .catch(() => ({ retiros: [], sucursal: item.sucursal }))));
-
-                let todosLosRetiros = [];
-                results.forEach(data => {
-                    if (data.retiros && data.retiros.length > 0) {
-                        const retirosConSucursal = data.retiros.map(retiro => ({
-                            ...retiro,
-                            sucursal: data.sucursal,
-                            valorAbs: Math.abs(parseFloat(retiro.valor || 0))
-                        }));
-                        todosLosRetiros = todosLosRetiros.concat(retirosConSucursal);
-                    }
-                });
-
-                // Filtrar por motivo que contenga "prestamo"
-                const retirosFiltrados = todosLosRetiros.filter(retiro =>
-                    retiro.motivo.toLowerCase().includes('prestamo')
-                );
-
-                detallesRetirosGlobal = retirosFiltrados;
-                retirosCargados = true;
-                checkIfBothLoaded();
-
-                // Ordenar por fecha descendente
-                retirosFiltrados.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
-
-                if (retirosFiltrados.length > 0) {
-                    desgloseBody.innerHTML = retirosFiltrados.map(retiro => {
-                         const esDeposito = retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito');
-                         // Aunque filtramos por préstamo, mantenemos la marca de depósito si existe
-                         return `
-                            <tr ${esDeposito ? 'class="bg-light text-muted"' : ''}>
-                                <td>${retiro.fecha}</td>
-                                <td>${retiro.sucursal}</td>
-                                <td>${retiro.motivo} ${esDeposito ? '<span class="badge badge-info">DEPÓSITO</span>' : ''}</td>
-                                <td class="text-danger">${formatCurrency(retiro.valor)}</td>
-                                <td>${retiro.usuario}</td>
-                            </tr>
-                         `;
-                    }).join('');
-                } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY RETIROS DE PRÉSTAMOS REGISTRADOS DESDE ENE 2025.</td></tr>';
-                }
-            } catch (error) {
-                console.error('Error al obtener detalles de retiros (préstamo):', error);
-                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DETALLES DE RETIROS DE PRÉSTAMOS.</td></tr>';
-            } finally {
-                 loadingOverlay.style.display = 'none';
-            }
-        }
-
 
         // Función para obtener y sumar egresos (resumen filtrado por préstamo)
         async function fetchAndDisplayEgresosSummary(monthsToFetch) {
@@ -507,7 +349,7 @@
 
                 detallesEgresosGlobal = egresosFiltrados;
                 egresosCargados = true;
-                checkIfBothLoaded();
+                actualizarValoresNetosPrestamos();
 
                  // Ordenar por fecha descendente
                  egresosFiltrados.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
@@ -530,13 +372,6 @@
                 desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DETALLES DE EGRESOS DE PRÉSTAMOS.</td></tr>';
             } finally {
                  loadingOverlay.style.display = 'none';
-            }
-        }
-
-        // Función para verificar si ambos detalles (retiros y egresos) han cargado
-        function checkIfBothLoaded() {
-            if (retirosCargados && egresosCargados) {
-                actualizarValoresNetosPrestamos();
             }
         }
 
@@ -610,11 +445,6 @@
                     }
                 };
 
-                // Procesar Retiros
-                detallesRetirosGlobal.forEach(retiro => {
-                    verificarYGuardarDeduccion(retiro, 'Retiro');
-                });
-
                 // Procesar Egresos
                 detallesEgresosGlobal.forEach(egreso => {
                     verificarYGuardarDeduccion(egreso, 'Egreso');
@@ -658,13 +488,7 @@
                 $deduccionesCell.html(deduccionesHtml);
                 // Ya no necesitamos tooltip en deducciones ya que se muestra la lista
                 $deduccionesCell.tooltip('dispose');
-
-                // Opcional: Invalidar las celdas para que DataTables actualice su caché de ordenación/filtrado
-                // prestamosTable.cell($valorNetoCell).invalidate();
-                // prestamosTable.cell($deduccionesCell).invalidate();
             });
-            // Opcional: Redibujar la tabla si se invalidaron celdas
-            // prestamosTable.draw(false);
         }
 
         $(document).ready(function() {
@@ -680,10 +504,8 @@
             // Obtener lista de meses a consultar (desde Ene 2025 hasta actual)
             const monthsToFetch = getMonthsToFetch();
 
-            // Cargar datos de retiros y egresos para el rango de fechas
-            fetchAndDisplayRetirosSummary(monthsToFetch);
+            // Cargar datos de egresos para el rango de fechas
             fetchAndDisplayEgresosSummary(monthsToFetch);
-            fetchAndDisplayDetallesRetiros(monthsToFetch);
             fetchAndDisplayDetallesEgresos(monthsToFetch);
 
             // Inicializar select2 para los combobox de usuarios
