@@ -13,11 +13,14 @@ class Prestamo extends Model
     protected $fillable = [
         'user_id',
         'valor',
+        'valor_neto',
+        'cuotas',
         'motivo'
     ];
 
     protected $casts = [
-        'valor' => 'decimal:2'
+        'valor' => 'decimal:2',
+        'valor_neto' => 'decimal:2'
     ];
 
     public function user()

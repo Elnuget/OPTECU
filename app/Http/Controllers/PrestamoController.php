@@ -18,6 +18,8 @@ class PrestamoController extends Controller
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'valor' => 'required|numeric|min:0',
+            'valor_neto' => 'required|numeric|min:0',
+            'cuotas' => 'required|integer|min:1',
             'motivo' => 'required|string|max:255'
         ]);
 
@@ -43,6 +45,8 @@ class PrestamoController extends Controller
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'valor' => 'required|numeric|min:0',
+            'valor_neto' => 'required|numeric|min:0',
+            'cuotas' => 'required|integer|min:1',
             'motivo' => 'required|string|max:255'
         ]);
 

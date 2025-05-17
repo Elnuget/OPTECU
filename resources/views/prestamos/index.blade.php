@@ -127,14 +127,14 @@
                     </thead>
                     <tbody>
                         @foreach ($prestamos as $prestamo)
-                            <tr data-prestamo-id="{{ $prestamo->id }}" data-original-valor="{{ $prestamo->valor }}">
+                            <tr data-prestamo-id="{{ $prestamo->id }}" data-original-valor="{{ $prestamo->valor }}" data-valor-neto="{{ $prestamo->valor_neto }}" data-cuotas="{{ $prestamo->cuotas }}">
                                 <td>{{ $prestamo->created_at->format('Y-m-d') }}</td>
                                 <td class="prestamo-usuario">{{ $prestamo->user->name }}</td>
                                 <td class="prestamo-motivo">{{ $prestamo->motivo }}</td>
                                 <td class="prestamo-valor-original">${{ number_format($prestamo->valor, 2, ',', '.') }}</td>
-                                <td class="prestamo-valor-neto">CALCULANDO...</td>
+                                <td class="prestamo-valor-neto">${{ number_format($prestamo->valor_neto, 2, ',', '.') }}</td>
                                 <td class="prestamo-deducciones">-</td>
-                                <td class="prestamo-cuotas">CALCULANDO...</td>
+                                <td class="prestamo-cuotas">{{ $prestamo->cuotas }}</td>
                                 <td>
                                     <button type="button" 
                                         class="btn btn-xs btn-default text-info mx-1 shadow" 
@@ -191,6 +191,14 @@
                         <div class="form-group">
                             <label for="valor">VALOR:</label>
                             <input type="number" class="form-control" id="valor" name="valor" required step="0.01" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="valor_neto">VALOR NETO:</label>
+                            <input type="number" class="form-control" id="valor_neto" name="valor_neto" required step="0.01" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="cuotas">CUOTAS:</label>
+                            <input type="number" class="form-control" id="cuotas" name="cuotas" required min="1" value="1">
                         </div>
                         <div class="form-group">
                             <label for="motivo">MOTIVO:</label>
@@ -408,6 +416,9 @@
                 const $rowNode = $(rowNode);
 
                 const originalValor = parseFloat($rowNode.data('original-valor'));
+                const valorNetoBD = parseFloat($rowNode.data('valor-neto')) || originalValor;
+                const cuotasBD = parseInt($rowNode.data('cuotas')) || 0;
+                
                 const usuarioNombre = $rowNode.find('td.prestamo-usuario').text().trim(); // Obtenemos el nombre tal cual
                 const usuarioNombreNormalizado = normalizarTexto(usuarioNombre);
                 const motivoPrestamoOriginalText = $rowNode.find('td.prestamo-motivo').text().trim();
@@ -453,55 +464,62 @@
                     verificarYGuardarDeduccion(egreso, 'Egreso');
                 });
 
-                // Calcular total y valor neto
+                // Calcular total de deducciones
                 totalDeducciones = deduccionesDetalladas.reduce((sum, d) => sum + d.valor, 0);
-                const valorNeto = originalValor - totalDeducciones;
-
-                // Calcular deducción media (promedio)
-                const deduccionMedia = deduccionesDetalladas.length > 0 
-                    ? totalDeducciones / deduccionesDetalladas.length 
-                    : 0;
                 
-                // Calcular número total de cuotas estimadas
-                const totalCuotasEstimadas = deduccionMedia > 0 
-                    ? Math.ceil(originalValor / deduccionMedia) 
-                    : 0;
+                // Obtener valor neto original de la base de datos
+                const valorNetoOriginal = valorNetoBD;
+                
+                // Calcular valor neto actualizado (valor neto original - deducciones)
+                const valorNetoActualizado = valorNetoOriginal - totalDeducciones;
+                
+                // Crear contenido detallado para la celda de valor neto
+                let valorNetoHtml = `
+                    <div class="d-flex flex-column">
+                        <div><strong>NETO ORIGINAL:</strong> ${formatCurrency(valorNetoOriginal)}</div>
+                        <div><strong>DEDUCCIONES:</strong> ${formatCurrency(totalDeducciones)}</div>
+                        <div class="border-top pt-1 mt-1">
+                            <strong>NETO ACTUAL:</strong> ${formatCurrency(valorNetoActualizado)}
+                        </div>
+                    </div>
+                `;
+                
+                $valorNetoCell.html(valorNetoHtml);
+                
+                const cuotasTotal = cuotasBD;
                 
                 // Cuotas pagadas = número de deducciones
                 const cuotasPagadas = deduccionesDetalladas.length;
                 
                 // Cuotas pendientes
-                const cuotasPendientes = Math.max(0, totalCuotasEstimadas - cuotasPagadas);
+                const cuotasPendientes = Math.max(0, cuotasTotal - cuotasPagadas);
+                
+                // Calcular deducción media (promedio), respetando las cuotas definidas
+                const deduccionMedia = cuotasTotal > 0 
+                    ? originalValor / cuotasTotal 
+                    : 0;
 
-                // Actualizar celdas de valor neto
-                const formattedNeto = formatCurrency(valorNeto);
-                const tooltipNeto = `Original: ${formatCurrency(originalValor)}\nDeducciones Totales: ${formatCurrency(totalDeducciones)}`;
-
-                $valorNetoCell.html(formattedNeto)
-                              .attr('title', tooltipNeto)
-                              .tooltip('dispose') // Eliminar tooltip anterior si existe
-                              .tooltip(); // Inicializar nuevo tooltip
-
-                // Actualizar celda de cuotas
+                // Actualizar celda de cuotas con información detallada
                 let cuotasHtml = '';
-                if (deduccionMedia > 0) {
+                if (cuotasTotal > 0) {
                     cuotasHtml = `
                         <div class="d-flex flex-column">
+                            <div><strong>CUOTAS TOTALES:</strong> ${cuotasTotal}</div>
                             <div><strong>CUOTA MEDIA:</strong> ${formatCurrency(deduccionMedia)}</div>
-                            <div><strong>PAGADAS:</strong> ${cuotasPagadas} de ${totalCuotasEstimadas}</div>
+                            <div><strong>PAGADAS:</strong> ${cuotasPagadas} de ${cuotasTotal}</div>
                             <div><strong>PENDIENTES:</strong> ${cuotasPendientes}</div>
                             <div class="progress mt-1" style="height: 10px;">
                                 <div class="progress-bar bg-success" role="progressbar" 
-                                    style="width: ${Math.min(100, (cuotasPagadas/totalCuotasEstimadas)*100)}%;" 
+                                    style="width: ${Math.min(100, (cuotasPagadas/cuotasTotal)*100)}%;" 
                                     aria-valuenow="${cuotasPagadas}" 
                                     aria-valuemin="0" 
-                                    aria-valuemax="${totalCuotasEstimadas}">
+                                    aria-valuemax="${cuotasTotal}">
                                 </div>
                             </div>
                         </div>
                     `;
                 } else {
-                    cuotasHtml = '<span class="text-muted">SIN DEDUCCIONES AÚN</span>';
+                    cuotasHtml = '<span class="text-muted">SIN CUOTAS DEFINIDAS</span>';
                 }
                 $cuotasCell.html(cuotasHtml);
 
@@ -541,6 +559,12 @@
                 "language": {
                     "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
                 }
+            });
+
+            // Calcular valor neto al cambiar el valor original en el modal
+            $('#valor').on('input', function() {
+                const valorOriginal = parseFloat($(this).val()) || 0;
+                $('#valor_neto').val(valorOriginal);
             });
 
             // Obtener lista de meses a consultar (desde Ene 2025 hasta actual)
