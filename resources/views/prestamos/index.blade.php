@@ -121,6 +121,7 @@
                             <th>VALOR ORIGINAL</th>
                             <th>VALOR NETO</th>
                             <th>DEDUCCIONES</th>
+                            <th>CUOTAS</th>
                             <th>ACCIONES</th>
                         </tr>
                     </thead>
@@ -133,6 +134,7 @@
                                 <td class="prestamo-valor-original">${{ number_format($prestamo->valor, 2, ',', '.') }}</td>
                                 <td class="prestamo-valor-neto">CALCULANDO...</td>
                                 <td class="prestamo-deducciones">-</td>
+                                <td class="prestamo-cuotas">CALCULANDO...</td>
                                 <td>
                                     <button type="button" 
                                         class="btn btn-xs btn-default text-info mx-1 shadow" 
@@ -413,6 +415,7 @@
 
                 const $valorNetoCell = $rowNode.find('td.prestamo-valor-neto'); // Celda para valor neto
                 const $deduccionesCell = $rowNode.find('td.prestamo-deducciones'); // Celda para deducciones
+                const $cuotasCell = $rowNode.find('td.prestamo-cuotas'); // Celda para cuotas
 
                 let totalDeducciones = 0;
                 let deduccionesDetalladas = []; // Para la lista en la celda
@@ -454,7 +457,23 @@
                 totalDeducciones = deduccionesDetalladas.reduce((sum, d) => sum + d.valor, 0);
                 const valorNeto = originalValor - totalDeducciones;
 
-                // Actualizar celdas
+                // Calcular deducción media (promedio)
+                const deduccionMedia = deduccionesDetalladas.length > 0 
+                    ? totalDeducciones / deduccionesDetalladas.length 
+                    : 0;
+                
+                // Calcular número total de cuotas estimadas
+                const totalCuotasEstimadas = deduccionMedia > 0 
+                    ? Math.ceil(originalValor / deduccionMedia) 
+                    : 0;
+                
+                // Cuotas pagadas = número de deducciones
+                const cuotasPagadas = deduccionesDetalladas.length;
+                
+                // Cuotas pendientes
+                const cuotasPendientes = Math.max(0, totalCuotasEstimadas - cuotasPagadas);
+
+                // Actualizar celdas de valor neto
                 const formattedNeto = formatCurrency(valorNeto);
                 const tooltipNeto = `Original: ${formatCurrency(originalValor)}\nDeducciones Totales: ${formatCurrency(totalDeducciones)}`;
 
@@ -462,6 +481,29 @@
                               .attr('title', tooltipNeto)
                               .tooltip('dispose') // Eliminar tooltip anterior si existe
                               .tooltip(); // Inicializar nuevo tooltip
+
+                // Actualizar celda de cuotas
+                let cuotasHtml = '';
+                if (deduccionMedia > 0) {
+                    cuotasHtml = `
+                        <div class="d-flex flex-column">
+                            <div><strong>CUOTA MEDIA:</strong> ${formatCurrency(deduccionMedia)}</div>
+                            <div><strong>PAGADAS:</strong> ${cuotasPagadas} de ${totalCuotasEstimadas}</div>
+                            <div><strong>PENDIENTES:</strong> ${cuotasPendientes}</div>
+                            <div class="progress mt-1" style="height: 10px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                    style="width: ${Math.min(100, (cuotasPagadas/totalCuotasEstimadas)*100)}%;" 
+                                    aria-valuenow="${cuotasPagadas}" 
+                                    aria-valuemin="0" 
+                                    aria-valuemax="${totalCuotasEstimadas}">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    cuotasHtml = '<span class="text-muted">SIN DEDUCCIONES AÚN</span>';
+                }
+                $cuotasCell.html(cuotasHtml);
 
                 // Construir lista HTML para deducciones
                 let deduccionesHtml = '<span class="text-muted">NINGUNA</span>';
