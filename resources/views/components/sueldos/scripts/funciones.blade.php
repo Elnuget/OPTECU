@@ -4,7 +4,8 @@
     let empleadoSeleccionado = null;
     let datosRol = {
         retiros: 0,
-        pedidos: 0,
+        pedidos: [],
+        pedidos_total: 0,
         historial: {
             ingresos: 0,
             egresos: 0
@@ -106,6 +107,19 @@
         return movimientosPorFecha;
     }
 
+    // Función para agrupar pedidos por fecha
+    function agruparPedidosPorFecha(pedidos) {
+        const pedidosPorFecha = {};
+        pedidos.forEach(pedido => {
+            const fecha = pedido.fecha.split('T')[0]; // Obtener solo la fecha
+            if (!pedidosPorFecha[fecha]) {
+                pedidosPorFecha[fecha] = [];
+            }
+            pedidosPorFecha[fecha].push(pedido);
+        });
+        return pedidosPorFecha;
+    }
+
     // Función para obtener las URLs de API según la sucursal seleccionada
     function getApiUrls(tipo) {
         const sucursal = document.getElementById('filtroSucursal').value;
@@ -150,7 +164,8 @@
     // Función para obtener pedidos del empleado
     async function obtenerPedidos(ano, mes) {
         const urls = getApiUrls('pedidos').map(url => `${url}?ano=${ano}&mes=${mes}`);
-        datosRol.pedidos = 0;
+        datosRol.pedidos = [];
+        datosRol.pedidos_total = 0;
         
         for (const url of urls) {
             try {
@@ -160,7 +175,8 @@
                     const pedidosEmpleado = data.data.pedidos.filter(pedido => 
                         pedido.usuario.toLowerCase() === empleadoSeleccionado.nombre.toLowerCase()
                     );
-                    datosRol.pedidos += pedidosEmpleado.reduce((sum, pedido) => 
+                    datosRol.pedidos = [...datosRol.pedidos, ...pedidosEmpleado];
+                    datosRol.pedidos_total += pedidosEmpleado.reduce((sum, pedido) => 
                         sum + parseFloat(pedido.total), 0
                     );
                 }
@@ -234,8 +250,9 @@
             elementos.nombre.textContent = empleadoSeleccionado.nombre;
             elementos.periodo.textContent = `${mes}/${ano}`;
 
-            // Agrupar movimientos por fecha
+            // Agrupar movimientos y pedidos por fecha
             const movimientosPorFecha = agruparMovimientosPorFecha(datosRol.movimientos);
+            const pedidosPorFecha = agruparPedidosPorFecha(datosRol.pedidos || []);
             
             // Actualizar desglose de movimientos
             let totalBalance = 0;
@@ -253,6 +270,10 @@
                     sucursal = getSucursalName(movs.cierre.url || '');
                 }
 
+                // Obtener pedidos del día
+                const pedidosDelDia = pedidosPorFecha[fecha] || [];
+                const totalPedidosDia = pedidosDelDia.reduce((sum, pedido) => sum + parseFloat(pedido.total), 0);
+
                 return `
                     <tr>
                         <td>${formatDate(fecha)}</td>
@@ -269,6 +290,24 @@
                         </td>
                         <td>
                             <span class="sucursal-badge ${getSucursalClass(sucursal)}">${sucursal}</span>
+                        </td>
+                        <td>
+                            ${pedidosDelDia.length > 0 ? 
+                                `<div class="pedidos-dia">
+                                    <strong>Total: ${formatCurrency(totalPedidosDia)}</strong>
+                                    <ul class="list-unstyled mb-0">
+                                        ${pedidosDelDia.map(pedido => `
+                                            <li>
+                                                <small>
+                                                    ${formatTime(pedido.fecha)} - ${pedido.cliente} 
+                                                    <span class="text-success">${formatCurrency(pedido.total)}</span>
+                                                </small>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>` : 
+                                '<small class="text-muted">Sin pedidos</small>'
+                            }
                         </td>
                     </tr>
                 `;
