@@ -205,57 +205,82 @@
 
     // Función para actualizar el rol de pagos
     function actualizarRolPagos() {
-        const mes = document.getElementById('filtroMes').value;
-        const ano = document.getElementById('filtroAno').value;
-        
-        // Actualizar encabezado
-        document.getElementById('rolEmpleadoNombre').textContent = empleadoSeleccionado.nombre;
-        document.getElementById('rolPeriodo').textContent = `${mes}/${ano}`;
+        try {
+            const mes = document.getElementById('filtroMes').value;
+            const ano = document.getElementById('filtroAno').value;
+            
+            // Verificar y actualizar elementos del DOM de forma segura
+            const elementos = {
+                nombre: document.getElementById('rolEmpleadoNombre'),
+                periodo: document.getElementById('rolPeriodo'),
+                desglose: document.getElementById('rolDesglose'),
+                totalRecibir: document.getElementById('rolTotalRecibir'),
+                contenedor: document.getElementById('contenedorRolPagos'),
+                mensaje: document.getElementById('mensajeSeleccionUsuario')
+            };
 
-        // Agrupar movimientos por fecha
-        const movimientosPorFecha = agruparMovimientosPorFecha(datosRol.movimientos);
-        
-        // Actualizar desglose de movimientos
-        const desgloseBody = document.getElementById('rolDesglose');
-        let totalAperturas = 0;
-        let totalCierres = 0;
+            // Verificar que todos los elementos existan
+            for (const [key, element] of Object.entries(elementos)) {
+                if (!element) {
+                    throw new Error(`No se encontró el elemento: ${key}`);
+                }
+            }
 
-        const filas = Object.entries(movimientosPorFecha).map(([fecha, movs]) => {
-            const aperturaMonto = movs.apertura ? Math.abs(parseFloat(movs.apertura.monto)) : 0;
-            const cierreMonto = movs.cierre ? Math.abs(parseFloat(movs.cierre.monto)) : 0;
-            const balance = aperturaMonto - cierreMonto;
+            // Mostrar el contenedor y ocultar el mensaje
+            elementos.contenedor.classList.remove('d-none');
+            elementos.mensaje.classList.add('d-none');
 
-            totalAperturas += aperturaMonto;
-            totalCierres += cierreMonto;
+            // Actualizar encabezado
+            elementos.nombre.textContent = empleadoSeleccionado.nombre;
+            elementos.periodo.textContent = `${mes}/${ano}`;
 
-            return `
-                <tr>
-                    <td>${formatDate(fecha)}</td>
-                    <td>
-                        ${movs.apertura ? '<span class="badge badge-apertura mr-2">APERTURA</span>' : ''}
-                        ${movs.cierre ? '<span class="badge badge-cierre">CIERRE</span>' : ''}
-                    </td>
-                    <td class="text-right">
-                        ${movs.apertura ? `<span class="monto-apertura">${formatCurrency(aperturaMonto)}</span>` : '-'}
-                    </td>
-                    <td class="text-right">
-                        ${movs.cierre ? `<span class="monto-cierre">${formatCurrency(cierreMonto)}</span>` : '-'}
-                    </td>
-                    <td class="text-right ${balance >= 0 ? 'text-success' : 'text-danger'}">
-                        ${formatCurrency(balance)}
-                    </td>
-                </tr>
-            `;
-        });
+            // Agrupar movimientos por fecha
+            const movimientosPorFecha = agruparMovimientosPorFecha(datosRol.movimientos);
+            
+            // Actualizar desglose de movimientos
+            let totalBalance = 0;
 
-        desgloseBody.innerHTML = filas.join('');
+            const filas = Object.entries(movimientosPorFecha).map(([fecha, movs]) => {
+                const aperturaMonto = movs.apertura ? Math.abs(parseFloat(movs.apertura.monto)) : 0;
+                const cierreMonto = movs.cierre ? Math.abs(parseFloat(movs.cierre.monto)) : 0;
+                totalBalance += (aperturaMonto - cierreMonto);
 
-        // Actualizar totales
-        const balanceTotal = totalAperturas - totalCierres;
-        document.getElementById('totalAperturas').textContent = formatCurrency(totalAperturas);
-        document.getElementById('totalCierres').textContent = formatCurrency(totalCierres);
-        document.getElementById('totalBalance').textContent = formatCurrency(balanceTotal);
-        document.getElementById('rolTotalRecibir').textContent = formatCurrency(balanceTotal);
+                // Determinar la sucursal
+                let sucursal = '';
+                if (movs.apertura) {
+                    sucursal = getSucursalName(movs.apertura.url || '');
+                } else if (movs.cierre) {
+                    sucursal = getSucursalName(movs.cierre.url || '');
+                }
+
+                return `
+                    <tr>
+                        <td>${formatDate(fecha)}</td>
+                        <td>
+                            ${movs.apertura ? 
+                                `<span class="badge badge-apertura">APERTURA</span>
+                                 <span class="hora-movimiento">${formatTime(movs.apertura.fecha)}</span>` : 
+                                ''}
+                            ${movs.apertura && movs.cierre ? '<br>' : ''}
+                            ${movs.cierre ? 
+                                `<span class="badge badge-cierre">CIERRE</span>
+                                 <span class="hora-movimiento">${formatTime(movs.cierre.fecha)}</span>` : 
+                                ''}
+                        </td>
+                        <td>
+                            <span class="sucursal-badge ${getSucursalClass(sucursal)}">${sucursal}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            elementos.desglose.innerHTML = filas.join('');
+            elementos.totalRecibir.textContent = formatCurrency(totalBalance);
+
+        } catch (error) {
+            console.error('Error al actualizar el rol:', error);
+            alert('Error al actualizar el rol de pagos: ' + error.message);
+        }
     }
 
     // Event listeners
@@ -287,6 +312,41 @@
             generarRolPagos();
         }
     });
+
+    // Función para obtener el nombre de la sucursal basado en la URL
+    function getSucursalName(url) {
+        if (url.includes('opticas.xyz') && !url.includes('escleroptica2') && !url.includes('sucursal3')) {
+            return 'MATRIZ';
+        } else if (url.includes('escleroptica2')) {
+            return 'ROCÍO';
+        } else if (url.includes('sucursal3')) {
+            return 'NORTE';
+        }
+        return 'DESCONOCIDO';
+    }
+
+    // Función para obtener la clase CSS de la sucursal
+    function getSucursalClass(sucursal) {
+        switch (sucursal) {
+            case 'MATRIZ':
+                return 'bg-primary';
+            case 'ROCÍO':
+                return 'bg-success';
+            case 'NORTE':
+                return 'bg-warning';
+            default:
+                return 'bg-secondary';
+        }
+    }
+
+    // Función para formatear la hora
+    function formatTime(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString('es-ES', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
 
     // Función para actualizar el total global de retiros y la barra de progreso
     function updateGlobalRetiros() {
