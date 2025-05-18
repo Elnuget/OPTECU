@@ -437,6 +437,137 @@
         </div>
     </div>
 
+    {{-- Tarjetas de Historial de Caja --}}
+    <div class="card card-outline card-info mb-4" id="card-historial-total">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-cash-register mr-2"></i>
+                HISTORIAL DE CAJA DE TODAS LAS SUCURSALES
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="info-box bg-success">
+                        <div class="info-box-content">
+                            <span class="info-box-text">TOTAL INGRESOS</span>
+                            <span class="info-box-number" id="total-ingresos-global">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-box bg-danger">
+                        <div class="info-box-content">
+                            <span class="info-box-text">TOTAL EGRESOS</span>
+                            <span class="info-box-number" id="total-egresos-global">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-box bg-info">
+                        <div class="info-box-content">
+                            <span class="info-box-text">BALANCE</span>
+                            <span class="info-box-number" id="total-balance-global">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Tarjeta Plegable Historial Matriz --}}
+    <div class="card card-outline card-success card-widget collapsed-card" id="card-historial-matriz">
+        <div class="card-header">
+            <h3 class="card-title">HISTORIAL DE CAJA MATRIZ - BALANCE: <span id="total-historial-matriz">CARGANDO...</span></h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>TIPO</th>
+                            <th>DESCRIPCIÓN</th>
+                            <th>MONTO</th>
+                            <th>USUARIO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desglose-historial-matriz">
+                        <tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="overlay dark" id="loading-overlay-historial-matriz" style="display: none;">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+        </div>
+    </div>
+
+    {{-- Tarjeta Plegable Historial Rocío --}}
+    <div class="card card-outline card-info card-widget collapsed-card" id="card-historial-rocio">
+        <div class="card-header">
+            <h3 class="card-title">HISTORIAL DE CAJA ROCÍO - BALANCE: <span id="total-historial-rocio">CARGANDO...</span></h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>TIPO</th>
+                            <th>DESCRIPCIÓN</th>
+                            <th>MONTO</th>
+                            <th>USUARIO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desglose-historial-rocio">
+                        <tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="overlay dark" id="loading-overlay-historial-rocio" style="display: none;">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+        </div>
+    </div>
+
+    {{-- Tarjeta Plegable Historial Norte --}}
+    <div class="card card-outline card-warning card-widget collapsed-card" id="card-historial-norte">
+        <div class="card-header">
+            <h3 class="card-title">HISTORIAL DE CAJA NORTE - BALANCE: <span id="total-historial-norte">CARGANDO...</span></h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>TIPO</th>
+                            <th>DESCRIPCIÓN</th>
+                            <th>MONTO</th>
+                            <th>USUARIO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desglose-historial-norte">
+                        <tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="overlay dark" id="loading-overlay-historial-norte" style="display: none;">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+        </div>
+    </div>
+
     <!-- Modal Crear Sueldo -->
     <div class="modal fade" id="crearSueldoModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
@@ -585,6 +716,13 @@
         let totalPedidosMatriz = 0;
         let totalPedidosRocio = 0;
         let totalPedidosNorte = 0;
+        // Variables globales para historial de caja
+        let totalIngresosMatriz = 0;
+        let totalEgresosMatriz = 0;
+        let totalIngresosRocio = 0;
+        let totalEgresosRocio = 0;
+        let totalIngresosNorte = 0;
+        let totalEgresosNorte = 0;
         const tipoSucursal = '{{ $tipoSucursal }}';
 
         $(document).ready(function() {
@@ -1050,19 +1188,230 @@
                     });
             }
 
-            // Función auxiliar para determinar el color del badge según el estado
-            function getEstadoColor(estado) {
-                estado = estado.toLowerCase();
-                switch(estado) {
-                    case 'pendiente':
-                        return 'warning';
-                    case 'completado':
-                        return 'success';
-                    case 'cancelado':
-                        return 'danger';
-                    default:
-                        return 'info';
+            // Función para actualizar el total global del historial
+            function updateGlobalHistorial() {
+                const sucursal = tipoSucursal !== 'todas' ? tipoSucursal : document.getElementById('filtroSucursal').value;
+                let totalIngresos = 0;
+                let totalEgresos = 0;
+
+                if (tipoSucursal !== 'todas') {
+                    if (tipoSucursal === 'matriz') {
+                        totalIngresos = totalIngresosMatriz;
+                        totalEgresos = totalEgresosMatriz;
+                    } else if (tipoSucursal === 'rocio') {
+                        totalIngresos = totalIngresosRocio;
+                        totalEgresos = totalEgresosRocio;
+                    } else if (tipoSucursal === 'norte') {
+                        totalIngresos = totalIngresosNorte;
+                        totalEgresos = totalEgresosNorte;
+                    }
+                } else {
+                    if (sucursal === '') {
+                        totalIngresos = totalIngresosMatriz + totalIngresosRocio + totalIngresosNorte;
+                        totalEgresos = totalEgresosMatriz + totalEgresosRocio + totalEgresosNorte;
+                    } else if (sucursal === 'matriz') {
+                        totalIngresos = totalIngresosMatriz;
+                        totalEgresos = totalEgresosMatriz;
+                    } else if (sucursal === 'rocio') {
+                        totalIngresos = totalIngresosRocio;
+                        totalEgresos = totalEgresosRocio;
+                    } else if (sucursal === 'norte') {
+                        totalIngresos = totalIngresosNorte;
+                        totalEgresos = totalEgresosNorte;
+                    }
                 }
+
+                const balance = totalIngresos - totalEgresos;
+
+                document.getElementById('total-ingresos-global').textContent = formatCurrency(totalIngresos);
+                document.getElementById('total-egresos-global').textContent = formatCurrency(totalEgresos);
+                document.getElementById('total-balance-global').textContent = formatCurrency(balance);
+            }
+
+            // Función para obtener y mostrar datos del historial de la API Matriz
+            function fetchAndDisplayHistorialMatriz(ano, mes) {
+                const apiUrl = `https://opticas.xyz/api/caja/historial?ano=${ano}&mes=${mes}`;
+                const totalSpan = document.getElementById('total-historial-matriz');
+                const desgloseBody = document.getElementById('desglose-historial-matriz');
+                const loadingOverlay = document.getElementById('loading-overlay-historial-matriz');
+
+                loadingOverlay.style.display = 'flex';
+                totalSpan.textContent = 'CARGANDO...';
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
+
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                        return response.json();
+                    })
+                    .then(response => {
+                        if (!response.success) throw new Error('La respuesta no fue exitosa');
+                        const data = response.data;
+                        const movimientos = data.movimientos || [];
+                        const totales = data.totales || { ingresos: 0, egresos: 0 };
+                        
+                        totalIngresosMatriz = parseFloat(totales.ingresos) || 0;
+                        totalEgresosMatriz = parseFloat(totales.egresos) || 0;
+                        const balance = totalIngresosMatriz - totalEgresosMatriz;
+                        
+                        totalSpan.textContent = formatCurrency(balance);
+                        updateGlobalHistorial();
+
+                        if (movimientos.length > 0) {
+                            desgloseBody.innerHTML = movimientos.map(movimiento => {
+                                const fecha = new Date(movimiento.fecha).toLocaleDateString('es-ES');
+                                const esIngreso = movimiento.descripcion === 'Apertura';
+                                return `
+                                    <tr>
+                                        <td>${fecha}</td>
+                                        <td>
+                                            <span class="badge badge-${esIngreso ? 'success' : 'danger'}">
+                                                ${movimiento.descripcion}
+                                            </span>
+                                        </td>
+                                        <td>${movimiento.descripcion}</td>
+                                        <td class="text-${esIngreso ? 'success' : 'danger'}">
+                                            ${formatCurrency(Math.abs(movimiento.monto))}
+                                        </td>
+                                        <td>${movimiento.usuario}</td>
+                                    </tr>
+                                `;
+                            }).join('');
+                        } else {
+                            desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY MOVIMIENTOS REGISTRADOS</td></tr>';
+                        }
+                        loadingOverlay.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        totalSpan.textContent = 'ERROR';
+                        desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                        loadingOverlay.style.display = 'none';
+                    });
+            }
+
+            // Función para obtener y mostrar datos del historial de la API Rocío
+            function fetchAndDisplayHistorialRocio(ano, mes) {
+                const apiUrl = `https://escleroptica2.opticas.xyz/api/caja/historial?ano=${ano}&mes=${mes}`;
+                const totalSpan = document.getElementById('total-historial-rocio');
+                const desgloseBody = document.getElementById('desglose-historial-rocio');
+                const loadingOverlay = document.getElementById('loading-overlay-historial-rocio');
+
+                loadingOverlay.style.display = 'flex';
+                totalSpan.textContent = 'CARGANDO...';
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
+
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                        return response.json();
+                    })
+                    .then(response => {
+                        if (!response.success) throw new Error('La respuesta no fue exitosa');
+                        const data = response.data;
+                        const movimientos = data.movimientos || [];
+                        const totales = data.totales || { ingresos: 0, egresos: 0 };
+                        
+                        totalIngresosRocio = parseFloat(totales.ingresos) || 0;
+                        totalEgresosRocio = parseFloat(totales.egresos) || 0;
+                        const balance = totalIngresosRocio - totalEgresosRocio;
+                        
+                        totalSpan.textContent = formatCurrency(balance);
+                        updateGlobalHistorial();
+
+                        if (movimientos.length > 0) {
+                            desgloseBody.innerHTML = movimientos.map(movimiento => {
+                                const fecha = new Date(movimiento.fecha).toLocaleDateString('es-ES');
+                                const esIngreso = movimiento.descripcion === 'Apertura';
+                                return `
+                                    <tr>
+                                        <td>${fecha}</td>
+                                        <td>
+                                            <span class="badge badge-${esIngreso ? 'success' : 'danger'}">
+                                                ${movimiento.descripcion}
+                                            </span>
+                                        </td>
+                                        <td>${movimiento.descripcion}</td>
+                                        <td class="text-${esIngreso ? 'success' : 'danger'}">
+                                            ${formatCurrency(Math.abs(movimiento.monto))}
+                                        </td>
+                                        <td>${movimiento.usuario}</td>
+                                    </tr>
+                                `;
+                            }).join('');
+                        } else {
+                            desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY MOVIMIENTOS REGISTRADOS</td></tr>';
+                        }
+                        loadingOverlay.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        totalSpan.textContent = 'ERROR';
+                        desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                        loadingOverlay.style.display = 'none';
+                    });
+            }
+
+            // Función para obtener y mostrar datos del historial de la API Norte
+            function fetchAndDisplayHistorialNorte(ano, mes) {
+                const apiUrl = `https://sucursal3.opticas.xyz/api/caja/historial?ano=${ano}&mes=${mes}`;
+                const totalSpan = document.getElementById('total-historial-norte');
+                const desgloseBody = document.getElementById('desglose-historial-norte');
+                const loadingOverlay = document.getElementById('loading-overlay-historial-norte');
+
+                loadingOverlay.style.display = 'flex';
+                totalSpan.textContent = 'CARGANDO...';
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
+
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                        return response.json();
+                    })
+                    .then(response => {
+                        if (!response.success) throw new Error('La respuesta no fue exitosa');
+                        const data = response.data;
+                        const movimientos = data.movimientos || [];
+                        const totales = data.totales || { ingresos: 0, egresos: 0 };
+                        
+                        totalIngresosNorte = parseFloat(totales.ingresos) || 0;
+                        totalEgresosNorte = parseFloat(totales.egresos) || 0;
+                        const balance = totalIngresosNorte - totalEgresosNorte;
+                        
+                        totalSpan.textContent = formatCurrency(balance);
+                        updateGlobalHistorial();
+
+                        if (movimientos.length > 0) {
+                            desgloseBody.innerHTML = movimientos.map(movimiento => {
+                                const fecha = new Date(movimiento.fecha).toLocaleDateString('es-ES');
+                                const esIngreso = movimiento.descripcion === 'Apertura';
+                                return `
+                                    <tr>
+                                        <td>${fecha}</td>
+                                        <td>
+                                            <span class="badge badge-${esIngreso ? 'success' : 'danger'}">
+                                                ${movimiento.descripcion}
+                                            </span>
+                                        </td>
+                                        <td>${movimiento.descripcion}</td>
+                                        <td class="text-${esIngreso ? 'success' : 'danger'}">
+                                            ${formatCurrency(Math.abs(movimiento.monto))}
+                                        </td>
+                                        <td>${movimiento.usuario}</td>
+                                    </tr>
+                                `;
+                            }).join('');
+                        } else {
+                            desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY MOVIMIENTOS REGISTRADOS</td></tr>';
+                        }
+                        loadingOverlay.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        totalSpan.textContent = 'ERROR';
+                        desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                        loadingOverlay.style.display = 'none';
+                    });
             }
 
             // Función para actualizar todas las tarjetas
@@ -1072,14 +1421,17 @@
                 if (sucursal === '' || sucursal === 'matriz' || tipoSucursal === 'todas') {
                     fetchAndDisplayRetirosMatriz(ano, mes);
                     fetchAndDisplayPedidosMatriz(ano, mes);
+                    fetchAndDisplayHistorialMatriz(ano, mes);
                 }
                 if (sucursal === '' || sucursal === 'rocio' || tipoSucursal === 'todas') {
                     fetchAndDisplayRetirosRocio(ano, mes);
                     fetchAndDisplayPedidosRocio(ano, mes);
+                    fetchAndDisplayHistorialRocio(ano, mes);
                 }
                 if (sucursal === '' || sucursal === 'norte' || tipoSucursal === 'todas') {
                     fetchAndDisplayRetirosNorte(ano, mes);
                     fetchAndDisplayPedidosNorte(ano, mes);
+                    fetchAndDisplayHistorialNorte(ano, mes);
                 }
 
                 toggleSucursalCards(sucursal);
@@ -1088,9 +1440,9 @@
             // Función para mostrar/ocultar tarjetas según la sucursal seleccionada
             function toggleSucursalCards(sucursal) {
                 const allCards = {
-                    'matriz': ['card-retiros-matriz', 'card-pedidos-matriz'],
-                    'rocio': ['card-retiros-rocio', 'card-pedidos-rocio'],
-                    'norte': ['card-retiros-norte', 'card-pedidos-norte']
+                    'matriz': ['card-retiros-matriz', 'card-pedidos-matriz', 'card-historial-matriz'],
+                    'rocio': ['card-retiros-rocio', 'card-pedidos-rocio', 'card-historial-rocio'],
+                    'norte': ['card-retiros-norte', 'card-pedidos-norte', 'card-historial-norte']
                 };
 
                 if (tipoSucursal !== 'todas') {
@@ -1104,6 +1456,7 @@
                     });
                     document.getElementById('card-retiros-total').style.display = 'none';
                     document.getElementById('card-pedidos-total').style.display = 'none';
+                    document.getElementById('card-historial-total').style.display = 'none';
                 } else {
                     if (sucursal === '') {
                         Object.values(allCards).flat().forEach(cardId => {
@@ -1111,6 +1464,7 @@
                         });
                         document.getElementById('card-retiros-total').style.display = 'block';
                         document.getElementById('card-pedidos-total').style.display = 'block';
+                        document.getElementById('card-historial-total').style.display = 'block';
                     } else {
                         Object.entries(allCards).forEach(([currentSucursal, cards]) => {
                             cards.forEach(cardId => {
@@ -1119,6 +1473,7 @@
                         });
                         document.getElementById('card-retiros-total').style.display = 'none';
                         document.getElementById('card-pedidos-total').style.display = 'none';
+                        document.getElementById('card-historial-total').style.display = 'none';
                     }
                 }
             }

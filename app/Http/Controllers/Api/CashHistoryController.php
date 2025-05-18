@@ -15,9 +15,12 @@ class CashHistoryController extends Controller
             $query = CashHistory::query()
                 ->with('user:id,name');
 
-            // Filtrar por fecha si se proporcionan
-            if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
-                $query->whereBetween('created_at', [$request->fecha_inicio, $request->fecha_fin]);
+            // Filtrar por año y mes si se proporcionan
+            if ($request->filled(['ano', 'mes'])) {
+                $ano = $request->ano;
+                $mes = $request->mes;
+                $query->whereYear('created_at', $ano)
+                      ->whereMonth('created_at', $mes);
             }
 
             // Filtrar por estado si se proporciona
@@ -25,25 +28,27 @@ class CashHistoryController extends Controller
                 $query->where('estado', $request->estado);
             }
 
-            $historial = $query->latest()->get();
+            $movimientos = $query->latest()->get();
 
-            // Obtener el total en caja
-            $sumCaja = Caja::sum('valor');
-
-            // Obtener el último registro para saber el estado actual
-            $ultimoRegistro = CashHistory::latest()->first();
-            $estadoActual = $ultimoRegistro ? $ultimoRegistro->estado : null;
+            // Calcular totales
+            $ingresos = $movimientos->where('estado', 'Apertura')->sum('monto');
+            $egresos = $movimientos->where('estado', 'Cierre')->sum('monto');
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'historial' => $historial,
-                    'total_en_caja' => $sumCaja,
-                    'estado_actual' => $estadoActual,
-                    'resumen' => [
-                        'total_aperturas' => $historial->where('estado', 'Apertura')->count(),
-                        'total_cierres' => $historial->where('estado', 'Cierre')->count(),
-                        'monto_total_movimientos' => $historial->sum('monto')
+                    'movimientos' => $movimientos->map(function($movimiento) {
+                        return [
+                            'id' => $movimiento->id,
+                            'fecha' => $movimiento->created_at,
+                            'descripcion' => $movimiento->estado,
+                            'monto' => $movimiento->monto,
+                            'usuario' => $movimiento->user->name
+                        ];
+                    }),
+                    'totales' => [
+                        'ingresos' => $ingresos,
+                        'egresos' => $egresos
                     ]
                 ]
             ]);
