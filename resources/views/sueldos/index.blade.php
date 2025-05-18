@@ -3,8 +3,8 @@
 @section('title', 'SUELDOS')
 
 @section('content_header')
-    <h1>SUELDOS</h1>
-    <p>ADMINISTRACIÓN DE SUELDOS</p>
+    <h1>ROL DE PAGOS</h1>
+    <p>ADMINISTRACIÓN DE ROLES DE PAGO</p>
     @if (session('error'))
         <div class="alert {{ session('tipo') }} alert-dismissible fade show" role="alert">
             <strong>{{ session('mensaje') }}</strong>
@@ -67,27 +67,97 @@
 
     <div class="card">
         <div class="card-body">
-            {{-- Resumen de totales --}}
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="info-box bg-success">
-                        <div class="info-box-content">
-                            <span class="info-box-text">TOTAL SUELDOS</span>
-                            <span class="info-box-number">${{ number_format($totalSueldos, 2, ',', '.') }}</span>
-                        </div>
+            @include('components.sueldos.filtros', ['tipoSucursal' => $tipoSucursal, 'users' => $users])
+            
+            {{-- Contenedor para el Rol de Pagos --}}
+            <div id="contenedorRolPagos" class="d-none">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>EMPLEADO: <span id="rolEmpleadoNombre"></span></h6>
                     </div>
+                    <div class="col-md-6">
+                        <h6>PERÍODO: <span id="rolPeriodo"></span></h6>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th colspan="2" class="text-center bg-info">INGRESOS</th>
+                                <th colspan="2" class="text-center bg-danger">EGRESOS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>SUELDO BASE</td>
+                                <td id="rolSueldoBase" class="text-right"></td>
+                                <td>RETIROS</td>
+                                <td id="rolRetiros" class="text-right"></td>
+                            </tr>
+                            <tr>
+                                <td>COMISIÓN PEDIDOS</td>
+                                <td id="rolComisionPedidos" class="text-right"></td>
+                                <td>OTROS DESCUENTOS</td>
+                                <td id="rolOtrosDescuentos" class="text-right"></td>
+                            </tr>
+                            <tr>
+                                <td>OTROS INGRESOS</td>
+                                <td id="rolOtrosIngresos" class="text-right"></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            <tr class="bg-light">
+                                <th>TOTAL INGRESOS</th>
+                                <th id="rolTotalIngresos" class="text-right"></th>
+                                <th>TOTAL EGRESOS</th>
+                                <th id="rolTotalEgresos" class="text-right"></th>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-success">
+                                <th colspan="3" class="text-right">TOTAL A RECIBIR</th>
+                                <th id="rolTotalRecibir" class="text-right"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="mt-4">
+                    <h6>DESGLOSE DE MOVIMIENTOS</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>FECHA</th>
+                                    <th>TIPO</th>
+                                    <th>DESCRIPCIÓN</th>
+                                    <th>MONTO</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rolDesglose">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="text-right mt-3">
+                    <button type="button" class="btn btn-primary" id="btnImprimirRol">
+                        <i class="fas fa-print"></i> IMPRIMIR
+                    </button>
                 </div>
             </div>
 
-            @include('components.sueldos.filtros', ['tipoSucursal' => $tipoSucursal, 'users' => $users])
-            @include('components.sueldos.tabla', ['sueldos' => $sueldos])
+            {{-- Mensaje cuando no hay usuario seleccionado --}}
+            <div id="mensajeSeleccionUsuario" class="text-center py-5">
+                <h4>SELECCIONE UN USUARIO PARA GENERAR EL ROL DE PAGOS</h4>
+            </div>
         </div>
     </div>
 
     @include('components.sueldos.retiros', ['tipoSucursal' => $tipoSucursal])
     @include('components.sueldos.pedidos', ['tipoSucursal' => $tipoSucursal])
     @include('components.sueldos.historial', ['tipoSucursal' => $tipoSucursal])
-    @include('components.sueldos.modales', ['users' => $users])
 
 @stop
 

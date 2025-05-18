@@ -1,5 +1,228 @@
 @push('js')
 <script>
+    // Variables globales para almacenar datos del rol
+    let empleadoSeleccionado = null;
+    let datosRol = {
+        retiros: 0,
+        pedidos: 0,
+        historial: {
+            ingresos: 0,
+            egresos: 0
+        }
+    };
+
+    // Función para habilitar/deshabilitar el botón de generar rol
+    function actualizarBotonGenerarRol() {
+        const selectEmpleado = document.getElementById('filtroUsuario');
+        const btnGenerarRol = document.getElementById('btnGenerarRol');
+        btnGenerarRol.disabled = !selectEmpleado.value;
+        empleadoSeleccionado = selectEmpleado.value ? {
+            id: selectEmpleado.value,
+            nombre: selectEmpleado.options[selectEmpleado.selectedIndex].text
+        } : null;
+    }
+
+    // Función para formatear moneda
+    function formatCurrency(amount) {
+        return new Intl.NumberFormat('es-EC', {
+            style: 'currency',
+            currency: 'USD'
+        }).format(amount);
+    }
+
+    // Función para generar el rol de pagos
+    async function generarRolPagos() {
+        const selectEmpleado = document.getElementById('filtroUsuario');
+        if (!selectEmpleado.value) {
+            alert('Por favor seleccione un usuario');
+            return;
+        }
+
+        empleadoSeleccionado = {
+            id: selectEmpleado.value,
+            nombre: selectEmpleado.options[selectEmpleado.selectedIndex].text
+        };
+
+        const ano = document.getElementById('filtroAno').value;
+        const mes = document.getElementById('filtroMes').value;
+
+        if (!ano || !mes) {
+            alert('Por favor seleccione año y mes');
+            return;
+        }
+
+        // Mostrar el contenedor del rol y ocultar el mensaje
+        document.getElementById('contenedorRolPagos').classList.remove('d-none');
+        document.getElementById('mensajeSeleccionUsuario').classList.add('d-none');
+
+        // Obtener datos de las APIs
+        try {
+            await Promise.all([
+                obtenerRetiros(ano, mes),
+                obtenerPedidos(ano, mes),
+                obtenerHistorial(ano, mes)
+            ]);
+
+            // Actualizar el rol con los datos
+            actualizarRolPagos();
+
+        } catch (error) {
+            console.error('Error al generar rol:', error);
+            alert('Error al generar el rol de pagos');
+        }
+    }
+
+    // Función para obtener retiros del empleado
+    async function obtenerRetiros(ano, mes) {
+        const urls = [
+            `https://opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`,
+            `https://escleroptica2.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`,
+            `https://sucursal3.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`
+        ];
+
+        datosRol.retiros = 0;
+        
+        for (const url of urls) {
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.retiros) {
+                    const retirosEmpleado = data.retiros.filter(retiro => 
+                        retiro.usuario.toLowerCase() === empleadoSeleccionado.nombre.toLowerCase()
+                    );
+                    datosRol.retiros += retirosEmpleado.reduce((sum, retiro) => 
+                        sum + Math.abs(parseFloat(retiro.valor)), 0
+                    );
+                }
+            } catch (error) {
+                console.error('Error al obtener retiros:', error);
+            }
+        }
+    }
+
+    // Función para obtener pedidos del empleado
+    async function obtenerPedidos(ano, mes) {
+        const urls = [
+            `https://opticas.xyz/api/pedidos?ano=${ano}&mes=${mes}`,
+            `https://escleroptica2.opticas.xyz/api/pedidos?ano=${ano}&mes=${mes}`,
+            `https://sucursal3.opticas.xyz/api/pedidos?ano=${ano}&mes=${mes}`
+        ];
+
+        datosRol.pedidos = 0;
+        
+        for (const url of urls) {
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.success && data.data.pedidos) {
+                    const pedidosEmpleado = data.data.pedidos.filter(pedido => 
+                        pedido.usuario.toLowerCase() === empleadoSeleccionado.nombre.toLowerCase()
+                    );
+                    datosRol.pedidos += pedidosEmpleado.reduce((sum, pedido) => 
+                        sum + parseFloat(pedido.total), 0
+                    );
+                }
+            } catch (error) {
+                console.error('Error al obtener pedidos:', error);
+            }
+        }
+    }
+
+    // Función para obtener historial del empleado
+    async function obtenerHistorial(ano, mes) {
+        const urls = [
+            `https://opticas.xyz/api/caja/historial?ano=${ano}&mes=${mes}`,
+            `https://escleroptica2.opticas.xyz/api/caja/historial?ano=${ano}&mes=${mes}`,
+            `https://sucursal3.opticas.xyz/api/caja/historial?ano=${ano}&mes=${mes}`
+        ];
+
+        datosRol.historial = { ingresos: 0, egresos: 0 };
+        datosRol.movimientos = [];
+        
+        for (const url of urls) {
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.success && data.data.movimientos) {
+                    const movimientosEmpleado = data.data.movimientos.filter(mov => 
+                        mov.usuario.toLowerCase() === empleadoSeleccionado.nombre.toLowerCase()
+                    );
+                    
+                    movimientosEmpleado.forEach(mov => {
+                        const monto = Math.abs(parseFloat(mov.monto));
+                        if (mov.descripcion === 'Apertura') {
+                            datosRol.historial.ingresos += monto;
+                        } else {
+                            datosRol.historial.egresos += monto;
+                        }
+                        datosRol.movimientos.push(mov);
+                    });
+                }
+            } catch (error) {
+                console.error('Error al obtener historial:', error);
+            }
+        }
+    }
+
+    // Función para actualizar el rol de pagos
+    function actualizarRolPagos() {
+        const mes = document.getElementById('filtroMes').value;
+        const ano = document.getElementById('filtroAno').value;
+        
+        // Actualizar encabezado
+        document.getElementById('rolEmpleadoNombre').textContent = empleadoSeleccionado.nombre;
+        document.getElementById('rolPeriodo').textContent = `${mes}/${ano}`;
+
+        // Calcular totales
+        const totalIngresos = datosRol.historial.ingresos + datosRol.pedidos;
+        const totalEgresos = datosRol.historial.egresos + datosRol.retiros;
+
+        // Actualizar montos
+        document.getElementById('rolSueldoBase').textContent = formatCurrency(datosRol.historial.ingresos);
+        document.getElementById('rolComisionPedidos').textContent = formatCurrency(datosRol.pedidos);
+        document.getElementById('rolOtrosIngresos').textContent = formatCurrency(0);
+        document.getElementById('rolRetiros').textContent = formatCurrency(datosRol.retiros);
+        document.getElementById('rolOtrosDescuentos').textContent = formatCurrency(datosRol.historial.egresos);
+        document.getElementById('rolTotalIngresos').textContent = formatCurrency(totalIngresos);
+        document.getElementById('rolTotalEgresos').textContent = formatCurrency(totalEgresos);
+        document.getElementById('rolTotalRecibir').textContent = formatCurrency(totalIngresos - totalEgresos);
+
+        // Actualizar desglose de movimientos
+        const desgloseBody = document.getElementById('rolDesglose');
+        desgloseBody.innerHTML = datosRol.movimientos.map(mov => `
+            <tr>
+                <td>${new Date(mov.fecha).toLocaleDateString('es-ES')}</td>
+                <td>${mov.descripcion === 'Apertura' ? 'INGRESO' : 'EGRESO'}</td>
+                <td>${mov.descripcion}</td>
+                <td class="text-${mov.descripcion === 'Apertura' ? 'success' : 'danger'}">
+                    ${formatCurrency(Math.abs(mov.monto))}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        // Listener para el select de empleado
+        const selectEmpleado = document.getElementById('filtroUsuario');
+        selectEmpleado.addEventListener('change', actualizarBotonGenerarRol);
+
+        // Listener para el botón de generar rol
+        const btnGenerarRol = document.getElementById('btnGenerarRol');
+        btnGenerarRol.addEventListener('click', generarRolPagos);
+
+        // Listener para el botón de imprimir
+        const btnImprimirRol = document.getElementById('btnImprimirRol');
+        btnImprimirRol.addEventListener('click', function() {
+            window.print();
+        });
+
+        // Si hay un usuario seleccionado al cargar, generar el rol
+        if (selectEmpleado.value) {
+            generarRolPagos();
+        }
+    });
+
     // Función para actualizar el total global de retiros y la barra de progreso
     function updateGlobalRetiros() {
         const sucursal = window.tipoSucursal !== 'todas' ? window.tipoSucursal : document.getElementById('filtroSucursal').value;

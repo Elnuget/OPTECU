@@ -1,6 +1,6 @@
 {{-- Formulario de filtro --}}
 <form method="GET" class="form-row mb-3" id="filterForm">
-    <div class="col-md-2">
+    <div class="col-md-3">
         <label for="filtroAno">SELECCIONAR AÑO:</label>
         <select name="ano" class="form-control custom-select" id="filtroAno">
             <option value="">SELECCIONE AÑO</option>
@@ -13,7 +13,7 @@
             @endfor
         </select>
     </div>
-    <div class="col-md-2">
+    <div class="col-md-3">
         <label for="filtroMes">SELECCIONAR MES:</label>
         <select name="mes" class="form-control custom-select" id="filtroMes">
             <option value="">SELECCIONE MES</option>
@@ -28,25 +28,10 @@
             @endforeach
         </select>
     </div>
-    <div class="col-md-2">
-        <label for="filtroSucursal">SELECCIONAR SUCURSAL:</label>
-        <select name="sucursal" class="form-control custom-select" id="filtroSucursal" {{ $tipoSucursal !== 'todas' ? 'disabled' : '' }}>
-            <option value="">TODAS LAS SUCURSALES</option>
-            @if($tipoSucursal === 'todas' || $tipoSucursal === 'matriz')
-                <option value="matriz">MATRIZ</option>
-            @endif
-            @if($tipoSucursal === 'todas' || $tipoSucursal === 'rocio')
-                <option value="rocio">ROCÍO</option>
-            @endif
-            @if($tipoSucursal === 'todas' || $tipoSucursal === 'norte')
-                <option value="norte">NORTE</option>
-            @endif
-        </select>
-    </div>
-    <div class="col-md-2">
+    <div class="col-md-3">
         <label for="filtroUsuario">SELECCIONAR USUARIO:</label>
         <select name="user_id" class="form-control custom-select" id="filtroUsuario">
-            <option value="">TODOS LOS USUARIOS</option>
+            <option value="">SELECCIONE USUARIO</option>
             @foreach($users as $user)
                 <option value="{{ $user->id }}" {{ request('user_id') == $user->id ? 'selected' : '' }}>
                     {{ $user->name }}
@@ -54,14 +39,18 @@
             @endforeach
         </select>
     </div>
-    <div class="col-md-2 align-self-end">
-        <button type="button" class="btn btn-primary" id="actualButton">ACTUAL</button>
+    <div class="col-md-3 align-self-end">
+        <button type="button" class="btn btn-primary btn-block" id="btnGenerarRol">
+            <i class="fas fa-sync-alt"></i> GENERAR ROL
+        </button>
     </div>
 </form>
 
 {{-- Botón Añadir Sueldo --}}
-<div class="btn-group mb-3">
-    <button type="button" class="btn btn-success" data-toggle="modal" data-target="#crearSueldoModal">
-        <i class="fas fa-plus mr-2"></i>AÑADIR SUELDO
-    </button>
+<div class="row mb-3">
+    <div class="col-md-12 text-right">
+        <button type="button" class="btn btn-success" data-toggle="modal" data-target="#modalAgregarSueldo">
+            <i class="fas fa-plus"></i> AÑADIR SUELDO
+        </button>
+    </div>
 </div> 
