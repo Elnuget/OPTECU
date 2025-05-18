@@ -3,6 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\PagoController;
+use App\Http\Controllers\Api\PedidoController;
+use App\Http\Controllers\Api\CashHistoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,3 +20,5 @@ use App\Http\Controllers\Api\PagoController;
 Route::get('/pagos/totales', [PagoController::class, 'getTotalesPorMes']);
 Route::get('/caja/retiros', [PagoController::class, 'getRetirosCaja']);
 Route::get('/egresos', [PagoController::class, 'getEgresosPorMes']);
+Route::get('/pedidos', [PedidoController::class, 'getPedidosPorMes']);
+Route::get('/caja/historial', [CashHistoryController::class, 'getHistorialCaja']);
