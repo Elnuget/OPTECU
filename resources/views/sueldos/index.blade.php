@@ -1520,5 +1520,43 @@
             // Carga inicial de datos
             updateAllCards(filtroAno.value, filtroMes.value);
         });
+
+        // Manejador para el modal de ver sueldo
+        $('#verSueldoModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget);
+            const fecha = button.data('fecha');
+            const descripcion = button.data('descripcion');
+            const valor = button.data('valor');
+            
+            const modal = $(this);
+            modal.find('#verFecha').text(fecha);
+            modal.find('#verDescripcion').text(descripcion);
+            modal.find('#verValor').text(new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(valor));
+        });
+
+        // Manejador para el modal de editar sueldo
+        $('#editarSueldoModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget);
+            const id = button.data('id');
+            const fecha = button.data('fecha');
+            const descripcion = button.data('descripcion');
+            const valor = button.data('valor');
+            
+            const modal = $(this);
+            const form = modal.find('#formEditarSueldo');
+            form.attr('action', `/sueldos/${id}`);
+            modal.find('#editFecha').val(fecha);
+            modal.find('#editDescripcion').val(descripcion);
+            modal.find('#editValor').val(valor);
+        });
+
+        // Manejador para el modal de confirmar eliminación
+        $('#confirmarEliminarModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget);
+            const url = button.data('url');
+            
+            const form = $(this).find('#eliminarForm');
+            form.attr('action', url);
+        });
     </script>
 @stop 

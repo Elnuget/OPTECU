@@ -57,7 +57,8 @@ class SueldoController extends Controller
         $validator = Validator::make($request->all(), [
             'fecha' => 'required|date',
             'descripcion' => 'required|string|max:255',
-            'valor' => 'required|numeric'
+            'valor' => 'required|numeric|min:0',
+            'user_id' => 'required|exists:users,id'
         ]);
 
         if ($validator->fails()) {
@@ -70,16 +71,22 @@ class SueldoController extends Controller
                 ]);
         }
 
-        $data = $request->all();
-        $data['user_id'] = Auth::id();
-        
-        $sueldo = Sueldo::create($data);
+        try {
+            Sueldo::create($request->all());
 
-        return redirect()->route('sueldos.index')
-            ->with([
-                'mensaje' => 'SUELDO REGISTRADO CORRECTAMENTE',
-                'tipo' => 'alert-success'
-            ]);
+            return redirect()->route('sueldos.index')
+                ->with([
+                    'mensaje' => 'SUELDO REGISTRADO CORRECTAMENTE',
+                    'tipo' => 'alert-success'
+                ]);
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with([
+                    'mensaje' => 'ERROR AL GUARDAR EL SUELDO: ' . $e->getMessage(),
+                    'tipo' => 'alert-danger'
+                ]);
+        }
     }
 
     /**
@@ -90,7 +97,17 @@ class SueldoController extends Controller
      */
     public function show(Sueldo $sueldo)
     {
-        return view('sueldos.show', compact('sueldo'));
+        try {
+            return response()->json([
+                'success' => true,
+                'data' => $sueldo->load('user')
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'ERROR AL OBTENER EL SUELDO: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -116,7 +133,7 @@ class SueldoController extends Controller
         $validator = Validator::make($request->all(), [
             'fecha' => 'required|date',
             'descripcion' => 'required|string|max:255',
-            'valor' => 'required|numeric'
+            'valor' => 'required|numeric|min:0'
         ]);
 
         if ($validator->fails()) {
@@ -129,16 +146,22 @@ class SueldoController extends Controller
                 ]);
         }
 
-        $data = $request->all();
-        $data['user_id'] = Auth::id();
-        
-        $sueldo->update($data);
+        try {
+            $sueldo->update($request->all());
 
-        return redirect()->route('sueldos.index')
-            ->with([
-                'mensaje' => 'SUELDO ACTUALIZADO CORRECTAMENTE',
-                'tipo' => 'alert-success'
-            ]);
+            return redirect()->route('sueldos.index')
+                ->with([
+                    'mensaje' => 'SUELDO ACTUALIZADO CORRECTAMENTE',
+                    'tipo' => 'alert-success'
+                ]);
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with([
+                    'mensaje' => 'ERROR AL ACTUALIZAR EL SUELDO: ' . $e->getMessage(),
+                    'tipo' => 'alert-danger'
+                ]);
+        }
     }
 
     /**
@@ -149,12 +172,20 @@ class SueldoController extends Controller
      */
     public function destroy(Sueldo $sueldo)
     {
-        $sueldo->delete();
+        try {
+            $sueldo->delete();
 
-        return redirect()->route('sueldos.index')
-            ->with([
-                'mensaje' => 'SUELDO ELIMINADO CORRECTAMENTE',
-                'tipo' => 'alert-success'
-            ]);
+            return redirect()->route('sueldos.index')
+                ->with([
+                    'mensaje' => 'SUELDO ELIMINADO CORRECTAMENTE',
+                    'tipo' => 'alert-success'
+                ]);
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with([
+                    'mensaje' => 'ERROR AL ELIMINAR EL SUELDO: ' . $e->getMessage(),
+                    'tipo' => 'alert-danger'
+                ]);
+        }
     }
 } 
