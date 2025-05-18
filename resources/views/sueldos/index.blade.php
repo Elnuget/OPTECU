@@ -87,7 +87,7 @@
                         <h6>PERÍODO: <span id="rolPeriodo" class="text-secondary"></span></h6>
                     </div>
                     <div class="col-md-6 text-right">
-                        <h5>TOTAL A RECIBIR: <span id="rolTotalRecibir" class="text-success"></span></h5>
+                        <h5>TOTAL DE PEDIDOS: <span id="rolTotalRecibir" class="text-success"></span></h5>
                     </div>
                 </div>
 
@@ -98,6 +98,7 @@
                                 <th>FECHA</th>
                                 <th>MOVIMIENTOS</th>
                                 <th>SUCURSAL</th>
+                                <th>PEDIDOS</th>
                             </tr>
                         </thead>
                         <tbody id="rolDesglose">

@@ -254,14 +254,11 @@
             const movimientosPorFecha = agruparMovimientosPorFecha(datosRol.movimientos);
             const pedidosPorFecha = agruparPedidosPorFecha(datosRol.pedidos || []);
             
+            // Variable para el total global de pedidos
+            let totalGlobalPedidos = 0;
+
             // Actualizar desglose de movimientos
-            let totalBalance = 0;
-
             const filas = Object.entries(movimientosPorFecha).map(([fecha, movs]) => {
-                const aperturaMonto = movs.apertura ? Math.abs(parseFloat(movs.apertura.monto)) : 0;
-                const cierreMonto = movs.cierre ? Math.abs(parseFloat(movs.cierre.monto)) : 0;
-                totalBalance += (aperturaMonto - cierreMonto);
-
                 // Determinar la sucursal
                 let sucursal = '';
                 if (movs.apertura) {
@@ -273,6 +270,9 @@
                 // Obtener pedidos del día
                 const pedidosDelDia = pedidosPorFecha[fecha] || [];
                 const totalPedidosDia = pedidosDelDia.reduce((sum, pedido) => sum + parseFloat(pedido.total), 0);
+                
+                // Sumar al total global
+                totalGlobalPedidos += totalPedidosDia;
 
                 return `
                     <tr>
@@ -314,7 +314,7 @@
             });
 
             elementos.desglose.innerHTML = filas.join('');
-            elementos.totalRecibir.textContent = formatCurrency(totalBalance);
+            elementos.totalRecibir.textContent = formatCurrency(totalGlobalPedidos);
 
         } catch (error) {
             console.error('Error al actualizar el rol:', error);
