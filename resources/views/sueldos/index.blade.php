@@ -1,6 +1,6 @@
 @extends('adminlte::page')
 
-@section('title', 'SUELDOS')
+@section('title', 'ROL DE PAGOS')
 
 @section('content_header')
     <h1>ROL DE PAGOS</h1>
@@ -23,46 +23,56 @@
     @endphp
 
     <style>
-        /* Convertir todo el texto a mayúsculas */
-        body, 
-        .content-wrapper, 
-        .main-header, 
-        .main-sidebar, 
-        .card-title,
-        .info-box-text,
-        .info-box-number,
-        .custom-select,
-        .btn,
-        label,
-        input,
-        select,
-        option,
-        datalist,
-        datalist option,
-        .form-control,
-        p,
-        h1, h2, h3, h4, h5, h6,
-        th,
-        td,
-        span,
-        a,
-        .dropdown-item,
-        .alert,
-        .modal-title,
-        .modal-body p,
-        .modal-content,
-        .card-header,
-        .card-footer,
-        button,
-        .close,
-        .table thead th,
-        .table tbody td,
-        .dataTables_filter,
-        .dataTables_info,
-        .paginate_button,
+        /* Estilos base */
+        body, .content-wrapper, .main-header, .main-sidebar, .card-title,
+        .info-box-text, .info-box-number, .custom-select, .btn, label,
+        input, select, option, datalist, datalist option, .form-control,
+        p, h1, h2, h3, h4, h5, h6, th, td, span, a, .dropdown-item,
+        .alert, .modal-title, .modal-body p, .modal-content, .card-header,
+        .card-footer, button, .close, .table thead th, .table tbody td,
+        .dataTables_filter, .dataTables_info, .paginate_button,
         .info-box span {
             text-transform: uppercase !important;
         }
+
+        .table-movimientos th {
+            background-color: #f4f6f9;
+            vertical-align: middle !important;
+        }
+
+        .table-movimientos td {
+            vertical-align: middle !important;
+        }
+
+        .badge-apertura {
+            background-color: #28a745;
+            color: white;
+            padding: 5px 10px;
+        }
+
+        .badge-cierre {
+            background-color: #dc3545;
+            color: white;
+            padding: 5px 10px;
+        }
+
+        .hora-movimiento {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-left: 10px;
+        }
+
+        .sucursal-badge {
+            background-color: #17a2b8;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .sucursal-matriz { background-color: #007bff; }
+        .sucursal-rocio { background-color: #28a745; }
+        .sucursal-norte { background-color: #17a2b8; }
     </style>
 
     <div class="card">
@@ -71,74 +81,28 @@
             
             {{-- Contenedor para el Rol de Pagos --}}
             <div id="contenedorRolPagos" class="d-none">
-                <div class="row mb-3">
+                <div class="row mb-4">
                     <div class="col-md-6">
-                        <h6>EMPLEADO: <span id="rolEmpleadoNombre"></span></h6>
+                        <h5>EMPLEADO: <span id="rolEmpleadoNombre" class="text-primary"></span></h5>
+                        <h6>PERÍODO: <span id="rolPeriodo" class="text-secondary"></span></h6>
                     </div>
-                    <div class="col-md-6">
-                        <h6>PERÍODO: <span id="rolPeriodo"></span></h6>
+                    <div class="col-md-6 text-right">
+                        <h5>TOTAL A RECIBIR: <span id="rolTotalRecibir" class="text-success"></span></h5>
                     </div>
-                </div>
-                
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th colspan="2" class="text-center bg-info">INGRESOS</th>
-                                <th colspan="2" class="text-center bg-danger">EGRESOS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>SUELDO BASE</td>
-                                <td id="rolSueldoBase" class="text-right"></td>
-                                <td>RETIROS</td>
-                                <td id="rolRetiros" class="text-right"></td>
-                            </tr>
-                            <tr>
-                                <td>COMISIÓN PEDIDOS</td>
-                                <td id="rolComisionPedidos" class="text-right"></td>
-                                <td>OTROS DESCUENTOS</td>
-                                <td id="rolOtrosDescuentos" class="text-right"></td>
-                            </tr>
-                            <tr>
-                                <td>OTROS INGRESOS</td>
-                                <td id="rolOtrosIngresos" class="text-right"></td>
-                                <td></td>
-                                <td></td>
-                            </tr>
-                            <tr class="bg-light">
-                                <th>TOTAL INGRESOS</th>
-                                <th id="rolTotalIngresos" class="text-right"></th>
-                                <th>TOTAL EGRESOS</th>
-                                <th id="rolTotalEgresos" class="text-right"></th>
-                            </tr>
-                        </tbody>
-                        <tfoot>
-                            <tr class="bg-success">
-                                <th colspan="3" class="text-right">TOTAL A RECIBIR</th>
-                                <th id="rolTotalRecibir" class="text-right"></th>
-                            </tr>
-                        </tfoot>
-                    </table>
                 </div>
 
-                <div class="mt-4">
-                    <h6>DESGLOSE DE MOVIMIENTOS</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>FECHA</th>
-                                    <th>TIPO</th>
-                                    <th>DESCRIPCIÓN</th>
-                                    <th>MONTO</th>
-                                </tr>
-                            </thead>
-                            <tbody id="rolDesglose">
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-movimientos">
+                        <thead>
+                            <tr>
+                                <th>FECHA</th>
+                                <th>MOVIMIENTOS</th>
+                                <th>SUCURSAL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rolDesglose">
+                        </tbody>
+                    </table>
                 </div>
 
                 <div class="text-right mt-3">
@@ -165,7 +129,6 @@
     @include('atajos')
     @push('js')
     <script>
-        // Definir la variable tipoSucursal globalmente para que esté disponible en todos los scripts
         window.tipoSucursal = '{{ $tipoSucursal }}';
     </script>
     @endpush
