@@ -16,6 +16,11 @@
 @stop
 
 @section('content')
+    @php
+        $empresa = \App\Models\Empresa::first();
+        $tipoSucursal = $empresa ? $empresa->getTipoSucursal() : 'todas';
+    @endphp
+
     <style>
         /* Convertir todo el texto a mayúsculas */
         body, 
@@ -103,6 +108,21 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="col-md-2">
+                    <label for="filtroSucursal">SELECCIONAR SUCURSAL:</label>
+                    <select name="sucursal" class="form-control custom-select" id="filtroSucursal" {{ $tipoSucursal !== 'todas' ? 'disabled' : '' }}>
+                        <option value="">TODAS LAS SUCURSALES</option>
+                        @if($tipoSucursal === 'todas' || $tipoSucursal === 'matriz')
+                            <option value="matriz">MATRIZ</option>
+                        @endif
+                        @if($tipoSucursal === 'todas' || $tipoSucursal === 'rocio')
+                            <option value="rocio">ROCÍO</option>
+                        @endif
+                        @if($tipoSucursal === 'todas' || $tipoSucursal === 'norte')
+                            <option value="norte">NORTE</option>
+                        @endif
+                    </select>
+                </div>
                 <div class="col-md-2 align-self-end">
                     <button type="button" class="btn btn-primary" id="actualButton">ACTUAL</button>
                 </div>
@@ -171,6 +191,120 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    {{-- Tarjetas de Retiros --}}
+    <div class="card card-outline card-danger mb-4" id="card-retiros-total">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-money-bill-wave mr-2"></i>
+                RETIROS TOTALES DE TODAS LAS SUCURSALES: 
+                <span id="total-retiros-global">CARGANDO...</span>
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="progress">
+                <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="progress-retiros-matriz">
+                    Matriz: $0
+                </div>
+                <div class="progress-bar bg-info" role="progressbar" style="width: 0%" id="progress-retiros-rocio">
+                    Rocío: $0
+                </div>
+                <div class="progress-bar bg-warning" role="progressbar" style="width: 0%" id="progress-retiros-norte">
+                    Norte: $0
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Tarjeta Plegable Retiros Matriz --}}
+    <div class="card card-outline card-success card-widget collapsed-card" id="card-retiros-matriz">
+        <div class="card-header">
+            <h3 class="card-title">RETIROS SUCURSAL MATRIZ - TOTAL: <span id="total-retiros-matriz">CARGANDO...</span></h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>MOTIVO</th>
+                            <th>VALOR</th>
+                            <th>USUARIO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desglose-retiros-matriz">
+                        <tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="overlay dark" id="loading-overlay-retiros-matriz" style="display: none;">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+        </div>
+    </div>
+
+    {{-- Tarjeta Plegable Retiros Rocío --}}
+    <div class="card card-outline card-info card-widget collapsed-card" id="card-retiros-rocio">
+        <div class="card-header">
+            <h3 class="card-title">RETIROS SUCURSAL ROCÍO - TOTAL: <span id="total-retiros-rocio">CARGANDO...</span></h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>MOTIVO</th>
+                            <th>VALOR</th>
+                            <th>USUARIO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desglose-retiros-rocio">
+                        <tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="overlay dark" id="loading-overlay-retiros-rocio" style="display: none;">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+        </div>
+    </div>
+
+    {{-- Tarjeta Plegable Retiros Norte --}}
+    <div class="card card-outline card-warning card-widget collapsed-card" id="card-retiros-norte">
+        <div class="card-header">
+            <h3 class="card-title">RETIROS SUCURSAL NORTE - TOTAL: <span id="total-retiros-norte">CARGANDO...</span></h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>MOTIVO</th>
+                            <th>VALOR</th>
+                            <th>USUARIO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desglose-retiros-norte">
+                        <tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="overlay dark" id="loading-overlay-retiros-norte" style="display: none;">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
         </div>
     </div>
 
@@ -305,6 +439,12 @@
 @section('js')
 @include('atajos')
     <script>
+        // Variables globales para almacenar los totales y el tipo de sucursal
+        let totalRetirosMatriz = 0;
+        let totalRetirosRocio = 0;
+        let totalRetirosNorte = 0;
+        const tipoSucursal = '{{ $tipoSucursal }}';
+
         $(document).ready(function() {
             // Inicializar DataTable
             var sueldosTable = $('#sueldosTable').DataTable({
@@ -344,54 +484,300 @@
                 }
             });
 
-            // Modal Ver Sueldo
-            $('#verSueldoModal').on('show.bs.modal', function(event) {
-                var button = $(event.relatedTarget);
-                var fecha = button.data('fecha');
-                var descripcion = button.data('descripcion');
-                var valor = button.data('valor');
+            // Función para formatear números como moneda
+            function formatCurrency(number) {
+                return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(number);
+            }
+
+            // Función para actualizar el total global de retiros y la barra de progreso
+            function updateGlobalRetiros() {
+                const sucursal = tipoSucursal !== 'todas' ? tipoSucursal : document.getElementById('filtroSucursal').value;
+                let totalGlobal = 0;
+
+                if (tipoSucursal !== 'todas') {
+                    if (tipoSucursal === 'matriz') totalGlobal = Math.abs(totalRetirosMatriz);
+                    else if (tipoSucursal === 'rocio') totalGlobal = Math.abs(totalRetirosRocio);
+                    else if (tipoSucursal === 'norte') totalGlobal = Math.abs(totalRetirosNorte);
+                } else {
+                    if (sucursal === '') {
+                        totalGlobal = Math.abs(totalRetirosMatriz) + Math.abs(totalRetirosRocio) + Math.abs(totalRetirosNorte);
+                    } else if (sucursal === 'matriz') {
+                        totalGlobal = Math.abs(totalRetirosMatriz);
+                    } else if (sucursal === 'rocio') {
+                        totalGlobal = Math.abs(totalRetirosRocio);
+                    } else if (sucursal === 'norte') {
+                        totalGlobal = Math.abs(totalRetirosNorte);
+                    }
+                }
+
+                const totalSpan = document.getElementById('total-retiros-global');
+                totalSpan.textContent = formatCurrency(-totalGlobal);
+
+                if (totalGlobal > 0) {
+                    const porcentajeMatriz = ((sucursal === '' || sucursal === 'matriz' ? Math.abs(totalRetirosMatriz) : 0) / totalGlobal) * 100;
+                    const porcentajeRocio = ((sucursal === '' || sucursal === 'rocio' ? Math.abs(totalRetirosRocio) : 0) / totalGlobal) * 100;
+                    const porcentajeNorte = ((sucursal === '' || sucursal === 'norte' ? Math.abs(totalRetirosNorte) : 0) / totalGlobal) * 100;
+
+                    const progressMatriz = document.getElementById('progress-retiros-matriz');
+                    const progressRocio = document.getElementById('progress-retiros-rocio');
+                    const progressNorte = document.getElementById('progress-retiros-norte');
+
+                    progressMatriz.style.width = porcentajeMatriz + '%';
+                    progressRocio.style.width = porcentajeRocio + '%';
+                    progressNorte.style.width = porcentajeNorte + '%';
+
+                    progressMatriz.textContent = `Matriz: ${formatCurrency(sucursal === '' || sucursal === 'matriz' ? totalRetirosMatriz : 0)}`;
+                    progressRocio.textContent = `Rocío: ${formatCurrency(sucursal === '' || sucursal === 'rocio' ? totalRetirosRocio : 0)}`;
+                    progressNorte.textContent = `Norte: ${formatCurrency(sucursal === '' || sucursal === 'norte' ? totalRetirosNorte : 0)}`;
+                }
+            }
+
+            // Función para obtener y mostrar datos de retiros de la API Matriz
+            function fetchAndDisplayRetirosMatriz(ano, mes) {
+                const apiUrl = `https://opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`;
+                const totalSpan = document.getElementById('total-retiros-matriz');
+                const desgloseBody = document.getElementById('desglose-retiros-matriz');
+                const loadingOverlay = document.getElementById('loading-overlay-retiros-matriz');
+
+                loadingOverlay.style.display = 'flex';
+                totalSpan.textContent = 'CARGANDO...';
+                desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>';
+
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const retirosFiltered = data.retiros ? data.retiros.filter(retiro => {
+                            const motivo = retiro.motivo.toLowerCase();
+                            return !motivo.includes('deposito') && !motivo.includes('depósito');
+                        }) : [];
+                        
+                        const totalFiltrado = retirosFiltered.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
+                        
+                        totalRetirosMatriz = totalFiltrado;
+                        totalSpan.textContent = formatCurrency(totalRetirosMatriz);
+                        updateGlobalRetiros();
+
+                        if (data.retiros && data.retiros.length > 0) {
+                            desgloseBody.innerHTML = data.retiros.map(retiro => {
+                                const esDeposito = retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito');
+                                return `
+                                    <tr ${esDeposito ? 'class="bg-light"' : ''}>
+                                        <td>${retiro.fecha}</td>
+                                        <td>${retiro.motivo} ${esDeposito ? '<span class="badge badge-info">DEPÓSITO</span>' : ''}</td>
+                                        <td class="text-danger">${formatCurrency(retiro.valor)}</td>
+                                        <td>${retiro.usuario}</td>
+                                    </tr>
+                                `;
+                            }).join('');
+                        } else {
+                            desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
+                        }
+                        loadingOverlay.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        totalSpan.textContent = 'ERROR';
+                        desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                        loadingOverlay.style.display = 'none';
+                    });
+            }
+
+            // Función para obtener y mostrar datos de retiros de la API Rocío
+            function fetchAndDisplayRetirosRocio(ano, mes) {
+                const apiUrl = `https://escleroptica2.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`;
+                const totalSpan = document.getElementById('total-retiros-rocio');
+                const desgloseBody = document.getElementById('desglose-retiros-rocio');
+                const loadingOverlay = document.getElementById('loading-overlay-retiros-rocio');
+
+                loadingOverlay.style.display = 'flex';
+                totalSpan.textContent = 'CARGANDO...';
+                desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>';
+
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const retirosFiltered = data.retiros ? data.retiros.filter(retiro => {
+                            const motivo = retiro.motivo.toLowerCase();
+                            return !motivo.includes('deposito') && !motivo.includes('depósito');
+                        }) : [];
+                        
+                        const totalFiltrado = retirosFiltered.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
+                        
+                        totalRetirosRocio = totalFiltrado;
+                        totalSpan.textContent = formatCurrency(totalRetirosRocio);
+                        updateGlobalRetiros();
+
+                        if (data.retiros && data.retiros.length > 0) {
+                            desgloseBody.innerHTML = data.retiros.map(retiro => {
+                                const esDeposito = retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito');
+                                return `
+                                    <tr ${esDeposito ? 'class="bg-light"' : ''}>
+                                        <td>${retiro.fecha}</td>
+                                        <td>${retiro.motivo} ${esDeposito ? '<span class="badge badge-info">DEPÓSITO</span>' : ''}</td>
+                                        <td class="text-danger">${formatCurrency(retiro.valor)}</td>
+                                        <td>${retiro.usuario}</td>
+                                    </tr>
+                                `;
+                            }).join('');
+                        } else {
+                            desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
+                        }
+                        loadingOverlay.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        totalSpan.textContent = 'ERROR';
+                        desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                        loadingOverlay.style.display = 'none';
+                    });
+            }
+
+            // Función para obtener y mostrar datos de retiros de la API Norte
+            function fetchAndDisplayRetirosNorte(ano, mes) {
+                const apiUrl = `https://sucursal3.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`;
+                const totalSpan = document.getElementById('total-retiros-norte');
+                const desgloseBody = document.getElementById('desglose-retiros-norte');
+                const loadingOverlay = document.getElementById('loading-overlay-retiros-norte');
+
+                loadingOverlay.style.display = 'flex';
+                totalSpan.textContent = 'CARGANDO...';
+                desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>';
+
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                        return response.json();
+                    })
+                    .then(data => {
+                        const retirosFiltered = data.retiros ? data.retiros.filter(retiro => {
+                            const motivo = retiro.motivo.toLowerCase();
+                            return !motivo.includes('deposito') && !motivo.includes('depósito');
+                        }) : [];
+                        
+                        const totalFiltrado = retirosFiltered.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
+                        
+                        totalRetirosNorte = totalFiltrado;
+                        totalSpan.textContent = formatCurrency(totalRetirosNorte);
+                        updateGlobalRetiros();
+
+                        if (data.retiros && data.retiros.length > 0) {
+                            desgloseBody.innerHTML = data.retiros.map(retiro => {
+                                const esDeposito = retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito');
+                                return `
+                                    <tr ${esDeposito ? 'class="bg-light"' : ''}>
+                                        <td>${retiro.fecha}</td>
+                                        <td>${retiro.motivo} ${esDeposito ? '<span class="badge badge-info">DEPÓSITO</span>' : ''}</td>
+                                        <td class="text-danger">${formatCurrency(retiro.valor)}</td>
+                                        <td>${retiro.usuario}</td>
+                                    </tr>
+                                `;
+                            }).join('');
+                        } else {
+                            desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
+                        }
+                        loadingOverlay.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        totalSpan.textContent = 'ERROR';
+                        desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                        loadingOverlay.style.display = 'none';
+                    });
+            }
+
+            // Función para actualizar todas las tarjetas
+            function updateAllCards(ano, mes) {
+                const sucursal = tipoSucursal !== 'todas' ? tipoSucursal : document.getElementById('filtroSucursal').value;
                 
-                var modal = $(this);
-                modal.find('#verFecha').text(fecha);
-                modal.find('#verDescripcion').text(descripcion);
-                modal.find('#verValor').text('$' + parseFloat(valor).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+                if (sucursal === '' || sucursal === 'matriz' || tipoSucursal === 'todas') {
+                    fetchAndDisplayRetirosMatriz(ano, mes);
+                }
+                if (sucursal === '' || sucursal === 'rocio' || tipoSucursal === 'todas') {
+                    fetchAndDisplayRetirosRocio(ano, mes);
+                }
+                if (sucursal === '' || sucursal === 'norte' || tipoSucursal === 'todas') {
+                    fetchAndDisplayRetirosNorte(ano, mes);
+                }
+
+                toggleSucursalCards(sucursal);
+            }
+
+            // Función para mostrar/ocultar tarjetas según la sucursal seleccionada
+            function toggleSucursalCards(sucursal) {
+                const allCards = {
+                    'matriz': ['card-retiros-matriz'],
+                    'rocio': ['card-retiros-rocio'],
+                    'norte': ['card-retiros-norte']
+                };
+
+                if (tipoSucursal !== 'todas') {
+                    Object.entries(allCards).forEach(([currentSucursal, cards]) => {
+                        cards.forEach(cardId => {
+                            const card = document.getElementById(cardId);
+                            if (card) {
+                                card.style.display = currentSucursal === tipoSucursal ? 'block' : 'none';
+                            }
+                        });
+                    });
+                    document.getElementById('card-retiros-total').style.display = 'none';
+                } else {
+                    if (sucursal === '') {
+                        Object.values(allCards).flat().forEach(cardId => {
+                            document.getElementById(cardId).style.display = 'block';
+                        });
+                        document.getElementById('card-retiros-total').style.display = 'block';
+                    } else {
+                        Object.entries(allCards).forEach(([currentSucursal, cards]) => {
+                            cards.forEach(cardId => {
+                                document.getElementById(cardId).style.display = currentSucursal === sucursal ? 'block' : 'none';
+                            });
+                        });
+                        document.getElementById('card-retiros-total').style.display = 'none';
+                    }
+                }
+            }
+
+            // Event listeners
+            const filtroAno = document.getElementById('filtroAno');
+            const filtroMes = document.getElementById('filtroMes');
+            const filtroSucursal = document.getElementById('filtroSucursal');
+
+            filtroAno.addEventListener('change', function() {
+                updateAllCards(this.value, filtroMes.value);
             });
 
-            // Modal Editar Sueldo
-            $('#editarSueldoModal').on('show.bs.modal', function(event) {
-                var button = $(event.relatedTarget);
-                var id = button.data('id');
-                var fecha = button.data('fecha');
-                var descripcion = button.data('descripcion');
-                var valor = button.data('valor');
-                
-                var modal = $(this);
-                modal.find('#formEditarSueldo').attr('action', '/sueldos/' + id);
-                modal.find('#editFecha').val(fecha);
-                modal.find('#editDescripcion').val(descripcion);
-                modal.find('#editValor').val(valor);
+            filtroMes.addEventListener('change', function() {
+                updateAllCards(filtroAno.value, this.value);
             });
 
-            // Modal Eliminar Sueldo
-            $('#confirmarEliminarModal').on('show.bs.modal', function(event) {
-                var button = $(event.relatedTarget);
-                var url = button.data('url');
-                var modal = $(this);
-                modal.find('#eliminarForm').attr('action', url);
+            if (tipoSucursal === 'todas') {
+                filtroSucursal.addEventListener('change', function() {
+                    updateAllCards(filtroAno.value, filtroMes.value);
+                });
+            }
+
+            document.getElementById('actualButton').addEventListener('click', function() {
+                const currentDate = new Date();
+                const currentYear = currentDate.getFullYear();
+                const currentMonth = currentDate.getMonth() + 1;
+
+                filtroAno.value = currentYear;
+                filtroMes.value = currentMonth;
+                if (tipoSucursal === 'todas') {
+                    filtroSucursal.value = '';
+                }
+
+                updateAllCards(currentYear, currentMonth);
             });
 
-            // Manejar cambios en los filtros
-            $('#filtroAno, #filtroMes').change(function() {
-                $('#filterForm').submit();
-            });
-
-            // Botón "Actual"
-            $('#actualButton').click(function() {
-                const now = new Date();
-                $('#filtroAno').val(now.getFullYear());
-                $('#filtroMes').val(now.getMonth() + 1);
-                $('#filterForm').submit();
-            });
+            // Carga inicial de datos
+            updateAllCards(filtroAno.value, filtroMes.value);
         });
     </script>
 @stop 
