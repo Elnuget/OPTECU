@@ -13,6 +13,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EgresoController;
 use App\Http\Controllers\PrestamoController;
+use App\Http\Controllers\SueldoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +48,9 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/puntuaciones', [AdminController::class, 'puntuacionesUsuarios'])
         ->name('admin.puntuaciones');
+        
+    // Rutas para Sueldos (solo administradores)
+    Route::resource('sueldos', SueldoController::class);
 });
 
 // Keep these routes accessible to all authenticated users

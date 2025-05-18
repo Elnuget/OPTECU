@@ -300,6 +300,14 @@ return [
             'active' => ['prestamos', 'prestamos/*'],
             'can' => 'admin',
         ],
+        
+        [
+            'text' => 'SUELDOS',
+            'icon' => 'fas fa-money-check-alt',
+            'url' => '/sueldos',
+            'active' => ['sueldos', 'sueldos/*'],
+            'can' => 'admin',
+        ],
 
         [
             'text' => 'FINANZAS',
