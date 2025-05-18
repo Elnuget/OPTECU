@@ -120,6 +120,19 @@
         return pedidosPorFecha;
     }
 
+    // Función para agrupar retiros por fecha
+    function agruparRetirosPorFecha(retiros) {
+        const retirosPorFecha = {};
+        retiros.forEach(retiro => {
+            const fecha = retiro.fecha.split('T')[0]; // Obtener solo la fecha
+            if (!retirosPorFecha[fecha]) {
+                retirosPorFecha[fecha] = [];
+            }
+            retirosPorFecha[fecha].push(retiro);
+        });
+        return retirosPorFecha;
+    }
+
     // Función para obtener las URLs de API según la sucursal seleccionada
     function getApiUrls(tipo) {
         const sucursal = document.getElementById('filtroSucursal').value;
@@ -141,7 +154,8 @@
     // Función para obtener retiros del empleado
     async function obtenerRetiros(ano, mes) {
         const urls = getApiUrls('caja/retiros').map(url => `${url}?ano=${ano}&mes=${mes}`);
-        datosRol.retiros = 0;
+        datosRol.retiros = [];
+        datosRol.retiros_total = 0;
         
         for (const url of urls) {
             try {
@@ -149,9 +163,12 @@
                 const data = await response.json();
                 if (data.retiros) {
                     const retirosEmpleado = data.retiros.filter(retiro => 
-                        retiro.usuario.toLowerCase() === empleadoSeleccionado.nombre.toLowerCase()
+                        retiro.usuario.toLowerCase() === empleadoSeleccionado.nombre.toLowerCase() &&
+                        !retiro.motivo.toLowerCase().includes('deposito') &&
+                        !retiro.motivo.toLowerCase().includes('depósito')
                     );
-                    datosRol.retiros += retirosEmpleado.reduce((sum, retiro) => 
+                    datosRol.retiros = [...datosRol.retiros, ...retirosEmpleado];
+                    datosRol.retiros_total += retirosEmpleado.reduce((sum, retiro) => 
                         sum + Math.abs(parseFloat(retiro.valor)), 0
                     );
                 }
@@ -250,9 +267,10 @@
             elementos.nombre.textContent = empleadoSeleccionado.nombre;
             elementos.periodo.textContent = `${mes}/${ano}`;
 
-            // Agrupar movimientos y pedidos por fecha
+            // Agrupar movimientos, pedidos y retiros por fecha
             const movimientosPorFecha = agruparMovimientosPorFecha(datosRol.movimientos);
             const pedidosPorFecha = agruparPedidosPorFecha(datosRol.pedidos || []);
+            const retirosPorFecha = agruparRetirosPorFecha(datosRol.retiros || []);
             
             // Variable para el total global de pedidos
             let totalGlobalPedidos = 0;
@@ -271,6 +289,10 @@
                 const pedidosDelDia = pedidosPorFecha[fecha] || [];
                 const totalPedidosDia = pedidosDelDia.reduce((sum, pedido) => sum + parseFloat(pedido.total), 0);
                 
+                // Obtener retiros del día
+                const retirosDelDia = retirosPorFecha[fecha] || [];
+                const totalRetirosDia = retirosDelDia.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
+
                 // Sumar al total global
                 totalGlobalPedidos += totalPedidosDia;
 
@@ -307,6 +329,24 @@
                                     </ul>
                                 </div>` : 
                                 '<small class="text-muted">Sin pedidos</small>'
+                            }
+                        </td>
+                        <td>
+                            ${retirosDelDia.length > 0 ? 
+                                `<div class="retiros-dia">
+                                    <strong>Total: ${formatCurrency(totalRetirosDia)}</strong>
+                                    <ul class="list-unstyled mb-0">
+                                        ${retirosDelDia.map(retiro => `
+                                            <li>
+                                                <small>
+                                                    ${formatTime(retiro.fecha)} - ${retiro.motivo}
+                                                    <span class="text-danger">${formatCurrency(Math.abs(retiro.valor))}</span>
+                                                </small>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                </div>` : 
+                                '<small class="text-muted">Sin retiros</small>'
                             }
                         </td>
                     </tr>

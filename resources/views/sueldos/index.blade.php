@@ -99,6 +99,7 @@
                                 <th>MOVIMIENTOS</th>
                                 <th>SUCURSAL</th>
                                 <th>PEDIDOS</th>
+                                <th>RETIROS</th>
                             </tr>
                         </thead>
                         <tbody id="rolDesglose">
