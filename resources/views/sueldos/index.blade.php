@@ -320,6 +320,123 @@
         </div>
     </div>
 
+    {{-- Tarjetas de Pedidos --}}
+    <div class="card card-outline card-primary mb-4" id="card-pedidos-total">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-shopping-cart mr-2"></i>
+                PEDIDOS TOTALES DE TODAS LAS SUCURSALES: 
+                <span id="total-pedidos-global">CARGANDO...</span>
+            </h3>
+        </div>
+        <div class="card-body">
+            <div class="progress">
+                <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="progress-pedidos-matriz">
+                    Matriz: $0
+                </div>
+                <div class="progress-bar bg-info" role="progressbar" style="width: 0%" id="progress-pedidos-rocio">
+                    Rocío: $0
+                </div>
+                <div class="progress-bar bg-warning" role="progressbar" style="width: 0%" id="progress-pedidos-norte">
+                    Norte: $0
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Tarjeta Plegable Pedidos Matriz --}}
+    <div class="card card-outline card-success card-widget collapsed-card" id="card-pedidos-matriz">
+        <div class="card-header">
+            <h3 class="card-title">PEDIDOS SUCURSAL MATRIZ - TOTAL: <span id="total-pedidos-matriz">CARGANDO...</span></h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>CLIENTE</th>
+                            <th>TOTAL</th>
+                            <th>ESTADO</th>
+                            <th>USUARIO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desglose-pedidos-matriz">
+                        <tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="overlay dark" id="loading-overlay-pedidos-matriz" style="display: none;">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+        </div>
+    </div>
+
+    {{-- Tarjeta Plegable Pedidos Rocío --}}
+    <div class="card card-outline card-info card-widget collapsed-card" id="card-pedidos-rocio">
+        <div class="card-header">
+            <h3 class="card-title">PEDIDOS SUCURSAL ROCÍO - TOTAL: <span id="total-pedidos-rocio">CARGANDO...</span></h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>CLIENTE</th>
+                            <th>TOTAL</th>
+                            <th>ESTADO</th>
+                            <th>USUARIO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desglose-pedidos-rocio">
+                        <tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="overlay dark" id="loading-overlay-pedidos-rocio" style="display: none;">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+        </div>
+    </div>
+
+    {{-- Tarjeta Plegable Pedidos Norte --}}
+    <div class="card card-outline card-warning card-widget collapsed-card" id="card-pedidos-norte">
+        <div class="card-header">
+            <h3 class="card-title">PEDIDOS SUCURSAL NORTE - TOTAL: <span id="total-pedidos-norte">CARGANDO...</span></h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="card-body" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>CLIENTE</th>
+                            <th>TOTAL</th>
+                            <th>ESTADO</th>
+                            <th>USUARIO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desglose-pedidos-norte">
+                        <tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="overlay dark" id="loading-overlay-pedidos-norte" style="display: none;">
+            <i class="fas fa-2x fa-sync-alt fa-spin"></i>
+        </div>
+    </div>
+
     <!-- Modal Crear Sueldo -->
     <div class="modal fade" id="crearSueldoModal" tabindex="-1" role="dialog">
         <div class="modal-dialog" role="document">
@@ -464,6 +581,10 @@
         let totalRetirosMatriz = 0;
         let totalRetirosRocio = 0;
         let totalRetirosNorte = 0;
+        // Variables globales para pedidos
+        let totalPedidosMatriz = 0;
+        let totalPedidosRocio = 0;
+        let totalPedidosNorte = 0;
         const tipoSucursal = '{{ $tipoSucursal }}';
 
         $(document).ready(function() {
@@ -712,18 +833,253 @@
                     });
             }
 
+            // Función para actualizar el total global de pedidos y la barra de progreso
+            function updateGlobalPedidos() {
+                const sucursal = tipoSucursal !== 'todas' ? tipoSucursal : document.getElementById('filtroSucursal').value;
+                let totalGlobal = 0;
+
+                if (tipoSucursal !== 'todas') {
+                    if (tipoSucursal === 'matriz') totalGlobal = totalPedidosMatriz;
+                    else if (tipoSucursal === 'rocio') totalGlobal = totalPedidosRocio;
+                    else if (tipoSucursal === 'norte') totalGlobal = totalPedidosNorte;
+                } else {
+                    if (sucursal === '') {
+                        totalGlobal = totalPedidosMatriz + totalPedidosRocio + totalPedidosNorte;
+                    } else if (sucursal === 'matriz') {
+                        totalGlobal = totalPedidosMatriz;
+                    } else if (sucursal === 'rocio') {
+                        totalGlobal = totalPedidosRocio;
+                    } else if (sucursal === 'norte') {
+                        totalGlobal = totalPedidosNorte;
+                    }
+                }
+
+                const totalSpan = document.getElementById('total-pedidos-global');
+                totalSpan.textContent = formatCurrency(totalGlobal);
+
+                if (totalGlobal > 0) {
+                    const porcentajeMatriz = ((sucursal === '' || sucursal === 'matriz' ? totalPedidosMatriz : 0) / totalGlobal) * 100;
+                    const porcentajeRocio = ((sucursal === '' || sucursal === 'rocio' ? totalPedidosRocio : 0) / totalGlobal) * 100;
+                    const porcentajeNorte = ((sucursal === '' || sucursal === 'norte' ? totalPedidosNorte : 0) / totalGlobal) * 100;
+
+                    const progressMatriz = document.getElementById('progress-pedidos-matriz');
+                    const progressRocio = document.getElementById('progress-pedidos-rocio');
+                    const progressNorte = document.getElementById('progress-pedidos-norte');
+
+                    progressMatriz.style.width = porcentajeMatriz + '%';
+                    progressRocio.style.width = porcentajeRocio + '%';
+                    progressNorte.style.width = porcentajeNorte + '%';
+
+                    progressMatriz.textContent = `Matriz: ${formatCurrency(sucursal === '' || sucursal === 'matriz' ? totalPedidosMatriz : 0)}`;
+                    progressRocio.textContent = `Rocío: ${formatCurrency(sucursal === '' || sucursal === 'rocio' ? totalPedidosRocio : 0)}`;
+                    progressNorte.textContent = `Norte: ${formatCurrency(sucursal === '' || sucursal === 'norte' ? totalPedidosNorte : 0)}`;
+                }
+            }
+
+            // Función para obtener y mostrar datos de pedidos de la API Matriz
+            function fetchAndDisplayPedidosMatriz(ano, mes) {
+                const apiUrl = `https://opticas.xyz/api/pedidos?ano=${ano}&mes=${mes}`;
+                const totalSpan = document.getElementById('total-pedidos-matriz');
+                const desgloseBody = document.getElementById('desglose-pedidos-matriz');
+                const loadingOverlay = document.getElementById('loading-overlay-pedidos-matriz');
+
+                loadingOverlay.style.display = 'flex';
+                totalSpan.textContent = 'CARGANDO...';
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
+
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                        return response.json();
+                    })
+                    .then(response => {
+                        if (!response.success) throw new Error('La respuesta no fue exitosa');
+                        const data = response.data;
+                        const pedidos = data.pedidos || [];
+                        const totales = data.totales || { ventas: 0, saldos: 0, cobrado: 0 };
+                        
+                        totalPedidosMatriz = parseFloat(totales.ventas) || 0;
+                        totalSpan.textContent = formatCurrency(totalPedidosMatriz);
+                        updateGlobalPedidos();
+
+                        if (pedidos.length > 0) {
+                            desgloseBody.innerHTML = pedidos.map(pedido => {
+                                const fecha = new Date(pedido.fecha).toLocaleDateString('es-ES');
+                                const saldoPendiente = parseFloat(pedido.saldo) > 0;
+                                return `
+                                    <tr class="${saldoPendiente ? 'table-warning' : ''}">
+                                        <td>${fecha}</td>
+                                        <td>${pedido.cliente}</td>
+                                        <td>${formatCurrency(pedido.total)}</td>
+                                        <td>
+                                            ${saldoPendiente ? 
+                                                `<span class="badge badge-warning">SALDO PENDIENTE: ${formatCurrency(pedido.saldo)}</span>` : 
+                                                `<span class="badge badge-success">PAGADO</span>`
+                                            }
+                                        </td>
+                                        <td>${pedido.usuario}</td>
+                                    </tr>
+                                `;
+                            }).join('');
+                        } else {
+                            desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY PEDIDOS REGISTRADOS</td></tr>';
+                        }
+                        loadingOverlay.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        totalSpan.textContent = 'ERROR';
+                        desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                        loadingOverlay.style.display = 'none';
+                    });
+            }
+
+            // Función para obtener y mostrar datos de pedidos de la API Rocío
+            function fetchAndDisplayPedidosRocio(ano, mes) {
+                const apiUrl = `https://escleroptica2.opticas.xyz/api/pedidos?ano=${ano}&mes=${mes}`;
+                const totalSpan = document.getElementById('total-pedidos-rocio');
+                const desgloseBody = document.getElementById('desglose-pedidos-rocio');
+                const loadingOverlay = document.getElementById('loading-overlay-pedidos-rocio');
+
+                loadingOverlay.style.display = 'flex';
+                totalSpan.textContent = 'CARGANDO...';
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
+
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                        return response.json();
+                    })
+                    .then(response => {
+                        if (!response.success) throw new Error('La respuesta no fue exitosa');
+                        const data = response.data;
+                        const pedidos = data.pedidos || [];
+                        const totales = data.totales || { ventas: 0, saldos: 0, cobrado: 0 };
+                        
+                        totalPedidosRocio = parseFloat(totales.ventas) || 0;
+                        totalSpan.textContent = formatCurrency(totalPedidosRocio);
+                        updateGlobalPedidos();
+
+                        if (pedidos.length > 0) {
+                            desgloseBody.innerHTML = pedidos.map(pedido => {
+                                const fecha = new Date(pedido.fecha).toLocaleDateString('es-ES');
+                                const saldoPendiente = parseFloat(pedido.saldo) > 0;
+                                return `
+                                    <tr class="${saldoPendiente ? 'table-warning' : ''}">
+                                        <td>${fecha}</td>
+                                        <td>${pedido.cliente}</td>
+                                        <td>${formatCurrency(pedido.total)}</td>
+                                        <td>
+                                            ${saldoPendiente ? 
+                                                `<span class="badge badge-warning">SALDO PENDIENTE: ${formatCurrency(pedido.saldo)}</span>` : 
+                                                `<span class="badge badge-success">PAGADO</span>`
+                                            }
+                                        </td>
+                                        <td>${pedido.usuario}</td>
+                                    </tr>
+                                `;
+                            }).join('');
+                        } else {
+                            desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY PEDIDOS REGISTRADOS</td></tr>';
+                        }
+                        loadingOverlay.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        totalSpan.textContent = 'ERROR';
+                        desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                        loadingOverlay.style.display = 'none';
+                    });
+            }
+
+            // Función para obtener y mostrar datos de pedidos de la API Norte
+            function fetchAndDisplayPedidosNorte(ano, mes) {
+                const apiUrl = `https://sucursal3.opticas.xyz/api/pedidos?ano=${ano}&mes=${mes}`;
+                const totalSpan = document.getElementById('total-pedidos-norte');
+                const desgloseBody = document.getElementById('desglose-pedidos-norte');
+                const loadingOverlay = document.getElementById('loading-overlay-pedidos-norte');
+
+                loadingOverlay.style.display = 'flex';
+                totalSpan.textContent = 'CARGANDO...';
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
+
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Error en la red o respuesta no válida');
+                        return response.json();
+                    })
+                    .then(response => {
+                        if (!response.success) throw new Error('La respuesta no fue exitosa');
+                        const data = response.data;
+                        const pedidos = data.pedidos || [];
+                        const totales = data.totales || { ventas: 0, saldos: 0, cobrado: 0 };
+                        
+                        totalPedidosNorte = parseFloat(totales.ventas) || 0;
+                        totalSpan.textContent = formatCurrency(totalPedidosNorte);
+                        updateGlobalPedidos();
+
+                        if (pedidos.length > 0) {
+                            desgloseBody.innerHTML = pedidos.map(pedido => {
+                                const fecha = new Date(pedido.fecha).toLocaleDateString('es-ES');
+                                const saldoPendiente = parseFloat(pedido.saldo) > 0;
+                                return `
+                                    <tr class="${saldoPendiente ? 'table-warning' : ''}">
+                                        <td>${fecha}</td>
+                                        <td>${pedido.cliente}</td>
+                                        <td>${formatCurrency(pedido.total)}</td>
+                                        <td>
+                                            ${saldoPendiente ? 
+                                                `<span class="badge badge-warning">SALDO PENDIENTE: ${formatCurrency(pedido.saldo)}</span>` : 
+                                                `<span class="badge badge-success">PAGADO</span>`
+                                            }
+                                        </td>
+                                        <td>${pedido.usuario}</td>
+                                    </tr>
+                                `;
+                            }).join('');
+                        } else {
+                            desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY PEDIDOS REGISTRADOS</td></tr>';
+                        }
+                        loadingOverlay.style.display = 'none';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        totalSpan.textContent = 'ERROR';
+                        desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
+                        loadingOverlay.style.display = 'none';
+                    });
+            }
+
+            // Función auxiliar para determinar el color del badge según el estado
+            function getEstadoColor(estado) {
+                estado = estado.toLowerCase();
+                switch(estado) {
+                    case 'pendiente':
+                        return 'warning';
+                    case 'completado':
+                        return 'success';
+                    case 'cancelado':
+                        return 'danger';
+                    default:
+                        return 'info';
+                }
+            }
+
             // Función para actualizar todas las tarjetas
             function updateAllCards(ano, mes) {
                 const sucursal = tipoSucursal !== 'todas' ? tipoSucursal : document.getElementById('filtroSucursal').value;
                 
                 if (sucursal === '' || sucursal === 'matriz' || tipoSucursal === 'todas') {
                     fetchAndDisplayRetirosMatriz(ano, mes);
+                    fetchAndDisplayPedidosMatriz(ano, mes);
                 }
                 if (sucursal === '' || sucursal === 'rocio' || tipoSucursal === 'todas') {
                     fetchAndDisplayRetirosRocio(ano, mes);
+                    fetchAndDisplayPedidosRocio(ano, mes);
                 }
                 if (sucursal === '' || sucursal === 'norte' || tipoSucursal === 'todas') {
                     fetchAndDisplayRetirosNorte(ano, mes);
+                    fetchAndDisplayPedidosNorte(ano, mes);
                 }
 
                 toggleSucursalCards(sucursal);
@@ -732,9 +1088,9 @@
             // Función para mostrar/ocultar tarjetas según la sucursal seleccionada
             function toggleSucursalCards(sucursal) {
                 const allCards = {
-                    'matriz': ['card-retiros-matriz'],
-                    'rocio': ['card-retiros-rocio'],
-                    'norte': ['card-retiros-norte']
+                    'matriz': ['card-retiros-matriz', 'card-pedidos-matriz'],
+                    'rocio': ['card-retiros-rocio', 'card-pedidos-rocio'],
+                    'norte': ['card-retiros-norte', 'card-pedidos-norte']
                 };
 
                 if (tipoSucursal !== 'todas') {
@@ -747,12 +1103,14 @@
                         });
                     });
                     document.getElementById('card-retiros-total').style.display = 'none';
+                    document.getElementById('card-pedidos-total').style.display = 'none';
                 } else {
                     if (sucursal === '') {
                         Object.values(allCards).flat().forEach(cardId => {
                             document.getElementById(cardId).style.display = 'block';
                         });
                         document.getElementById('card-retiros-total').style.display = 'block';
+                        document.getElementById('card-pedidos-total').style.display = 'block';
                     } else {
                         Object.entries(allCards).forEach(([currentSucursal, cards]) => {
                             cards.forEach(cardId => {
@@ -760,6 +1118,7 @@
                             });
                         });
                         document.getElementById('card-retiros-total').style.display = 'none';
+                        document.getElementById('card-pedidos-total').style.display = 'none';
                     }
                 }
             }
