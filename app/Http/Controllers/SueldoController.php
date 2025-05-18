@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Sueldo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 
 class SueldoController extends Controller
 {
@@ -29,7 +30,7 @@ class SueldoController extends Controller
             $query->whereMonth('fecha', $mes);
         }
         
-        $sueldos = $query->orderBy('fecha', 'desc')->get();
+        $sueldos = $query->with('user')->orderBy('fecha', 'desc')->get();
         $totalSueldos = $sueldos->sum('valor');
         
         return view('sueldos.index', compact('sueldos', 'totalSueldos'));
@@ -69,7 +70,10 @@ class SueldoController extends Controller
                 ]);
         }
 
-        $sueldo = Sueldo::create($request->all());
+        $data = $request->all();
+        $data['user_id'] = Auth::id();
+        
+        $sueldo = Sueldo::create($data);
 
         return redirect()->route('sueldos.index')
             ->with([
@@ -125,7 +129,10 @@ class SueldoController extends Controller
                 ]);
         }
 
-        $sueldo->update($request->all());
+        $data = $request->all();
+        $data['user_id'] = Auth::id();
+        
+        $sueldo->update($data);
 
         return redirect()->route('sueldos.index')
             ->with([

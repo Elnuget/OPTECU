@@ -19,6 +19,7 @@
     @php
         $empresa = \App\Models\Empresa::first();
         $tipoSucursal = $empresa ? $empresa->getTipoSucursal() : 'todas';
+        $users = \App\Models\User::orderBy('name')->get();
     @endphp
 
     <style>
@@ -121,6 +122,17 @@
                         @if($tipoSucursal === 'todas' || $tipoSucursal === 'norte')
                             <option value="norte">NORTE</option>
                         @endif
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="filtroUsuario">SELECCIONAR USUARIO:</label>
+                    <select name="user_id" class="form-control custom-select" id="filtroUsuario">
+                        <option value="">TODOS LOS USUARIOS</option>
+                        @foreach($users as $user)
+                            <option value="{{ $user->id }}" {{ request('user_id') == $user->id ? 'selected' : '' }}>
+                                {{ $user->name }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="col-md-2 align-self-end">
@@ -332,6 +344,15 @@
                         <div class="form-group">
                             <label for="valor">VALOR:</label>
                             <input type="number" class="form-control" id="valor" name="valor" required step="0.01" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="user_id">USUARIO:</label>
+                            <select class="form-control" id="user_id" name="user_id" required>
+                                <option value="">SELECCIONE USUARIO</option>
+                                @foreach($users as $user)
+                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -747,6 +768,7 @@
             const filtroAno = document.getElementById('filtroAno');
             const filtroMes = document.getElementById('filtroMes');
             const filtroSucursal = document.getElementById('filtroSucursal');
+            const filtroUsuario = document.getElementById('filtroUsuario');
 
             filtroAno.addEventListener('change', function() {
                 updateAllCards(this.value, filtroMes.value);
@@ -762,6 +784,10 @@
                 });
             }
 
+            filtroUsuario.addEventListener('change', function() {
+                updateAllCards(filtroAno.value, filtroMes.value);
+            });
+
             document.getElementById('actualButton').addEventListener('click', function() {
                 const currentDate = new Date();
                 const currentYear = currentDate.getFullYear();
@@ -772,6 +798,7 @@
                 if (tipoSucursal === 'todas') {
                     filtroSucursal.value = '';
                 }
+                document.getElementById('filtroUsuario').value = '';
 
                 updateAllCards(currentYear, currentMonth);
             });

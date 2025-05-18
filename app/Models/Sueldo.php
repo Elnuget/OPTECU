@@ -15,11 +15,20 @@ class Sueldo extends Model
     protected $fillable = [
         'fecha',
         'descripcion',
-        'valor'
+        'valor',
+        'user_id'
     ];
 
     protected $casts = [
         'fecha' => 'date',
         'valor' => 'decimal:2'
     ];
+
+    /**
+     * Obtiene el usuario que registró el sueldo.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 } 
