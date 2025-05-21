@@ -92,19 +92,12 @@ class PedidosController extends Controller
      */
     public function create()
     {
-        // Obtener el mes y año actual
+        // Obtener el año y mes actual
         $currentYear = date('Y');
         $currentMonth = date('m');
-
-        // Filtrar armazones del mes y año actual
-        $armazones = Inventario::where('cantidad', '>', 0)
-            ->whereYear('fecha', $currentYear)
-            ->whereMonth('fecha', $currentMonth)
-            ->where('lugar', 'not like', '%ESTUCHE%')
-            ->where('lugar', 'not like', '%LIQUIDO%')
-            ->where('lugar', 'not like', '%GOTERO%')
-            ->where('lugar', 'not like', '%SPRAY%')
-            ->where('lugar', 'not like', '%COSAS%')
+        
+        $armazones = Inventario::where('lugar', 'like', '%ARMAZON%')
+            ->where('cantidad', '>', 0)
             ->get();
 
         // Filtrar accesorios del mes y año actual
@@ -121,6 +114,13 @@ class PedidosController extends Controller
             })
             ->get();
 
+        // Obtener lista de clientes únicos existentes
+        $clientes = Pedido::select('cliente')
+            ->whereNotNull('cliente')
+            ->distinct()
+            ->pluck('cliente')
+            ->toArray();
+
         $currentDate = date('Y-m-d');
         $lastOrder = Pedido::orderBy('numero_orden', 'desc')->first();
         $nextOrderNumber = $lastOrder ? $lastOrder->numero_orden + 1 : 1;
@@ -131,7 +131,8 @@ class PedidosController extends Controller
             'accesorios', 
             'currentDate', 
             'nextOrderNumber', 
-            'nextInvoiceNumber'
+            'nextInvoiceNumber',
+            'clientes'
         ));
     }
 

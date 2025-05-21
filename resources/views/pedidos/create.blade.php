@@ -111,7 +111,12 @@
                                 </div>
                                 <div la="col-md-6">
                                     <label for="cliente" class="form-label">Cliente</label>
-                                    <input type="text" class="form-control" id="cliente" name="cliente" required>
+                                    <input type="text" class="form-control" id="cliente" name="cliente" required list="clientes_existentes" placeholder="Seleccione o escriba un nombre de cliente">
+                                    <datalist id="clientes_existentes">
+                                        @foreach($clientes as $cliente)
+                                            <option value="{{ $cliente }}">
+                                        @endforeach
+                                    </datalist>
                                 </div>
                             </div>
 
