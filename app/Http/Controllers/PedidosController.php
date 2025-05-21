@@ -96,23 +96,15 @@ class PedidosController extends Controller
         $currentYear = date('Y');
         $currentMonth = date('m');
         
-        $armazones = Inventario::where('lugar', 'like', '%ARMAZON%')
-            ->where('cantidad', '>', 0)
-            ->get();
-
-        // Filtrar accesorios del mes y año actual
-        $accesorios = Inventario::where('cantidad', '>', 0)
+        // Obtener armazones y accesorios del mes actual (solo con cantidad > 0)
+        $inventario = Inventario::where('cantidad', '>', 0)
             ->whereYear('fecha', $currentYear)
             ->whereMonth('fecha', $currentMonth)
-            ->where(function($query) {
-                $query->where('lugar', 'like', '%ESTUCHE%')
-                    ->orWhere('lugar', 'like', '%LIQUIDO%')
-                    ->orWhere('lugar', 'like', '%GOTERO%')
-                    ->orWhere('lugar', 'like', '%SPRAY%')
-                    ->orWhere('lugar', 'like', '%VITRINA%')
-                    ->orWhere('lugar', 'like', '%COSAS%');
-            })
             ->get();
+
+        // Separar el inventario en armazones y accesorios
+        $armazones = $inventario;
+        $accesorios = $inventario;
 
         // Obtener lista de clientes únicos existentes
         $clientes = Pedido::select('cliente')
