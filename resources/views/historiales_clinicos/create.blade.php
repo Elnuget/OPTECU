@@ -54,15 +54,30 @@
                         <div class="form-row">
                             <div class="form-group col-md-4">
                                 <label for="nombres">Nombres <span class="text-danger">*</span></label>
-                                <input type="text" name="nombres" id="nombres" class="form-control" required>
+                                <input type="text" name="nombres" id="nombres" class="form-control" required list="nombres_existentes" placeholder="Seleccione o escriba un nombre">
+                                <datalist id="nombres_existentes">
+                                    @foreach($nombres as $nombre)
+                                        <option value="{{ $nombre }}">
+                                    @endforeach
+                                </datalist>
                             </div>
                             <div class="form-group col-md-4">
                                 <label for="apellidos">Apellidos <span class="text-danger">*</span></label>
-                                <input type="text" name="apellidos" id="apellidos" class="form-control" required>
+                                <input type="text" name="apellidos" id="apellidos" class="form-control" required list="apellidos_existentes" placeholder="Seleccione o escriba un apellido">
+                                <datalist id="apellidos_existentes">
+                                    @foreach($apellidos as $apellido)
+                                        <option value="{{ $apellido }}">
+                                    @endforeach
+                                </datalist>
                             </div>
                             <div class="form-group col-md-4">
                                 <label for="cedula">Cédula</label> <!-- Removido text-danger -->
-                                <input type="text" name="cedula" id="cedula" class="form-control">
+                                <input type="text" name="cedula" id="cedula" class="form-control" list="cedulas_existentes" placeholder="Seleccione o escriba una cédula">
+                                <datalist id="cedulas_existentes">
+                                    @foreach($cedulas as $cedula)
+                                        <option value="{{ $cedula }}">
+                                    @endforeach
+                                </datalist>
                             </div>
                             <div class="form-group col-md-4">
                                 <label for="edad">Edad <span class="text-danger">*</span></label>
@@ -74,7 +89,12 @@
                             </div>
                             <div class="form-group col-md-4">
                                 <label for="celular">Celular <span class="text-danger">*</span></label>
-                                <input type="text" name="celular" id="celular" class="form-control" required>
+                                <input type="text" name="celular" id="celular" class="form-control" required list="celulares_existentes" placeholder="Seleccione o escriba un número de celular">
+                                <datalist id="celulares_existentes">
+                                    @foreach($celulares as $celular)
+                                        <option value="{{ $celular }}">
+                                    @endforeach
+                                </datalist>
                             </div>
                             <div class="form-group col-md-4">
                                 <label for="ocupacion">Ocupación <span class="text-danger">*</span></label>
@@ -450,6 +470,95 @@
             let meses = $('#meses_proxima_consulta').val();
             if (meses) {
                 $('#proxima_consulta').val(calcularProximaConsulta(meses));
+            }
+        });
+
+        // Función para cargar datos personales desde historiales previos
+        function cargarDatosPersonales(campo, valor) {
+            if (!valor) return;
+
+            // Mostrar indicador de carga
+            const elemento = document.getElementById(campo);
+            if (!elemento.nextElementSibling || !elemento.nextElementSibling.classList.contains('loading-indicator')) {
+                const loadingIndicator = document.createElement('small');
+                loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
+                loadingIndicator.textContent = 'Cargando datos...';
+                elemento.parentNode.appendChild(loadingIndicator);
+            }
+
+            // Hacer petición AJAX para obtener datos del último historial
+            fetch(`/api/historiales-clinicos/buscar-por/${campo}/${encodeURIComponent(valor)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al obtener datos');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Remover indicador de carga
+                    const loadingIndicator = elemento.parentNode.querySelector('.loading-indicator');
+                    if (loadingIndicator) {
+                        loadingIndicator.remove();
+                    }
+
+                    if (data.success && data.historial) {
+                        // Autocompletar campos excepto el que generó la búsqueda
+                        if (campo !== 'nombres') {
+                            document.getElementById('nombres').value = data.historial.nombres || '';
+                        }
+                        if (campo !== 'apellidos') {
+                            document.getElementById('apellidos').value = data.historial.apellidos || '';
+                        }
+                        if (campo !== 'cedula') {
+                            document.getElementById('cedula').value = data.historial.cedula || '';
+                        }
+                        if (campo !== 'celular') {
+                            document.getElementById('celular').value = data.historial.celular || '';
+                        }
+                        // También podríamos completar otros campos como edad y fecha_nacimiento si es necesario
+                        if (data.historial.edad) {
+                            document.getElementById('edad').value = data.historial.edad;
+                        }
+                        if (data.historial.fecha_nacimiento) {
+                            document.getElementById('fecha_nacimiento').value = data.historial.fecha_nacimiento;
+                        }
+                        if (data.historial.ocupacion) {
+                            document.getElementById('ocupacion').value = data.historial.ocupacion;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Remover indicador de carga en caso de error
+                    const loadingIndicator = elemento.parentNode.querySelector('.loading-indicator');
+                    if (loadingIndicator) {
+                        loadingIndicator.remove();
+                    }
+                });
+        }
+
+        // Añadir eventos para los campos de datos personales
+        $('#nombres').on('change', function() {
+            if (this.value.trim()) {
+                cargarDatosPersonales('nombres', this.value);
+            }
+        });
+
+        $('#apellidos').on('change', function() {
+            if (this.value.trim()) {
+                cargarDatosPersonales('apellidos', this.value);
+            }
+        });
+
+        $('#cedula').on('change', function() {
+            if (this.value.trim()) {
+                cargarDatosPersonales('cedula', this.value);
+            }
+        });
+
+        $('#celular').on('change', function() {
+            if (this.value.trim()) {
+                cargarDatosPersonales('celular', this.value);
             }
         });
     });

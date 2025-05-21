@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\PagoController;
 use App\Http\Controllers\Api\PedidoController;
 use App\Http\Controllers\Api\CashHistoryController;
+use App\Http\Controllers\Api\HistorialClinicoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -28,3 +29,6 @@ Route::get('/clientes/{cliente}/ultimo-pedido', [PedidoController::class, 'getUl
 
 // Ruta para buscar pedidos por cualquier campo de datos personales
 Route::get('/pedidos/buscar-por/{campo}/{valor}', [PedidoController::class, 'buscarPedidoPorCampo']);
+
+// Ruta para buscar historiales clínicos por cualquier campo de datos personales
+Route::get('/historiales-clinicos/buscar-por/{campo}/{valor}', [HistorialClinicoController::class, 'buscarPorCampo']);

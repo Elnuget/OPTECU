@@ -28,32 +28,46 @@ class HistorialClinicoController extends Controller
 
     public function create()
     {
-        // Obtener antecedentes únicos
-        $antecedentesPersonalesOculares = HistorialClinico::select('antecedentes_personales_oculares')
-            ->whereNotNull('antecedentes_personales_oculares')
+        // Obtener listados para antecedentes
+        $antecedentesPersonalesOculares = $this->obtenerAntecedentesPrevios('antecedentes_personales_oculares');
+        $antecedentesPersonalesGenerales = $this->obtenerAntecedentesPrevios('antecedentes_personales_generales');
+        $antecedentesFamiliaresOculares = $this->obtenerAntecedentesPrevios('antecedentes_familiares_oculares');
+        $antecedentesFamiliaresGenerales = $this->obtenerAntecedentesPrevios('antecedentes_familiares_generales');
+        
+        // Obtener datos de pacientes previos para autocompletado
+        $nombres = HistorialClinico::select('nombres')
+            ->whereNotNull('nombres')
             ->distinct()
-            ->pluck('antecedentes_personales_oculares');
-
-        $antecedentesPersonalesGenerales = HistorialClinico::select('antecedentes_personales_generales')
-            ->whereNotNull('antecedentes_personales_generales')
+            ->pluck('nombres')
+            ->toArray();
+            
+        $apellidos = HistorialClinico::select('apellidos')
+            ->whereNotNull('apellidos')
             ->distinct()
-            ->pluck('antecedentes_personales_generales');
-
-        $antecedentesFamiliaresOculares = HistorialClinico::select('antecedentes_familiares_oculares')
-            ->whereNotNull('antecedentes_familiares_oculares')
+            ->pluck('apellidos')
+            ->toArray();
+            
+        $cedulas = HistorialClinico::select('cedula')
+            ->whereNotNull('cedula')
             ->distinct()
-            ->pluck('antecedentes_familiares_oculares');
-
-        $antecedentesFamiliaresGenerales = HistorialClinico::select('antecedentes_familiares_generales')
-            ->whereNotNull('antecedentes_familiares_generales')
+            ->pluck('cedula')
+            ->toArray();
+            
+        $celulares = HistorialClinico::select('celular')
+            ->whereNotNull('celular')
             ->distinct()
-            ->pluck('antecedentes_familiares_generales');
+            ->pluck('celular')
+            ->toArray();
 
         return view('historiales_clinicos.create', compact(
             'antecedentesPersonalesOculares',
             'antecedentesPersonalesGenerales',
             'antecedentesFamiliaresOculares',
-            'antecedentesFamiliaresGenerales'
+            'antecedentesFamiliaresGenerales',
+            'nombres',
+            'apellidos',
+            'cedulas',
+            'celulares'
         ));
     }
 
@@ -642,5 +656,14 @@ class HistorialClinicoController extends Controller
             \Log::error('Error al obtener cumpleañeros: ' . $e->getMessage());
             return collect(); // Devolver colección vacía
         }
+    }
+
+    private function obtenerAntecedentesPrevios($tipo)
+    {
+        return HistorialClinico::select($tipo)
+            ->whereNotNull($tipo)
+            ->distinct()
+            ->pluck($tipo)
+            ->toArray();
     }
 }
