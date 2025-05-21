@@ -124,11 +124,21 @@
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label for="cedula" class="form-label">Cédula</label>
-                                    <input type="text" class="form-control" id="cedula" name="cedula">
+                                    <input type="text" class="form-control" id="cedula" name="cedula" list="cedulas_existentes" placeholder="Seleccione o escriba una cédula">
+                                    <datalist id="cedulas_existentes">
+                                        @foreach($cedulas as $cedula)
+                                            <option value="{{ $cedula }}">
+                                        @endforeach
+                                    </datalist>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="paciente" class="form-label">Paciente</label>
-                                    <input type="text" class="form-control" id="paciente" name="paciente">
+                                    <input type="text" class="form-control" id="paciente" name="paciente" list="pacientes_existentes" placeholder="Seleccione o escriba un paciente">
+                                    <datalist id="pacientes_existentes">
+                                        @foreach($pacientes as $paciente)
+                                            <option value="{{ $paciente }}">
+                                        @endforeach
+                                    </datalist>
                                 </div>
                             </div>
 
@@ -140,11 +150,21 @@
                                 </div>
                                 <div class="col-md-3">
                                     <label for="celular" class="form-label">Celular</label>
-                                    <input type="text" class="form-control" id="celular" name="celular">
+                                    <input type="text" class="form-control" id="celular" name="celular" list="celulares_existentes" placeholder="Seleccione o escriba un celular">
+                                    <datalist id="celulares_existentes">
+                                        @foreach($celulares as $celular)
+                                            <option value="{{ $celular }}">
+                                        @endforeach
+                                    </datalist>
                                 </div>
                                 <div class="col-md-3">
                                     <label for="correo_electronico" class="form-label">Correo Electrónico</label>
-                                    <input type="email" class="form-control" id="correo_electronico" name="correo_electronico">
+                                    <input type="email" class="form-control" id="correo_electronico" name="correo_electronico" list="correos_existentes" placeholder="Seleccione o escriba un correo">
+                                    <datalist id="correos_existentes">
+                                        @foreach($correos as $correo)
+                                            <option value="{{ $correo }}">
+                                        @endforeach
+                                    </datalist>
                                 </div>
                             </div>
                         </div>

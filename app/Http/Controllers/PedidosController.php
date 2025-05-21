@@ -120,6 +120,34 @@ class PedidosController extends Controller
             ->distinct()
             ->pluck('cliente')
             ->toArray();
+            
+        // Obtener lista de cédulas únicas existentes
+        $cedulas = Pedido::select('cedula')
+            ->whereNotNull('cedula')
+            ->distinct()
+            ->pluck('cedula')
+            ->toArray();
+            
+        // Obtener lista de pacientes únicos existentes
+        $pacientes = Pedido::select('paciente')
+            ->whereNotNull('paciente')
+            ->distinct()
+            ->pluck('paciente')
+            ->toArray();
+            
+        // Obtener lista de celulares únicos existentes
+        $celulares = Pedido::select('celular')
+            ->whereNotNull('celular')
+            ->distinct()
+            ->pluck('celular')
+            ->toArray();
+            
+        // Obtener lista de correos electrónicos únicos existentes
+        $correos = Pedido::select('correo_electronico')
+            ->whereNotNull('correo_electronico')
+            ->distinct()
+            ->pluck('correo_electronico')
+            ->toArray();
 
         $currentDate = date('Y-m-d');
         $lastOrder = Pedido::orderBy('numero_orden', 'desc')->first();
@@ -132,7 +160,11 @@ class PedidosController extends Controller
             'currentDate', 
             'nextOrderNumber', 
             'nextInvoiceNumber',
-            'clientes'
+            'clientes',
+            'cedulas',
+            'pacientes',
+            'celulares',
+            'correos'
         ));
     }
 
