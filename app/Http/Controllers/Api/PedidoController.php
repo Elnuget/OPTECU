@@ -64,4 +64,48 @@ class PedidoController extends Controller
             ], 500);
         }
     }
+    
+    /**
+     * Obtiene el último pedido de un cliente específico
+     * 
+     * @param string $cliente Nombre del cliente
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getUltimoPedidoCliente($cliente)
+    {
+        try {
+            // Decodificar el nombre del cliente (ya que viene de una URL)
+            $clienteName = urldecode($cliente);
+            
+            // Buscar el último pedido del cliente
+            $pedido = Pedido::where('cliente', $clienteName)
+                ->select([
+                    'id',
+                    'cliente',
+                    'cedula',
+                    'paciente',
+                    'celular',
+                    'correo_electronico'
+                ])
+                ->orderBy('created_at', 'desc')
+                ->first();
+                
+            if (!$pedido) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontraron pedidos para este cliente'
+                ], 404);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'pedido' => $pedido
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener el último pedido: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 } 

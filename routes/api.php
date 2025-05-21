@@ -22,3 +22,6 @@ Route::get('/caja/retiros', [PagoController::class, 'getRetirosCaja']);
 Route::get('/egresos', [PagoController::class, 'getEgresosPorMes']);
 Route::get('/pedidos', [PedidoController::class, 'getPedidosPorMes']);
 Route::get('/caja/historial', [CashHistoryController::class, 'getHistorialCaja']);
+
+// Ruta para obtener último pedido de un cliente
+Route::get('/clientes/{cliente}/ultimo-pedido', [PedidoController::class, 'getUltimoPedidoCliente']);

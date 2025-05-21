@@ -455,6 +455,53 @@
                     }
                 });
             });
+
+            // Añadir evento para autocompletar datos del cliente
+            document.getElementById('cliente').addEventListener('change', function() {
+                const clienteSeleccionado = this.value;
+                if (clienteSeleccionado) {
+                    // Mostrar indicador de carga
+                    const originalText = this.nextElementSibling ? this.nextElementSibling.textContent : '';
+                    if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('loading-indicator')) {
+                        const loadingIndicator = document.createElement('small');
+                        loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
+                        loadingIndicator.textContent = 'Cargando datos...';
+                        this.parentNode.appendChild(loadingIndicator);
+                    }
+
+                    // Hacer petición AJAX para obtener datos del último pedido del cliente
+                    fetch(`/api/clientes/${encodeURIComponent(clienteSeleccionado)}/ultimo-pedido`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Error al obtener datos del cliente');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            // Remover indicador de carga
+                            const loadingIndicator = this.parentNode.querySelector('.loading-indicator');
+                            if (loadingIndicator) {
+                                loadingIndicator.remove();
+                            }
+
+                            if (data.success && data.pedido) {
+                                // Autocompletar campos con datos del último pedido
+                                document.getElementById('cedula').value = data.pedido.cedula || '';
+                                document.getElementById('paciente').value = data.pedido.paciente || '';
+                                document.getElementById('celular').value = data.pedido.celular || '';
+                                document.getElementById('correo_electronico').value = data.pedido.correo_electronico || '';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            // Remover indicador de carga en caso de error
+                            const loadingIndicator = this.parentNode.querySelector('.loading-indicator');
+                            if (loadingIndicator) {
+                                loadingIndicator.remove();
+                            }
+                        });
+                }
+            });
         });
 
         function calculateTotal() {
