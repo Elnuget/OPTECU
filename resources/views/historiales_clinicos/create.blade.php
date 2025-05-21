@@ -502,29 +502,63 @@
                     }
 
                     if (data.success && data.historial) {
-                        // Autocompletar campos excepto el que generó la búsqueda
-                        if (campo !== 'nombres') {
-                            document.getElementById('nombres').value = data.historial.nombres || '';
-                        }
-                        if (campo !== 'apellidos') {
-                            document.getElementById('apellidos').value = data.historial.apellidos || '';
-                        }
-                        if (campo !== 'cedula') {
-                            document.getElementById('cedula').value = data.historial.cedula || '';
-                        }
-                        if (campo !== 'celular') {
-                            document.getElementById('celular').value = data.historial.celular || '';
-                        }
-                        // También podríamos completar otros campos como edad y fecha_nacimiento si es necesario
-                        if (data.historial.edad) {
-                            document.getElementById('edad').value = data.historial.edad;
-                        }
-                        if (data.historial.fecha_nacimiento) {
-                            document.getElementById('fecha_nacimiento').value = data.historial.fecha_nacimiento;
-                        }
-                        if (data.historial.ocupacion) {
-                            document.getElementById('ocupacion').value = data.historial.ocupacion;
-                        }
+                        // Cargar todos los datos del historial, excepto la fecha
+                        const historial = data.historial;
+                        
+                        // Autocompletar campos excepto el que generó la búsqueda y la fecha
+                        // Datos personales
+                        if (campo !== 'nombres') document.getElementById('nombres').value = historial.nombres || '';
+                        if (campo !== 'apellidos') document.getElementById('apellidos').value = historial.apellidos || '';
+                        if (campo !== 'cedula') document.getElementById('cedula').value = historial.cedula || '';
+                        if (campo !== 'celular') document.getElementById('celular').value = historial.celular || '';
+                        document.getElementById('edad').value = historial.edad || '';
+                        document.getElementById('fecha_nacimiento').value = historial.fecha_nacimiento || '';
+                        document.getElementById('ocupacion').value = historial.ocupacion || '';
+                        
+                        // Motivo de consulta y enfermedad actual
+                        document.getElementsByName('motivo_consulta')[0].value = historial.motivo_consulta || '';
+                        document.getElementsByName('enfermedad_actual')[0].value = historial.enfermedad_actual || '';
+                        
+                        // Antecedentes
+                        document.getElementsByName('antecedentes_personales_oculares')[0].value = historial.antecedentes_personales_oculares || '';
+                        document.getElementsByName('antecedentes_personales_generales')[0].value = historial.antecedentes_personales_generales || '';
+                        document.getElementsByName('antecedentes_familiares_oculares')[0].value = historial.antecedentes_familiares_oculares || '';
+                        document.getElementsByName('antecedentes_familiares_generales')[0].value = historial.antecedentes_familiares_generales || '';
+                        
+                        // Agudeza visual y PH
+                        document.getElementsByName('agudeza_visual_vl_sin_correccion_od')[0].value = historial.agudeza_visual_vl_sin_correccion_od || '';
+                        document.getElementsByName('agudeza_visual_vl_sin_correccion_oi')[0].value = historial.agudeza_visual_vl_sin_correccion_oi || '';
+                        document.getElementsByName('agudeza_visual_vl_sin_correccion_ao')[0].value = historial.agudeza_visual_vl_sin_correccion_ao || '';
+                        document.getElementsByName('agudeza_visual_vp_sin_correccion_od')[0].value = historial.agudeza_visual_vp_sin_correccion_od || '';
+                        document.getElementsByName('agudeza_visual_vp_sin_correccion_oi')[0].value = historial.agudeza_visual_vp_sin_correccion_oi || '';
+                        document.getElementsByName('agudeza_visual_vp_sin_correccion_ao')[0].value = historial.agudeza_visual_vp_sin_correccion_ao || '';
+                        document.getElementsByName('ph_od')[0].value = historial.ph_od || '';
+                        document.getElementsByName('ph_oi')[0].value = historial.ph_oi || '';
+                        document.getElementsByName('optotipo')[0].value = historial.optotipo || '';
+                        
+                        // Lensometría
+                        document.getElementsByName('lensometria_od')[0].value = historial.lensometria_od || '';
+                        document.getElementsByName('lensometria_oi')[0].value = historial.lensometria_oi || '';
+                        document.getElementsByName('tipo_lente')[0].value = historial.tipo_lente || '';
+                        document.getElementsByName('material')[0].value = historial.material || '';
+                        document.getElementsByName('filtro')[0].value = historial.filtro || '';
+                        document.getElementsByName('tiempo_uso')[0].value = historial.tiempo_uso || '';
+                        
+                        // RX Final
+                        document.getElementsByName('refraccion_od')[0].value = historial.refraccion_od || '';
+                        document.getElementsByName('refraccion_oi')[0].value = historial.refraccion_oi || '';
+                        document.getElementsByName('rx_final_dp_od')[0].value = historial.rx_final_dp_od || '';
+                        document.getElementsByName('rx_final_dp_oi')[0].value = historial.rx_final_dp_oi || '';
+                        document.getElementsByName('rx_final_av_vl_od')[0].value = historial.rx_final_av_vl_od || '';
+                        document.getElementsByName('rx_final_av_vl_oi')[0].value = historial.rx_final_av_vl_oi || '';
+                        document.getElementsByName('rx_final_av_vp_od')[0].value = historial.rx_final_av_vp_od || '';
+                        document.getElementsByName('rx_final_av_vp_oi')[0].value = historial.rx_final_av_vp_oi || '';
+                        document.getElementsByName('add')[0].value = historial.add || '';
+                        
+                        // Diagnóstico y tratamiento
+                        document.getElementsByName('diagnostico')[0].value = historial.diagnostico || '';
+                        document.getElementsByName('tratamiento')[0].value = historial.tratamiento || '';
+                        document.getElementsByName('cotizacion')[0].value = historial.cotizacion || '';
                     }
                 })
                 .catch(error => {

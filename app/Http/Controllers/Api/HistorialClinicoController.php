@@ -32,16 +32,6 @@ class HistorialClinicoController extends Controller
             
             // Buscar el último historial que coincida con el campo y valor
             $historial = HistorialClinico::where($campo, $valorDecodificado)
-                ->select([
-                    'id',
-                    'nombres',
-                    'apellidos',
-                    'cedula',
-                    'edad',
-                    'fecha_nacimiento',
-                    'celular',
-                    'ocupacion'
-                ])
                 ->orderBy('created_at', 'desc')
                 ->first();
                 
