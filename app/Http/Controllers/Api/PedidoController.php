@@ -108,4 +108,61 @@ class PedidoController extends Controller
             ], 500);
         }
     }
+    
+    /**
+     * Busca el último pedido basado en un campo y valor específicos
+     * 
+     * @param string $campo Campo a buscar (cliente, cedula, paciente, celular, correo)
+     * @param string $valor Valor a buscar
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function buscarPedidoPorCampo($campo, $valor)
+    {
+        try {
+            // Decodificar el valor (ya que viene de una URL)
+            $valorDecodificado = urldecode($valor);
+            
+            // Mapear el campo 'correo' al nombre real de la columna
+            $campoReal = $campo === 'correo' ? 'correo_electronico' : $campo;
+            
+            // Validar que el campo sea válido
+            $camposPermitidos = ['cliente', 'cedula', 'paciente', 'celular', 'correo_electronico'];
+            if (!in_array($campoReal, $camposPermitidos)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Campo de búsqueda no válido'
+                ], 400);
+            }
+            
+            // Buscar el último pedido que coincida con el campo y valor
+            $pedido = Pedido::where($campoReal, $valorDecodificado)
+                ->select([
+                    'id',
+                    'cliente',
+                    'cedula',
+                    'paciente',
+                    'celular',
+                    'correo_electronico'
+                ])
+                ->orderBy('created_at', 'desc')
+                ->first();
+                
+            if (!$pedido) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "No se encontraron pedidos con este $campo"
+                ], 404);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'pedido' => $pedido
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al buscar pedido: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 } 

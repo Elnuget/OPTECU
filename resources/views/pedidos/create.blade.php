@@ -458,50 +458,90 @@
 
             // Añadir evento para autocompletar datos del cliente
             document.getElementById('cliente').addEventListener('change', function() {
-                const clienteSeleccionado = this.value;
-                if (clienteSeleccionado) {
-                    // Mostrar indicador de carga
-                    const originalText = this.nextElementSibling ? this.nextElementSibling.textContent : '';
-                    if (!this.nextElementSibling || !this.nextElementSibling.classList.contains('loading-indicator')) {
-                        const loadingIndicator = document.createElement('small');
-                        loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
-                        loadingIndicator.textContent = 'Cargando datos...';
-                        this.parentNode.appendChild(loadingIndicator);
-                    }
+                cargarDatosPersonales('cliente', this.value);
+            });
 
-                    // Hacer petición AJAX para obtener datos del último pedido del cliente
-                    fetch(`/api/clientes/${encodeURIComponent(clienteSeleccionado)}/ultimo-pedido`)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error('Error al obtener datos del cliente');
-                            }
-                            return response.json();
-                        })
-                        .then(data => {
-                            // Remover indicador de carga
-                            const loadingIndicator = this.parentNode.querySelector('.loading-indicator');
-                            if (loadingIndicator) {
-                                loadingIndicator.remove();
-                            }
-
-                            if (data.success && data.pedido) {
-                                // Autocompletar campos con datos del último pedido
-                                document.getElementById('cedula').value = data.pedido.cedula || '';
-                                document.getElementById('paciente').value = data.pedido.paciente || '';
-                                document.getElementById('celular').value = data.pedido.celular || '';
-                                document.getElementById('correo_electronico').value = data.pedido.correo_electronico || '';
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            // Remover indicador de carga en caso de error
-                            const loadingIndicator = this.parentNode.querySelector('.loading-indicator');
-                            if (loadingIndicator) {
-                                loadingIndicator.remove();
-                            }
-                        });
+            // Añadir eventos para los demás campos de datos personales
+            document.getElementById('cedula').addEventListener('change', function() {
+                if (this.value.trim()) {
+                    cargarDatosPersonales('cedula', this.value);
                 }
             });
+
+            document.getElementById('paciente').addEventListener('change', function() {
+                if (this.value.trim()) {
+                    cargarDatosPersonales('paciente', this.value);
+                }
+            });
+
+            document.getElementById('celular').addEventListener('change', function() {
+                if (this.value.trim()) {
+                    cargarDatosPersonales('celular', this.value);
+                }
+            });
+
+            document.getElementById('correo_electronico').addEventListener('change', function() {
+                if (this.value.trim()) {
+                    cargarDatosPersonales('correo', this.value);
+                }
+            });
+
+            // Función para cargar datos personales según el campo proporcionado
+            function cargarDatosPersonales(campo, valor) {
+                if (!valor) return;
+
+                // Mostrar indicador de carga
+                const elemento = document.getElementById(campo === 'correo' ? 'correo_electronico' : campo);
+                if (!elemento.nextElementSibling || !elemento.nextElementSibling.classList.contains('loading-indicator')) {
+                    const loadingIndicator = document.createElement('small');
+                    loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
+                    loadingIndicator.textContent = 'Cargando datos...';
+                    elemento.parentNode.appendChild(loadingIndicator);
+                }
+
+                // Hacer petición AJAX para obtener datos del último pedido
+                fetch(`/api/pedidos/buscar-por/${campo}/${encodeURIComponent(valor)}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Error al obtener datos');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Remover indicador de carga
+                        const loadingIndicator = elemento.parentNode.querySelector('.loading-indicator');
+                        if (loadingIndicator) {
+                            loadingIndicator.remove();
+                        }
+
+                        if (data.success && data.pedido) {
+                            // Autocompletar campos excepto el que generó la búsqueda
+                            if (campo !== 'cliente') {
+                                document.getElementById('cliente').value = data.pedido.cliente || '';
+                            }
+                            if (campo !== 'cedula') {
+                                document.getElementById('cedula').value = data.pedido.cedula || '';
+                            }
+                            if (campo !== 'paciente') {
+                                document.getElementById('paciente').value = data.pedido.paciente || '';
+                            }
+                            if (campo !== 'celular') {
+                                document.getElementById('celular').value = data.pedido.celular || '';
+                            }
+                            if (campo !== 'correo') {
+                                document.getElementById('correo_electronico').value = data.pedido.correo_electronico || '';
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // Remover indicador de carga en caso de error
+                        const loadingIndicator = elemento.parentNode.querySelector('.loading-indicator');
+                        if (loadingIndicator) {
+                            loadingIndicator.remove();
+                        }
+                    });
+            }
         });
 
         function calculateTotal() {
