@@ -67,6 +67,29 @@
     </div>
     {{-- Fin Tarjetas de Resumen --}}
 
+    {{-- Filtro de Sucursal --}}
+    <div class="card card-outline card-purple mb-4">
+        <div class="card-header">
+            <h3 class="card-title">FILTROS</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="filtro-sucursal">FILTRAR POR SUCURSAL:</label>
+                        <select class="form-control" id="filtro-sucursal">
+                            <option value="TODAS">TODAS LAS SUCURSALES</option>
+                            <option value="MATRIZ">MATRIZ</option>
+                            <option value="ROCÍO">ROCÍO</option>
+                            <option value="NORTE">NORTE</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{-- Fin Filtro de Sucursal --}}
+
     {{-- Tarjeta Plegable Egresos Mes Actual --}}
     <div class="card card-outline card-purple card-widget collapsed-card" id="card-egresos-mes-actual">
         <div class="card-header">
@@ -245,10 +268,49 @@
     <script>
         let detallesEgresosGlobal = [];
         let egresosCargados = false;
+        let sucursalSeleccionada = 'TODAS';
 
         // Función para formatear números como moneda
         function formatCurrency(number) {
             return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(number);
+        }
+
+        // Función para filtrar egresos por sucursal
+        function filtrarEgresosPorSucursal(egresos, sucursal) {
+            if (sucursal === 'TODAS') {
+                return egresos;
+            }
+            return egresos.filter(egreso => egreso.sucursal === sucursal);
+        }
+
+        // Función para actualizar la visualización de egresos
+        function actualizarVisualizacionEgresos() {
+            const egresosFiltrados = filtrarEgresosPorSucursal(detallesEgresosGlobal, sucursalSeleccionada);
+            
+            // Actualizar el resumen
+            const totalEgresosFiltrados = egresosFiltrados.reduce((sum, egreso) => sum + egreso.valorAbs, 0);
+            const summarySpan = document.getElementById('summary-egresos-mes-actual');
+            summarySpan.textContent = formatCurrency(totalEgresosFiltrados);
+
+            // Actualizar la tabla de detalles
+            const desgloseBody = document.getElementById('desglose-egresos-mes-actual');
+            
+            if (egresosFiltrados.length > 0) {
+                desgloseBody.innerHTML = egresosFiltrados.map(egreso => `
+                    <tr>
+                        <td>${egreso.fecha}</td>
+                        <td>${egreso.sucursal}</td>
+                        <td>${egreso.motivo}</td>
+                        <td class="text-danger">${formatCurrency(egreso.valor)}</td>
+                        <td>${egreso.usuario}</td>
+                    </tr>
+                `).join('');
+            } else {
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY EGRESOS DE PRÉSTAMOS PARA LA SUCURSAL SELECCIONADA.</td></tr>';
+            }
+
+            // Actualizar los valores netos y deducciones
+            actualizarValoresNetosPrestamos();
         }
 
         // Genera una lista de meses/años desde Enero 2025 hasta la fecha actual
@@ -359,7 +421,7 @@
 
                 detallesEgresosGlobal = egresosFiltrados;
                 egresosCargados = true;
-                actualizarValoresNetosPrestamos();
+                actualizarVisualizacionEgresos();
 
                  // Ordenar por fecha descendente
                  egresosFiltrados.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
@@ -550,6 +612,12 @@
             $('#valor').on('input', function() {
                 const valorOriginal = parseFloat($(this).val()) || 0;
                 $('#valor_neto').val(valorOriginal);
+            });
+
+            // Evento para el cambio de sucursal
+            $('#filtro-sucursal').on('change', function() {
+                sucursalSeleccionada = $(this).val();
+                actualizarVisualizacionEgresos();
             });
 
             // Obtener lista de meses a consultar (desde Ene 2025 hasta actual)
