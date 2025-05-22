@@ -121,10 +121,6 @@
         </div>
     </div>
 
-    @include('components.sueldos.retiros', ['tipoSucursal' => $tipoSucursal])
-    @include('components.sueldos.pedidos', ['tipoSucursal' => $tipoSucursal])
-    @include('components.sueldos.historial', ['tipoSucursal' => $tipoSucursal])
-
 @stop
 
 @section('js')
