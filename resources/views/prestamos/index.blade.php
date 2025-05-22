@@ -502,22 +502,7 @@
                 // Actualizar celda de cuotas con información detallada
                 let cuotasHtml = '';
                 if (cuotasTotal > 0) {
-                    cuotasHtml = `
-                        <div class="d-flex flex-column">
-                            <div><strong>CUOTAS TOTALES:</strong> ${cuotasTotal}</div>
-                            <div><strong>CUOTA MEDIA:</strong> ${formatCurrency(deduccionMedia)}</div>
-                            <div><strong>PAGADAS:</strong> ${cuotasPagadas} de ${cuotasTotal}</div>
-                            <div><strong>PENDIENTES:</strong> ${cuotasPendientes}</div>
-                            <div class="progress mt-1" style="height: 10px;">
-                                <div class="progress-bar bg-success" role="progressbar" 
-                                    style="width: ${Math.min(100, (cuotasPagadas/cuotasTotal)*100)}%;" 
-                                    aria-valuenow="${cuotasPagadas}" 
-                                    aria-valuemin="0" 
-                                    aria-valuemax="${cuotasTotal}">
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                                        cuotasHtml = `                        <div class="d-flex flex-column">                            <div><strong>CUOTAS TOTALES:</strong> ${cuotasTotal}</div>                            <div><strong>PAGADAS:</strong> ${cuotasPagadas} de ${cuotasTotal}</div>                            <div><strong>PENDIENTES:</strong> ${cuotasPendientes}</div>                            <div class="progress mt-1" style="height: 10px;">                                <div class="progress-bar bg-success" role="progressbar"                                     style="width: ${Math.min(100, (cuotasPagadas/cuotasTotal)*100)}%;"                                     aria-valuenow="${cuotasPagadas}"                                     aria-valuemin="0"                                     aria-valuemax="${cuotasTotal}">                                </div>                            </div>                        </div>                    `;
                 } else {
                     cuotasHtml = '<span class="text-muted">SIN CUOTAS DEFINIDAS</span>';
                 }
