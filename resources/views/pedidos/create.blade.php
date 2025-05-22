@@ -104,19 +104,28 @@
                         <div class="card-body">
                             {{-- Fila 2 --}}
                             <div class="row mb-3">
+                                <div class="col-md-12 mb-3">
+                                    <label for="buscar_cliente_paciente" class="form-label">Buscar Cliente/Paciente</label>
+                                    <input type="text" class="form-control" id="buscar_cliente_paciente" 
+                                           placeholder="Escriba para buscar un cliente o paciente existente" 
+                                           list="clientes_pacientes_list">
+                                    <datalist id="clientes_pacientes_list">
+                                        @foreach($clientes as $cliente)
+                                            <option value="{{ $cliente }}" data-tipo="cliente">
+                                        @endforeach
+                                        @foreach($pacientes as $paciente)
+                                            <option value="{{ $paciente }}" data-tipo="paciente">
+                                        @endforeach
+                                    </datalist>
+                                </div>
                                 <div class="col-md-6">
                                     <label for="fact" class="form-label">Factura</label>
                                     <input type="text" class="form-control" id="fact" name="fact"
                                            value="Pendiente">
                                 </div>
-                                <div la="col-md-6">
+                                <div class="col-md-6">
                                     <label for="cliente" class="form-label">Cliente</label>
-                                    <input type="text" class="form-control" id="cliente" name="cliente" required list="clientes_existentes" placeholder="Seleccione o escriba un nombre de cliente">
-                                    <datalist id="clientes_existentes">
-                                        @foreach($clientes as $cliente)
-                                            <option value="{{ $cliente }}">
-                                        @endforeach
-                                    </datalist>
+                                    <input type="text" class="form-control" id="cliente" name="cliente" required>
                                 </div>
                             </div>
 
@@ -133,12 +142,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label for="paciente" class="form-label">Paciente</label>
-                                    <input type="text" class="form-control" id="paciente" name="paciente" list="pacientes_existentes" placeholder="Seleccione o escriba un paciente">
-                                    <datalist id="pacientes_existentes">
-                                        @foreach($pacientes as $paciente)
-                                            <option value="{{ $paciente }}">
-                                        @endforeach
-                                    </datalist>
+                                    <input type="text" class="form-control" id="paciente" name="paciente">
                                 </div>
                             </div>
 
@@ -458,21 +462,27 @@
                 });
             });
 
-            // Añadir evento para autocompletar datos del cliente
-            document.getElementById('cliente').addEventListener('change', function() {
-                cargarDatosPersonales('cliente', this.value);
-            });
+            // Manejar la búsqueda unificada de cliente/paciente
+            document.getElementById('buscar_cliente_paciente').addEventListener('change', function() {
+                const selectedOption = document.querySelector(`#clientes_pacientes_list option[value="${this.value}"]`);
+                if (selectedOption) {
+                    const tipo = selectedOption.dataset.tipo;
+                    const valor = this.value;
 
-            // Añadir eventos para los demás campos de datos personales
-            document.getElementById('cedula').addEventListener('change', function() {
-                if (this.value.trim()) {
-                    cargarDatosPersonales('cedula', this.value);
+                    if (tipo === 'cliente') {
+                        document.getElementById('cliente').value = valor;
+                        cargarDatosPersonales('cliente', valor);
+                    } else if (tipo === 'paciente') {
+                        document.getElementById('paciente').value = valor;
+                        cargarDatosPersonales('paciente', valor);
+                    }
                 }
             });
 
-            document.getElementById('paciente').addEventListener('change', function() {
+            // Añadir eventos para cédula y otros campos
+            document.getElementById('cedula').addEventListener('change', function() {
                 if (this.value.trim()) {
-                    cargarDatosPersonales('paciente', this.value);
+                    cargarDatosPersonales('cedula', this.value);
                 }
             });
 
