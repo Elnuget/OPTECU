@@ -73,21 +73,79 @@
         .sucursal-matriz { background-color: #007bff; }
         .sucursal-rocio { background-color: #28a745; }
         .sucursal-norte { background-color: #17a2b8; }
+
+        .rol-usuario {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+        }
     </style>
 
     <div class="card">
         <div class="card-body">
-            @include('components.sueldos.filtros', ['tipoSucursal' => $tipoSucursal, 'users' => $users])
-            
-            {{-- Contenedor para el Rol de Pagos --}}
-            <div id="contenedorRolPagos" class="d-none">
+            {{-- Filtros de fecha y sucursal --}}
+            <div class="form-row mb-4">
+                <div class="col-md-3">
+                    <label for="filtroAno">SELECCIONAR AÑO:</label>
+                    <select name="ano" class="form-control custom-select" id="filtroAno">
+                        <option value="">SELECCIONE AÑO</option>
+                        @php
+                            $currentYear = date('Y');
+                            $selectedYear = request('ano', $currentYear);
+                        @endphp
+                        @for ($year = date('Y'); $year >= 2000; $year--)
+                            <option value="{{ $year }}" {{ $selectedYear == $year ? 'selected' : '' }}>{{ $year }}</option>
+                        @endfor
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filtroMes">SELECCIONAR MES:</label>
+                    <select name="mes" class="form-control custom-select" id="filtroMes">
+                        <option value="">SELECCIONE MES</option>
+                        @php
+                            $currentMonth = date('n');
+                            $selectedMonth = request('mes', $currentMonth);
+                        @endphp
+                        @foreach (['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'] as $index => $month)
+                            <option value="{{ $index + 1 }}" {{ $selectedMonth == ($index + 1) ? 'selected' : '' }}>
+                                {{ $month }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filtroSucursal">SELECCIONAR SUCURSAL:</label>
+                    <select name="sucursal" class="form-control custom-select" id="filtroSucursal" {{ $tipoSucursal !== 'todas' ? 'disabled' : '' }}>
+                        <option value="">TODAS LAS SUCURSALES</option>
+                        @if($tipoSucursal === 'todas' || $tipoSucursal === 'matriz')
+                            <option value="matriz" {{ request('sucursal') == 'matriz' ? 'selected' : '' }}>MATRIZ</option>
+                        @endif
+                        @if($tipoSucursal === 'todas' || $tipoSucursal === 'rocio')
+                            <option value="rocio" {{ request('sucursal') == 'rocio' ? 'selected' : '' }}>ROCÍO</option>
+                        @endif
+                        @if($tipoSucursal === 'todas' || $tipoSucursal === 'norte')
+                            <option value="norte" {{ request('sucursal') == 'norte' ? 'selected' : '' }}>NORTE</option>
+                        @endif
+                    </select>
+                </div>
+                <div class="col-md-3 align-self-end">
+                    <button type="button" class="btn btn-primary btn-block" id="actualButton">
+                        <i class="fas fa-sync-alt"></i> ACTUAL
+                    </button>
+                </div>
+            </div>
+
+            {{-- Roles de pago para cada usuario --}}
+            @foreach($users as $user)
+            <div class="rol-usuario" id="rol-usuario-{{ $user->id }}">
                 <div class="row mb-4">
                     <div class="col-md-6">
-                        <h5>EMPLEADO: <span id="rolEmpleadoNombre" class="text-primary"></span></h5>
-                        <h6>PERÍODO: <span id="rolPeriodo" class="text-secondary"></span></h6>
+                        <h5>EMPLEADO: <span class="text-primary">{{ $user->name }}</span></h5>
+                        <h6>PERÍODO: <span class="text-secondary" id="periodo_{{ $user->id }}"></span></h6>
                     </div>
                     <div class="col-md-6 text-right">
-                        <h5>TOTAL DE PEDIDOS: <span id="rolTotalRecibir" class="text-success"></span></h5>
+                        <h5>TOTAL DE PEDIDOS: <span class="text-success" id="total_{{ $user->id }}"></span></h5>
                     </div>
                 </div>
 
@@ -102,25 +160,20 @@
                                 <th>RETIROS</th>
                             </tr>
                         </thead>
-                        <tbody id="rolDesglose">
+                        <tbody id="desglose_{{ $user->id }}">
                         </tbody>
                     </table>
                 </div>
 
                 <div class="text-right mt-3">
-                    <button type="button" class="btn btn-primary" id="btnImprimirRol">
+                    <button type="button" class="btn btn-primary btn-imprimir" data-user="{{ $user->id }}">
                         <i class="fas fa-print"></i> IMPRIMIR
                     </button>
                 </div>
             </div>
-
-            {{-- Mensaje cuando no hay usuario seleccionado --}}
-            <div id="mensajeSeleccionUsuario" class="text-center py-5">
-                <h4>SELECCIONE UN USUARIO PARA GENERAR EL ROL DE PAGOS</h4>
-            </div>
+            @endforeach
         </div>
     </div>
-
 @stop
 
 @section('js')
@@ -128,6 +181,52 @@
     @push('js')
     <script>
         window.tipoSucursal = '{{ $tipoSucursal }}';
+        
+        // Función para cargar los datos de cada usuario
+        function cargarDatosUsuario(userId, nombre) {
+            const ano = document.getElementById('filtroAno').value;
+            const mes = document.getElementById('filtroMes').value;
+            const sucursal = document.getElementById('filtroSucursal').value;
+            
+            // Aquí deberás adaptar tu lógica existente para cargar los datos
+            // usando el ID del usuario y los filtros seleccionados
+            obtenerRolPagos(userId, nombre, ano, mes, sucursal);
+        }
+
+        // Cuando el documento esté listo
+        $(document).ready(function() {
+            // Cargar datos para cada usuario
+            @foreach($users as $user)
+                cargarDatosUsuario({{ $user->id }}, '{{ $user->name }}');
+            @endforeach
+
+            // Manejar cambios en los filtros
+            $('#filtroAno, #filtroMes, #filtroSucursal').change(function() {
+                @foreach($users as $user)
+                    cargarDatosUsuario({{ $user->id }}, '{{ $user->name }}');
+                @endforeach
+            });
+
+            // Manejar el botón actual
+            $('#actualButton').click(function() {
+                const now = new Date();
+                $('#filtroAno').val(now.getFullYear());
+                $('#filtroMes').val(now.getMonth() + 1);
+                if (window.tipoSucursal === 'todas') {
+                    $('#filtroSucursal').val('');
+                }
+                
+                @foreach($users as $user)
+                    cargarDatosUsuario({{ $user->id }}, '{{ $user->name }}');
+                @endforeach
+            });
+
+            // Manejar clicks en botones de imprimir
+            $('.btn-imprimir').click(function() {
+                const userId = $(this).data('user');
+                imprimirRolPagos(userId);
+            });
+        });
     </script>
     @endpush
     @include('components.sueldos.scripts.init')
