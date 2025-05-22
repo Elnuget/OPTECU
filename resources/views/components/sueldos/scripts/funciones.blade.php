@@ -74,11 +74,16 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 if (data.retiros) {
-                    const retirosEmpleado = data.retiros.filter(retiro => 
-                        retiro.usuario.toLowerCase() === nombre.toLowerCase() &&
-                        !retiro.motivo.toLowerCase().includes('deposito') &&
-                        !retiro.motivo.toLowerCase().includes('depósito')
-                    );
+                    const retirosEmpleado = data.retiros
+                        .filter(retiro => 
+                            retiro.usuario.toLowerCase() === nombre.toLowerCase() &&
+                            !retiro.motivo.toLowerCase().includes('deposito') &&
+                            !retiro.motivo.toLowerCase().includes('depósito')
+                        )
+                        .map(retiro => ({
+                            ...retiro,
+                            url: url // Agregar la URL para identificar la sucursal
+                        }));
                     datosRoles[userId].retiros = [...datosRoles[userId].retiros, ...retirosEmpleado];
                     datosRoles[userId].retiros_total += retirosEmpleado.reduce((sum, retiro) => 
                         sum + Math.abs(parseFloat(retiro.valor)), 0
@@ -116,9 +121,14 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 if (data.success && data.data.pedidos) {
-                    const pedidosEmpleado = data.data.pedidos.filter(pedido => 
-                        pedido.usuario.toLowerCase() === nombre.toLowerCase()
-                    );
+                    const pedidosEmpleado = data.data.pedidos
+                        .filter(pedido => 
+                            pedido.usuario.toLowerCase() === nombre.toLowerCase()
+                        )
+                        .map(pedido => ({
+                            ...pedido,
+                            url: url // Agregar la URL para identificar la sucursal
+                        }));
                     datosRoles[userId].pedidos = [...datosRoles[userId].pedidos, ...pedidosEmpleado];
                     datosRoles[userId].pedidos_total += pedidosEmpleado.reduce((sum, pedido) => 
                         sum + parseFloat(pedido.total), 0
@@ -156,12 +166,14 @@
                 const response = await fetch(url);
                 const data = await response.json();
                 if (data.success && data.data.movimientos) {
-                    const movimientosEmpleado = data.data.movimientos.filter(mov => 
-                        mov.usuario.toLowerCase() === nombre.toLowerCase()
-                    );
+                    const movimientosEmpleado = data.data.movimientos
+                        .filter(mov => mov.usuario.toLowerCase() === nombre.toLowerCase())
+                        .map(mov => ({
+                            ...mov,
+                            url: url // Agregar la URL para identificar la sucursal
+                        }));
                     
                     movimientosEmpleado.forEach(mov => {
-                        mov.url = url;
                         const monto = Math.abs(parseFloat(mov.monto));
                         if (mov.descripcion === 'Apertura') {
                             datosRoles[userId].historial.ingresos += monto;
@@ -210,6 +222,18 @@
                 const totalPedidosDia = pedidosDelDia.reduce((sum, pedido) => sum + parseFloat(pedido.total), 0);
                 const totalRetirosDia = retirosDelDia.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
 
+                // Determinar la sucursal del día
+                let sucursalDia = null;
+                if (movimientosDia.apertura) {
+                    sucursalDia = getSucursalName(movimientosDia.apertura.url);
+                } else if (movimientosDia.cierre) {
+                    sucursalDia = getSucursalName(movimientosDia.cierre.url);
+                } else if (pedidosDelDia.length > 0 && pedidosDelDia[0].url) {
+                    sucursalDia = getSucursalName(pedidosDelDia[0].url);
+                } else if (retirosDelDia.length > 0 && retirosDelDia[0].url) {
+                    sucursalDia = getSucursalName(retirosDelDia[0].url);
+                }
+
                 filas.push(`
                     <tr>
                         <td>${formatDate(fecha)}</td>
@@ -228,10 +252,11 @@
                             }
                         </td>
                         <td>
-                            ${movimientosDia.apertura ? 
-                                `<span class="sucursal-badge ${getSucursalClass(getSucursalName(movimientosDia.apertura.url))}">
-                                    ${getSucursalName(movimientosDia.apertura.url)}
-                                </span>` : ''
+                            ${sucursalDia ? 
+                                `<span class="sucursal-badge ${getSucursalClass(sucursalDia)}">
+                                    ${sucursalDia}
+                                </span>` : 
+                                '<small class="text-muted">NO DISPONIBLE</small>'
                             }
                         </td>
                         <td>
