@@ -527,7 +527,19 @@
                         if (campo !== 'cedula') document.getElementById('cedula').value = historial.cedula || '';
                         if (campo !== 'celular') document.getElementById('celular').value = historial.celular || '';
                         document.getElementById('edad').value = historial.edad || '';
-                        document.getElementById('fecha_nacimiento').value = historial.fecha_nacimiento || '';
+                        
+                        // Formatear y establecer la fecha de nacimiento si existe
+                        if (historial.fecha_nacimiento) {
+                            // Asegurarse de que la fecha esté en formato YYYY-MM-DD
+                            const fechaNacimiento = new Date(historial.fecha_nacimiento);
+                            if (!isNaN(fechaNacimiento.getTime())) {
+                                const fechaFormateada = fechaNacimiento.toISOString().split('T')[0];
+                                document.getElementById('fecha_nacimiento').value = fechaFormateada;
+                            }
+                        } else {
+                            document.getElementById('fecha_nacimiento').value = '';
+                        }
+                        
                         document.getElementById('ocupacion').value = historial.ocupacion || '';
                         
                         // Motivo de consulta y enfermedad actual
