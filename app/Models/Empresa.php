@@ -16,7 +16,7 @@ class Empresa extends Model
 
     public function getTipoSucursal()
     {
-        if (empty($this->nombre) || $this->nombre === 'MATRIZ') {
+        if (empty($this->nombre) || $this->nombre === 'Matriz') {
             return 'todas';
         } elseif ($this->nombre === 'EL ROCIO') {
             return 'rocio';

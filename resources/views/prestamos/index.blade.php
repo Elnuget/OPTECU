@@ -78,10 +78,10 @@
                     <div class="form-group">
                         <label for="filtro-sucursal">FILTRAR POR SUCURSAL:</label>
                         <select class="form-control" id="filtro-sucursal">
-                            <option value="TODAS">TODAS LAS SUCURSALES</option>
-                            <option value="MATRIZ">MATRIZ</option>
-                            <option value="ROCÍO">ROCÍO</option>
-                            <option value="NORTE">NORTE</option>
+                            <option value="TODAS" {{ $sucursalPorDefecto == 'TODAS' ? 'selected' : '' }}>TODAS LAS SUCURSALES</option>
+                            <option value="MATRIZ" {{ $sucursalPorDefecto == 'MATRIZ' ? 'selected' : '' }}>MATRIZ</option>
+                            <option value="ROCÍO" {{ $sucursalPorDefecto == 'ROCÍO' ? 'selected' : '' }}>ROCÍO</option>
+                            <option value="NORTE" {{ $sucursalPorDefecto == 'NORTE' ? 'selected' : '' }}>NORTE</option>
                         </select>
                     </div>
                 </div>
@@ -268,7 +268,7 @@
     <script>
         let detallesEgresosGlobal = [];
         let egresosCargados = false;
-        let sucursalSeleccionada = 'TODAS';
+        let sucursalSeleccionada = '{{ $sucursalPorDefecto }}';
 
         // Función para formatear números como moneda
         function formatCurrency(number) {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Prestamo;
+use App\Models\Empresa;
 use Illuminate\Http\Request;
 
 class PrestamoController extends Controller
@@ -10,7 +11,24 @@ class PrestamoController extends Controller
     public function index()
     {
         $prestamos = Prestamo::with('user')->latest()->get();
-        return view('prestamos.index', compact('prestamos'));
+        $empresa = Empresa::first(); // Obtener la primera empresa registrada
+        $sucursalPorDefecto = 'TODAS';
+
+        if ($empresa) {
+            switch ($empresa->nombre) {
+                case 'Matriz':
+                    $sucursalPorDefecto = 'MATRIZ';
+                    break;
+                case 'EL ROCIO':
+                    $sucursalPorDefecto = 'ROCÍO';
+                    break;
+                case 'NORTE WENDY':
+                    $sucursalPorDefecto = 'NORTE';
+                    break;
+            }
+        }
+
+        return view('prestamos.index', compact('prestamos', 'sucursalPorDefecto'));
     }
 
     public function store(Request $request)
