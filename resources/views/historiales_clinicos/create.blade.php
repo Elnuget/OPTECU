@@ -51,27 +51,28 @@
                 </div>
                 <div id="datosPaciente" class="collapse">
                     <div class="card-body">
+                        <div class="form-row mb-4">
+                            <div class="form-group col-md-12">
+                                <label for="buscar_paciente">Buscar Paciente Existente</label>
+                                <input type="text" id="buscar_paciente" class="form-control" placeholder="Escriba el nombre o apellido del paciente" list="pacientes_existentes">
+                                <datalist id="pacientes_existentes">
+                                    @foreach($nombresCompletos as $registro)
+                                        <option value="{{ $registro['completo'] }}" data-nombre="{{ $registro['nombre'] }}" data-apellido="{{ $registro['apellido'] }}">
+                                    @endforeach
+                                </datalist>
+                            </div>
+                        </div>
                         <div class="form-row">
                             <div class="form-group col-md-4">
                                 <label for="nombres">Nombres <span class="text-danger">*</span></label>
-                                <input type="text" name="nombres" id="nombres" class="form-control" required list="nombres_existentes" placeholder="Seleccione o escriba un nombre">
-                                <datalist id="nombres_existentes">
-                                    @foreach($nombresCompletos as $registro)
-                                        <option value="{{ $registro['nombre'] }}" data-apellido="{{ $registro['apellido'] }}">{{ $registro['completo'] }}</option>
-                                    @endforeach
-                                </datalist>
+                                <input type="text" name="nombres" id="nombres" class="form-control" required>
                             </div>
                             <div class="form-group col-md-4">
                                 <label for="apellidos">Apellidos <span class="text-danger">*</span></label>
-                                <input type="text" name="apellidos" id="apellidos" class="form-control" required list="apellidos_existentes" placeholder="Seleccione o escriba un apellido">
-                                <datalist id="apellidos_existentes">
-                                    @foreach($nombresCompletos as $registro)
-                                        <option value="{{ $registro['apellido'] }}" data-nombre="{{ $registro['nombre'] }}">{{ $registro['completo'] }}</option>
-                                    @endforeach
-                                </datalist>
+                                <input type="text" name="apellidos" id="apellidos" class="form-control" required>
                             </div>
                             <div class="form-group col-md-4">
-                                <label for="cedula">Cédula</label> <!-- Removido text-danger -->
+                                <label for="cedula">Cédula</label>
                                 <input type="text" name="cedula" id="cedula" class="form-control" list="cedulas_existentes" placeholder="Seleccione o escriba una cédula">
                                 <datalist id="cedulas_existentes">
                                     @foreach($cedulas as $cedula)
@@ -437,20 +438,20 @@
             $(this).val($(this).val().toUpperCase());
         });
 
-        // Función para manejar el autocompletado cruzado de nombres y apellidos
-        function setupCrossAutocomplete(sourceInput, targetInput, sourceList, targetList) {
-            $(sourceInput).on('input', function() {
-                const selectedOption = $(sourceList + ' option[value="' + this.value + '"]');
-                if (selectedOption.length) {
-                    const targetValue = selectedOption.data(targetInput.replace('#', ''));
-                    $(targetInput).val(targetValue);
-                }
-            });
-        }
-
-        // Configurar autocompletado cruzado para nombres y apellidos
-        setupCrossAutocomplete('#nombres', '#apellidos', '#nombres_existentes', '#apellidos_existentes');
-        setupCrossAutocomplete('#apellidos', '#nombres', '#apellidos_existentes', '#nombres_existentes');
+        // Manejar la selección de paciente existente
+        $('#buscar_paciente').on('input', function() {
+            const selectedOption = $('#pacientes_existentes option[value="' + this.value + '"]');
+            if (selectedOption.length) {
+                const nombre = selectedOption.data('nombre');
+                const apellido = selectedOption.data('apellido');
+                
+                $('#nombres').val(nombre);
+                $('#apellidos').val(apellido);
+                
+                // Cargar datos adicionales del paciente
+                cargarDatosPersonales('nombres', nombre);
+            }
+        });
 
         // Función para calcular la próxima consulta basada en la fecha de registro
         function calcularProximaConsulta(meses) {
@@ -598,19 +599,7 @@
                 });
         }
 
-        // Añadir eventos para los campos de datos personales
-        $('#nombres').on('change', function() {
-            if (this.value.trim()) {
-                cargarDatosPersonales('nombres', this.value);
-            }
-        });
-
-        $('#apellidos').on('change', function() {
-            if (this.value.trim()) {
-                cargarDatosPersonales('apellidos', this.value);
-            }
-        });
-
+        // Eventos para autocompletado de cédula y celular
         $('#cedula').on('change', function() {
             if (this.value.trim()) {
                 cargarDatosPersonales('cedula', this.value);
