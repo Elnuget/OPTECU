@@ -26,9 +26,21 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="valor">VALOR:</label>
+                    <label for="valor">VALOR ORIGINAL:</label>
                     <input type="number" class="form-control" id="valor" name="valor" 
                            value="{{ $prestamo->valor }}" required step="0.01" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="valor_neto">VALOR NETO:</label>
+                    <input type="number" class="form-control" id="valor_neto" name="valor_neto" 
+                           value="{{ $prestamo->valor_neto }}" required step="0.01" min="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="cuotas">CUOTAS:</label>
+                    <input type="number" class="form-control" id="cuotas" name="cuotas" 
+                           value="{{ $prestamo->cuotas }}" required min="1">
                 </div>
 
                 <div class="form-group">
@@ -61,6 +73,12 @@
                 placeholder: 'SELECCIONE UN USUARIO',
                 allowClear: true,
                 width: '100%'
+            });
+
+            // Calcular valor neto al cambiar el valor original
+            $('#valor').on('input', function() {
+                const valorOriginal = parseFloat($(this).val()) || 0;
+                $('#valor_neto').val(valorOriginal);
             });
         });
     </script>
