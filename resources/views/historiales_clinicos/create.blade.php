@@ -56,8 +56,8 @@
                                 <label for="nombres">Nombres <span class="text-danger">*</span></label>
                                 <input type="text" name="nombres" id="nombres" class="form-control" required list="nombres_existentes" placeholder="Seleccione o escriba un nombre">
                                 <datalist id="nombres_existentes">
-                                    @foreach($nombres as $nombre)
-                                        <option value="{{ $nombre }}">
+                                    @foreach($nombresCompletos as $registro)
+                                        <option value="{{ $registro['nombre'] }}" data-apellido="{{ $registro['apellido'] }}">{{ $registro['completo'] }}</option>
                                     @endforeach
                                 </datalist>
                             </div>
@@ -65,8 +65,8 @@
                                 <label for="apellidos">Apellidos <span class="text-danger">*</span></label>
                                 <input type="text" name="apellidos" id="apellidos" class="form-control" required list="apellidos_existentes" placeholder="Seleccione o escriba un apellido">
                                 <datalist id="apellidos_existentes">
-                                    @foreach($apellidos as $apellido)
-                                        <option value="{{ $apellido }}">
+                                    @foreach($nombresCompletos as $registro)
+                                        <option value="{{ $registro['apellido'] }}" data-nombre="{{ $registro['nombre'] }}">{{ $registro['completo'] }}</option>
                                     @endforeach
                                 </datalist>
                             </div>
@@ -436,6 +436,21 @@
         $('input[type="text"], textarea').on('input', function() {
             $(this).val($(this).val().toUpperCase());
         });
+
+        // Función para manejar el autocompletado cruzado de nombres y apellidos
+        function setupCrossAutocomplete(sourceInput, targetInput, sourceList, targetList) {
+            $(sourceInput).on('input', function() {
+                const selectedOption = $(sourceList + ' option[value="' + this.value + '"]');
+                if (selectedOption.length) {
+                    const targetValue = selectedOption.data(targetInput.replace('#', ''));
+                    $(targetInput).val(targetValue);
+                }
+            });
+        }
+
+        // Configurar autocompletado cruzado para nombres y apellidos
+        setupCrossAutocomplete('#nombres', '#apellidos', '#nombres_existentes', '#apellidos_existentes');
+        setupCrossAutocomplete('#apellidos', '#nombres', '#apellidos_existentes', '#nombres_existentes');
 
         // Función para calcular la próxima consulta basada en la fecha de registro
         function calcularProximaConsulta(meses) {

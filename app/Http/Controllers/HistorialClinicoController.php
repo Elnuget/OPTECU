@@ -35,18 +35,23 @@ class HistorialClinicoController extends Controller
         $antecedentesFamiliaresGenerales = $this->obtenerAntecedentesPrevios('antecedentes_familiares_generales');
         
         // Obtener datos de pacientes previos para autocompletado
-        $nombres = HistorialClinico::select('nombres')
+        $historiales = HistorialClinico::select('nombres', 'apellidos')
             ->whereNotNull('nombres')
-            ->distinct()
-            ->pluck('nombres')
-            ->toArray();
-            
-        $apellidos = HistorialClinico::select('apellidos')
             ->whereNotNull('apellidos')
             ->distinct()
-            ->pluck('apellidos')
-            ->toArray();
+            ->get();
             
+        $nombresCompletos = $historiales->map(function($historial) {
+            return [
+                'nombre' => $historial->nombres,
+                'apellido' => $historial->apellidos,
+                'completo' => $historial->nombres . ' - ' . $historial->apellidos
+            ];
+        })->unique('completo')->values();
+        
+        $nombres = $nombresCompletos->pluck('nombre')->unique()->values();
+        $apellidos = $nombresCompletos->pluck('apellido')->unique()->values();
+        
         $cedulas = HistorialClinico::select('cedula')
             ->whereNotNull('cedula')
             ->distinct()
@@ -67,7 +72,8 @@ class HistorialClinicoController extends Controller
             'nombres',
             'apellidos',
             'cedulas',
-            'celulares'
+            'celulares',
+            'nombresCompletos'
         ));
     }
 
