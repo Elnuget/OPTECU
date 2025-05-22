@@ -276,9 +276,25 @@
 
             document.getElementById(`desglose_${userId}`).innerHTML = filas.join('');
 
+            // Verificar si hay datos
+            const hayDatos = todasLasFechas.size > 0 || 
+                           datosRoles[userId].pedidos_total > 0 || 
+                           datosRoles[userId].retiros_total > 0 ||
+                           datosRoles[userId].historial.ingresos > 0 ||
+                           datosRoles[userId].historial.egresos > 0;
+
+            // Mostrar u ocultar el contenedor del rol
+            const contenedorRol = document.getElementById(`rol-usuario-${userId}`);
+            if (contenedorRol) {
+                contenedorRol.style.display = hayDatos ? 'block' : 'none';
+            }
+
+            return hayDatos;
+
         } catch (error) {
             console.error('Error al actualizar el rol:', error);
             alert('Error al actualizar el rol de pagos: ' + error.message);
+            return false;
         }
     }
 
