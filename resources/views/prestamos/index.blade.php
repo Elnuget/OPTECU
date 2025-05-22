@@ -481,17 +481,22 @@
                 const valorNetoBD = parseFloat($rowNode.data('valor-neto')) || originalValor;
                 const cuotasBD = parseInt($rowNode.data('cuotas')) || 0;
                 
-                const usuarioNombre = $rowNode.find('td.prestamo-usuario').text().trim(); // Obtenemos el nombre tal cual
+                const usuarioNombre = $rowNode.find('td.prestamo-usuario').text().trim();
                 const usuarioNombreNormalizado = normalizarTexto(usuarioNombre);
                 const motivoPrestamoOriginalText = $rowNode.find('td.prestamo-motivo').text().trim();
                 const palabrasClavePrestamo = obtenerPalabrasClave(motivoPrestamoOriginalText);
 
-                const $valorNetoCell = $rowNode.find('td.prestamo-valor-neto'); // Celda para valor neto
-                const $deduccionesCell = $rowNode.find('td.prestamo-deducciones'); // Celda para deducciones
-                const $cuotasCell = $rowNode.find('td.prestamo-cuotas'); // Celda para cuotas
+                const $valorNetoCell = $rowNode.find('td.prestamo-valor-neto');
+                const $deduccionesCell = $rowNode.find('td.prestamo-deducciones');
+                const $cuotasCell = $rowNode.find('td.prestamo-cuotas');
+
+                // Filtrar deducciones por sucursal seleccionada
+                const egresosFiltrados = sucursalSeleccionada === 'TODAS' 
+                    ? detallesEgresosGlobal 
+                    : detallesEgresosGlobal.filter(egreso => egreso.sucursal === sucursalSeleccionada);
 
                 let totalDeducciones = 0;
-                let deduccionesDetalladas = []; // Para la lista en la celda
+                let deduccionesDetalladas = [];
 
                 // Función interna para verificar relación y guardar deducción
                 const verificarYGuardarDeduccion = (item, tipo) => {
@@ -511,18 +516,18 @@
                     }
 
                     if (relacionado) {
-                        // Guardar detalles para la lista
                         deduccionesDetalladas.push({
                             fecha: item.fecha,
                             tipo: tipo,
                             valor: item.valorAbs,
-                            motivo: item.motivo // Podríamos mostrarlo en el tooltip si es muy largo
+                            motivo: item.motivo,
+                            sucursal: item.sucursal
                         });
                     }
                 };
 
-                // Procesar Egresos
-                detallesEgresosGlobal.forEach(egreso => {
+                // Procesar Egresos filtrados
+                egresosFiltrados.forEach(egreso => {
                     verificarYGuardarDeduccion(egreso, 'Egreso');
                 });
 
@@ -539,7 +544,7 @@
                 let valorNetoHtml = `
                     <div class="d-flex flex-column">
                         <div><strong>NETO ORIGINAL:</strong> ${formatCurrency(valorNetoOriginal)}</div>
-                        <div><strong>DEDUCCIONES:</strong> ${formatCurrency(totalDeducciones)}</div>
+                        <div><strong>DEDUCCIONES${sucursalSeleccionada !== 'TODAS' ? ' (' + sucursalSeleccionada + ')' : ''}:</strong> ${formatCurrency(totalDeducciones)}</div>
                         <div class="border-top pt-1 mt-1">
                             <strong>NETO ACTUAL:</strong> ${formatCurrency(valorNetoActualizado)}
                         </div>
@@ -550,21 +555,30 @@
                 
                 const cuotasTotal = cuotasBD;
                 
-                // Cuotas pagadas = número de deducciones
+                // Cuotas pagadas = número de deducciones según el filtro
                 const cuotasPagadas = deduccionesDetalladas.length;
                 
                 // Cuotas pendientes
                 const cuotasPendientes = Math.max(0, cuotasTotal - cuotasPagadas);
-                
-                // Calcular deducción media (promedio), respetando las cuotas definidas
-                const deduccionMedia = cuotasTotal > 0 
-                    ? originalValor / cuotasTotal 
-                    : 0;
 
                 // Actualizar celda de cuotas con información detallada
                 let cuotasHtml = '';
                 if (cuotasTotal > 0) {
-                                        cuotasHtml = `                        <div class="d-flex flex-column">                            <div><strong>CUOTAS TOTALES:</strong> ${cuotasTotal}</div>                            <div><strong>PAGADAS:</strong> ${cuotasPagadas} de ${cuotasTotal}</div>                            <div><strong>PENDIENTES:</strong> ${cuotasPendientes}</div>                            <div class="progress mt-1" style="height: 10px;">                                <div class="progress-bar bg-success" role="progressbar"                                     style="width: ${Math.min(100, (cuotasPagadas/cuotasTotal)*100)}%;"                                     aria-valuenow="${cuotasPagadas}"                                     aria-valuemin="0"                                     aria-valuemax="${cuotasTotal}">                                </div>                            </div>                        </div>                    `;
+                    cuotasHtml = `
+                        <div class="d-flex flex-column">
+                            <div><strong>CUOTAS TOTALES:</strong> ${cuotasTotal}</div>
+                            <div><strong>PAGADAS${sucursalSeleccionada !== 'TODAS' ? ' (' + sucursalSeleccionada + ')' : ''}:</strong> ${cuotasPagadas} de ${cuotasTotal}</div>
+                            <div><strong>PENDIENTES:</strong> ${cuotasPendientes}</div>
+                            <div class="progress mt-1" style="height: 10px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                    style="width: ${Math.min(100, (cuotasPagadas/cuotasTotal)*100)}%;" 
+                                    aria-valuenow="${cuotasPagadas}" 
+                                    aria-valuemin="0" 
+                                    aria-valuemax="${cuotasTotal}">
+                                </div>
+                            </div>
+                        </div>
+                    `;
                 } else {
                     cuotasHtml = '<span class="text-muted">SIN CUOTAS DEFINIDAS</span>';
                 }
@@ -573,7 +587,7 @@
                 // Construir lista HTML para deducciones
                 let deduccionesHtml = '<span class="text-muted">NINGUNA</span>';
                 if (deduccionesDetalladas.length > 0) {
-                     // Ordenar deducciones por fecha para mostrarlas cronológicamente
+                    // Ordenar deducciones por fecha para mostrarlas cronológicamente
                     deduccionesDetalladas.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
                     deduccionesHtml = '<ul class="list-unstyled mb-0" style="font-size: 0.8em;">';
@@ -581,19 +595,21 @@
                         deduccionesHtml += `
                             <li class="mb-1">
                                 <div><strong>${d.fecha}</strong> (${d.tipo}): ${formatCurrency(d.valor)}</div>
-                                <div class="text-muted" style="font-size: 0.9em;">Motivo: ${d.motivo}</div>
+                                <div class="text-muted" style="font-size: 0.9em;">
+                                    Sucursal: ${d.sucursal}<br>
+                                    Motivo: ${d.motivo}
+                                </div>
                             </li>`;
                     });
                     // Agregar línea separadora y total
                     deduccionesHtml += `
                         <li class="mt-2 pt-2 border-top">
-                            <strong>TOTAL DEDUCCIONES: ${formatCurrency(totalDeducciones)}</strong>
+                            <strong>TOTAL DEDUCCIONES${sucursalSeleccionada !== 'TODAS' ? ' (' + sucursalSeleccionada + ')' : ''}: ${formatCurrency(totalDeducciones)}</strong>
                         </li>
                     </ul>`;
                 }
 
                 $deduccionesCell.html(deduccionesHtml);
-                // Ya no necesitamos tooltip en deducciones ya que se muestra la lista
                 $deduccionesCell.tooltip('dispose');
             });
         }
