@@ -100,9 +100,9 @@
     <div class="card mt-4">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
-                <h3 class="card-title">SUELDOS REGISTRADOS</h3>
+                <h3 class="card-title">DETALLE SUELDOS REGISTRADOS</h3>
                 <button class="btn btn-primary" data-toggle="modal" data-target="#modalAgregarSueldo">
-                    <i class="fas fa-plus"></i> AGREGAR SUELDO
+                    <i class="fas fa-plus"></i> DETALLE AGREGAR SUELDO
                 </button>
             </div>
         </div>
@@ -152,7 +152,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalAgregarSueldoLabel">AGREGAR NUEVO SUELDO</h5>
+                    <h5 class="modal-title" id="modalAgregarSueldoLabel">AGREGAR DETALLE NUEVO SUELDO</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -195,7 +195,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalEditarSueldoLabel">EDITAR SUELDO</h5>
+                    <h5 class="modal-title" id="modalEditarSueldoLabel">EDITAR DETALLE SUELDO</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
