@@ -224,4 +224,111 @@
             margin-top: 4px;
         }
     }
+
+    /* Estilos para operaciones (pedidos y retiros) */
+    .operaciones-container {
+        position: relative;
+    }
+
+    .sucursal-operaciones {
+        background-color: rgba(0,0,0,0.02);
+        border-radius: 4px;
+        padding: 10px;
+    }
+
+    .sucursal-operaciones .badge-secondary {
+        display: block;
+        text-align: left;
+        margin-bottom: 8px;
+        padding: 5px 8px;
+    }
+
+    .pedidos-dia, .retiros-dia {
+        background-color: white;
+        border-radius: 4px;
+        padding: 10px;
+        margin-top: 5px;
+    }
+
+    .total-general {
+        margin-top: 10px;
+        padding: 8px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        text-align: right;
+    }
+
+    /* Ajustes responsivos */
+    @media (max-width: 768px) {
+        .table-movimientos {
+            font-size: 0.85em;
+        }
+
+        .table-movimientos td {
+            padding: 0.5rem;
+        }
+
+        .sucursal-operaciones {
+            margin-bottom: 10px;
+        }
+
+        .pedidos-dia, .retiros-dia {
+            padding: 8px;
+        }
+
+        .badge {
+            white-space: normal;
+            text-align: left;
+        }
+
+        .total-general {
+            text-align: left;
+            margin-top: 8px;
+            padding: 6px;
+        }
+
+        .hora-movimiento {
+            display: block;
+            float: none;
+            margin-top: 4px;
+            font-size: 0.9em;
+        }
+
+        .sucursal-operaciones .badge-secondary {
+            font-size: 0.9em;
+        }
+
+        ul.list-unstyled li {
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        ul.list-unstyled li:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+    }
+
+    /* Ajustes para pantallas muy pequeñas */
+    @media (max-width: 576px) {
+        .table-movimientos {
+            font-size: 0.8em;
+        }
+
+        .badge {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .sucursal-operaciones {
+            padding: 8px;
+        }
+
+        .total-general strong {
+            display: block;
+            font-size: 0.95em;
+        }
+    }
 </style> 

@@ -368,100 +368,14 @@
                 pedidosDelDia,
                 retirosDelDia,
                 totalPedidosDia,
-                totalRetirosDia,
-                sucursalDia
+                totalRetirosDia
             } = datos;
-
-            // Inicializar información de todas las sucursales posibles
-            const sucursalInfo = {
-                'MATRIZ': {
-                    movimientos: [],
-                    pedidos: 0,
-                    retiros: 0
-                },
-                'ROCÍO': {
-                    movimientos: [],
-                    pedidos: 0,
-                    retiros: 0
-                },
-                'NORTE': {
-                    movimientos: [],
-                    pedidos: 0,
-                    retiros: 0
-                }
-            };
-
-            // Procesar movimientos
-            if (movimientosDia.matriz.apertura) sucursalInfo['MATRIZ'].movimientos.push('APERTURA');
-            if (movimientosDia.matriz.cierre) sucursalInfo['MATRIZ'].movimientos.push('CIERRE');
-            if (movimientosDia.rocio.apertura) sucursalInfo['ROCÍO'].movimientos.push('APERTURA');
-            if (movimientosDia.rocio.cierre) sucursalInfo['ROCÍO'].movimientos.push('CIERRE');
-            if (movimientosDia.norte.apertura) sucursalInfo['NORTE'].movimientos.push('APERTURA');
-            if (movimientosDia.norte.cierre) sucursalInfo['NORTE'].movimientos.push('CIERRE');
-
-            // Contar pedidos por sucursal
-            pedidosDelDia.forEach(pedido => {
-                const sucursal = pedido.sucursal;
-                if (sucursalInfo[sucursal]) {
-                    sucursalInfo[sucursal].pedidos++;
-                }
-            });
-
-            // Contar retiros por sucursal
-            retirosDelDia.forEach(retiro => {
-                const sucursal = retiro.sucursal;
-                if (sucursalInfo[sucursal]) {
-                    sucursalInfo[sucursal].retiros++;
-                }
-            });
-
-            // Determinar qué sucursales tienen actividad
-            const sucursalesActivas = Object.entries(sucursalInfo)
-                .filter(([_, info]) => 
-                    info.movimientos.length > 0 || 
-                    info.pedidos > 0 || 
-                    info.retiros > 0
-                )
-                .map(([suc, _]) => suc);
 
             return `
                 <tr>
                     <td>${RolPagosUtils.formatDate(fecha)}</td>
                     <td>
                         ${this.generarHTMLMovimientos(movimientosDia)}
-                    </td>
-                    <td class="text-center">
-                        ${sucursalesActivas.length > 0 ? 
-                            sucursalesActivas.map(suc => {
-                                const info = sucursalInfo[suc];
-                                const detalles = [];
-                                
-                                if (info.movimientos.length > 0) {
-                                    detalles.push(`<span class="badge badge-warning badge-sm">${info.movimientos.join(', ')}</span>`);
-                                }
-                                if (info.pedidos > 0) {
-                                    detalles.push(`<span class="badge badge-success badge-sm">${info.pedidos} PEDIDO(S)</span>`);
-                                }
-                                if (info.retiros > 0) {
-                                    detalles.push(`<span class="badge badge-danger badge-sm">${info.retiros} RETIRO(S)</span>`);
-                                }
-
-                                return `
-                                    <div class="sucursal-container mb-2">
-                                        <div class="badge badge-info mb-1" style="font-size: 0.9em; display: block;" data-sucursal="${suc}">
-                                            <i class="fas fa-store-alt mr-1"></i>${suc}
-                                        </div>
-                                        ${detalles.length > 0 ? 
-                                            `<div class="sucursal-details">
-                                                ${detalles.join(' ')}
-                                            </div>` : 
-                                            ''
-                                        }
-                                    </div>
-                                `;
-                            }).join('') : 
-                            '<small class="text-muted"><i class="fas fa-question-circle mr-1"></i>NO ESPECIFICADA</small>'
-                        }
                     </td>
                     <td>
                         ${this.generarHTMLPedidos(pedidosDelDia, totalPedidosDia)}
@@ -529,19 +443,44 @@
                 return '<small class="text-muted">Sin pedidos</small>';
             }
 
+            // Agrupar pedidos por sucursal
+            const pedidosPorSucursal = pedidos.reduce((acc, pedido) => {
+                if (!acc[pedido.sucursal]) {
+                    acc[pedido.sucursal] = {
+                        pedidos: [],
+                        total: 0
+                    };
+                }
+                acc[pedido.sucursal].pedidos.push(pedido);
+                acc[pedido.sucursal].total += parseFloat(pedido.total);
+                return acc;
+            }, {});
+
             return `
-                <div class="pedidos-dia">
-                    <strong>Total: ${RolPagosUtils.formatCurrency(total)}</strong>
-                    <ul class="list-unstyled mb-0">
-                        ${pedidos.map(pedido => `
-                            <li>
-                                <small>
-                                    ${RolPagosUtils.formatTime(pedido.fecha)} - ${pedido.cliente}
-                                    <span class="text-success">${RolPagosUtils.formatCurrency(pedido.total)}</span>
-                                </small>
-                            </li>
-                        `).join('')}
-                    </ul>
+                <div class="operaciones-container">
+                    ${Object.entries(pedidosPorSucursal).map(([sucursal, data]) => `
+                        <div class="sucursal-operaciones mb-3">
+                            <div class="badge badge-secondary mb-2">
+                                <i class="fas fa-store-alt mr-1"></i>${sucursal}
+                            </div>
+                            <div class="pedidos-dia">
+                                <strong>Total: ${RolPagosUtils.formatCurrency(data.total)}</strong>
+                                <ul class="list-unstyled mb-0">
+                                    ${data.pedidos.map(pedido => `
+                                        <li>
+                                            <small>
+                                                ${RolPagosUtils.formatTime(pedido.fecha)} - ${pedido.cliente}
+                                                <span class="text-success">${RolPagosUtils.formatCurrency(pedido.total)}</span>
+                                            </small>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `).join('')}
+                    <div class="total-general">
+                        <strong>TOTAL GENERAL: ${RolPagosUtils.formatCurrency(total)}</strong>
+                    </div>
                 </div>
             `;
         }
@@ -551,19 +490,44 @@
                 return '<small class="text-muted">Sin retiros</small>';
             }
 
+            // Agrupar retiros por sucursal
+            const retirosPorSucursal = retiros.reduce((acc, retiro) => {
+                if (!acc[retiro.sucursal]) {
+                    acc[retiro.sucursal] = {
+                        retiros: [],
+                        total: 0
+                    };
+                }
+                acc[retiro.sucursal].retiros.push(retiro);
+                acc[retiro.sucursal].total += Math.abs(parseFloat(retiro.valor));
+                return acc;
+            }, {});
+
             return `
-                <div class="retiros-dia">
-                    <strong>Total: ${RolPagosUtils.formatCurrency(total)}</strong>
-                    <ul class="list-unstyled mb-0">
-                        ${retiros.map(retiro => `
-                            <li>
-                                <small>
-                                    ${RolPagosUtils.formatTime(retiro.fecha)} - ${retiro.motivo}
-                                    <span class="text-danger">${RolPagosUtils.formatCurrency(Math.abs(retiro.valor))}</span>
-                                </small>
-                            </li>
-                        `).join('')}
-                    </ul>
+                <div class="operaciones-container">
+                    ${Object.entries(retirosPorSucursal).map(([sucursal, data]) => `
+                        <div class="sucursal-operaciones mb-3">
+                            <div class="badge badge-secondary mb-2">
+                                <i class="fas fa-store-alt mr-1"></i>${sucursal}
+                            </div>
+                            <div class="retiros-dia">
+                                <strong>Total: ${RolPagosUtils.formatCurrency(data.total)}</strong>
+                                <ul class="list-unstyled mb-0">
+                                    ${data.retiros.map(retiro => `
+                                        <li>
+                                            <small>
+                                                ${RolPagosUtils.formatTime(retiro.fecha)} - ${retiro.motivo}
+                                                <span class="text-danger">${RolPagosUtils.formatCurrency(Math.abs(retiro.valor))}</span>
+                                            </small>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    `).join('')}
+                    <div class="total-general">
+                        <strong>TOTAL GENERAL: ${RolPagosUtils.formatCurrency(total)}</strong>
+                    </div>
                 </div>
             `;
         }

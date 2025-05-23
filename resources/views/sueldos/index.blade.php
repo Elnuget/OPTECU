@@ -140,7 +140,6 @@
                                         <tr>
                                             <th>FECHA</th>
                                             <th>MOVIMIENTOS</th>
-                                            <th>SUCURSAL</th>
                                             <th>PEDIDOS</th>
                                             <th>RETIROS</th>
                                         </tr>
