@@ -406,10 +406,14 @@
                 }
             }
 
+            // Formatear la fecha para mostrar y para el atributo data
+            const fechaMostrar = RolPagosUtils.formatDate(fechaMovimiento);
+            const fechaParaData = fecha.split('T')[0]; // Solo la parte de la fecha sin hora
+
             return `
                 <tr>
-                    <td>
-                        ${RolPagosUtils.formatDate(fechaMovimiento)}
+                    <td data-fecha="${fechaParaData}">
+                        ${fechaMostrar}
                         <div class="text-muted" style="font-size: 0.85em;">
                             <i class="fas fa-clock"></i> ${horaMovimiento}
                         </div>
@@ -426,7 +430,7 @@
                     <td>
                         <input type="number" 
                                class="form-control valor-editable" 
-                               data-row-id="${fechaMovimiento}"
+                               data-fecha="${fechaParaData}"
                                value="0.00" 
                                step="0.01" 
                                min="0">
@@ -687,7 +691,7 @@
 
             if (data.success) {
                 // Actualizar la interfaz si es necesario
-                const $input = $(`.valor-editable[data-row-id="${fecha}"]`);
+                const $input = $(`.valor-editable[data-fecha="${fecha}"]`);
                 $input.val(valor.toFixed(2));
 
                 // Mostrar mensaje de éxito rápido
@@ -720,7 +724,7 @@
             });
 
             // Restaurar el valor anterior en caso de error
-            const $input = $(`.valor-editable[data-row-id="${fecha}"]`);
+            const $input = $(`.valor-editable[data-fecha="${fecha}"]`);
             $input.val('0.00').focus();
         }
     }
@@ -729,8 +733,7 @@
     $(document).on('change', '.valor-editable', async function() {
         const $input = $(this);
         const valor = parseFloat($input.val());
-        const $row = $input.closest('tr');
-        const fecha = $row.find('td:first').data('fecha') || $input.data('row-id'); // Intentar obtener la fecha de la columna
+        const fecha = $input.data('fecha'); // Usar el atributo data-fecha
         const userId = $('#selectUsuario').val();
 
         // Validaciones más estrictas
@@ -765,6 +768,23 @@
                 }
             });
             $input.val('0.00').focus();
+            return;
+        }
+
+        // Validar que la fecha sea válida
+        if (!fecha) {
+            limpiarModales();
+            await Swal.fire({
+                icon: 'error',
+                title: '¡ERROR!',
+                text: 'No se pudo obtener la fecha correctamente',
+                showConfirmButton: true,
+                confirmButtonText: 'ENTENDIDO',
+                confirmButtonColor: '#dc3545',
+                willClose: () => {
+                    limpiarModales();
+                }
+            });
             return;
         }
 
