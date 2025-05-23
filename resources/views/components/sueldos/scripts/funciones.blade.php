@@ -24,9 +24,20 @@
         }
 
         static getSucursalName(url) {
-            if (url.includes('opticas.xyz')) return 'MATRIZ';
-            if (url.includes('escleroptica2')) return 'ROCÍO';
-            if (url.includes('sucursal3')) return 'NORTE';
+            // Asegurarnos de que la URL sea una cadena y la convertimos a minúsculas
+            const urlLower = (url || '').toLowerCase();
+            
+            console.log('Detectando sucursal para URL:', urlLower); // Debug
+
+            // Orden específico de verificación para evitar falsos positivos
+            if (urlLower.includes('escleroptica2.opticas.xyz')) {
+                return 'ROCÍO';
+            } else if (urlLower.includes('sucursal3.opticas.xyz')) {
+                return 'NORTE';
+            } else if (urlLower.includes('opticas.xyz')) {
+                return 'MATRIZ';
+            }
+            
             return 'DESCONOCIDA';
         }
 
@@ -63,6 +74,7 @@
             const sucursal = document.getElementById('filtroSucursal').value;
             const urls = [];
 
+            // Modificamos el orden y la lógica de las URLs
             if (sucursal === '' || sucursal === 'matriz') {
                 urls.push(`https://opticas.xyz/api/${tipo}`);
             }
@@ -73,6 +85,7 @@
                 urls.push(`https://sucursal3.opticas.xyz/api/${tipo}`);
             }
 
+            console.log('URLs generadas para', tipo, ':', urls); // Debug
             return urls;
         }
 
@@ -93,7 +106,15 @@
                                 !retiro.motivo.toLowerCase().includes('deposito') &&
                                 !retiro.motivo.toLowerCase().includes('depósito')
                             )
-                            .map(retiro => ({...retiro, url}));
+                            .map(retiro => {
+                                const sucursal = RolPagosUtils.getSucursalName(url);
+                                console.log('Retiro procesado:', { url, sucursal }); // Debug
+                                return {
+                                    ...retiro,
+                                    url,
+                                    sucursal
+                                };
+                            });
                         
                         this.data.retiros.push(...retirosEmpleado);
                         this.data.retiros_total += retirosEmpleado.reduce((sum, retiro) => 
@@ -119,7 +140,15 @@
                     if (data.success && data.data.pedidos) {
                         const pedidosEmpleado = data.data.pedidos
                             .filter(pedido => pedido.usuario.toLowerCase() === this.nombre.toLowerCase())
-                            .map(pedido => ({...pedido, url}));
+                            .map(pedido => {
+                                const sucursal = RolPagosUtils.getSucursalName(url);
+                                console.log('Pedido procesado:', { url, sucursal }); // Debug
+                                return {
+                                    ...pedido,
+                                    url,
+                                    sucursal
+                                };
+                            });
                         
                         this.data.pedidos.push(...pedidosEmpleado);
                         this.data.pedidos_total += pedidosEmpleado.reduce((sum, pedido) => 
@@ -145,7 +174,15 @@
                     if (data.success && data.data.movimientos) {
                         const movimientosEmpleado = data.data.movimientos
                             .filter(mov => mov.usuario.toLowerCase() === this.nombre.toLowerCase())
-                            .map(mov => ({...mov, url}));
+                            .map(mov => {
+                                const sucursal = RolPagosUtils.getSucursalName(url);
+                                console.log('Movimiento procesado:', { url, sucursal }); // Debug
+                                return {
+                                    ...mov,
+                                    url,
+                                    sucursal
+                                };
+                            });
                         
                         movimientosEmpleado.forEach(mov => {
                             const monto = Math.abs(parseFloat(mov.monto));
@@ -253,10 +290,24 @@
         }
 
         determinarSucursalDia(movimientosDia, pedidosDelDia, retirosDelDia) {
-            if (movimientosDia.apertura) return RolPagosUtils.getSucursalName(movimientosDia.apertura.url);
-            if (movimientosDia.cierre) return RolPagosUtils.getSucursalName(movimientosDia.cierre.url);
-            if (pedidosDelDia.length > 0) return RolPagosUtils.getSucursalName(pedidosDelDia[0].url);
-            if (retirosDelDia.length > 0) return RolPagosUtils.getSucursalName(retirosDelDia[0].url);
+            // Priorizar movimientos de apertura/cierre
+            if (movimientosDia.apertura) return movimientosDia.apertura.sucursal;
+            if (movimientosDia.cierre) return movimientosDia.cierre.sucursal;
+            
+            // Si hay pedidos, usar la sucursal del primer pedido
+            if (pedidosDelDia.length > 0) {
+                const sucursales = new Set(pedidosDelDia.map(p => p.sucursal));
+                if (sucursales.size === 1) return pedidosDelDia[0].sucursal;
+                return Array.from(sucursales).join(' / ');
+            }
+            
+            // Si hay retiros, usar la sucursal del primer retiro
+            if (retirosDelDia.length > 0) {
+                const sucursales = new Set(retirosDelDia.map(r => r.sucursal));
+                if (sucursales.size === 1) return retirosDelDia[0].sucursal;
+                return Array.from(sucursales).join(' / ');
+            }
+            
             return null;
         }
 
@@ -277,7 +328,12 @@
                         ${this.generarHTMLMovimientos(movimientosDia)}
                     </td>
                     <td>
-                        ${sucursalDia ? `<span class="sucursal-badge sucursal-${sucursalDia.toLowerCase()}">${sucursalDia}</span>` : ''}
+                        ${sucursalDia ? 
+                            sucursalDia.split(' / ').map(suc => 
+                                `<span class="sucursal-badge sucursal-${suc.toLowerCase()}">${suc}</span>`
+                            ).join('<br>') : 
+                            '<small class="text-muted">Sin sucursal</small>'
+                        }
                     </td>
                     <td>
                         ${this.generarHTMLPedidos(pedidosDelDia, totalPedidosDia)}
