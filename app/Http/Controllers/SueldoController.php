@@ -209,12 +209,25 @@ class SueldoController extends Controller
                 ], 422);
             }
 
-            $sueldo = Sueldo::create([
-                'fecha' => $request->fecha,
-                'descripcion' => 'REGISTROCOBRO',
-                'valor' => $request->valor,
-                'user_id' => $request->user_id
-            ]);
+            // Buscar si existe un registro para esta fecha y usuario
+            $sueldo = Sueldo::where('user_id', $request->user_id)
+                           ->where('fecha', $request->fecha)
+                           ->where('descripcion', 'REGISTROCOBRO')
+                           ->first();
+
+            if ($sueldo) {
+                // Si existe, actualizar el valor
+                $sueldo->valor = $request->valor;
+                $sueldo->save();
+            } else {
+                // Si no existe, crear nuevo registro
+                $sueldo = Sueldo::create([
+                    'fecha' => $request->fecha,
+                    'descripcion' => 'REGISTROCOBRO',
+                    'valor' => $request->valor,
+                    'user_id' => $request->user_id
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

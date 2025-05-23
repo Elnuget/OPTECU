@@ -717,7 +717,7 @@
                 // Mostrar mensaje de éxito rápido
                 await toast.fire({
                     icon: 'success',
-                    title: 'GUARDADO'
+                    title: data.data.wasRecentlyCreated ? 'VALOR REGISTRADO' : 'VALOR ACTUALIZADO'
                 });
             } else {
                 throw new Error(data.mensaje || 'Error al guardar el valor');
