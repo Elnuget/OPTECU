@@ -189,6 +189,50 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal para editar sueldo -->
+    <div class="modal fade" id="modalEditarSueldo" tabindex="-1" role="dialog" aria-labelledby="modalEditarSueldoLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEditarSueldoLabel">EDITAR SUELDO</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="formEditarSueldo">
+                    <input type="hidden" id="editar_sueldo_id" name="sueldo_id">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="editar_usuario">EMPLEADO:</label>
+                            <select class="form-control" id="editar_usuario" name="user_id" required>
+                                <option value="">SELECCIONE UN EMPLEADO</option>
+                                @foreach($users as $user)
+                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editar_fecha">FECHA:</label>
+                            <input type="date" class="form-control" id="editar_fecha" name="fecha" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editar_descripcion">DESCRIPCIÓN:</label>
+                            <input type="text" class="form-control" id="editar_descripcion" name="descripcion" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editar_valor">VALOR:</label>
+                            <input type="number" step="0.01" class="form-control" id="editar_valor" name="valor" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">CANCELAR</button>
+                        <button type="submit" class="btn btn-primary">GUARDAR CAMBIOS</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @stop
 
 @section('js')
@@ -340,42 +384,121 @@
             $('#modalAgregarSueldo').on('hidden.bs.modal', function() {
                 $('#formAgregarSueldo')[0].reset();
             });
+
+            // Función para cargar datos en el modal de edición
+            function cargarDatosEdicion(id) {
+                $.ajax({
+                    url: `/sueldos/${id}`,
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success) {
+                            const sueldo = response.data;
+                            $('#editar_sueldo_id').val(sueldo.id);
+                            $('#editar_usuario').val(sueldo.user_id);
+                            $('#editar_fecha').val(sueldo.fecha.split('T')[0]);
+                            $('#editar_descripcion').val(sueldo.descripcion);
+                            $('#editar_valor').val(sueldo.valor);
+                            $('#modalEditarSueldo').modal('show');
+                        }
+                    },
+                    error: function() {
+                        Swal.fire({
+                            title: 'ERROR',
+                            text: 'NO SE PUDO CARGAR LA INFORMACIÓN DEL SUELDO',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+
+            // Función para editar sueldo
+            function editarSueldo(id) {
+                cargarDatosEdicion(id);
+            }
+
+            // Manejar el envío del formulario de edición
+            $('#formEditarSueldo').on('submit', function(e) {
+                e.preventDefault();
+                
+                const id = $('#editar_sueldo_id').val();
+                const formData = {
+                    user_id: $('#editar_usuario').val(),
+                    fecha: $('#editar_fecha').val(),
+                    descripcion: $('#editar_descripcion').val(),
+                    valor: $('#editar_valor').val(),
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    _method: 'PUT'
+                };
+
+                $.ajax({
+                    url: `/sueldos/${id}`,
+                    method: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        Swal.fire({
+                            title: '¡ÉXITO!',
+                            text: 'SUELDO ACTUALIZADO CORRECTAMENTE',
+                            icon: 'success'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            title: 'ERROR',
+                            text: 'HUBO UN ERROR AL ACTUALIZAR EL SUELDO',
+                            icon: 'error'
+                        });
+                    }
+                });
+
+                $('#modalEditarSueldo').modal('hide');
+            });
+
+            // Función para eliminar sueldo
+            function eliminarSueldo(id) {
+                Swal.fire({
+                    title: '¿ESTÁS SEGURO?',
+                    text: 'ESTA ACCIÓN NO SE PUEDE DESHACER',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'SÍ, ELIMINAR',
+                    cancelButtonText: 'CANCELAR'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `/sueldos/${id}`,
+                            method: 'POST',
+                            data: {
+                                _token: $('meta[name="csrf-token"]').attr('content'),
+                                _method: 'DELETE'
+                            },
+                            success: function() {
+                                Swal.fire({
+                                    title: '¡ELIMINADO!',
+                                    text: 'EL SUELDO HA SIDO ELIMINADO CORRECTAMENTE',
+                                    icon: 'success'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            },
+                            error: function() {
+                                Swal.fire({
+                                    title: 'ERROR',
+                                    text: 'NO SE PUDO ELIMINAR EL SUELDO',
+                                    icon: 'error'
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Hacer las funciones disponibles globalmente
+            window.editarSueldo = editarSueldo;
+            window.eliminarSueldo = eliminarSueldo;
         });
-
-        function editarSueldo(id) {
-            Swal.fire({
-                title: 'EDITAR SUELDO',
-                text: '¿Estás seguro de que deseas editar este registro?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Sí, editar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Aquí puedes agregar la lógica para editar el sueldo
-                    console.log('Editando sueldo:', id);
-                }
-            });
-        }
-
-        function eliminarSueldo(id) {
-            Swal.fire({
-                title: '¿ESTÁS SEGURO?',
-                text: 'Esta acción no se puede deshacer',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Sí, eliminar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Aquí puedes agregar la lógica para eliminar el sueldo
-                    console.log('Eliminando sueldo:', id);
-                }
-            });
-        }
     </script>
 @stop 
