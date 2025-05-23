@@ -95,6 +95,52 @@
             </div>
         </div>
     </div>
+    
+    <!-- Nueva tabla de sueldos registrados -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3 class="card-title">SUELDOS REGISTRADOS</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>EMPLEADO</th>
+                            <th>DESCRIPCIÓN</th>
+                            <th>VALOR</th>
+                            <th>ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @php
+                            $sueldos = \App\Models\Sueldo::with('user')
+                                ->orderBy('fecha', 'desc')
+                                ->get();
+                        @endphp
+                        
+                        @foreach($sueldos as $sueldo)
+                            <tr>
+                                <td>{{ $sueldo->fecha->format('d/m/Y') }}</td>
+                                <td>{{ $sueldo->user->name }}</td>
+                                <td>{{ $sueldo->descripcion }}</td>
+                                <td>${{ number_format($sueldo->valor, 2) }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="editarSueldo({{ $sueldo->id }})">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" onclick="eliminarSueldo({{ $sueldo->id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 @stop
 
 @section('js')
@@ -205,5 +251,41 @@
                 cargarRolDePagos();
             });
         });
+
+        function editarSueldo(id) {
+            Swal.fire({
+                title: 'EDITAR SUELDO',
+                text: '¿Estás seguro de que deseas editar este registro?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, editar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Aquí puedes agregar la lógica para editar el sueldo
+                    console.log('Editando sueldo:', id);
+                }
+            });
+        }
+
+        function eliminarSueldo(id) {
+            Swal.fire({
+                title: '¿ESTÁS SEGURO?',
+                text: 'Esta acción no se puede deshacer',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Aquí puedes agregar la lógica para eliminar el sueldo
+                    console.log('Eliminando sueldo:', id);
+                }
+            });
+        }
     </script>
 @stop 
