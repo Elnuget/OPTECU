@@ -99,7 +99,12 @@
     <!-- Nueva tabla de sueldos registrados -->
     <div class="card mt-4">
         <div class="card-header">
-            <h3 class="card-title">SUELDOS REGISTRADOS</h3>
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="card-title">SUELDOS REGISTRADOS</h3>
+                <button class="btn btn-primary" data-toggle="modal" data-target="#modalAgregarSueldo">
+                    <i class="fas fa-plus"></i> AGREGAR SUELDO
+                </button>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -138,6 +143,49 @@
                         @endforeach
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para agregar sueldo -->
+    <div class="modal fade" id="modalAgregarSueldo" tabindex="-1" role="dialog" aria-labelledby="modalAgregarSueldoLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalAgregarSueldoLabel">AGREGAR NUEVO SUELDO</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="formAgregarSueldo">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="usuario">EMPLEADO:</label>
+                            <select class="form-control" id="usuario" name="user_id" required>
+                                <option value="">SELECCIONE UN EMPLEADO</option>
+                                @foreach($users as $user)
+                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fecha">FECHA:</label>
+                            <input type="date" class="form-control" id="fecha" name="fecha" required value="{{ date('Y-m-d') }}">
+                        </div>
+                        <div class="form-group">
+                            <label for="descripcion">DESCRIPCIÓN:</label>
+                            <input type="text" class="form-control" id="descripcion" name="descripcion" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="valor">VALOR:</label>
+                            <input type="number" step="0.01" class="form-control" id="valor" name="valor" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">CANCELAR</button>
+                        <button type="submit" class="btn btn-primary">GUARDAR</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -249,6 +297,48 @@
             // Manejar cambios en los filtros
             $('#filtroMes, #filtroAno, #filtroSucursal').change(function() {
                 cargarRolDePagos();
+            });
+
+            // Manejar el envío del formulario de agregar sueldo
+            $('#formAgregarSueldo').on('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    user_id: $('#usuario').val(),
+                    fecha: $('#fecha').val(),
+                    descripcion: $('#descripcion').val(),
+                    valor: $('#valor').val(),
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                };
+
+                $.ajax({
+                    url: '{{ route("sueldos.store") }}',
+                    method: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        Swal.fire({
+                            title: '¡ÉXITO!',
+                            text: 'SUELDO REGISTRADO CORRECTAMENTE',
+                            icon: 'success'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            title: 'ERROR',
+                            text: 'HUBO UN ERROR AL REGISTRAR EL SUELDO',
+                            icon: 'error'
+                        });
+                    }
+                });
+
+                $('#modalAgregarSueldo').modal('hide');
+            });
+
+            // Limpiar formulario cuando se cierra el modal
+            $('#modalAgregarSueldo').on('hidden.bs.modal', function() {
+                $('#formAgregarSueldo')[0].reset();
             });
         });
 
