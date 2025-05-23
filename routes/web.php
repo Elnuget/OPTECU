@@ -51,6 +51,7 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
         
     // Rutas para Sueldos (solo administradores)
     Route::resource('sueldos', SueldoController::class);
+    Route::post('sueldos/guardar-valor', [SueldoController::class, 'guardarValor'])->name('sueldos.guardar-valor');
 });
 
 // Keep these routes accessible to all authenticated users

@@ -188,4 +188,45 @@ class SueldoController extends Controller
                 ]);
         }
     }
+
+    /**
+     * Guarda un valor de sueldo vía AJAX
+     */
+    public function guardarValor(Request $request)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'fecha' => 'required|date',
+                'valor' => 'required|numeric|min:0',
+                'user_id' => 'required|exists:users,id'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'mensaje' => 'DATOS INVÁLIDOS',
+                    'errores' => $validator->errors()
+                ], 422);
+            }
+
+            $sueldo = Sueldo::create([
+                'fecha' => $request->fecha,
+                'descripcion' => 'REGISTROCOBRO',
+                'valor' => $request->valor,
+                'user_id' => $request->user_id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'mensaje' => 'VALOR GUARDADO CORRECTAMENTE',
+                'data' => $sueldo
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'ERROR AL GUARDAR EL VALOR: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 } 

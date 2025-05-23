@@ -3,9 +3,14 @@
 @section('title', 'ROL DE PAGOS')
 
 @section('content_header')
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <h1>ROL DE PAGOS</h1>
     <p>ADMINISTRACIÓN DE ROLES DE PAGO</p>
     @include('components.sueldos.alerts')
+@stop
+
+@section('css')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
 @stop
 
 @section('content')
@@ -93,6 +98,7 @@
 @stop
 
 @section('js')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
     @include('atajos')
     @include('components.sueldos.scripts.init')
     @include('components.sueldos.scripts.funciones')

@@ -577,4 +577,79 @@
         outline: 0;
         box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
     }
+
+    /* Animaciones para SweetAlert2 */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+        20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+
+    .animated {
+        animation-duration: 0.5s;
+        animation-fill-mode: both;
+    }
+
+    .fadeIn {
+        animation-name: fadeIn;
+    }
+
+    .fadeInDown {
+        animation-name: fadeInDown;
+    }
+
+    .shake {
+        animation-name: shake;
+    }
+
+    .faster {
+        animation-duration: 0.3s;
+    }
+
+    /* Estilos personalizados para SweetAlert2 */
+    .swal2-popup {
+        font-size: 1.1em !important;
+        border-radius: 10px !important;
+    }
+
+    .swal2-title {
+        font-size: 1.5em !important;
+        font-weight: 600 !important;
+    }
+
+    .swal2-content {
+        font-size: 1.1em !important;
+    }
+
+    .swal2-confirm {
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        padding: 12px 25px !important;
+    }
+
+    .swal2-timer-progress-bar {
+        background-color: rgba(0,0,0,0.2) !important;
+    }
 </style> 

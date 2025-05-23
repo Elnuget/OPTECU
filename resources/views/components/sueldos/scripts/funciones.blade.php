@@ -617,5 +617,214 @@
             alert('Error al generar el rol de pagos');
         }
     }
+
+    // Función para limpiar todos los modales
+    function limpiarModales() {
+        // Cerrar cualquier modal de SweetAlert2 que esté abierto
+        if (Swal.isVisible()) {
+            Swal.close();
+        }
+        
+        // Eliminar cualquier overlay residual de SweetAlert2
+        const overlays = document.getElementsByClassName('swal2-container');
+        while (overlays.length > 0) {
+            overlays[0].remove();
+        }
+        
+        // Eliminar cualquier backdrop residual
+        const backdrops = document.getElementsByClassName('swal2-backdrop-show');
+        while (backdrops.length > 0) {
+            backdrops[0].remove();
+        }
+        
+        // Restaurar el scroll del body si está bloqueado
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+        document.body.style.paddingRight = '';
+        document.body.style.overflow = '';
+    }
+
+    // Función para guardar el valor del sueldo
+    async function guardarValorSueldo(fecha, valor, userId) {
+        let timeoutId;
+
+        try {
+            // Limpiar cualquier modal residual antes de empezar
+            limpiarModales();
+
+            // Mostrar indicador de carga con timeout de seguridad
+            await Swal.fire({
+                title: 'GUARDANDO...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                    // Timeout de seguridad de 10 segundos
+                    timeoutId = setTimeout(() => {
+                        limpiarModales();
+                        throw new Error('La operación tardó demasiado tiempo. Por favor, intente nuevamente.');
+                    }, 10000);
+                }
+            });
+
+            const response = await fetch('/sueldos/guardar-valor', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    fecha: fecha,
+                    valor: valor,
+                    user_id: userId
+                })
+            });
+
+            // Limpiar el timeout de seguridad
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+
+            // Asegurarse de que el modal de carga esté cerrado
+            limpiarModales();
+
+            if (!response.ok) {
+                throw new Error(`Error en la respuesta del servidor: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Actualizar la interfaz si es necesario
+                const $input = $(`.valor-editable[data-row-id="${fecha}"]`);
+                $input.val(valor.toFixed(2));
+
+                // Mostrar mensaje de éxito
+                await Swal.fire({
+                    icon: 'success',
+                    title: '¡GUARDADO!',
+                    text: data.mensaje || 'El valor se guardó correctamente',
+                    showConfirmButton: true,
+                    confirmButtonText: 'ACEPTAR',
+                    confirmButtonColor: '#28a745',
+                    timer: 3000,
+                    timerProgressBar: true,
+                    customClass: {
+                        popup: 'animated fadeInDown faster'
+                    },
+                    willClose: () => {
+                        limpiarModales();
+                    }
+                });
+            } else {
+                throw new Error(data.mensaje || 'Error al guardar el valor');
+            }
+        } catch (error) {
+            console.error('Error al guardar:', error);
+            
+            // Limpiar modales antes de mostrar el error
+            limpiarModales();
+
+            await Swal.fire({
+                icon: 'error',
+                title: '¡ERROR!',
+                text: error.message || 'Error al guardar el valor. Por favor, intente nuevamente.',
+                showConfirmButton: true,
+                confirmButtonText: 'ENTENDIDO',
+                confirmButtonColor: '#dc3545',
+                customClass: {
+                    popup: 'animated shake faster'
+                },
+                willClose: () => {
+                    limpiarModales();
+                }
+            });
+
+            // Restaurar el valor anterior en caso de error
+            const $input = $(`.valor-editable[data-row-id="${fecha}"]`);
+            $input.val('0.00').focus();
+        }
+    }
+
+    // Agregar el evento para manejar cambios en los valores editables
+    $(document).on('change', '.valor-editable', async function() {
+        const $input = $(this);
+        const valor = parseFloat($input.val());
+        const fecha = $input.data('row-id');
+        const userId = $('#selectUsuario').val();
+
+        // Validaciones más estrictas
+        if (!userId) {
+            limpiarModales();
+            await Swal.fire({
+                icon: 'warning',
+                title: '¡ATENCIÓN!',
+                text: 'Por favor seleccione un usuario',
+                showConfirmButton: true,
+                confirmButtonText: 'ENTENDIDO',
+                confirmButtonColor: '#ffc107',
+                willClose: () => {
+                    limpiarModales();
+                }
+            });
+            $input.val('0.00').focus();
+            return;
+        }
+
+        if (!valor || isNaN(valor) || valor <= 0) {
+            limpiarModales();
+            await Swal.fire({
+                icon: 'warning',
+                title: '¡VALOR INVÁLIDO!',
+                text: 'Por favor ingrese un valor numérico mayor a 0',
+                showConfirmButton: true,
+                confirmButtonText: 'ENTENDIDO',
+                confirmButtonColor: '#ffc107',
+                willClose: () => {
+                    limpiarModales();
+                }
+            });
+            $input.val('0.00').focus();
+            return;
+        }
+
+        // Confirmar antes de guardar
+        limpiarModales();
+        const { isConfirmed } = await Swal.fire({
+            icon: 'question',
+            title: '¿GUARDAR VALOR?',
+            text: `¿Está seguro de guardar el valor de $${valor.toFixed(2)}?`,
+            showCancelButton: true,
+            confirmButtonText: 'SÍ, GUARDAR',
+            cancelButtonText: 'CANCELAR',
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#dc3545',
+            willClose: () => {
+                limpiarModales();
+            }
+        });
+
+        if (isConfirmed) {
+            await guardarValorSueldo(fecha, valor, userId);
+        } else {
+            $input.val('0.00').focus();
+        }
+    });
+
+    // Función para limpiar modales residuales al cargar la página
+    $(document).ready(function() {
+        limpiarModales();
+    });
+
+    // Agregar evento para limpiar modales al cambiar de pestaña o minimizar
+    $(window).on('blur', limpiarModales);
+
+    // Agregar evento para limpiar modales al presionar ESC
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Escape') {
+            limpiarModales();
+        }
+    });
 </script>
 @endpush 
