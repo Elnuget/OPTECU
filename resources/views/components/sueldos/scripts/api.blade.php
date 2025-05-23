@@ -1,516 +1,196 @@
 @push('js')
 <script>
-    // Funciones para obtener datos de retiros
-    function fetchAndDisplayRetirosMatriz(ano, mes) {
-        const apiUrl = `https://opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`;
-        const totalSpan = document.getElementById('total-retiros-matriz');
-        const desgloseBody = document.getElementById('desglose-retiros-matriz');
-        const loadingOverlay = document.getElementById('loading-overlay-retiros-matriz');
+    class APIEndpoints {
+        static BASE_URLS = {
+            matriz: 'https://opticas.xyz/api',
+            rocio: 'https://escleroptica2.opticas.xyz/api',
+            norte: 'https://sucursal3.opticas.xyz/api'
+        };
 
-        loadingOverlay.style.display = 'flex';
-        totalSpan.textContent = 'CARGANDO...';
-        desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>';
+        static ENDPOINTS = {
+            retiros: '/caja/retiros',
+            pedidos: '/pedidos',
+            historial: '/caja/historial'
+        };
 
-        fetch(apiUrl)
-            .then(response => {
-                if (!response.ok) throw new Error('Error en la red o respuesta no válida');
-                return response.json();
-            })
-            .then(data => {
-                const retirosFiltered = data.retiros ? data.retiros.filter(retiro => {
-                    const motivo = retiro.motivo.toLowerCase();
-                    return !motivo.includes('deposito') && !motivo.includes('depósito');
-                }) : [];
-                
-                const totalFiltrado = retirosFiltered.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
-                
-                totalRetirosMatriz = totalFiltrado;
-                totalSpan.textContent = formatCurrency(totalRetirosMatriz);
-                updateGlobalRetiros();
-
-                if (data.retiros && data.retiros.length > 0) {
-                    desgloseBody.innerHTML = data.retiros.map(retiro => {
-                        const esDeposito = retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito');
-                        return `
-                            <tr ${esDeposito ? 'class="bg-light"' : ''}>
-                                <td>${retiro.fecha}</td>
-                                <td>${retiro.motivo} ${esDeposito ? '<span class="badge badge-info">DEPÓSITO</span>' : ''}</td>
-                                <td class="text-danger">${formatCurrency(retiro.valor)}</td>
-                                <td>${retiro.usuario}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
-                }
-                loadingOverlay.style.display = 'none';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                totalSpan.textContent = 'ERROR';
-                desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
-                loadingOverlay.style.display = 'none';
-            });
+        static getEndpoints(tipo, params = {}) {
+            const sucursal = document.getElementById('filtroSucursal').value;
+            const queryString = Object.entries(params)
+                .map(([key, value]) => `${key}=${value}`)
+                .join('&');
+            
+            const urls = [];
+            
+            if (sucursal === '' || sucursal === 'matriz') {
+                urls.push(`${this.BASE_URLS.matriz}${this.ENDPOINTS[tipo]}?${queryString}`);
+            }
+            if (sucursal === '' || sucursal === 'rocio') {
+                urls.push(`${this.BASE_URLS.rocio}${this.ENDPOINTS[tipo]}?${queryString}`);
+            }
+            if (sucursal === '' || sucursal === 'norte') {
+                urls.push(`${this.BASE_URLS.norte}${this.ENDPOINTS[tipo]}?${queryString}`);
+            }
+            
+            return urls;
+        }
     }
 
-    function fetchAndDisplayRetirosRocio(ano, mes) {
-        const apiUrl = `https://escleroptica2.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`;
-        const totalSpan = document.getElementById('total-retiros-rocio');
-        const desgloseBody = document.getElementById('desglose-retiros-rocio');
-        const loadingOverlay = document.getElementById('loading-overlay-retiros-rocio');
-
-        loadingOverlay.style.display = 'flex';
-        totalSpan.textContent = 'CARGANDO...';
-        desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>';
-
-        fetch(apiUrl)
-            .then(response => {
-                if (!response.ok) throw new Error('Error en la red o respuesta no válida');
-                return response.json();
-            })
-            .then(data => {
-                const retirosFiltered = data.retiros ? data.retiros.filter(retiro => {
-                    const motivo = retiro.motivo.toLowerCase();
-                    return !motivo.includes('deposito') && !motivo.includes('depósito');
-                }) : [];
-                
-                const totalFiltrado = retirosFiltered.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
-                
-                totalRetirosRocio = totalFiltrado;
-                totalSpan.textContent = formatCurrency(totalRetirosRocio);
-                updateGlobalRetiros();
-
-                if (data.retiros && data.retiros.length > 0) {
-                    desgloseBody.innerHTML = data.retiros.map(retiro => {
-                        const esDeposito = retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito');
-                        return `
-                            <tr ${esDeposito ? 'class="bg-light"' : ''}>
-                                <td>${retiro.fecha}</td>
-                                <td>${retiro.motivo} ${esDeposito ? '<span class="badge badge-info">DEPÓSITO</span>' : ''}</td>
-                                <td class="text-danger">${formatCurrency(retiro.valor)}</td>
-                                <td>${retiro.usuario}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
+    class APIService {
+        static async fetchData(url) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
                 }
-                loadingOverlay.style.display = 'none';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                totalSpan.textContent = 'ERROR';
-                desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
-                loadingOverlay.style.display = 'none';
-            });
+                return await response.json();
+            } catch (error) {
+                console.error(`Error al obtener datos de ${url}:`, error);
+                throw error;
+            }
+        }
+
+        static async fetchMultipleEndpoints(urls) {
+            return Promise.all(urls.map(url => this.fetchData(url)));
+        }
+
+        static async obtenerRetiros(ano, mes, nombre) {
+            const urls = APIEndpoints.getEndpoints('retiros', { ano, mes });
+            const results = await this.fetchMultipleEndpoints(urls);
+            
+            return results.reduce((acc, data) => {
+                if (data.retiros) {
+                    const retirosEmpleado = data.retiros
+                        .filter(retiro => 
+                            retiro.usuario.toLowerCase() === nombre.toLowerCase() &&
+                            !retiro.motivo.toLowerCase().includes('deposito') &&
+                            !retiro.motivo.toLowerCase().includes('depósito')
+                        );
+                    acc.push(...retirosEmpleado);
+                }
+                return acc;
+            }, []);
+        }
+
+        static async obtenerPedidos(ano, mes, nombre) {
+            const urls = APIEndpoints.getEndpoints('pedidos', { ano, mes });
+            const results = await this.fetchMultipleEndpoints(urls);
+            
+            return results.reduce((acc, data) => {
+                if (data.success && data.data.pedidos) {
+                    const pedidosEmpleado = data.data.pedidos
+                        .filter(pedido => pedido.usuario.toLowerCase() === nombre.toLowerCase());
+                    acc.push(...pedidosEmpleado);
+                }
+                return acc;
+            }, []);
+        }
+
+        static async obtenerHistorial(ano, mes, nombre) {
+            const urls = APIEndpoints.getEndpoints('historial', { ano, mes });
+            const results = await this.fetchMultipleEndpoints(urls);
+            
+            return results.reduce((acc, data) => {
+                if (data.success && data.data.movimientos) {
+                    const movimientosEmpleado = data.data.movimientos
+                        .filter(mov => mov.usuario.toLowerCase() === nombre.toLowerCase());
+                    acc.push(...movimientosEmpleado);
+                }
+                return acc;
+            }, []);
+        }
     }
 
-    function fetchAndDisplayRetirosNorte(ano, mes) {
-        const apiUrl = `https://sucursal3.opticas.xyz/api/caja/retiros?ano=${ano}&mes=${mes}`;
-        const totalSpan = document.getElementById('total-retiros-norte');
-        const desgloseBody = document.getElementById('desglose-retiros-norte');
-        const loadingOverlay = document.getElementById('loading-overlay-retiros-norte');
+    // Función para imprimir rol de pagos
+    function imprimirRolPagos(userId) {
+        const contenido = document.getElementById(`rol-usuario-${userId}`);
+        const ventanaImpresion = window.open('', '_blank');
+        
+        ventanaImpresion.document.write(`
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <title>Rol de Pagos</title>
+                <style>
+                    @media print {
+                        body {
+                            font-family: Arial, sans-serif;
+                            font-size: 12pt;
+                            line-height: 1.4;
+                            margin: 2cm;
+                        }
+                        
+                        .table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 1rem;
+                            page-break-inside: auto;
+                        }
+                        
+                        .table th,
+                        .table td {
+                            border: 1px solid #ddd;
+                            padding: 8px;
+                            text-align: left;
+                        }
+                        
+                        .table th {
+                            background-color: #f4f4f4;
+                            font-weight: bold;
+                        }
+                        
+                        tr {
+                            page-break-inside: avoid;
+                            page-break-after: auto;
+                        }
+                        
+                        thead {
+                            display: table-header-group;
+                        }
+                        
+                        tfoot {
+                            display: table-footer-group;
+                        }
 
-        loadingOverlay.style.display = 'flex';
-        totalSpan.textContent = 'CARGANDO...';
-        desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">CARGANDO DATOS...</td></tr>';
-
-        fetch(apiUrl)
-            .then(response => {
-                if (!response.ok) throw new Error('Error en la red o respuesta no válida');
-                return response.json();
-            })
-            .then(data => {
-                const retirosFiltered = data.retiros ? data.retiros.filter(retiro => {
-                    const motivo = retiro.motivo.toLowerCase();
-                    return !motivo.includes('deposito') && !motivo.includes('depósito');
-                }) : [];
-                
-                const totalFiltrado = retirosFiltered.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
-                
-                totalRetirosNorte = totalFiltrado;
-                totalSpan.textContent = formatCurrency(totalRetirosNorte);
-                updateGlobalRetiros();
-
-                if (data.retiros && data.retiros.length > 0) {
-                    desgloseBody.innerHTML = data.retiros.map(retiro => {
-                        const esDeposito = retiro.motivo.toLowerCase().includes('deposito') || retiro.motivo.toLowerCase().includes('depósito');
-                        return `
-                            <tr ${esDeposito ? 'class="bg-light"' : ''}>
-                                <td>${retiro.fecha}</td>
-                                <td>${retiro.motivo} ${esDeposito ? '<span class="badge badge-info">DEPÓSITO</span>' : ''}</td>
-                                <td class="text-danger">${formatCurrency(retiro.valor)}</td>
-                                <td>${retiro.usuario}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center">NO HAY RETIROS REGISTRADOS</td></tr>';
-                }
-                loadingOverlay.style.display = 'none';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                totalSpan.textContent = 'ERROR';
-                desgloseBody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
-                loadingOverlay.style.display = 'none';
-            });
+                        .text-right { text-align: right; }
+                        .text-center { text-align: center; }
+                        .text-success { color: #28a745; }
+                        .text-danger { color: #dc3545; }
+                        
+                        .badge {
+                            padding: 2px 5px;
+                            border-radius: 3px;
+                            font-size: 90%;
+                        }
+                        
+                        .badge-apertura { background-color: #e8f5e9; }
+                        .badge-cierre { background-color: #ffebee; }
+                        
+                        .btn-imprimir {
+                            display: none;
+                        }
+                        
+                        @page {
+                            size: A4;
+                            margin: 2cm;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                ${contenido.innerHTML}
+            </body>
+            </html>
+        `);
+        
+        ventanaImpresion.document.close();
+        setTimeout(() => {
+            ventanaImpresion.print();
+            ventanaImpresion.close();
+        }, 250);
     }
 
-    // Funciones para obtener datos de pedidos
-    function fetchAndDisplayPedidosMatriz(ano, mes) {
-        const apiUrl = `https://opticas.xyz/api/pedidos?ano=${ano}&mes=${mes}`;
-        const totalSpan = document.getElementById('total-pedidos-matriz');
-        const desgloseBody = document.getElementById('desglose-pedidos-matriz');
-        const loadingOverlay = document.getElementById('loading-overlay-pedidos-matriz');
-
-        loadingOverlay.style.display = 'flex';
-        totalSpan.textContent = 'CARGANDO...';
-        desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
-
-        fetch(apiUrl)
-            .then(response => {
-                if (!response.ok) throw new Error('Error en la red o respuesta no válida');
-                return response.json();
-            })
-            .then(response => {
-                if (!response.success) throw new Error('La respuesta no fue exitosa');
-                const data = response.data;
-                const pedidos = data.pedidos || [];
-                const totales = data.totales || { ventas: 0, saldos: 0, cobrado: 0 };
-                
-                totalPedidosMatriz = parseFloat(totales.ventas) || 0;
-                totalSpan.textContent = formatCurrency(totalPedidosMatriz);
-                updateGlobalPedidos();
-
-                if (pedidos.length > 0) {
-                    desgloseBody.innerHTML = pedidos.map(pedido => {
-                        const fecha = new Date(pedido.fecha).toLocaleDateString('es-ES');
-                        const saldoPendiente = parseFloat(pedido.saldo) > 0;
-                        return `
-                            <tr class="${saldoPendiente ? 'table-warning' : ''}">
-                                <td>${fecha}</td>
-                                <td>${pedido.cliente}</td>
-                                <td>${formatCurrency(pedido.total)}</td>
-                                <td>
-                                    ${saldoPendiente ? 
-                                        `<span class="badge badge-warning">SALDO PENDIENTE: ${formatCurrency(pedido.saldo)}</span>` : 
-                                        `<span class="badge badge-success">PAGADO</span>`
-                                    }
-                                </td>
-                                <td>${pedido.usuario}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY PEDIDOS REGISTRADOS</td></tr>';
-                }
-                loadingOverlay.style.display = 'none';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                totalSpan.textContent = 'ERROR';
-                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
-                loadingOverlay.style.display = 'none';
-            });
-    }
-
-    function fetchAndDisplayPedidosRocio(ano, mes) {
-        const apiUrl = `https://escleroptica2.opticas.xyz/api/pedidos?ano=${ano}&mes=${mes}`;
-        const totalSpan = document.getElementById('total-pedidos-rocio');
-        const desgloseBody = document.getElementById('desglose-pedidos-rocio');
-        const loadingOverlay = document.getElementById('loading-overlay-pedidos-rocio');
-
-        loadingOverlay.style.display = 'flex';
-        totalSpan.textContent = 'CARGANDO...';
-        desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
-
-        fetch(apiUrl)
-            .then(response => {
-                if (!response.ok) throw new Error('Error en la red o respuesta no válida');
-                return response.json();
-            })
-            .then(response => {
-                if (!response.success) throw new Error('La respuesta no fue exitosa');
-                const data = response.data;
-                const pedidos = data.pedidos || [];
-                const totales = data.totales || { ventas: 0, saldos: 0, cobrado: 0 };
-                
-                totalPedidosRocio = parseFloat(totales.ventas) || 0;
-                totalSpan.textContent = formatCurrency(totalPedidosRocio);
-                updateGlobalPedidos();
-
-                if (pedidos.length > 0) {
-                    desgloseBody.innerHTML = pedidos.map(pedido => {
-                        const fecha = new Date(pedido.fecha).toLocaleDateString('es-ES');
-                        const saldoPendiente = parseFloat(pedido.saldo) > 0;
-                        return `
-                            <tr class="${saldoPendiente ? 'table-warning' : ''}">
-                                <td>${fecha}</td>
-                                <td>${pedido.cliente}</td>
-                                <td>${formatCurrency(pedido.total)}</td>
-                                <td>
-                                    ${saldoPendiente ? 
-                                        `<span class="badge badge-warning">SALDO PENDIENTE: ${formatCurrency(pedido.saldo)}</span>` : 
-                                        `<span class="badge badge-success">PAGADO</span>`
-                                    }
-                                </td>
-                                <td>${pedido.usuario}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY PEDIDOS REGISTRADOS</td></tr>';
-                }
-                loadingOverlay.style.display = 'none';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                totalSpan.textContent = 'ERROR';
-                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
-                loadingOverlay.style.display = 'none';
-            });
-    }
-
-    function fetchAndDisplayPedidosNorte(ano, mes) {
-        const apiUrl = `https://sucursal3.opticas.xyz/api/pedidos?ano=${ano}&mes=${mes}`;
-        const totalSpan = document.getElementById('total-pedidos-norte');
-        const desgloseBody = document.getElementById('desglose-pedidos-norte');
-        const loadingOverlay = document.getElementById('loading-overlay-pedidos-norte');
-
-        loadingOverlay.style.display = 'flex';
-        totalSpan.textContent = 'CARGANDO...';
-        desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
-
-        fetch(apiUrl)
-            .then(response => {
-                if (!response.ok) throw new Error('Error en la red o respuesta no válida');
-                return response.json();
-            })
-            .then(response => {
-                if (!response.success) throw new Error('La respuesta no fue exitosa');
-                const data = response.data;
-                const pedidos = data.pedidos || [];
-                const totales = data.totales || { ventas: 0, saldos: 0, cobrado: 0 };
-                
-                totalPedidosNorte = parseFloat(totales.ventas) || 0;
-                totalSpan.textContent = formatCurrency(totalPedidosNorte);
-                updateGlobalPedidos();
-
-                if (pedidos.length > 0) {
-                    desgloseBody.innerHTML = pedidos.map(pedido => {
-                        const fecha = new Date(pedido.fecha).toLocaleDateString('es-ES');
-                        const saldoPendiente = parseFloat(pedido.saldo) > 0;
-                        return `
-                            <tr class="${saldoPendiente ? 'table-warning' : ''}">
-                                <td>${fecha}</td>
-                                <td>${pedido.cliente}</td>
-                                <td>${formatCurrency(pedido.total)}</td>
-                                <td>
-                                    ${saldoPendiente ? 
-                                        `<span class="badge badge-warning">SALDO PENDIENTE: ${formatCurrency(pedido.saldo)}</span>` : 
-                                        `<span class="badge badge-success">PAGADO</span>`
-                                    }
-                                </td>
-                                <td>${pedido.usuario}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY PEDIDOS REGISTRADOS</td></tr>';
-                }
-                loadingOverlay.style.display = 'none';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                totalSpan.textContent = 'ERROR';
-                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
-                loadingOverlay.style.display = 'none';
-            });
-    }
-
-    // Funciones para obtener datos del historial
-    function fetchAndDisplayHistorialMatriz(ano, mes) {
-        const apiUrl = `https://opticas.xyz/api/caja/historial?ano=${ano}&mes=${mes}`;
-        const totalSpan = document.getElementById('total-historial-matriz');
-        const desgloseBody = document.getElementById('desglose-historial-matriz');
-        const loadingOverlay = document.getElementById('loading-overlay-historial-matriz');
-
-        loadingOverlay.style.display = 'flex';
-        totalSpan.textContent = 'CARGANDO...';
-        desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
-
-        fetch(apiUrl)
-            .then(response => {
-                if (!response.ok) throw new Error('Error en la red o respuesta no válida');
-                return response.json();
-            })
-            .then(response => {
-                if (!response.success) throw new Error('La respuesta no fue exitosa');
-                const data = response.data;
-                const movimientos = data.movimientos || [];
-                const totales = data.totales || { ingresos: 0, egresos: 0 };
-                
-                totalIngresosMatriz = parseFloat(totales.ingresos) || 0;
-                totalEgresosMatriz = parseFloat(totales.egresos) || 0;
-                const balance = totalIngresosMatriz - totalEgresosMatriz;
-                
-                totalSpan.textContent = formatCurrency(balance);
-                updateGlobalHistorial();
-
-                if (movimientos.length > 0) {
-                    desgloseBody.innerHTML = movimientos.map(movimiento => {
-                        const fecha = new Date(movimiento.fecha).toLocaleDateString('es-ES');
-                        const esIngreso = movimiento.descripcion === 'Apertura';
-                        return `
-                            <tr>
-                                <td>${fecha}</td>
-                                <td>
-                                    <span class="badge badge-${esIngreso ? 'success' : 'danger'}">
-                                        ${movimiento.descripcion}
-                                    </span>
-                                </td>
-                                <td>${movimiento.descripcion}</td>
-                                <td class="text-${esIngreso ? 'success' : 'danger'}">
-                                    ${formatCurrency(Math.abs(movimiento.monto))}
-                                </td>
-                                <td>${movimiento.usuario}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY MOVIMIENTOS REGISTRADOS</td></tr>';
-                }
-                loadingOverlay.style.display = 'none';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                totalSpan.textContent = 'ERROR';
-                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
-                loadingOverlay.style.display = 'none';
-            });
-    }
-
-    function fetchAndDisplayHistorialRocio(ano, mes) {
-        const apiUrl = `https://escleroptica2.opticas.xyz/api/caja/historial?ano=${ano}&mes=${mes}`;
-        const totalSpan = document.getElementById('total-historial-rocio');
-        const desgloseBody = document.getElementById('desglose-historial-rocio');
-        const loadingOverlay = document.getElementById('loading-overlay-historial-rocio');
-
-        loadingOverlay.style.display = 'flex';
-        totalSpan.textContent = 'CARGANDO...';
-        desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
-
-        fetch(apiUrl)
-            .then(response => {
-                if (!response.ok) throw new Error('Error en la red o respuesta no válida');
-                return response.json();
-            })
-            .then(response => {
-                if (!response.success) throw new Error('La respuesta no fue exitosa');
-                const data = response.data;
-                const movimientos = data.movimientos || [];
-                const totales = data.totales || { ingresos: 0, egresos: 0 };
-                
-                totalIngresosRocio = parseFloat(totales.ingresos) || 0;
-                totalEgresosRocio = parseFloat(totales.egresos) || 0;
-                const balance = totalIngresosRocio - totalEgresosRocio;
-                
-                totalSpan.textContent = formatCurrency(balance);
-                updateGlobalHistorial();
-
-                if (movimientos.length > 0) {
-                    desgloseBody.innerHTML = movimientos.map(movimiento => {
-                        const fecha = new Date(movimiento.fecha).toLocaleDateString('es-ES');
-                        const esIngreso = movimiento.descripcion === 'Apertura';
-                        return `
-                            <tr>
-                                <td>${fecha}</td>
-                                <td>
-                                    <span class="badge badge-${esIngreso ? 'success' : 'danger'}">
-                                        ${movimiento.descripcion}
-                                    </span>
-                                </td>
-                                <td>${movimiento.descripcion}</td>
-                                <td class="text-${esIngreso ? 'success' : 'danger'}">
-                                    ${formatCurrency(Math.abs(movimiento.monto))}
-                                </td>
-                                <td>${movimiento.usuario}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY MOVIMIENTOS REGISTRADOS</td></tr>';
-                }
-                loadingOverlay.style.display = 'none';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                totalSpan.textContent = 'ERROR';
-                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
-                loadingOverlay.style.display = 'none';
-            });
-    }
-
-    function fetchAndDisplayHistorialNorte(ano, mes) {
-        const apiUrl = `https://sucursal3.opticas.xyz/api/caja/historial?ano=${ano}&mes=${mes}`;
-        const totalSpan = document.getElementById('total-historial-norte');
-        const desgloseBody = document.getElementById('desglose-historial-norte');
-        const loadingOverlay = document.getElementById('loading-overlay-historial-norte');
-
-        loadingOverlay.style.display = 'flex';
-        totalSpan.textContent = 'CARGANDO...';
-        desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
-
-        fetch(apiUrl)
-            .then(response => {
-                if (!response.ok) throw new Error('Error en la red o respuesta no válida');
-                return response.json();
-            })
-            .then(response => {
-                if (!response.success) throw new Error('La respuesta no fue exitosa');
-                const data = response.data;
-                const movimientos = data.movimientos || [];
-                const totales = data.totales || { ingresos: 0, egresos: 0 };
-                
-                totalIngresosNorte = parseFloat(totales.ingresos) || 0;
-                totalEgresosNorte = parseFloat(totales.egresos) || 0;
-                const balance = totalIngresosNorte - totalEgresosNorte;
-                
-                totalSpan.textContent = formatCurrency(balance);
-                updateGlobalHistorial();
-
-                if (movimientos.length > 0) {
-                    desgloseBody.innerHTML = movimientos.map(movimiento => {
-                        const fecha = new Date(movimiento.fecha).toLocaleDateString('es-ES');
-                        const esIngreso = movimiento.descripcion === 'Apertura';
-                        return `
-                            <tr>
-                                <td>${fecha}</td>
-                                <td>
-                                    <span class="badge badge-${esIngreso ? 'success' : 'danger'}">
-                                        ${movimiento.descripcion}
-                                    </span>
-                                </td>
-                                <td>${movimiento.descripcion}</td>
-                                <td class="text-${esIngreso ? 'success' : 'danger'}">
-                                    ${formatCurrency(Math.abs(movimiento.monto))}
-                                </td>
-                                <td>${movimiento.usuario}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY MOVIMIENTOS REGISTRADOS</td></tr>';
-                }
-                loadingOverlay.style.display = 'none';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                totalSpan.textContent = 'ERROR';
-                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS</td></tr>';
-                loadingOverlay.style.display = 'none';
-            });
-    }
+    window.APIService = APIService;
+    window.imprimirRolPagos = imprimirRolPagos;
 </script>
 @endpush 

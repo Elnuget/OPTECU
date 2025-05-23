@@ -1,445 +1,384 @@
 @push('js')
 <script>
-    // Variables globales para almacenar datos de los roles
-    let datosRoles = {};
-
-    // Función para formatear moneda
-    function formatCurrency(amount) {
-        return new Intl.NumberFormat('es-EC', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(amount);
-    }
-
-    // Función para formatear fecha
-    function formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        });
-    }
-
-    // Función para formatear hora
-    function formatTime(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleTimeString('es-ES', {
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
-
-    // Función para obtener las URLs de API según la sucursal seleccionada
-    function getApiUrls(tipo) {
-        const sucursal = document.getElementById('filtroSucursal').value;
-        const urls = [];
-
-        if (sucursal === '' || sucursal === 'matriz') {
-            urls.push(`https://opticas.xyz/api/${tipo}`);
-        }
-        if (sucursal === '' || sucursal === 'rocio') {
-            urls.push(`https://escleroptica2.opticas.xyz/api/${tipo}`);
-        }
-        if (sucursal === '' || sucursal === 'norte') {
-            urls.push(`https://sucursal3.opticas.xyz/api/${tipo}`);
+    class RolPagosUtils {
+        static formatCurrency(amount) {
+            return new Intl.NumberFormat('es-EC', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
         }
 
-        return urls;
-    }
-
-    // Función para obtener retiros del empleado
-    async function obtenerRetiros(userId, nombre, ano, mes) {
-        const urls = getApiUrls('caja/retiros').map(url => `${url}?ano=${ano}&mes=${mes}`);
-        
-        if (!datosRoles[userId]) {
-            datosRoles[userId] = {
-                retiros: [],
-                retiros_total: 0,
-                pedidos: [],
-                pedidos_total: 0,
-                historial: {
-                    ingresos: 0,
-                    egresos: 0
-                },
-                movimientos: []
-            };
-        }
-        
-        datosRoles[userId].retiros = [];
-        datosRoles[userId].retiros_total = 0;
-        
-        for (const url of urls) {
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data.retiros) {
-                    const retirosEmpleado = data.retiros
-                        .filter(retiro => 
-                            retiro.usuario.toLowerCase() === nombre.toLowerCase() &&
-                            !retiro.motivo.toLowerCase().includes('deposito') &&
-                            !retiro.motivo.toLowerCase().includes('depósito')
-                        )
-                        .map(retiro => ({
-                            ...retiro,
-                            url: url // Agregar la URL para identificar la sucursal
-                        }));
-                    datosRoles[userId].retiros = [...datosRoles[userId].retiros, ...retirosEmpleado];
-                    datosRoles[userId].retiros_total += retirosEmpleado.reduce((sum, retiro) => 
-                        sum + Math.abs(parseFloat(retiro.valor)), 0
-                    );
-                }
-            } catch (error) {
-                console.error('Error al obtener retiros:', error);
-            }
-        }
-    }
-
-    // Función para obtener pedidos del empleado
-    async function obtenerPedidos(userId, nombre, ano, mes) {
-        const urls = getApiUrls('pedidos').map(url => `${url}?ano=${ano}&mes=${mes}`);
-        
-        if (!datosRoles[userId]) {
-            datosRoles[userId] = {
-                retiros: [],
-                retiros_total: 0,
-                pedidos: [],
-                pedidos_total: 0,
-                historial: {
-                    ingresos: 0,
-                    egresos: 0
-                },
-                movimientos: []
-            };
-        }
-        
-        datosRoles[userId].pedidos = [];
-        datosRoles[userId].pedidos_total = 0;
-        
-        for (const url of urls) {
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data.success && data.data.pedidos) {
-                    const pedidosEmpleado = data.data.pedidos
-                        .filter(pedido => 
-                            pedido.usuario.toLowerCase() === nombre.toLowerCase()
-                        )
-                        .map(pedido => ({
-                            ...pedido,
-                            url: url // Agregar la URL para identificar la sucursal
-                        }));
-                    datosRoles[userId].pedidos = [...datosRoles[userId].pedidos, ...pedidosEmpleado];
-                    datosRoles[userId].pedidos_total += pedidosEmpleado.reduce((sum, pedido) => 
-                        sum + parseFloat(pedido.total), 0
-                    );
-                }
-            } catch (error) {
-                console.error('Error al obtener pedidos:', error);
-            }
-        }
-    }
-
-    // Función para obtener historial del empleado
-    async function obtenerHistorial(userId, nombre, ano, mes) {
-        const urls = getApiUrls('caja/historial').map(url => `${url}?ano=${ano}&mes=${mes}`);
-        
-        if (!datosRoles[userId]) {
-            datosRoles[userId] = {
-                retiros: [],
-                retiros_total: 0,
-                pedidos: [],
-                pedidos_total: 0,
-                historial: {
-                    ingresos: 0,
-                    egresos: 0
-                },
-                movimientos: []
-            };
-        }
-        
-        datosRoles[userId].historial = { ingresos: 0, egresos: 0 };
-        datosRoles[userId].movimientos = [];
-        
-        for (const url of urls) {
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data.success && data.data.movimientos) {
-                    const movimientosEmpleado = data.data.movimientos
-                        .filter(mov => mov.usuario.toLowerCase() === nombre.toLowerCase())
-                        .map(mov => ({
-                            ...mov,
-                            url: url // Agregar la URL para identificar la sucursal
-                        }));
-                    
-                    movimientosEmpleado.forEach(mov => {
-                        const monto = Math.abs(parseFloat(mov.monto));
-                        if (mov.descripcion === 'Apertura') {
-                            datosRoles[userId].historial.ingresos += monto;
-                        } else {
-                            datosRoles[userId].historial.egresos += monto;
-                        }
-                        datosRoles[userId].movimientos.push(mov);
-                    });
-                }
-            } catch (error) {
-                console.error('Error al obtener historial:', error);
-            }
-        }
-    }
-
-    // Función para actualizar el rol de pagos de un usuario específico
-    function actualizarRolPagos(userId, nombre) {
-        try {
-            const mes = document.getElementById('filtroMes').value;
-            const ano = document.getElementById('filtroAno').value;
-            
-            // Actualizar período
-            document.getElementById(`periodo_${userId}`).textContent = `${mes}/${ano}`;
-            
-            // Actualizar total
-            document.getElementById(`total_${userId}`).textContent = formatCurrency(datosRoles[userId].pedidos_total || 0);
-
-            // Agrupar movimientos, pedidos y retiros por fecha
-            const movimientosPorFecha = agruparMovimientosPorFecha(datosRoles[userId].movimientos);
-            const pedidosPorFecha = agruparPedidosPorFecha(datosRoles[userId].pedidos || []);
-            const retirosPorFecha = agruparRetirosPorFecha(datosRoles[userId].retiros || []);
-            
-            // Generar filas para la tabla
-            const filas = [];
-            const todasLasFechas = new Set([
-                ...Object.keys(movimientosPorFecha),
-                ...Object.keys(pedidosPorFecha),
-                ...Object.keys(retirosPorFecha)
-            ]);
-
-            Array.from(todasLasFechas).sort().forEach(fecha => {
-                const movimientosDia = movimientosPorFecha[fecha] || { apertura: null, cierre: null };
-                const pedidosDelDia = pedidosPorFecha[fecha] || [];
-                const retirosDelDia = retirosPorFecha[fecha] || [];
-                
-                const totalPedidosDia = pedidosDelDia.reduce((sum, pedido) => sum + parseFloat(pedido.total), 0);
-                const totalRetirosDia = retirosDelDia.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
-
-                // Determinar la sucursal del día
-                let sucursalDia = null;
-                if (movimientosDia.apertura) {
-                    sucursalDia = getSucursalName(movimientosDia.apertura.url);
-                } else if (movimientosDia.cierre) {
-                    sucursalDia = getSucursalName(movimientosDia.cierre.url);
-                } else if (pedidosDelDia.length > 0 && pedidosDelDia[0].url) {
-                    sucursalDia = getSucursalName(pedidosDelDia[0].url);
-                } else if (retirosDelDia.length > 0 && retirosDelDia[0].url) {
-                    sucursalDia = getSucursalName(retirosDelDia[0].url);
-                }
-
-                filas.push(`
-                    <tr>
-                        <td>${formatDate(fecha)}</td>
-                        <td>
-                            ${movimientosDia.apertura ? 
-                                `<span class="badge badge-apertura">
-                                    APERTURA: ${formatCurrency(Math.abs(movimientosDia.apertura.monto))}
-                                    <span class="hora-movimiento">${formatTime(movimientosDia.apertura.fecha)}</span>
-                                </span>` : ''
-                            }
-                            ${movimientosDia.cierre ? 
-                                `<br><span class="badge badge-cierre">
-                                    CIERRE: ${formatCurrency(Math.abs(movimientosDia.cierre.monto))}
-                                    <span class="hora-movimiento">${formatTime(movimientosDia.cierre.fecha)}</span>
-                                </span>` : ''
-                            }
-                        </td>
-                        <td>
-                            ${sucursalDia ? 
-                                `<span class="sucursal-badge ${getSucursalClass(sucursalDia)}">
-                                    ${sucursalDia}
-                                </span>` : 
-                                '<small class="text-muted">NO DISPONIBLE</small>'
-                            }
-                        </td>
-                        <td>
-                            ${pedidosDelDia.length > 0 ? 
-                                `<div class="pedidos-dia">
-                                    <strong>Total: ${formatCurrency(totalPedidosDia)}</strong>
-                                    <ul class="list-unstyled mb-0">
-                                        ${pedidosDelDia.map(pedido => `
-                                            <li>
-                                                <small>
-                                                    ${formatTime(pedido.fecha)} - Orden: ${pedido.numero_orden}
-                                                    <span class="text-success">${formatCurrency(pedido.total)}</span>
-                                                </small>
-                                            </li>
-                                        `).join('')}
-                                    </ul>
-                                </div>` : 
-                                '<small class="text-muted">Sin pedidos</small>'
-                            }
-                        </td>
-                        <td>
-                            ${retirosDelDia.length > 0 ? 
-                                `<div class="retiros-dia">
-                                    <strong>Total: ${formatCurrency(totalRetirosDia)}</strong>
-                                    <ul class="list-unstyled mb-0">
-                                        ${retirosDelDia.map(retiro => `
-                                            <li>
-                                                <small>
-                                                    ${formatTime(retiro.fecha)} - ${retiro.motivo}
-                                                    <span class="text-danger">${formatCurrency(Math.abs(retiro.valor))}</span>
-                                                </small>
-                                            </li>
-                                        `).join('')}
-                                    </ul>
-                                </div>` : 
-                                '<small class="text-muted">Sin retiros</small>'
-                            }
-                        </td>
-                    </tr>
-                `);
+        static formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
             });
+        }
 
-            document.getElementById(`desglose_${userId}`).innerHTML = filas.join('');
+        static formatTime(dateString) {
+            return new Date(dateString).toLocaleTimeString('es-ES', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
 
-            // Si no hay datos, mostrar mensaje indicativo
-            if (todasLasFechas.size === 0) {
-                document.getElementById(`desglose_${userId}`).innerHTML = `
+        static getSucursalName(url) {
+            if (url.includes('opticas.xyz')) return 'MATRIZ';
+            if (url.includes('escleroptica2')) return 'ROCÍO';
+            if (url.includes('sucursal3')) return 'NORTE';
+            return 'DESCONOCIDA';
+        }
+
+        static agruparPorFecha(items, fechaKey = 'fecha') {
+            return items.reduce((acc, item) => {
+                const fecha = item[fechaKey].split('T')[0];
+                if (!acc[fecha]) {
+                    acc[fecha] = [];
+                }
+                acc[fecha].push(item);
+                return acc;
+            }, {});
+        }
+    }
+
+    class RolPagosAPI {
+        constructor(userId, nombre) {
+            this.userId = userId;
+            this.nombre = nombre;
+            this.data = {
+                retiros: [],
+                retiros_total: 0,
+                pedidos: [],
+                pedidos_total: 0,
+                historial: {
+                    ingresos: 0,
+                    egresos: 0
+                },
+                movimientos: []
+            };
+        }
+
+        static getApiUrls(tipo) {
+            const sucursal = document.getElementById('filtroSucursal').value;
+            const urls = [];
+
+            if (sucursal === '' || sucursal === 'matriz') {
+                urls.push(`https://opticas.xyz/api/${tipo}`);
+            }
+            if (sucursal === '' || sucursal === 'rocio') {
+                urls.push(`https://escleroptica2.opticas.xyz/api/${tipo}`);
+            }
+            if (sucursal === '' || sucursal === 'norte') {
+                urls.push(`https://sucursal3.opticas.xyz/api/${tipo}`);
+            }
+
+            return urls;
+        }
+
+        async obtenerRetiros(ano, mes) {
+            const urls = RolPagosAPI.getApiUrls('caja/retiros').map(url => `${url}?ano=${ano}&mes=${mes}`);
+            
+            this.data.retiros = [];
+            this.data.retiros_total = 0;
+            
+            for (const url of urls) {
+                try {
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (data.retiros) {
+                        const retirosEmpleado = data.retiros
+                            .filter(retiro => 
+                                retiro.usuario.toLowerCase() === this.nombre.toLowerCase() &&
+                                !retiro.motivo.toLowerCase().includes('deposito') &&
+                                !retiro.motivo.toLowerCase().includes('depósito')
+                            )
+                            .map(retiro => ({...retiro, url}));
+                        
+                        this.data.retiros.push(...retirosEmpleado);
+                        this.data.retiros_total += retirosEmpleado.reduce((sum, retiro) => 
+                            sum + Math.abs(parseFloat(retiro.valor)), 0
+                        );
+                    }
+                } catch (error) {
+                    console.error('Error al obtener retiros:', error);
+                }
+            }
+        }
+
+        async obtenerPedidos(ano, mes) {
+            const urls = RolPagosAPI.getApiUrls('pedidos').map(url => `${url}?ano=${ano}&mes=${mes}`);
+            
+            this.data.pedidos = [];
+            this.data.pedidos_total = 0;
+            
+            for (const url of urls) {
+                try {
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (data.success && data.data.pedidos) {
+                        const pedidosEmpleado = data.data.pedidos
+                            .filter(pedido => pedido.usuario.toLowerCase() === this.nombre.toLowerCase())
+                            .map(pedido => ({...pedido, url}));
+                        
+                        this.data.pedidos.push(...pedidosEmpleado);
+                        this.data.pedidos_total += pedidosEmpleado.reduce((sum, pedido) => 
+                            sum + parseFloat(pedido.total), 0
+                        );
+                    }
+                } catch (error) {
+                    console.error('Error al obtener pedidos:', error);
+                }
+            }
+        }
+
+        async obtenerHistorial(ano, mes) {
+            const urls = RolPagosAPI.getApiUrls('caja/historial').map(url => `${url}?ano=${ano}&mes=${mes}`);
+            
+            this.data.historial = { ingresos: 0, egresos: 0 };
+            this.data.movimientos = [];
+            
+            for (const url of urls) {
+                try {
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (data.success && data.data.movimientos) {
+                        const movimientosEmpleado = data.data.movimientos
+                            .filter(mov => mov.usuario.toLowerCase() === this.nombre.toLowerCase())
+                            .map(mov => ({...mov, url}));
+                        
+                        movimientosEmpleado.forEach(mov => {
+                            const monto = Math.abs(parseFloat(mov.monto));
+                            if (mov.descripcion === 'Apertura') {
+                                this.data.historial.ingresos += monto;
+                            } else {
+                                this.data.historial.egresos += monto;
+                            }
+                        });
+                        
+                        this.data.movimientos.push(...movimientosEmpleado);
+                    }
+                } catch (error) {
+                    console.error('Error al obtener historial:', error);
+                }
+            }
+        }
+
+        actualizarUI() {
+            try {
+                const mes = document.getElementById('filtroMes').value;
+                const ano = document.getElementById('filtroAno').value;
+                
+                // Actualizar período y total
+                document.getElementById(`periodo_${this.userId}`).textContent = `${mes}/${ano}`;
+                document.getElementById(`total_${this.userId}`).textContent = RolPagosUtils.formatCurrency(this.data.pedidos_total || 0);
+
+                // Agrupar datos por fecha
+                const movimientosPorFecha = this.agruparMovimientosPorFecha();
+                const pedidosPorFecha = RolPagosUtils.agruparPorFecha(this.data.pedidos);
+                const retirosPorFecha = RolPagosUtils.agruparPorFecha(this.data.retiros);
+                
+                // Generar filas
+                const todasLasFechas = new Set([
+                    ...Object.keys(movimientosPorFecha),
+                    ...Object.keys(pedidosPorFecha),
+                    ...Object.keys(retirosPorFecha)
+                ]);
+
+                const filas = this.generarFilasTabla(Array.from(todasLasFechas), {
+                    movimientosPorFecha,
+                    pedidosPorFecha,
+                    retirosPorFecha
+                });
+
+                document.getElementById(`desglose_${this.userId}`).innerHTML = filas.join('');
+
+                return true;
+            } catch (error) {
+                console.error('Error al actualizar UI:', error);
+                return false;
+            }
+        }
+
+        agruparMovimientosPorFecha() {
+            const movimientosPorFecha = {};
+            
+            this.data.movimientos.forEach(mov => {
+                const fecha = mov.fecha.split('T')[0];
+                if (!movimientosPorFecha[fecha]) {
+                    movimientosPorFecha[fecha] = { apertura: null, cierre: null };
+                }
+                
+                if (mov.descripcion === 'Apertura') {
+                    movimientosPorFecha[fecha].apertura = mov;
+                } else {
+                    movimientosPorFecha[fecha].cierre = mov;
+                }
+            });
+            
+            return movimientosPorFecha;
+        }
+
+        generarFilasTabla(fechas, datos) {
+            if (fechas.length === 0) {
+                return [`
                     <tr>
                         <td colspan="5" class="text-center text-muted">
                             <i class="fas fa-info-circle"></i> NO HAY DATOS PARA ESTE PERÍODO
                         </td>
                     </tr>
+                `];
+            }
+
+            return fechas.sort().map(fecha => {
+                const movimientosDia = datos.movimientosPorFecha[fecha] || { apertura: null, cierre: null };
+                const pedidosDelDia = datos.pedidosPorFecha[fecha] || [];
+                const retirosDelDia = datos.retirosPorFecha[fecha] || [];
+                
+                const totalPedidosDia = pedidosDelDia.reduce((sum, pedido) => sum + parseFloat(pedido.total), 0);
+                const totalRetirosDia = retirosDelDia.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
+
+                // Determinar la sucursal del día
+                let sucursalDia = this.determinarSucursalDia(movimientosDia, pedidosDelDia, retirosDelDia);
+
+                return this.generarFilaHTML(fecha, {
+                    movimientosDia,
+                    pedidosDelDia,
+                    retirosDelDia,
+                    totalPedidosDia,
+                    totalRetirosDia,
+                    sucursalDia
+                });
+            });
+        }
+
+        determinarSucursalDia(movimientosDia, pedidosDelDia, retirosDelDia) {
+            if (movimientosDia.apertura) return RolPagosUtils.getSucursalName(movimientosDia.apertura.url);
+            if (movimientosDia.cierre) return RolPagosUtils.getSucursalName(movimientosDia.cierre.url);
+            if (pedidosDelDia.length > 0) return RolPagosUtils.getSucursalName(pedidosDelDia[0].url);
+            if (retirosDelDia.length > 0) return RolPagosUtils.getSucursalName(retirosDelDia[0].url);
+            return null;
+        }
+
+        generarFilaHTML(fecha, datos) {
+            const {
+                movimientosDia,
+                pedidosDelDia,
+                retirosDelDia,
+                totalPedidosDia,
+                totalRetirosDia,
+                sucursalDia
+            } = datos;
+
+            return `
+                <tr>
+                    <td>${RolPagosUtils.formatDate(fecha)}</td>
+                    <td>
+                        ${this.generarHTMLMovimientos(movimientosDia)}
+                    </td>
+                    <td>
+                        ${sucursalDia ? `<span class="sucursal-badge sucursal-${sucursalDia.toLowerCase()}">${sucursalDia}</span>` : ''}
+                    </td>
+                    <td>
+                        ${this.generarHTMLPedidos(pedidosDelDia, totalPedidosDia)}
+                    </td>
+                    <td>
+                        ${this.generarHTMLRetiros(retirosDelDia, totalRetirosDia)}
+                    </td>
+                </tr>
+            `;
+        }
+
+        generarHTMLMovimientos(movimientosDia) {
+            let html = '';
+            
+            if (movimientosDia.apertura) {
+                html += `
+                    <span class="badge badge-apertura">
+                        APERTURA: ${RolPagosUtils.formatCurrency(Math.abs(movimientosDia.apertura.monto))}
+                        <span class="hora-movimiento">${RolPagosUtils.formatTime(movimientosDia.apertura.fecha)}</span>
+                    </span>
                 `;
             }
-
-            return true;
-
-        } catch (error) {
-            console.error('Error al actualizar el rol:', error);
-            alert('Error al actualizar el rol de pagos: ' + error.message);
-            return false;
+            
+            if (movimientosDia.cierre) {
+                html += `
+                    <br><span class="badge badge-cierre">
+                        CIERRE: ${RolPagosUtils.formatCurrency(Math.abs(movimientosDia.cierre.monto))}
+                        <span class="hora-movimiento">${RolPagosUtils.formatTime(movimientosDia.cierre.fecha)}</span>
+                    </span>
+                `;
+            }
+            
+            return html;
         }
-    }
 
-    // Función para obtener el nombre de la sucursal basado en la URL
-    function getSucursalName(url) {
-        if (url.includes('opticas.xyz') && !url.includes('escleroptica2') && !url.includes('sucursal3')) {
-            return 'MATRIZ';
-        } else if (url.includes('escleroptica2')) {
-            return 'ROCÍO';
-        } else if (url.includes('sucursal3')) {
-            return 'NORTE';
+        generarHTMLPedidos(pedidos, total) {
+            if (pedidos.length === 0) {
+                return '<small class="text-muted">Sin pedidos</small>';
+            }
+
+            return `
+                <div class="pedidos-dia">
+                    <strong>Total: ${RolPagosUtils.formatCurrency(total)}</strong>
+                    <ul class="list-unstyled mb-0">
+                        ${pedidos.map(pedido => `
+                            <li>
+                                <small>
+                                    ${RolPagosUtils.formatTime(pedido.fecha)} - ${pedido.cliente}
+                                    <span class="text-success">${RolPagosUtils.formatCurrency(pedido.total)}</span>
+                                </small>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
         }
-        return 'DESCONOCIDO';
-    }
 
-    // Función para obtener la clase CSS de la sucursal
-    function getSucursalClass(sucursal) {
-        switch (sucursal) {
-            case 'MATRIZ':
-                return 'sucursal-matriz';
-            case 'ROCÍO':
-                return 'sucursal-rocio';
-            case 'NORTE':
-                return 'sucursal-norte';
-            default:
-                return '';
+        generarHTMLRetiros(retiros, total) {
+            if (retiros.length === 0) {
+                return '<small class="text-muted">Sin retiros</small>';
+            }
+
+            return `
+                <div class="retiros-dia">
+                    <strong>Total: ${RolPagosUtils.formatCurrency(total)}</strong>
+                    <ul class="list-unstyled mb-0">
+                        ${retiros.map(retiro => `
+                            <li>
+                                <small>
+                                    ${RolPagosUtils.formatTime(retiro.fecha)} - ${retiro.motivo}
+                                    <span class="text-danger">${RolPagosUtils.formatCurrency(Math.abs(retiro.valor))}</span>
+                                </small>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
         }
-    }
-
-    // Función para agrupar movimientos por fecha
-    function agruparMovimientosPorFecha(movimientos) {
-        const movimientosPorFecha = {};
-        movimientos.forEach(mov => {
-            const fecha = mov.fecha.split('T')[0];
-            if (!movimientosPorFecha[fecha]) {
-                movimientosPorFecha[fecha] = {
-                    apertura: null,
-                    cierre: null
-                };
-            }
-            if (mov.descripcion === 'Apertura') {
-                movimientosPorFecha[fecha].apertura = mov;
-            } else {
-                movimientosPorFecha[fecha].cierre = mov;
-            }
-        });
-        return movimientosPorFecha;
-    }
-
-    // Función para agrupar pedidos por fecha
-    function agruparPedidosPorFecha(pedidos) {
-        const pedidosPorFecha = {};
-        pedidos.forEach(pedido => {
-            const fecha = pedido.fecha.split('T')[0];
-            if (!pedidosPorFecha[fecha]) {
-                pedidosPorFecha[fecha] = [];
-            }
-            pedidosPorFecha[fecha].push(pedido);
-        });
-        return pedidosPorFecha;
-    }
-
-    // Función para agrupar retiros por fecha
-    function agruparRetirosPorFecha(retiros) {
-        const retirosPorFecha = {};
-        retiros.forEach(retiro => {
-            const fecha = retiro.fecha.split('T')[0];
-            if (!retirosPorFecha[fecha]) {
-                retirosPorFecha[fecha] = [];
-            }
-            retirosPorFecha[fecha].push(retiro);
-        });
-        return retirosPorFecha;
     }
 
     // Función principal para obtener el rol de pagos
-    async function obtenerRolPagos(userId, nombre) {
-        const ano = document.getElementById('filtroAno').value;
-        const mes = document.getElementById('filtroMes').value;
-
+    async function obtenerRolPagos(userId, nombre, ano, mes) {
         if (!ano || !mes) {
             alert('Por favor seleccione año y mes');
             return;
         }
 
         try {
+            const api = new RolPagosAPI(userId, nombre);
+            
             await Promise.all([
-                obtenerRetiros(userId, nombre, ano, mes),
-                obtenerPedidos(userId, nombre, ano, mes),
-                obtenerHistorial(userId, nombre, ano, mes)
+                api.obtenerRetiros(ano, mes),
+                api.obtenerPedidos(ano, mes),
+                api.obtenerHistorial(ano, mes)
             ]);
 
-            actualizarRolPagos(userId, nombre);
+            api.actualizarUI();
         } catch (error) {
             console.error('Error al generar rol:', error);
             alert('Error al generar el rol de pagos');
         }
-    }
-
-    // Función para imprimir rol de pagos
-    function imprimirRolPagos(userId) {
-        const contenido = document.getElementById(`rol-usuario-${userId}`);
-        const ventanaImpresion = window.open('', '_blank');
-        ventanaImpresion.document.write(`
-            <html>
-                <head>
-                    <title>Rol de Pagos</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; }
-                        .table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-                        .table th, .table td { border: 1px solid #ddd; padding: 8px; }
-                        .text-right { text-align: right; }
-                        .text-center { text-align: center; }
-                    </style>
-                </head>
-                <body>
-                    ${contenido.innerHTML}
-                </body>
-            </html>
-        `);
-        ventanaImpresion.document.close();
-        ventanaImpresion.print();
     }
 </script>
 @endpush 

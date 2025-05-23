@@ -16,91 +16,76 @@
     let totalIngresosNorte = 0;
     let totalEgresosNorte = 0;
 
-    $(document).ready(function() {
-        // Inicializar DataTable
-        var sueldosTable = $('#sueldosTable').DataTable({
-            "order": [[0, "desc"]],
-            "paging": false,
-            "info": false,
-            "dom": 'Bfrt',
-            "buttons": [
-                'excelHtml5',
-                'csvHtml5',
-                {
-                    "extend": 'print',
-                    "text": 'IMPRIMIR',
-                    "autoPrint": true,
-                    "exportOptions": {
-                        "columns": [0, 1, 2]
-                    },
-                    "customize": function(win) {
-                        $(win.document.body).css('font-size', '16pt');
-                        $(win.document.body).find('table')
-                            .addClass('compact')
-                            .css('font-size', 'inherit');
-                    }
-                },
-                {
-                    "extend": 'pdfHtml5',
-                    "text": 'PDF',
-                    "filename": 'Sueldos.pdf',
-                    "pageSize": 'LETTER',
-                    "exportOptions": {
-                        "columns": [0, 1, 2]
-                    }
-                }
-            ],
-            "language": {
-                "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
-            }
-        });
-
-        // Función para formatear números como moneda
-        window.formatCurrency = function(number) {
-            return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(number);
+    class RolPagosManager {
+        constructor() {
+            this.tipoSucursal = window.tipoSucursal;
+            this.initializeEventListeners();
+            this.loadInitialData();
         }
 
-        // Event listeners
-        const filtroAno = document.getElementById('filtroAno');
-        const filtroMes = document.getElementById('filtroMes');
-        const filtroSucursal = document.getElementById('filtroSucursal');
-        const filtroUsuario = document.getElementById('filtroUsuario');
+        initializeEventListeners() {
+            const filtros = ['#filtroAno', '#filtroMes'];
+            if (this.tipoSucursal === 'todas') {
+                filtros.push('#filtroSucursal');
+            }
 
-        filtroAno.addEventListener('change', function() {
-            updateAllCards(this.value, filtroMes.value);
-        });
+            // Manejar cambios en los filtros
+            $(filtros.join(', ')).on('change', () => this.updateAllData());
 
-        filtroMes.addEventListener('change', function() {
-            updateAllCards(filtroAno.value, this.value);
-        });
+            // Manejar el botón "Actual"
+            $('#actualButton').on('click', () => this.setCurrentPeriod());
 
-        if (window.tipoSucursal === 'todas') {
-            filtroSucursal.addEventListener('change', function() {
-                updateAllCards(filtroAno.value, filtroMes.value);
+            // Manejar botones de impresión
+            $('.btn-imprimir').on('click', (e) => {
+                const userId = $(e.currentTarget).data('user');
+                this.imprimirRolPagos(userId);
             });
         }
 
-        filtroUsuario.addEventListener('change', function() {
-            updateAllCards(filtroAno.value, filtroMes.value);
-        });
-
-        document.getElementById('actualButton').addEventListener('click', function() {
-            const currentDate = new Date();
-            const currentYear = currentDate.getFullYear();
-            const currentMonth = currentDate.getMonth() + 1;
-
-            filtroAno.value = currentYear;
-            filtroMes.value = currentMonth;
-            if (window.tipoSucursal === 'todas') {
-                filtroSucursal.value = '';
+        setCurrentPeriod() {
+            const now = new Date();
+            $('#filtroAno').val(now.getFullYear());
+            $('#filtroMes').val(now.getMonth() + 1);
+            
+            if (this.tipoSucursal === 'todas') {
+                $('#filtroSucursal').val('');
             }
-            document.getElementById('filtroUsuario').value = '';
 
-            updateAllCards(currentYear, currentMonth);
-        });
+            this.updateAllData();
+        }
 
-        // Carga inicial de datos
-        updateAllCards(filtroAno.value, filtroMes.value);
+        updateAllData() {
+            const ano = $('#filtroAno').val();
+            const mes = $('#filtroMes').val();
+
+            if (!ano || !mes) {
+                alert('Por favor seleccione año y mes');
+                return;
+            }
+
+            $('.rol-usuario').each((_, element) => {
+                const userId = $(element).attr('id').replace('rol-usuario-', '');
+                const nombre = $(element).find('.text-primary').first().text();
+                this.cargarDatosUsuario(userId, nombre);
+            });
+        }
+
+        cargarDatosUsuario(userId, nombre) {
+            const ano = $('#filtroAno').val();
+            const mes = $('#filtroMes').val();
+            const sucursal = $('#filtroSucursal').val();
+            
+            obtenerRolPagos(userId, nombre, ano, mes, sucursal);
+        }
+
+        loadInitialData() {
+            this.updateAllData();
+        }
+    }
+
+    // Inicializar cuando el documento esté listo
+    $(document).ready(() => {
+        window.rolPagosManager = new RolPagosManager();
     });
 </script>
 @endpush 
