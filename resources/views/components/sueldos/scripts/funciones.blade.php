@@ -192,7 +192,8 @@
                                 return {
                                     ...mov,
                                     url,
-                                    sucursal
+                                    sucursal,
+                                    valor_editable: '0.00' // Agregamos el campo para el valor editable
                                 };
                             });
                         
@@ -421,6 +422,14 @@
                     </td>
                     <td>
                         ${this.generarHTMLRetiros(retirosDelDia, totalRetirosDia)}
+                    </td>
+                    <td>
+                        <input type="number" 
+                               class="form-control valor-editable" 
+                               data-row-id="${fechaMovimiento}"
+                               value="0.00" 
+                               step="0.01" 
+                               min="0">
                     </td>
                 </tr>
             `;

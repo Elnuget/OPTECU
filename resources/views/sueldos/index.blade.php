@@ -102,6 +102,14 @@
             let selectedUserId = null;
             let selectedUserName = null;
 
+            // Función para manejar el cambio en los valores editables
+            $(document).on('change', '.valor-editable', function() {
+                const valor = $(this).val();
+                const rowId = $(this).data('row-id');
+                // Aquí puedes agregar la lógica para guardar el valor
+                console.log('Valor cambiado:', valor, 'para la fila:', rowId);
+            });
+
             // Función para cargar los datos del rol
             function cargarRolDePagos() {
                 if (!selectedUserId) return;
@@ -152,6 +160,7 @@
                                             <th>MOVIMIENTOS</th>
                                             <th>PEDIDOS</th>
                                             <th>RETIROS</th>
+                                            <th>VALOR</th>
                                         </tr>
                                     </thead>
                                     <tbody id="desglose_${selectedUserId}">

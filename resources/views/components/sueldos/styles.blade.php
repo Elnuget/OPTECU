@@ -563,4 +563,18 @@
             margin-top: 2px;
         }
     }
+
+    .valor-editable {
+        width: 100px;
+        text-align: right;
+        padding: 4px 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .valor-editable:focus {
+        border-color: #80bdff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    }
 </style> 
