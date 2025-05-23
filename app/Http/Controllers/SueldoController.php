@@ -229,4 +229,45 @@ class SueldoController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtiene los sueldos con descripción REGISTROCOBRO
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function getRegistrosCobro(Request $request)
+    {
+        try {
+            $query = Sueldo::where('descripcion', 'REGISTROCOBRO');
+            
+            // Filtros opcionales
+            if ($request->has('user_id')) {
+                $query->where('user_id', $request->user_id);
+            }
+            
+            if ($request->has('fecha_inicio')) {
+                $query->where('fecha', '>=', $request->fecha_inicio);
+            }
+            
+            if ($request->has('fecha_fin')) {
+                $query->where('fecha', '<=', $request->fecha_fin);
+            }
+            
+            $registros = $query->with('user')
+                             ->orderBy('fecha', 'desc')
+                             ->get();
+            
+            return response()->json([
+                'success' => true,
+                'data' => $registros,
+                'total' => $registros->sum('valor')
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'ERROR AL OBTENER LOS REGISTROS DE COBRO: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 } 

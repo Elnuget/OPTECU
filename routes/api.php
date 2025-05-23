@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\PagoController;
 use App\Http\Controllers\Api\PedidoController;
 use App\Http\Controllers\Api\CashHistoryController;
 use App\Http\Controllers\Api\HistorialClinicoController;
+use App\Http\Controllers\SueldoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,3 +33,5 @@ Route::get('/pedidos/buscar-por/{campo}/{valor}', [PedidoController::class, 'bus
 
 // Ruta para buscar historiales clínicos por cualquier campo de datos personales
 Route::get('/historiales-clinicos/buscar-por/{campo}/{valor}', [HistorialClinicoController::class, 'buscarPorCampo']);
+
+Route::get('/sueldos/registros-cobro', [SueldoController::class, 'getRegistrosCobro']);

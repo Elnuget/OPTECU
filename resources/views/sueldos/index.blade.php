@@ -233,6 +233,66 @@
             </div>
         </div>
     </div>
+
+    <!-- Nueva tarjeta para Registros de Cobro -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3 class="card-title">REGISTROS DE COBRO</h3>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="filtroUsuarioCobro">FILTRAR POR USUARIO:</label>
+                        <select class="form-control" id="filtroUsuarioCobro">
+                            <option value="">TODOS LOS USUARIOS</option>
+                            @foreach($users as $user)
+                                <option value="{{ $user->id }}">{{ $user->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="fechaInicioCobro">FECHA INICIO:</label>
+                        <input type="date" class="form-control" id="fechaInicioCobro">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="fechaFinCobro">FECHA FIN:</label>
+                        <input type="date" class="form-control" id="fechaFinCobro">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>EMPLEADO</th>
+                            <th>VALOR</th>
+                            <th>ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaRegistrosCobro">
+                        <tr>
+                            <td colspan="4" class="text-center">
+                                <i class="fas fa-spinner fa-spin"></i> CARGANDO REGISTROS...
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" class="text-right"><strong>TOTAL:</strong></td>
+                            <td colspan="2"><strong id="totalRegistrosCobro">$0.00</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
 @stop
 
 @section('js')
@@ -499,6 +559,80 @@
             // Hacer las funciones disponibles globalmente
             window.editarSueldo = editarSueldo;
             window.eliminarSueldo = eliminarSueldo;
+
+            // Función para cargar los registros de cobro
+            function cargarRegistrosCobro() {
+                const userId = $('#filtroUsuarioCobro').val();
+                const fechaInicio = $('#fechaInicioCobro').val();
+                const fechaFin = $('#fechaFinCobro').val();
+                
+                let url = '/api/sueldos/registros-cobro?';
+                
+                if (userId) url += `user_id=${userId}&`;
+                if (fechaInicio) url += `fecha_inicio=${fechaInicio}&`;
+                if (fechaFin) url += `fecha_fin=${fechaFin}&`;
+                
+                $.ajax({
+                    url: url,
+                    method: 'GET',
+                    success: function(response) {
+                        if (response.success) {
+                            const registros = response.data;
+                            let html = '';
+                            
+                            if (registros.length === 0) {
+                                html = `
+                                    <tr>
+                                        <td colspan="4" class="text-center">
+                                            NO SE ENCONTRARON REGISTROS
+                                        </td>
+                                    </tr>
+                                `;
+                            } else {
+                                registros.forEach(registro => {
+                                    const fecha = new Date(registro.fecha).toLocaleDateString();
+                                    html += `
+                                        <tr>
+                                            <td>${fecha}</td>
+                                            <td>${registro.user.name}</td>
+                                            <td>$${parseFloat(registro.valor).toFixed(2)}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-danger" onclick="eliminarSueldo(${registro.id})">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                });
+                            }
+                            
+                            $('#tablaRegistrosCobro').html(html);
+                            $('#totalRegistrosCobro').text(`$${parseFloat(response.total).toFixed(2)}`);
+                        } else {
+                            Swal.fire({
+                                title: 'ERROR',
+                                text: 'ERROR AL CARGAR LOS REGISTROS',
+                                icon: 'error'
+                            });
+                        }
+                    },
+                    error: function() {
+                        Swal.fire({
+                            title: 'ERROR',
+                            text: 'ERROR AL CARGAR LOS REGISTROS',
+                            icon: 'error'
+                        });
+                    }
+                });
+            }
+
+            // Cargar registros al iniciar
+            cargarRegistrosCobro();
+
+            // Manejar cambios en los filtros
+            $('#filtroUsuarioCobro, #fechaInicioCobro, #fechaFinCobro').change(function() {
+                cargarRegistrosCobro();
+            });
         });
     </script>
 @stop 
