@@ -372,51 +372,57 @@
                 sucursalDia
             } = datos;
 
-            // Preparar información de operaciones por sucursal
-            const sucursalInfo = {};
-            if (sucursalDia) {
-                sucursalDia.split(' / ').forEach(suc => {
-                    sucursalInfo[suc] = {
-                        movimientos: [],
-                        pedidos: 0,
-                        retiros: 0
-                    };
-                });
+            // Inicializar información de todas las sucursales posibles
+            const sucursalInfo = {
+                'MATRIZ': {
+                    movimientos: [],
+                    pedidos: 0,
+                    retiros: 0
+                },
+                'ROCÍO': {
+                    movimientos: [],
+                    pedidos: 0,
+                    retiros: 0
+                },
+                'NORTE': {
+                    movimientos: [],
+                    pedidos: 0,
+                    retiros: 0
+                }
+            };
 
-                // Contar movimientos por sucursal
-                if (movimientosDia.matriz.apertura) {
-                    sucursalInfo['MATRIZ'].movimientos.push('APERTURA');
-                }
-                if (movimientosDia.rocio.apertura) {
-                    sucursalInfo['ROCÍO'].movimientos.push('APERTURA');
-                }
-                if (movimientosDia.norte.apertura) {
-                    sucursalInfo['NORTE'].movimientos.push('APERTURA');
-                }
-                if (movimientosDia.matriz.cierre) {
-                    sucursalInfo['MATRIZ'].movimientos.push('CIERRE');
-                }
-                if (movimientosDia.rocio.cierre) {
-                    sucursalInfo['ROCÍO'].movimientos.push('CIERRE');
-                }
-                if (movimientosDia.norte.cierre) {
-                    sucursalInfo['NORTE'].movimientos.push('CIERRE');
-                }
+            // Procesar movimientos
+            if (movimientosDia.matriz.apertura) sucursalInfo['MATRIZ'].movimientos.push('APERTURA');
+            if (movimientosDia.matriz.cierre) sucursalInfo['MATRIZ'].movimientos.push('CIERRE');
+            if (movimientosDia.rocio.apertura) sucursalInfo['ROCÍO'].movimientos.push('APERTURA');
+            if (movimientosDia.rocio.cierre) sucursalInfo['ROCÍO'].movimientos.push('CIERRE');
+            if (movimientosDia.norte.apertura) sucursalInfo['NORTE'].movimientos.push('APERTURA');
+            if (movimientosDia.norte.cierre) sucursalInfo['NORTE'].movimientos.push('CIERRE');
 
-                // Contar pedidos por sucursal
-                pedidosDelDia.forEach(pedido => {
-                    if (sucursalInfo[pedido.sucursal]) {
-                        sucursalInfo[pedido.sucursal].pedidos++;
-                    }
-                });
+            // Contar pedidos por sucursal
+            pedidosDelDia.forEach(pedido => {
+                const sucursal = pedido.sucursal;
+                if (sucursalInfo[sucursal]) {
+                    sucursalInfo[sucursal].pedidos++;
+                }
+            });
 
-                // Contar retiros por sucursal
-                retirosDelDia.forEach(retiro => {
-                    if (sucursalInfo[retiro.sucursal]) {
-                        sucursalInfo[retiro.sucursal].retiros++;
-                    }
-                });
-            }
+            // Contar retiros por sucursal
+            retirosDelDia.forEach(retiro => {
+                const sucursal = retiro.sucursal;
+                if (sucursalInfo[sucursal]) {
+                    sucursalInfo[sucursal].retiros++;
+                }
+            });
+
+            // Determinar qué sucursales tienen actividad
+            const sucursalesActivas = Object.entries(sucursalInfo)
+                .filter(([_, info]) => 
+                    info.movimientos.length > 0 || 
+                    info.pedidos > 0 || 
+                    info.retiros > 0
+                )
+                .map(([suc, _]) => suc);
 
             return `
                 <tr>
@@ -425,8 +431,8 @@
                         ${this.generarHTMLMovimientos(movimientosDia)}
                     </td>
                     <td class="text-center">
-                        ${sucursalDia ? 
-                            sucursalDia.split(' / ').map(suc => {
+                        ${sucursalesActivas.length > 0 ? 
+                            sucursalesActivas.map(suc => {
                                 const info = sucursalInfo[suc];
                                 const detalles = [];
                                 
