@@ -301,20 +301,18 @@
 
             document.getElementById(`desglose_${userId}`).innerHTML = filas.join('');
 
-            // Verificar si hay datos
-            const hayDatos = todasLasFechas.size > 0 || 
-                           datosRoles[userId].pedidos_total > 0 || 
-                           datosRoles[userId].retiros_total > 0 ||
-                           datosRoles[userId].historial.ingresos > 0 ||
-                           datosRoles[userId].historial.egresos > 0;
-
-            // Mostrar u ocultar el contenedor del rol
-            const contenedorRol = document.getElementById(`rol-usuario-${userId}`);
-            if (contenedorRol) {
-                contenedorRol.style.display = hayDatos ? 'block' : 'none';
+            // Si no hay datos, mostrar mensaje indicativo
+            if (todasLasFechas.size === 0) {
+                document.getElementById(`desglose_${userId}`).innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            <i class="fas fa-info-circle"></i> NO HAY DATOS PARA ESTE PERÍODO
+                        </td>
+                    </tr>
+                `;
             }
 
-            return hayDatos;
+            return true;
 
         } catch (error) {
             console.error('Error al actualizar el rol:', error);
