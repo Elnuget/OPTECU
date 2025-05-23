@@ -134,6 +134,16 @@
                     contenedor.append(`
                         <div class="rol-usuario" id="rol_${selectedUserId}">
                             <h4>${selectedUserName}</h4>
+                            <div class="mb-3 d-flex justify-content-between">
+                                <div>
+                                    <strong>PERÍODO: </strong>
+                                    <span id="periodo_${selectedUserId}">-</span>
+                                </div>
+                                <div>
+                                    <strong>TOTAL VENTAS: </strong>
+                                    <span id="total_${selectedUserId}">$0.00</span>
+                                </div>
+                            </div>
                             <div class="table-responsive">
                                 <table class="table table-bordered table-movimientos">
                                     <thead>
@@ -152,18 +162,6 @@
                                             </td>
                                         </tr>
                                     </tbody>
-                                    <tfoot>
-                                        <tr>
-                                            <td colspan="3">
-                                                <strong>PERÍODO: </strong>
-                                                <span id="periodo_${selectedUserId}">-</span>
-                                            </td>
-                                            <td colspan="2" class="text-right">
-                                                <strong>TOTAL: </strong>
-                                                <span id="total_${selectedUserId}">$0.00</span>
-                                            </td>
-                                        </tr>
-                                    </tfoot>
                                 </table>
                             </div>
                         </div>
