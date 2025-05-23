@@ -206,14 +206,38 @@
                 const mes = document.getElementById('filtroMes').value;
                 const ano = document.getElementById('filtroAno').value;
                 
+                // Filtrar datos por mes y año
+                const pedidosFiltrados = this.data.pedidos.filter(pedido => {
+                    const fecha = new Date(pedido.fecha);
+                    const mesPedido = (fecha.getMonth() + 1).toString().padStart(2, '0');
+                    const anoPedido = fecha.getFullYear().toString();
+                    return mesPedido === mes && anoPedido === ano;
+                });
+
+                const retirosFiltrados = this.data.retiros.filter(retiro => {
+                    const fecha = new Date(retiro.fecha);
+                    const mesRetiro = (fecha.getMonth() + 1).toString().padStart(2, '0');
+                    const anoRetiro = fecha.getFullYear().toString();
+                    return mesRetiro === mes && anoRetiro === ano;
+                });
+
+                // Calcular totales solo con los datos filtrados
+                const totalPedidos = pedidosFiltrados.reduce((sum, pedido) => 
+                    sum + parseFloat(pedido.total), 0
+                );
+
+                const totalRetiros = retirosFiltrados.reduce((sum, retiro) => 
+                    sum + Math.abs(parseFloat(retiro.valor)), 0
+                );
+
                 // Actualizar período y total
                 document.getElementById(`periodo_${this.userId}`).textContent = `${mes}/${ano}`;
-                document.getElementById(`total_${this.userId}`).textContent = RolPagosUtils.formatCurrency(this.data.pedidos_total || 0);
+                document.getElementById(`total_${this.userId}`).textContent = RolPagosUtils.formatCurrency(totalPedidos || 0);
 
                 // Agrupar datos por fecha
                 const movimientosPorFecha = this.agruparMovimientosPorFecha();
-                const pedidosPorFecha = RolPagosUtils.agruparPorFecha(this.data.pedidos);
-                const retirosPorFecha = RolPagosUtils.agruparPorFecha(this.data.retiros);
+                const pedidosPorFecha = RolPagosUtils.agruparPorFecha(pedidosFiltrados);
+                const retirosPorFecha = RolPagosUtils.agruparPorFecha(retirosFiltrados);
                 
                 // Generar filas
                 const todasLasFechas = new Set([
@@ -267,7 +291,28 @@
                 `];
             }
 
-            return fechas.sort().map(fecha => {
+            const mesSeleccionado = document.getElementById('filtroMes').value;
+            const anoSeleccionado = document.getElementById('filtroAno').value;
+
+            // Filtrar fechas que no correspondan al mes y año seleccionados
+            const fechasFiltradas = fechas.filter(fecha => {
+                const fechaObj = new Date(fecha);
+                const mes = (fechaObj.getMonth() + 1).toString().padStart(2, '0');
+                const ano = fechaObj.getFullYear().toString();
+                return mes === mesSeleccionado && ano === anoSeleccionado;
+            });
+
+            if (fechasFiltradas.length === 0) {
+                return [`
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            <i class="fas fa-info-circle"></i> NO HAY DATOS PARA EL PERÍODO ${mesSeleccionado}/${anoSeleccionado}
+                        </td>
+                    </tr>
+                `];
+            }
+
+            return fechasFiltradas.sort().map(fecha => {
                 const movimientosDia = datos.movimientosPorFecha[fecha] || { apertura: null, cierre: null };
                 const pedidosDelDia = datos.pedidosPorFecha[fecha] || [];
                 const retirosDelDia = datos.retirosPorFecha[fecha] || [];
@@ -275,7 +320,6 @@
                 const totalPedidosDia = pedidosDelDia.reduce((sum, pedido) => sum + parseFloat(pedido.total), 0);
                 const totalRetirosDia = retirosDelDia.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
 
-                // Determinar la sucursal del día
                 let sucursalDia = this.determinarSucursalDia(movimientosDia, pedidosDelDia, retirosDelDia);
 
                 return this.generarFilaHTML(fecha, {
