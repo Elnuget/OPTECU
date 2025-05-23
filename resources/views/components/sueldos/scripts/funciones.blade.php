@@ -78,7 +78,8 @@
                     ingresos: 0,
                     egresos: 0
                 },
-                movimientos: []
+                movimientos: [],
+                registrosCobro: []
             };
         }
 
@@ -211,6 +212,19 @@
                 } catch (error) {
                     console.error('Error al obtener historial:', error);
                 }
+            }
+        }
+
+        async obtenerRegistrosCobro(ano, mes) {
+            try {
+                const response = await fetch(`/api/sueldos/registros-cobro?ano=${ano}&mes=${mes}&user_id=${this.userId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.data.registrosCobro = data.data;
+                }
+            } catch (error) {
+                console.error('Error al obtener registros de cobro:', error);
             }
         }
 
@@ -410,6 +424,11 @@
             const fechaMostrar = RolPagosUtils.formatDate(fechaMovimiento);
             const fechaParaData = fecha.split('T')[0]; // Solo la parte de la fecha sin hora
 
+            // Buscar si existe un registro de cobro para esta fecha
+            const registroCobro = this.data.registrosCobro.find(registro => 
+                registro.fecha.split('T')[0] === fechaParaData
+            );
+
             return `
                 <tr>
                     <td data-fecha="${fechaParaData}">
@@ -431,7 +450,7 @@
                         <input type="number" 
                                class="form-control valor-editable" 
                                data-fecha="${fechaParaData}"
-                               value="0.00" 
+                               value="${registroCobro ? registroCobro.valor : '0.00'}" 
                                step="0.01" 
                                min="0">
                     </td>
@@ -612,7 +631,8 @@
             await Promise.all([
                 api.obtenerRetiros(ano, mes),
                 api.obtenerPedidos(ano, mes),
-                api.obtenerHistorial(ano, mes)
+                api.obtenerHistorial(ano, mes),
+                api.obtenerRegistrosCobro(ano, mes)
             ]);
 
             api.actualizarUI();

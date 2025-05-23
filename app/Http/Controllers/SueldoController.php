@@ -240,6 +240,15 @@ class SueldoController extends Controller
         try {
             $query = Sueldo::where('descripcion', 'REGISTROCOBRO');
             
+            // Filtros por año y mes
+            if ($request->has('ano')) {
+                $query->whereYear('fecha', $request->ano);
+            }
+            
+            if ($request->has('mes')) {
+                $query->whereMonth('fecha', $request->mes);
+            }
+            
             // Filtros opcionales
             if ($request->has('user_id')) {
                 $query->where('user_id', $request->user_id);

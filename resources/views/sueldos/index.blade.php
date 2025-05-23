@@ -306,12 +306,74 @@
             let selectedUserId = null;
             let selectedUserName = null;
 
-            // Función para manejar el cambio en los valores editables
-            $(document).on('change', '.valor-editable', function() {
-                const valor = $(this).val();
-                const rowId = $(this).data('row-id');
-                // Aquí puedes agregar la lógica para guardar el valor
-                console.log('Valor cambiado:', valor, 'para la fila:', rowId);
+            // Agregar el evento para manejar cambios en los valores editables
+            $(document).on('change', '.valor-editable', async function() {
+                const $input = $(this);
+                const valor = parseFloat($input.val());
+                const fecha = $input.data('fecha');
+                const userId = $('#selectUsuario').val();
+
+                // Validaciones más estrictas
+                if (!userId) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: '¡ATENCIÓN!',
+                        text: 'POR FAVOR SELECCIONE UN USUARIO',
+                        showConfirmButton: true,
+                        confirmButtonText: 'ENTENDIDO',
+                        confirmButtonColor: '#ffc107'
+                    });
+                    $input.val('0.00').focus();
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/sueldos/guardar-valor', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        },
+                        body: JSON.stringify({
+                            fecha: fecha,
+                            valor: valor,
+                            user_id: userId
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Mostrar notificación de éxito
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true
+                        });
+
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'VALOR GUARDADO CORRECTAMENTE'
+                        });
+
+                        // Actualizar la tabla de registros de cobro
+                        cargarRegistrosCobro();
+                    } else {
+                        throw new Error(data.mensaje || 'ERROR AL GUARDAR EL VALOR');
+                    }
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '¡ERROR!',
+                        text: error.message || 'ERROR AL GUARDAR EL VALOR',
+                        showConfirmButton: true,
+                        confirmButtonText: 'ENTENDIDO',
+                        confirmButtonColor: '#dc3545'
+                    });
+                    $input.val('0.00').focus();
+                }
             });
 
             // Función para cargar los datos del rol
