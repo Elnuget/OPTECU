@@ -267,13 +267,18 @@
             this.data.movimientos.forEach(mov => {
                 const fecha = mov.fecha.split('T')[0];
                 if (!movimientosPorFecha[fecha]) {
-                    movimientosPorFecha[fecha] = { apertura: null, cierre: null };
+                    movimientosPorFecha[fecha] = {
+                        matriz: { apertura: null, cierre: null },
+                        rocio: { apertura: null, cierre: null },
+                        norte: { apertura: null, cierre: null }
+                    };
                 }
                 
+                const sucursalKey = mov.sucursal.toLowerCase().replace('í', 'i');
                 if (mov.descripcion === 'Apertura') {
-                    movimientosPorFecha[fecha].apertura = mov;
+                    movimientosPorFecha[fecha][sucursalKey].apertura = mov;
                 } else {
-                    movimientosPorFecha[fecha].cierre = mov;
+                    movimientosPorFecha[fecha][sucursalKey].cierre = mov;
                 }
             });
             
@@ -313,7 +318,11 @@
             }
 
             return fechasFiltradas.sort().map(fecha => {
-                const movimientosDia = datos.movimientosPorFecha[fecha] || { apertura: null, cierre: null };
+                const movimientosDia = datos.movimientosPorFecha[fecha] || {
+                    matriz: { apertura: null, cierre: null },
+                    rocio: { apertura: null, cierre: null },
+                    norte: { apertura: null, cierre: null }
+                };
                 const pedidosDelDia = datos.pedidosPorFecha[fecha] || [];
                 const retirosDelDia = datos.retirosPorFecha[fecha] || [];
                 
@@ -337,8 +346,9 @@
             let sucursales = new Set();
             
             // Recolectar todas las sucursales de las diferentes fuentes
-            if (movimientosDia.apertura) sucursales.add(movimientosDia.apertura.sucursal);
-            if (movimientosDia.cierre) sucursales.add(movimientosDia.cierre.sucursal);
+            if (movimientosDia.matriz.apertura) sucursales.add('MATRIZ');
+            if (movimientosDia.rocio.apertura) sucursales.add('ROCÍO');
+            if (movimientosDia.norte.apertura) sucursales.add('NORTE');
             pedidosDelDia.forEach(p => sucursales.add(p.sucursal));
             retirosDelDia.forEach(r => sucursales.add(r.sucursal));
             
@@ -374,11 +384,23 @@
                 });
 
                 // Contar movimientos por sucursal
-                if (movimientosDia.apertura) {
-                    sucursalInfo[movimientosDia.apertura.sucursal].movimientos.push('APERTURA');
+                if (movimientosDia.matriz.apertura) {
+                    sucursalInfo['MATRIZ'].movimientos.push('APERTURA');
                 }
-                if (movimientosDia.cierre) {
-                    sucursalInfo[movimientosDia.cierre.sucursal].movimientos.push('CIERRE');
+                if (movimientosDia.rocio.apertura) {
+                    sucursalInfo['ROCÍO'].movimientos.push('APERTURA');
+                }
+                if (movimientosDia.norte.apertura) {
+                    sucursalInfo['NORTE'].movimientos.push('APERTURA');
+                }
+                if (movimientosDia.matriz.cierre) {
+                    sucursalInfo['MATRIZ'].movimientos.push('CIERRE');
+                }
+                if (movimientosDia.rocio.cierre) {
+                    sucursalInfo['ROCÍO'].movimientos.push('CIERRE');
+                }
+                if (movimientosDia.norte.cierre) {
+                    sucursalInfo['NORTE'].movimientos.push('CIERRE');
                 }
 
                 // Contar pedidos por sucursal
@@ -448,35 +470,52 @@
         generarHTMLMovimientos(movimientosDia) {
             let html = '';
             
-            if (movimientosDia.apertura) {
-                html += `
-                    <span class="badge badge-apertura">
-                        APERTURA: ${RolPagosUtils.formatCurrency(Math.abs(movimientosDia.apertura.monto))}
-                        <span class="hora-movimiento">
-                            ${RolPagosUtils.formatTime(movimientosDia.apertura.fecha)}
-                            <small class="d-block text-white-50">
-                                <i class="fas fa-user"></i> ${movimientosDia.apertura.usuario}
-                            </small>
-                        </span>
-                    </span>
-                `;
-            }
+            // Array de sucursales para iterar
+            const sucursales = [
+                { key: 'matriz', nombre: 'MATRIZ' },
+                { key: 'rocio', nombre: 'ROCÍO' },
+                { key: 'norte', nombre: 'NORTE' }
+            ];
+
+            sucursales.forEach(({ key, nombre }) => {
+                const movimientos = movimientosDia[key];
+                if (movimientos.apertura || movimientos.cierre) {
+                    html += `<div class="sucursal-movimientos mb-2">
+                        <div class="badge badge-secondary mb-1">${nombre}</div>`;
+
+                    if (movimientos.apertura) {
+                        html += `
+                            <div class="badge badge-apertura d-block mb-1">
+                                APERTURA: ${RolPagosUtils.formatCurrency(Math.abs(movimientos.apertura.monto))}
+                                <span class="hora-movimiento">
+                                    ${RolPagosUtils.formatTime(movimientos.apertura.fecha)}
+                                    <small class="d-block text-white-50">
+                                        <i class="fas fa-user"></i> ${movimientos.apertura.usuario}
+                                    </small>
+                                </span>
+                            </div>
+                        `;
+                    }
+                    
+                    if (movimientos.cierre) {
+                        html += `
+                            <div class="badge badge-cierre d-block">
+                                CIERRE: ${RolPagosUtils.formatCurrency(Math.abs(movimientos.cierre.monto))}
+                                <span class="hora-movimiento">
+                                    ${RolPagosUtils.formatTime(movimientos.cierre.fecha)}
+                                    <small class="d-block text-white-50">
+                                        <i class="fas fa-user"></i> ${movimientos.cierre.usuario}
+                                    </small>
+                                </span>
+                            </div>
+                        `;
+                    }
+
+                    html += '</div>';
+                }
+            });
             
-            if (movimientosDia.cierre) {
-                html += `
-                    <br><span class="badge badge-cierre">
-                        CIERRE: ${RolPagosUtils.formatCurrency(Math.abs(movimientosDia.cierre.monto))}
-                        <span class="hora-movimiento">
-                            ${RolPagosUtils.formatTime(movimientosDia.cierre.fecha)}
-                            <small class="d-block text-white-50">
-                                <i class="fas fa-user"></i> ${movimientosDia.cierre.usuario}
-                            </small>
-                        </span>
-                    </span>
-                `;
-            }
-            
-            return html;
+            return html || '<small class="text-muted">Sin movimientos</small>';
         }
 
         generarHTMLPedidos(pedidos, total) {

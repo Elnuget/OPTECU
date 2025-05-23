@@ -179,4 +179,49 @@
     .badge-danger:hover {
         opacity: 0.9;
     }
+
+    /* Estilos para movimientos por sucursal */
+    .sucursal-movimientos {
+        background-color: rgba(0,0,0,0.03);
+        border-radius: 4px;
+        padding: 8px;
+    }
+
+    .sucursal-movimientos .badge {
+        width: 100%;
+        text-align: left;
+        white-space: normal;
+    }
+
+    .badge-secondary {
+        background-color: #6c757d;
+        font-size: 0.8em;
+    }
+
+    .badge-apertura, .badge-cierre {
+        margin: 4px 0;
+        padding: 6px 8px;
+    }
+
+    .badge-apertura {
+        background-color: #28a745;
+    }
+
+    .badge-cierre {
+        background-color: #dc3545;
+    }
+
+    .hora-movimiento {
+        float: right;
+        text-align: right;
+    }
+
+    /* Ajustes responsive */
+    @media (max-width: 768px) {
+        .hora-movimiento {
+            display: block;
+            float: none;
+            margin-top: 4px;
+        }
+    }
 </style> 
