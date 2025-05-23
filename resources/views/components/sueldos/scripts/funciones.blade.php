@@ -290,25 +290,22 @@
         }
 
         determinarSucursalDia(movimientosDia, pedidosDelDia, retirosDelDia) {
-            // Priorizar movimientos de apertura/cierre
-            if (movimientosDia.apertura) return movimientosDia.apertura.sucursal;
-            if (movimientosDia.cierre) return movimientosDia.cierre.sucursal;
+            let sucursales = new Set();
             
-            // Si hay pedidos, usar la sucursal del primer pedido
-            if (pedidosDelDia.length > 0) {
-                const sucursales = new Set(pedidosDelDia.map(p => p.sucursal));
-                if (sucursales.size === 1) return pedidosDelDia[0].sucursal;
-                return Array.from(sucursales).join(' / ');
-            }
+            // Recolectar todas las sucursales de las diferentes fuentes
+            if (movimientosDia.apertura) sucursales.add(movimientosDia.apertura.sucursal);
+            if (movimientosDia.cierre) sucursales.add(movimientosDia.cierre.sucursal);
+            pedidosDelDia.forEach(p => sucursales.add(p.sucursal));
+            retirosDelDia.forEach(r => sucursales.add(r.sucursal));
             
-            // Si hay retiros, usar la sucursal del primer retiro
-            if (retirosDelDia.length > 0) {
-                const sucursales = new Set(retirosDelDia.map(r => r.sucursal));
-                if (sucursales.size === 1) return retirosDelDia[0].sucursal;
-                return Array.from(sucursales).join(' / ');
-            }
+            // Convertir el Set a Array y filtrar valores nulos o undefined
+            const sucursalesArray = Array.from(sucursales).filter(s => s);
             
-            return null;
+            if (sucursalesArray.length === 0) return 'NO ESPECIFICADA';
+            if (sucursalesArray.length === 1) return sucursalesArray[0];
+            
+            // Si hay múltiples sucursales, mostrarlas todas
+            return sucursalesArray.join(' / ');
         }
 
         generarFilaHTML(fecha, datos) {
@@ -327,12 +324,14 @@
                     <td>
                         ${this.generarHTMLMovimientos(movimientosDia)}
                     </td>
-                    <td>
+                    <td class="text-center">
                         ${sucursalDia ? 
                             sucursalDia.split(' / ').map(suc => 
-                                `<span class="sucursal-badge sucursal-${suc.toLowerCase()}">${suc}</span>`
-                            ).join('<br>') : 
-                            '<small class="text-muted">Sin sucursal</small>'
+                                `<div class="badge badge-info mb-1" style="font-size: 0.9em; display: block;" data-sucursal="${suc}">
+                                    <i class="fas fa-store-alt mr-1"></i>${suc}
+                                </div>`
+                            ).join('') : 
+                            '<small class="text-muted"><i class="fas fa-question-circle mr-1"></i>NO ESPECIFICADA</small>'
                         }
                     </td>
                     <td>

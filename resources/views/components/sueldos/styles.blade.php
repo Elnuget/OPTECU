@@ -104,4 +104,31 @@
             }
         }
     }
+
+    /* Nuevos estilos para las sucursales */
+    .badge-info {
+        transition: all 0.3s ease;
+    }
+
+    .badge-info:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .text-muted i {
+        opacity: 0.7;
+    }
+
+    /* Estilos específicos por sucursal */
+    .badge-info[data-sucursal="MATRIZ"] {
+        background-color: #007bff;
+    }
+
+    .badge-info[data-sucursal="ROCÍO"] {
+        background-color: #17a2b8;
+    }
+
+    .badge-info[data-sucursal="NORTE"] {
+        background-color: #6610f2;
+    }
 </style> 
