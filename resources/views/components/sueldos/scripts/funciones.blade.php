@@ -9,18 +9,26 @@
         }
 
         static formatDate(dateString) {
-            return new Date(dateString).toLocaleDateString('es-ES', {
+            const fecha = new Date(dateString);
+            // Convertir a zona horaria de Quito (UTC-5)
+            const options = {
                 year: 'numeric',
                 month: '2-digit',
-                day: '2-digit'
-            });
+                day: '2-digit',
+                timeZone: 'America/Guayaquil'
+            };
+            return fecha.toLocaleDateString('es-EC', options);
         }
 
         static formatTime(dateString) {
-            return new Date(dateString).toLocaleTimeString('es-ES', {
+            const fecha = new Date(dateString);
+            // Convertir a zona horaria de Quito (UTC-5)
+            const options = {
                 hour: '2-digit',
-                minute: '2-digit'
-            });
+                minute: '2-digit',
+                timeZone: 'America/Guayaquil'
+            };
+            return fecha.toLocaleTimeString('es-EC', options);
         }
 
         static getSucursalName(url) {
@@ -43,11 +51,15 @@
 
         static agruparPorFecha(items, fechaKey = 'fecha') {
             return items.reduce((acc, item) => {
-                const fecha = item[fechaKey].split('T')[0];
-                if (!acc[fecha]) {
-                    acc[fecha] = [];
+                const fecha = new Date(item[fechaKey]);
+                // Usar la zona horaria de Quito para agrupar
+                const fechaQuito = new Date(fecha.toLocaleString('en-US', { timeZone: 'America/Guayaquil' }));
+                const fechaStr = fechaQuito.toISOString().split('T')[0];
+                
+                if (!acc[fechaStr]) {
+                    acc[fechaStr] = [];
                 }
-                acc[fecha].push(item);
+                acc[fechaStr].push(item);
                 return acc;
             }, {});
         }
@@ -206,18 +218,20 @@
                 const mes = document.getElementById('filtroMes').value;
                 const ano = document.getElementById('filtroAno').value;
                 
-                // Filtrar datos por mes y año
+                // Filtrar datos por mes y año considerando la zona horaria
                 const pedidosFiltrados = this.data.pedidos.filter(pedido => {
                     const fecha = new Date(pedido.fecha);
-                    const mesPedido = (fecha.getMonth() + 1).toString().padStart(2, '0');
-                    const anoPedido = fecha.getFullYear().toString();
+                    const fechaEcuador = new Date(fecha.getTime() - (5 * 60 * 60 * 1000));
+                    const mesPedido = (fechaEcuador.getMonth() + 1).toString().padStart(2, '0');
+                    const anoPedido = fechaEcuador.getFullYear().toString();
                     return mesPedido === mes && anoPedido === ano;
                 });
 
                 const retirosFiltrados = this.data.retiros.filter(retiro => {
                     const fecha = new Date(retiro.fecha);
-                    const mesRetiro = (fecha.getMonth() + 1).toString().padStart(2, '0');
-                    const anoRetiro = fecha.getFullYear().toString();
+                    const fechaEcuador = new Date(fecha.getTime() - (5 * 60 * 60 * 1000));
+                    const mesRetiro = (fechaEcuador.getMonth() + 1).toString().padStart(2, '0');
+                    const anoRetiro = fechaEcuador.getFullYear().toString();
                     return mesRetiro === mes && anoRetiro === ano;
                 });
 
@@ -265,9 +279,13 @@
             const movimientosPorFecha = {};
             
             this.data.movimientos.forEach(mov => {
-                const fecha = mov.fecha.split('T')[0];
-                if (!movimientosPorFecha[fecha]) {
-                    movimientosPorFecha[fecha] = {
+                // Convertir la fecha a la zona horaria de Ecuador
+                const fecha = new Date(mov.fecha);
+                const fechaEcuador = new Date(fecha.getTime() - (5 * 60 * 60 * 1000));
+                const fechaKey = fechaEcuador.toISOString().split('T')[0];
+                
+                if (!movimientosPorFecha[fechaKey]) {
+                    movimientosPorFecha[fechaKey] = {
                         matriz: { apertura: null, cierre: null },
                         rocio: { apertura: null, cierre: null },
                         norte: { apertura: null, cierre: null }
@@ -276,9 +294,9 @@
                 
                 const sucursalKey = mov.sucursal.toLowerCase().replace('í', 'i');
                 if (mov.descripcion === 'Apertura') {
-                    movimientosPorFecha[fecha][sucursalKey].apertura = mov;
+                    movimientosPorFecha[fechaKey][sucursalKey].apertura = mov;
                 } else {
-                    movimientosPorFecha[fecha][sucursalKey].cierre = mov;
+                    movimientosPorFecha[fechaKey][sucursalKey].cierre = mov;
                 }
             });
             
@@ -302,8 +320,9 @@
             // Filtrar fechas que no correspondan al mes y año seleccionados
             const fechasFiltradas = fechas.filter(fecha => {
                 const fechaObj = new Date(fecha);
-                const mes = (fechaObj.getMonth() + 1).toString().padStart(2, '0');
-                const ano = fechaObj.getFullYear().toString();
+                const fechaEcuador = new Date(fechaObj.getTime() - (5 * 60 * 60 * 1000));
+                const mes = (fechaEcuador.getMonth() + 1).toString().padStart(2, '0');
+                const ano = fechaEcuador.getFullYear().toString();
                 return mes === mesSeleccionado && ano === anoSeleccionado;
             });
 
@@ -371,9 +390,29 @@
                 totalRetirosDia
             } = datos;
 
+            // Obtener la fecha y hora del primer movimiento del día
+            let fechaMovimiento = fecha;
+            let horaMovimiento = '';
+            
+            // Buscar el primer movimiento del día para obtener la fecha y hora exacta
+            const sucursales = ['matriz', 'rocio', 'norte'];
+            for (const sucursal of sucursales) {
+                const movimientos = movimientosDia[sucursal];
+                if (movimientos && movimientos.apertura) {
+                    fechaMovimiento = movimientos.apertura.fecha;
+                    horaMovimiento = RolPagosUtils.formatTime(movimientos.apertura.fecha);
+                    break;
+                }
+            }
+
             return `
                 <tr>
-                    <td>${RolPagosUtils.formatDate(fecha)}</td>
+                    <td>
+                        ${RolPagosUtils.formatDate(fechaMovimiento)}
+                        <div class="text-muted" style="font-size: 0.85em;">
+                            <i class="fas fa-clock"></i> ${horaMovimiento}
+                        </div>
+                    </td>
                     <td>
                         ${this.generarHTMLMovimientos(movimientosDia)}
                     </td>
@@ -388,6 +427,10 @@
         }
 
         generarHTMLMovimientos(movimientosDia) {
+            if (!movimientosDia) {
+                return '<small class="text-muted">Sin movimientos</small>';
+            }
+
             let html = '';
             
             // Array de sucursales para iterar
@@ -399,19 +442,25 @@
 
             sucursales.forEach(({ key, nombre }) => {
                 const movimientos = movimientosDia[key];
-                if (movimientos.apertura || movimientos.cierre) {
+                if (movimientos && (movimientos.apertura || movimientos.cierre)) {
                     html += `<div class="sucursal-movimientos mb-2">
-                        <div class="badge badge-secondary mb-1">${nombre}</div>`;
+                        <div class="badge badge-secondary mb-1">
+                            <i class="fas fa-store-alt mr-1"></i>${nombre}
+                        </div>`;
 
                     if (movimientos.apertura) {
                         html += `
                             <div class="badge badge-apertura d-block mb-1">
                                 APERTURA: ${RolPagosUtils.formatCurrency(Math.abs(movimientos.apertura.monto))}
                                 <span class="hora-movimiento">
-                                    ${RolPagosUtils.formatTime(movimientos.apertura.fecha)}
-                                    <small class="d-block text-white-50">
-                                        <i class="fas fa-user"></i> ${movimientos.apertura.usuario}
-                                    </small>
+                                    <div class="fecha-movimiento">
+                                        <i class="fas fa-calendar-alt mr-1"></i>
+                                        ${RolPagosUtils.formatDate(movimientos.apertura.fecha)}
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-clock mr-1"></i>
+                                        ${RolPagosUtils.formatTime(movimientos.apertura.fecha)}
+                                    </div>
                                 </span>
                             </div>
                         `;
@@ -422,10 +471,14 @@
                             <div class="badge badge-cierre d-block">
                                 CIERRE: ${RolPagosUtils.formatCurrency(Math.abs(movimientos.cierre.monto))}
                                 <span class="hora-movimiento">
-                                    ${RolPagosUtils.formatTime(movimientos.cierre.fecha)}
-                                    <small class="d-block text-white-50">
-                                        <i class="fas fa-user"></i> ${movimientos.cierre.usuario}
-                                    </small>
+                                    <div class="fecha-movimiento">
+                                        <i class="fas fa-calendar-alt mr-1"></i>
+                                        ${RolPagosUtils.formatDate(movimientos.cierre.fecha)}
+                                    </div>
+                                    <div>
+                                        <i class="fas fa-clock mr-1"></i>
+                                        ${RolPagosUtils.formatTime(movimientos.cierre.fecha)}
+                                    </div>
                                 </span>
                             </div>
                         `;
