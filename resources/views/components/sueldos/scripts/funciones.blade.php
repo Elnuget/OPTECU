@@ -362,6 +362,40 @@
                 sucursalDia
             } = datos;
 
+            // Preparar información de operaciones por sucursal
+            const sucursalInfo = {};
+            if (sucursalDia) {
+                sucursalDia.split(' / ').forEach(suc => {
+                    sucursalInfo[suc] = {
+                        movimientos: [],
+                        pedidos: 0,
+                        retiros: 0
+                    };
+                });
+
+                // Contar movimientos por sucursal
+                if (movimientosDia.apertura) {
+                    sucursalInfo[movimientosDia.apertura.sucursal].movimientos.push('APERTURA');
+                }
+                if (movimientosDia.cierre) {
+                    sucursalInfo[movimientosDia.cierre.sucursal].movimientos.push('CIERRE');
+                }
+
+                // Contar pedidos por sucursal
+                pedidosDelDia.forEach(pedido => {
+                    if (sucursalInfo[pedido.sucursal]) {
+                        sucursalInfo[pedido.sucursal].pedidos++;
+                    }
+                });
+
+                // Contar retiros por sucursal
+                retirosDelDia.forEach(retiro => {
+                    if (sucursalInfo[retiro.sucursal]) {
+                        sucursalInfo[retiro.sucursal].retiros++;
+                    }
+                });
+            }
+
             return `
                 <tr>
                     <td>${RolPagosUtils.formatDate(fecha)}</td>
@@ -370,11 +404,34 @@
                     </td>
                     <td class="text-center">
                         ${sucursalDia ? 
-                            sucursalDia.split(' / ').map(suc => 
-                                `<div class="badge badge-info mb-1" style="font-size: 0.9em; display: block;" data-sucursal="${suc}">
-                                    <i class="fas fa-store-alt mr-1"></i>${suc}
-                                </div>`
-                            ).join('') : 
+                            sucursalDia.split(' / ').map(suc => {
+                                const info = sucursalInfo[suc];
+                                const detalles = [];
+                                
+                                if (info.movimientos.length > 0) {
+                                    detalles.push(`<span class="badge badge-warning badge-sm">${info.movimientos.join(', ')}</span>`);
+                                }
+                                if (info.pedidos > 0) {
+                                    detalles.push(`<span class="badge badge-success badge-sm">${info.pedidos} PEDIDO(S)</span>`);
+                                }
+                                if (info.retiros > 0) {
+                                    detalles.push(`<span class="badge badge-danger badge-sm">${info.retiros} RETIRO(S)</span>`);
+                                }
+
+                                return `
+                                    <div class="sucursal-container mb-2">
+                                        <div class="badge badge-info mb-1" style="font-size: 0.9em; display: block;" data-sucursal="${suc}">
+                                            <i class="fas fa-store-alt mr-1"></i>${suc}
+                                        </div>
+                                        ${detalles.length > 0 ? 
+                                            `<div class="sucursal-details">
+                                                ${detalles.join(' ')}
+                                            </div>` : 
+                                            ''
+                                        }
+                                    </div>
+                                `;
+                            }).join('') : 
                             '<small class="text-muted"><i class="fas fa-question-circle mr-1"></i>NO ESPECIFICADA</small>'
                         }
                     </td>
@@ -395,7 +452,12 @@
                 html += `
                     <span class="badge badge-apertura">
                         APERTURA: ${RolPagosUtils.formatCurrency(Math.abs(movimientosDia.apertura.monto))}
-                        <span class="hora-movimiento">${RolPagosUtils.formatTime(movimientosDia.apertura.fecha)}</span>
+                        <span class="hora-movimiento">
+                            ${RolPagosUtils.formatTime(movimientosDia.apertura.fecha)}
+                            <small class="d-block text-white-50">
+                                <i class="fas fa-user"></i> ${movimientosDia.apertura.usuario}
+                            </small>
+                        </span>
                     </span>
                 `;
             }
@@ -404,7 +466,12 @@
                 html += `
                     <br><span class="badge badge-cierre">
                         CIERRE: ${RolPagosUtils.formatCurrency(Math.abs(movimientosDia.cierre.monto))}
-                        <span class="hora-movimiento">${RolPagosUtils.formatTime(movimientosDia.cierre.fecha)}</span>
+                        <span class="hora-movimiento">
+                            ${RolPagosUtils.formatTime(movimientosDia.cierre.fecha)}
+                            <small class="d-block text-white-50">
+                                <i class="fas fa-user"></i> ${movimientosDia.cierre.usuario}
+                            </small>
+                        </span>
                     </span>
                 `;
             }

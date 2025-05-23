@@ -131,4 +131,52 @@
     .badge-info[data-sucursal="NORTE"] {
         background-color: #6610f2;
     }
+
+    /* Nuevos estilos para detalles de sucursal */
+    .sucursal-container {
+        background-color: rgba(0,0,0,0.02);
+        border-radius: 4px;
+        padding: 5px;
+    }
+
+    .sucursal-details {
+        margin-top: 4px;
+    }
+
+    .badge-sm {
+        font-size: 0.75em;
+        padding: 3px 6px;
+        margin: 0 2px;
+    }
+
+    /* Estilos para los badges de usuario */
+    .hora-movimiento small {
+        margin-top: 2px;
+        font-size: 0.85em;
+    }
+
+    .hora-movimiento small i {
+        margin-right: 3px;
+    }
+
+    /* Ajustes para los badges de operaciones */
+    .badge-warning {
+        background-color: #ffc107;
+        color: #000;
+    }
+
+    .badge-success {
+        background-color: #28a745;
+    }
+
+    .badge-danger {
+        background-color: #dc3545;
+    }
+
+    /* Hover effects */
+    .badge-warning:hover,
+    .badge-success:hover,
+    .badge-danger:hover {
+        opacity: 0.9;
+    }
 </style> 
