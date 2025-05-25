@@ -208,6 +208,9 @@
                                         text: response.message,
                                         timer: 1500,
                                         showConfirmButton: false
+                                    }).then(() => {
+                                        // Recargar la página después de mostrar el mensaje
+                                        window.location.reload();
                                     });
                                 } else {
                                     displayValue.show();
@@ -365,6 +368,9 @@
                                     title: 'Artículo creado exitosamente',
                                     showConfirmButton: false,
                                     timer: 1500
+                                }).then(() => {
+                                    // Recargar la página después de mostrar el mensaje
+                                    window.location.reload();
                                 });
                             },
                             error: function(xhr) {

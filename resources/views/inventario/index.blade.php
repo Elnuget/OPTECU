@@ -39,8 +39,3 @@
     @include('atajos')
     <x-inventario.scripts />
 @stop
-
-@section('js')
-    @include('atajos')
-    <x-inventario.scripts />
-@stop
