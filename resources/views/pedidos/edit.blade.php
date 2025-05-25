@@ -40,6 +40,27 @@
         .card-header:hover {
             background-color: rgba(0,0,0,.03);
         }
+
+        /* Convertir inputs a mayúsculas */
+        input[type="text"],
+        input[type="email"],
+        input[type="number"],
+        textarea,
+        select,
+        .form-control {
+            text-transform: uppercase !important;
+        }
+
+        /* Asegurar que los placeholders también estén en mayúsculas */
+        input::placeholder,
+        textarea::placeholder {
+            text-transform: uppercase !important;
+        }
+
+        /* Asegurar que las opciones de datalist estén en mayúsculas */
+        datalist option {
+            text-transform: uppercase !important;
+        }
     </style>
 
     {{-- Mostrar mensajes de error --}}

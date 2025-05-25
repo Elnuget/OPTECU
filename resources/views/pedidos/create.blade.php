@@ -15,12 +15,56 @@
 
 @section('content')
     <style>
+        /* Convertir todo el texto a mayúsculas */
+        .card-title,
+        .card-header h3,
+        .form-label,
+        label,
+        .list-group-item,
+        .input-group-text,
+        .custom-select option,
+        .btn,
+        input::placeholder,
+        select option,
+        .text-muted,
+        strong,
+        p,
+        h1, h2, h3, h4, h5, h6 {
+            text-transform: uppercase !important;
+        }
+
         /* Estilos para hacer clickeable el header completo */
         .card-header {
             cursor: pointer;
         }
         .card-header:hover {
             background-color: rgba(0,0,0,.03);
+        }
+
+        /* Convertir inputs a mayúsculas */
+        input[type="text"],
+        input[type="email"],
+        input[type="number"],
+        textarea,
+        select,
+        .form-control {
+            text-transform: uppercase !important;
+        }
+
+        /* Asegurar que los placeholders también estén en mayúsculas */
+        input::placeholder,
+        textarea::placeholder {
+            text-transform: uppercase !important;
+        }
+
+        /* Asegurar que las opciones de datalist estén en mayúsculas */
+        datalist option {
+            text-transform: uppercase !important;
+        }
+
+        /* Asegurar que las opciones del selectpicker estén en mayúsculas */
+        .bootstrap-select .dropdown-menu li a {
+            text-transform: uppercase !important;
         }
     </style>
 
