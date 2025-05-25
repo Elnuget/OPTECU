@@ -297,16 +297,17 @@
 
 @section('js')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
     @include('atajos')
     @include('components.sueldos.scripts.init')
     @include('components.sueldos.scripts.funciones')
     @include('components.sueldos.scripts.api')
     <script>
-        // Declarar las variables globalmente
+        // Variables globales
         let selectedUserId = null;
         let selectedUserName = null;
 
-        // Declarar la función agregarFilaDetalle globalmente
+        // Función global para agregar fila de detalle
         window.agregarFilaDetalle = function(userId) {
             const fecha = new Date();
             const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
@@ -337,6 +338,174 @@
                 </tr>
             `;
             $(`#detalles_${userId}`).append(nuevaFila);
+        };
+
+        // Función global para exportar a Excel
+        window.exportarExcel = function() {
+            if (!selectedUserId) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: '¡ATENCIÓN!',
+                    text: 'POR FAVOR SELECCIONE UN USUARIO PARA EXPORTAR',
+                    confirmButtonText: 'ENTENDIDO'
+                });
+                return;
+            }
+
+            const mes = $('#filtroMes').val();
+            const ano = $('#filtroAno').val();
+            
+            // Mostrar indicador de carga
+            Swal.fire({
+                title: 'GENERANDO EXCEL',
+                text: 'POR FAVOR ESPERE...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Obtener los datos necesarios
+            Promise.all([
+                // Obtener detalles
+                $.ajax({
+                    url: '/detalles-sueldos/periodo',
+                    method: 'GET',
+                    data: { user_id: selectedUserId, mes: mes, ano: ano }
+                }),
+                // Obtener total de registros de cobro
+                $.ajax({
+                    url: '/api/sueldos/total-registros-cobro',
+                    method: 'GET',
+                    data: { user_id: selectedUserId, mes: mes, ano: ano }
+                })
+            ]).then(([detallesResponse, registrosResponse]) => {
+                // Preparar los datos para el Excel
+                const nombreEmpleado = selectedUserName;
+                const periodo = `${mes}/${ano}`;
+                const totalRegistrosCobro = parseFloat(registrosResponse.total) || 0;
+                const detalles = detallesResponse.success ? detallesResponse.data : [];
+                
+                let totalDetalles = 0;
+                detalles.forEach(detalle => {
+                    totalDetalles += parseFloat(detalle.valor);
+                });
+
+                const sueldoRecibir = totalRegistrosCobro + totalDetalles;
+
+                // Crear el workbook
+                const wb = XLSX.utils.book_new();
+
+                // Datos del encabezado general
+                const datosEncabezado = [
+                    ['ROL DE PAGOS'],
+                    [''],
+                    ['EMPLEADO:', nombreEmpleado],
+                    ['PERÍODO:', periodo],
+                    ['SUCURSAL:', $('#filtroSucursal').val() || 'TODAS'],
+                    [''],
+                    ['RESUMEN GENERAL'],
+                    ['TOTAL REGISTROS COBRO:', `$${totalRegistrosCobro.toFixed(2)}`],
+                    ['TOTAL DETALLES:', `$${totalDetalles.toFixed(2)}`],
+                    ['SUELDO A RECIBIR:', `$${sueldoRecibir.toFixed(2)}`],
+                    ['']
+                ];
+
+                // Obtener los datos de la tabla de movimientos directamente del DOM
+                datosEncabezado.push(['TABLA DE MOVIMIENTOS']);
+                datosEncabezado.push(['FECHA', 'MOVIMIENTOS', 'PEDIDOS', 'RETIROS', 'VALOR']);
+                
+                const $movimientosRows = $(`#desglose_${selectedUserId} tr`);
+                if ($movimientosRows.length > 0) {
+                    $movimientosRows.each(function() {
+                        const $row = $(this);
+                        const $cells = $row.find('td');
+                        if ($cells.length >= 5) {
+                            datosEncabezado.push([
+                                $cells.eq(0).text().trim(),
+                                $cells.eq(1).text().trim(),
+                                $cells.eq(2).text().trim(),
+                                $cells.eq(3).text().trim(),
+                                $cells.eq(4).text().trim()
+                            ]);
+                        }
+                    });
+                } else {
+                    datosEncabezado.push(['NO HAY MOVIMIENTOS REGISTRADOS']);
+                }
+
+                datosEncabezado.push(['']);
+                datosEncabezado.push(['']);
+
+                // Agregar tabla de detalles
+                datosEncabezado.push(['TABLA DE DETALLES']);
+                datosEncabezado.push(['FECHA', 'DESCRIPCIÓN', 'VALOR']);
+
+                if (detalles.length > 0) {
+                    detalles.forEach(detalle => {
+                        datosEncabezado.push([
+                            `${detalle.mes}/${detalle.ano}`,
+                            detalle.descripcion,
+                            `$${parseFloat(detalle.valor).toFixed(2)}`
+                        ]);
+                    });
+                } else {
+                    datosEncabezado.push(['NO HAY DETALLES REGISTRADOS']);
+                }
+
+                // Crear la hoja de cálculo
+                const ws = XLSX.utils.aoa_to_sheet(datosEncabezado);
+
+                // Ajustar el ancho de las columnas
+                const wscols = [
+                    {wch: 15}, // A
+                    {wch: 40}, // B
+                    {wch: 15}, // C
+                    {wch: 15}, // D
+                    {wch: 15}  // E
+                ];
+                ws['!cols'] = wscols;
+
+                // Agregar estilos básicos (negrita para encabezados)
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                for (let R = range.s.r; R <= range.e.r; R++) {
+                    for (let C = range.s.c; C <= range.e.c; C++) {
+                        const cell_address = {c: C, r: R};
+                        const cell_ref = XLSX.utils.encode_cell(cell_address);
+                        if (ws[cell_ref] && 
+                            (R === 0 || // ROL DE PAGOS
+                             R === 6 || // RESUMEN GENERAL
+                             R === 11 || // TABLA DE MOVIMIENTOS
+                             (detalles.length > 0 ? R === (14 + $movimientosRows.length) : false))) { // TABLA DE DETALLES
+                            if (!ws[cell_ref].s) ws[cell_ref].s = {};
+                            ws[cell_ref].s.font = {bold: true};
+                        }
+                    }
+                }
+
+                // Agregar la hoja al libro
+                XLSX.utils.book_append_sheet(wb, ws, 'Rol de Pagos');
+
+                // Generar el archivo
+                const nombreArchivo = `ROL_DE_PAGOS_${nombreEmpleado.replace(/\s+/g, '_')}_${periodo.replace('/', '-')}.xlsx`;
+                XLSX.writeFile(wb, nombreArchivo);
+
+                // Cerrar el indicador de carga
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡ÉXITO!',
+                    text: 'EL ARCHIVO EXCEL HA SIDO GENERADO CORRECTAMENTE',
+                    confirmButtonText: 'ACEPTAR'
+                });
+            }).catch(error => {
+                console.error('Error al exportar:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: '¡ERROR!',
+                    text: 'HUBO UN ERROR AL GENERAR EL ARCHIVO EXCEL',
+                    confirmButtonText: 'ENTENDIDO'
+                });
+            });
         };
 
         $(document).ready(function() {
@@ -502,11 +671,16 @@
                                         <strong>TOTAL DETALLES: </strong>
                                         <span id="total_detalles_${selectedUserId}">$0.00</span>
                                     </div>
-                                    <div>
+                                    <div class="mr-4">
                                         <strong>SUELDO A RECIBIR: </strong>
                                         <span id="sueldo_recibir_${selectedUserId}">$0.00</span>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="mb-3">
+                                <button class="btn btn-success" onclick="exportarExcel()">
+                                    <i class="fas fa-file-excel"></i> EXPORTAR A EXCEL
+                                </button>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-bordered table-movimientos">
