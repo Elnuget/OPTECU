@@ -472,6 +472,10 @@
                                         <strong>TOTAL VENTAS: </strong>
                                         <span id="total_${selectedUserId}">$0.00</span>
                                     </div>
+                                    <div class="mr-4">
+                                        <strong>TOTAL REGISTROS COBRO: </strong>
+                                        <span id="total_registros_${selectedUserId}">$0.00</span>
+                                    </div>
                                     <div>
                                         <strong>TOTAL DETALLES: </strong>
                                         <span id="total_detalles_${selectedUserId}">$0.00</span>

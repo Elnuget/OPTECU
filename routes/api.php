@@ -35,3 +35,4 @@ Route::get('/pedidos/buscar-por/{campo}/{valor}', [PedidoController::class, 'bus
 Route::get('/historiales-clinicos/buscar-por/{campo}/{valor}', [HistorialClinicoController::class, 'buscarPorCampo']);
 
 Route::get('/sueldos/registros-cobro', [SueldoController::class, 'getRegistrosCobro']);
+Route::get('/sueldos/total-registros-cobro', [SueldoController::class, 'getTotalRegistrosCobro']);

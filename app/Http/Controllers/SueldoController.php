@@ -292,4 +292,43 @@ class SueldoController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtiene el total de registros de cobro para un usuario en un período específico
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function getTotalRegistrosCobro(Request $request)
+    {
+        try {
+            $query = Sueldo::where('descripcion', 'REGISTROCOBRO');
+            
+            // Filtros por año y mes
+            if ($request->has('ano')) {
+                $query->whereYear('fecha', $request->ano);
+            }
+            
+            if ($request->has('mes')) {
+                $query->whereMonth('fecha', $request->mes);
+            }
+            
+            // Filtro por usuario
+            if ($request->has('user_id')) {
+                $query->where('user_id', $request->user_id);
+            }
+            
+            $total = $query->sum('valor');
+            
+            return response()->json([
+                'success' => true,
+                'total' => $total
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'ERROR AL OBTENER EL TOTAL DE REGISTROS DE COBRO: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 } 

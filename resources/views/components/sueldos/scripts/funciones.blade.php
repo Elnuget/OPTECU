@@ -217,11 +217,21 @@
 
         async obtenerRegistrosCobro(ano, mes) {
             try {
-                const response = await fetch(`/api/sueldos/registros-cobro?ano=${ano}&mes=${mes}&user_id=${this.userId}`);
-                const data = await response.json();
+                // Obtener los registros de cobro
+                const responseRegistros = await fetch(`/api/sueldos/registros-cobro?ano=${ano}&mes=${mes}&user_id=${this.userId}`);
+                const dataRegistros = await responseRegistros.json();
                 
-                if (data.success) {
-                    this.data.registrosCobro = data.data;
+                if (dataRegistros.success) {
+                    this.data.registrosCobro = dataRegistros.data;
+                }
+
+                // Obtener el total de registros de cobro
+                const responseTotal = await fetch(`/api/sueldos/total-registros-cobro?ano=${ano}&mes=${mes}&user_id=${this.userId}`);
+                const dataTotal = await responseTotal.json();
+                
+                if (dataTotal.success) {
+                    // Actualizar el total en la interfaz
+                    document.getElementById(`total_registros_${this.userId}`).textContent = `$${parseFloat(dataTotal.total).toFixed(2)}`;
                 }
             } catch (error) {
                 console.error('Error al obtener registros de cobro:', error);
