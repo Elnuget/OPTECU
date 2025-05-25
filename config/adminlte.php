@@ -267,6 +267,30 @@ return [
         ],
 
         [
+            'text' => 'Historiales Clínicos',
+            'icon' => 'fas fa-notes-medical',
+            'url' => '/historiales_clinicos?ano=' . date('Y') . '&mes=' . date('m'),
+            'active' => ['historiales_clinicos/*', 'historiales_clinicos'],
+        ],
+
+        [
+            'text' => 'MENSAJES WHATSAPP',
+            'icon' => 'fab fa-whatsapp',
+            'submenu' => [
+                [
+                    'text' => 'MENSAJES CUMPLEAÑOS',
+                    'url'  => 'mensajes/cumpleanos',
+                    'icon' => 'fas fa-birthday-cake',
+                ],
+                [
+                    'text' => 'RECORDATORIOS CONSULTA',
+                    'url'  => 'mensajes/recordatorios',
+                    'icon' => 'fas fa-calendar-check',
+                ],
+            ],
+        ],
+
+        [
             'text' => 'Pagos',
             'icon' => 'fas fa-fw fa-money-bill',
             'url' => '/Pagos?ano=' . date('Y') . '&mes=' . date('m'),
@@ -314,30 +338,6 @@ return [
             'url' => '/egresos/finanzas',
             'active' => ['egresos/finanzas'],
             'can' => 'admin',
-        ],
-
-        [
-            'text' => 'Historiales Clínicos',
-            'icon' => 'fas fa-notes-medical',
-            'url' => '/historiales_clinicos?ano=' . date('Y') . '&mes=' . date('m'),
-            'active' => ['historiales_clinicos/*', 'historiales_clinicos'],
-        ],
-
-        [
-            'text' => 'MENSAJES WHATSAPP',
-            'icon' => 'fab fa-whatsapp',
-            'submenu' => [
-                [
-                    'text' => 'MENSAJES CUMPLEAÑOS',
-                    'url'  => 'mensajes/cumpleanos',
-                    'icon' => 'fas fa-birthday-cake',
-                ],
-                [
-                    'text' => 'RECORDATORIOS CONSULTA',
-                    'url'  => 'mensajes/recordatorios',
-                    'icon' => 'fas fa-calendar-check',
-                ],
-            ],
         ],
 
         [
