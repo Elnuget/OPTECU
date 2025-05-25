@@ -405,6 +405,7 @@
                     ['SUCURSAL:', $('#filtroSucursal').val() || 'TODAS'],
                     [''],
                     ['RESUMEN GENERAL'],
+                    ['TOTAL VENTAS:', $(`#total_${selectedUserId}`).text()],
                     ['TOTAL REGISTROS COBRO:', `$${totalRegistrosCobro.toFixed(2)}`],
                     ['TOTAL DETALLES:', `$${totalDetalles.toFixed(2)}`],
                     ['SUELDO A RECIBIR:', `$${sueldoRecibir.toFixed(2)}`],
@@ -416,21 +417,41 @@
                 datosEncabezado.push(['FECHA', 'MOVIMIENTOS', 'PEDIDOS', 'RETIROS', 'VALOR']);
                 
                 const $movimientosRows = $(`#desglose_${selectedUserId} tr`);
+                let hayMovimientos = false;
                 if ($movimientosRows.length > 0) {
                     $movimientosRows.each(function() {
                         const $row = $(this);
+                        // Verificar si es una fila de carga o mensaje
+                        if ($row.find('td[colspan]').length > 0) {
+                            return true; // continuar con la siguiente iteración
+                        }
+                        
                         const $cells = $row.find('td');
                         if ($cells.length >= 5) {
+                            hayMovimientos = true;
+                            // Obtener valores de los inputs si existen, si no del texto de la celda
+                            const fecha = $cells.eq(0).find('input').val() || $cells.eq(0).text().trim();
+                            const movimientos = $cells.eq(1).find('input').val() || $cells.eq(1).text().trim();
+                            const pedidos = $cells.eq(2).find('input').val() || $cells.eq(2).text().trim();
+                            const retiros = $cells.eq(3).find('input').val() || $cells.eq(3).text().trim();
+                            let valor = $cells.eq(4).find('input').val() || $cells.eq(4).text().trim();
+                            
+                            // Limpiar y formatear el valor
+                            valor = valor.replace('$', '').trim();
+                            const valorNumerico = parseFloat(valor) || 0;
+
                             datosEncabezado.push([
-                                $cells.eq(0).text().trim(),
-                                $cells.eq(1).text().trim(),
-                                $cells.eq(2).text().trim(),
-                                $cells.eq(3).text().trim(),
-                                $cells.eq(4).text().trim()
+                                fecha,
+                                movimientos,
+                                pedidos,
+                                retiros,
+                                `$${valorNumerico.toFixed(2)}`
                             ]);
                         }
                     });
-                } else {
+                }
+                
+                if (!hayMovimientos) {
                     datosEncabezado.push(['NO HAY MOVIMIENTOS REGISTRADOS']);
                 }
 
@@ -441,15 +462,42 @@
                 datosEncabezado.push(['TABLA DE DETALLES']);
                 datosEncabezado.push(['FECHA', 'DESCRIPCIÓN', 'VALOR']);
 
-                if (detalles.length > 0) {
-                    detalles.forEach(detalle => {
-                        datosEncabezado.push([
-                            `${detalle.mes}/${detalle.ano}`,
-                            detalle.descripcion,
-                            `$${parseFloat(detalle.valor).toFixed(2)}`
-                        ]);
+                // Obtener los detalles directamente de la tabla en el DOM
+                const $detallesRows = $(`#detalles_${selectedUserId} tr`);
+                let hayDetalles = false;
+
+                if ($detallesRows.length > 0) {
+                    $detallesRows.each(function() {
+                        const $row = $(this);
+                        // Verificar si es una fila de carga o mensaje
+                        if ($row.find('td[colspan]').length > 0) {
+                            return true; // continuar con la siguiente iteración
+                        }
+
+                        const $cells = $row.find('td');
+                        if ($cells.length >= 3) {
+                            hayDetalles = true;
+                            // Obtener valores de los inputs
+                            const fecha = $cells.eq(0).find('input').val() || $cells.eq(0).text().trim();
+                            const descripcion = $cells.eq(2).find('input').val() || $cells.eq(2).text().trim();
+                            let valor = $cells.eq(3).find('input').val() || $cells.eq(3).text().trim();
+                            
+                            // Limpiar y formatear el valor
+                            valor = valor.replace('$', '').trim();
+                            const valorNumerico = parseFloat(valor) || 0;
+
+                            if (fecha && descripcion) {
+                                datosEncabezado.push([
+                                    fecha,
+                                    descripcion,
+                                    `$${valorNumerico.toFixed(2)}`
+                                ]);
+                            }
+                        }
                     });
-                } else {
+                }
+
+                if (!hayDetalles) {
                     datosEncabezado.push(['NO HAY DETALLES REGISTRADOS']);
                 }
 
@@ -476,7 +524,7 @@
                             (R === 0 || // ROL DE PAGOS
                              R === 6 || // RESUMEN GENERAL
                              R === 11 || // TABLA DE MOVIMIENTOS
-                             (detalles.length > 0 ? R === (14 + $movimientosRows.length) : false))) { // TABLA DE DETALLES
+                             R === (14 + ($movimientosRows.length > 0 ? $movimientosRows.length : 1)))) { // TABLA DE DETALLES
                             if (!ws[cell_ref].s) ws[cell_ref].s = {};
                             ws[cell_ref].s.font = {bold: true};
                         }
