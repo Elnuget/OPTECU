@@ -40,7 +40,7 @@ class DetalleSueldoController extends Controller
             'mes' => 'required|string|size:2',
             'ano' => 'required|integer|min:2000|max:2100',
             'descripcion' => 'required|string|max:255',
-            'valor' => 'required|numeric|min:0'
+            'valor' => 'required|numeric'
         ]);
 
         try {
@@ -94,7 +94,7 @@ class DetalleSueldoController extends Controller
             'mes' => 'required|string|size:2',
             'ano' => 'required|integer|min:2000|max:2100',
             'descripcion' => 'required|string|max:255',
-            'valor' => 'required|numeric|min:0'
+            'valor' => 'required|numeric'
         ]);
 
         try {

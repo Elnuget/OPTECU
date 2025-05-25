@@ -324,7 +324,7 @@
                         <input type="text" class="form-control form-control-sm descripcion-detalle" placeholder="DESCRIPCIÓN">
                     </td>
                     <td>
-                        <input type="number" class="form-control form-control-sm valor-detalle" value="0.00" step="0.01">
+                        <input type="number" class="form-control form-control-sm valor-detalle" value="0.00" step="0.01" min="-999999.99" max="999999.99">
                     </td>
                     <td class="text-center">
                         <button type="button" class="btn btn-success btn-sm guardar-detalle">
