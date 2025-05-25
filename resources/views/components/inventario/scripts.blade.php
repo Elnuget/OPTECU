@@ -486,8 +486,27 @@
 
                 // Validar que el código no esté vacío
                 if (!codigo.trim()) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Validación',
+                        text: 'El código no puede estar vacío',
+                        showConfirmButton: true
+                    });
                     return false;
                 }
+
+                // Mostrar indicador de carga
+                Swal.fire({
+                    title: 'Creando artículo...',
+                    text: 'Por favor espere',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    allowEnterKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
                 $.ajax({
                     url: '{{ route("inventario.store") }}',
@@ -497,31 +516,39 @@
                         ...articleData
                     },
                     success: function(response) {
-                        if (response.id) {
-                            row.attr('data-id', response.id);
-                            row.removeClass('empty-space');
-                            
-                            // Actualizar las celdas con los valores
-                            row.find('td[data-field="codigo"] .display-value').text(articleData.codigo);
-                            row.find('td[data-field="cantidad"] .display-value').text(articleData.cantidad);
-                            
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Artículo creado exitosamente',
-                                showConfirmButton: false,
-                                timer: 1500
-                            }).then(() => {
+                        // Actualizar las celdas con los valores
+                        row.attr('data-id', response.id || '');
+                        row.removeClass('empty-space');
+                        row.find('td[data-field="codigo"] .display-value').text(articleData.codigo);
+                        row.find('td[data-field="cantidad"] .display-value').text(articleData.cantidad);
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Éxito!',
+                            text: 'El artículo se ha creado correctamente',
+                            showConfirmButton: true,
+                            confirmButtonText: 'Aceptar'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
                                 window.location.reload();
-                            });
-                        }
+                            }
+                        });
                     },
                     error: function(xhr) {
+                        let errorMessage = 'Hubo un error al crear el artículo';
+                        
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
+                        }
+                        
                         Swal.fire({
                             icon: 'error',
-                            title: 'Error al crear el artículo',
-                            text: xhr.responseJSON?.message || 'Por favor, intente nuevamente',
-                            timer: 2000,
-                            showConfirmButton: false
+                            title: 'Error',
+                            text: errorMessage,
+                            showConfirmButton: true,
+                            confirmButtonText: 'Aceptar'
                         });
                     }
                 });
@@ -540,7 +567,7 @@
                     const displayValue = cell.find('.display-value');
                     
                     // Crear input para el código
-                    const input = $('<input type="text" class="form-control">');
+                    const input = $('<input type="text" class="form-control" placeholder="INGRESE EL CÓDIGO">');
                     displayValue.hide();
                     cell.append(input);
                     input.focus();
