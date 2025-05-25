@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\PedidoController;
 use App\Http\Controllers\Api\CashHistoryController;
 use App\Http\Controllers\Api\HistorialClinicoController;
 use App\Http\Controllers\SueldoController;
+use App\Http\Controllers\InventarioController;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,3 +37,5 @@ Route::get('/historiales-clinicos/buscar-por/{campo}/{valor}', [HistorialClinico
 
 Route::get('/sueldos/registros-cobro', [SueldoController::class, 'getRegistrosCobro']);
 Route::get('/sueldos/total-registros-cobro', [SueldoController::class, 'getTotalRegistrosCobro']);
+
+Route::post('/inventario/restaurar/{id}', [InventarioController::class, 'restaurar']);

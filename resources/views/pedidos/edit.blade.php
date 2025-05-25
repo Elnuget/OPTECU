@@ -14,6 +14,9 @@
 @stop
 
 @section('content')
+    {{-- Meta tag para CSRF --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
     <style>
         /* Convertir todo el texto a mayúsculas */
         .card-title,
@@ -133,11 +136,37 @@
 @stop
 
 @section('js')
-<script src="{{ asset('js/pedidos.js') }}"></script>
+<!-- jQuery primero -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Bootstrap -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Bootstrap Select -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/css/bootstrap-select.min.css">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/js/bootstrap-select.min.js"></script>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Nuestro script de pedidos -->
 <script>
+    // Configurar la versión de Bootstrap para bootstrap-select
+    $.fn.selectpicker.Constructor.BootstrapVersion = '4.6.0';
+</script>
+<script src="{{ asset('js/pedidos.js') }}"></script>
+
+<script>
+    console.log('Vista cargada');
+    // Verificar que jQuery está cargado
+    if (typeof jQuery !== 'undefined') {
+        console.log('jQuery está cargado');
+    } else {
+        console.error('jQuery no está cargado');
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM Content Loaded en la vista');
         // Hacer que todo el header sea clickeable
         document.querySelectorAll('.card-header').forEach(header => {
             header.addEventListener('click', function(e) {
@@ -151,6 +180,12 @@
                 }
             });
         });
+
+        // Verificar que los elementos existen
+        const addButton = document.getElementById('add-armazon');
+        const container = document.getElementById('armazones-container');
+        console.log('Botón de agregar:', addButton);
+        console.log('Contenedor:', container);
     });
 </script>
 @stop

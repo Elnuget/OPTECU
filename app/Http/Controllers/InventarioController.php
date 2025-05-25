@@ -205,6 +205,30 @@ class InventarioController extends Controller
         }
     }
 
+    /**
+     * Restaura una unidad al inventario cuando se elimina de un pedido.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function restaurar($id)
+    {
+        try {
+            $inventario = Inventario::findOrFail($id);
+            $inventario->increment('cantidad');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Unidad restaurada exitosamente al inventario'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al restaurar la unidad: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getNumerosLugar($lugar)
     {
         // removed: pluck('numero_lugar')

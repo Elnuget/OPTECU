@@ -2,7 +2,7 @@
 
 <div class="card collapsed-card">
     <div class="card-header">
-        <h3 class="card-title">Armazón y Accesorios</h3>
+        <h3 class="card-title">Armazón o Accesorio</h3>
         <div class="card-tools">
             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                 <i class="fas fa-plus"></i>
@@ -18,9 +18,9 @@
                 @endif
                 <div class="row">
                     <div class="col-md-12">
-                        <label>Armazón (Inventario)</label>
+                        <label>Armazón o Accesorio (Inventario)</label>
                         <select name="a_inventario_id[]" class="form-control selectpicker" data-live-search="true">
-                            <option value="">Seleccione un armazón</option>
+                            <option value="">Seleccione un armazón o accesorio</option>
                             @foreach($inventarioItems as $item)
                                 <option value="{{ $item->id }}" 
                                     {{ $inventario->id == $item->id ? 'selected' : '' }}>
@@ -46,7 +46,7 @@
                     <div class="row mt-2">
                         <div class="col-12 text-right">
                             <button type="button" class="btn btn-danger btn-sm remove-armazon">
-                                Eliminar Armazón
+                                <i class="fas fa-times"></i> Eliminar Armazón o Accesorio
                             </button>
                         </div>
                     </div>
@@ -57,7 +57,7 @@
         <div class="row mt-3">
             <div class="col-12">
                 <button type="button" class="btn btn-success" id="add-armazon">
-                    Agregar Armazón
+                    <i class="fas fa-plus"></i> Agregar Armazón o Accesorio
                 </button>
             </div>
         </div>
