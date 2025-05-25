@@ -100,9 +100,9 @@
     <div class="card mt-4">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
-                <h3 class="card-title">DETALLE SUELDOS REGISTRADOS</h3>
+                <h3 class="card-title"> SUELDOS REGISTRADOS</h3>
                 <button class="btn btn-primary" data-toggle="modal" data-target="#modalAgregarSueldo">
-                    <i class="fas fa-plus"></i> DETALLE AGREGAR SUELDO
+                    <i class="fas fa-plus"></i>  AGREGAR SUELDO
                 </button>
             </div>
         </div>
@@ -152,7 +152,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalAgregarSueldoLabel">AGREGAR DETALLE NUEVO SUELDO</h5>
+                    <h5 class="modal-title" id="modalAgregarSueldoLabel">AGREGAR NUEVO SUELDO</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -195,7 +195,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalEditarSueldoLabel">EDITAR DETALLE SUELDO</h5>
+                    <h5 class="modal-title" id="modalEditarSueldoLabel">EDITAR SUELDO</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -395,8 +395,28 @@
                         </tr>
                     `);
                     
-                    obtenerRolPagos(selectedUserId, selectedUserName, ano, mes);
+                    obtenerRolPagos(selectedUserId, selectedUserName, ano, mes)
+                        .then(data => {
+                            // Actualizar los detalles
+                            actualizarDetallesRolPagos(data);
+                        });
                 }
+            }
+
+            // Función para actualizar los detalles del rol de pagos
+            function actualizarDetallesRolPagos(data) {
+                const sueldoBase = data.sueldo_base || 0;
+                const comisiones = data.comisiones || 0;
+                const bonificaciones = data.bonificaciones || 0;
+                const descuentos = data.descuentos || 0;
+                const totalPagar = sueldoBase + comisiones + bonificaciones - descuentos;
+
+                // Actualizar los valores en la tabla de detalles
+                $(`#sueldo_base_${selectedUserId}`).text(`$${sueldoBase.toFixed(2)}`);
+                $(`#comisiones_${selectedUserId}`).text(`$${comisiones.toFixed(2)}`);
+                $(`#bonificaciones_${selectedUserId}`).text(`$${bonificaciones.toFixed(2)}`);
+                $(`#descuentos_${selectedUserId}`).text(`$${descuentos.toFixed(2)}`);
+                $(`#total_pagar_${selectedUserId}`).text(`$${totalPagar.toFixed(2)}`);
             }
 
             // Función para actualizar la interfaz cuando se selecciona un usuario
@@ -437,6 +457,36 @@
                                             </td>
                                         </tr>
                                     </tbody>
+                                </table>
+                            </div>
+                            <div class="table-responsive mt-4">
+                                <h5>DETALLES</h5>
+                                <table class="table table-bordered table-detalles">
+                                    <thead>
+                                        <tr>
+                                            <th>FECHA</th>
+                                            <th>EMPLEADO</th>
+                                            <th>DESCRIPCIÓN</th>
+                                            <th>VALOR</th>
+                                            <th>ACCIONES</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="detalles_${selectedUserId}">
+                                        <!-- Las filas se agregarán dinámicamente -->
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="5" class="text-center">
+                                                <button type="button" class="btn btn-success btn-sm" onclick="agregarFilaDetalle(${selectedUserId})">
+                                                    <i class="fas fa-plus"></i> AGREGAR DETALLE
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr class="table-primary">
+                                            <td colspan="3"><strong>TOTAL</strong></td>
+                                            <td class="text-right" colspan="2"><strong id="total_detalles_${selectedUserId}">$0.00</strong></td>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         </div>
@@ -621,6 +671,55 @@
             // Hacer las funciones disponibles globalmente
             window.editarSueldo = editarSueldo;
             window.eliminarSueldo = eliminarSueldo;
+
+            // Función para agregar una nueva fila de detalle
+            function agregarFilaDetalle(userId) {
+                const fecha = new Date().toISOString().split('T')[0];
+                const empleado = $('#selectUsuario option:selected').text();
+                const nuevaFila = `
+                    <tr>
+                        <td>
+                            <input type="date" class="form-control form-control-sm" value="${fecha}">
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm" value="${empleado}" readonly>
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm" placeholder="DESCRIPCIÓN">
+                        </td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm valor-detalle" value="0.00" step="0.01" onchange="calcularTotalDetalles(${userId})">
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-danger btn-sm" onclick="eliminarFilaDetalle(this, ${userId})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                $(`#detalles_${userId}`).append(nuevaFila);
+                calcularTotalDetalles(userId);
+            }
+
+            // Función para eliminar una fila de detalle
+            function eliminarFilaDetalle(boton, userId) {
+                $(boton).closest('tr').remove();
+                calcularTotalDetalles(userId);
+            }
+
+            // Función para calcular el total de los detalles
+            function calcularTotalDetalles(userId) {
+                let total = 0;
+                $(`#detalles_${userId} .valor-detalle`).each(function() {
+                    total += parseFloat($(this).val()) || 0;
+                });
+                $(`#total_detalles_${userId}`).text(`$${total.toFixed(2)}`);
+            }
+
+            // Hacer las funciones disponibles globalmente
+            window.agregarFilaDetalle = agregarFilaDetalle;
+            window.eliminarFilaDetalle = eliminarFilaDetalle;
+            window.calcularTotalDetalles = calcularTotalDetalles;
 
             // Función para cargar los registros de cobro
             function cargarRegistrosCobro() {
