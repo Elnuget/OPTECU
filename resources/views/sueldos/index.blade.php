@@ -844,6 +844,82 @@
             $('#filtroUsuarioCobro, #fechaInicioCobro, #fechaFinCobro').change(function() {
                 cargarRegistrosCobro();
             });
+
+            // Manejar el clic en el botón guardar-detalle
+            $(document).on('click', '.guardar-detalle', function() {
+                const $row = $(this).closest('tr');
+                const $descripcion = $row.find('.descripcion-detalle');
+                const $valor = $row.find('.valor-detalle');
+                const descripcion = $descripcion.val();
+                const valor = parseFloat($valor.val());
+                const userId = selectedUserId;
+                const mes = $('#filtroMes').val();
+                const ano = $('#filtroAno').val();
+
+                if (!descripcion || isNaN(valor)) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: '¡ATENCIÓN!',
+                        text: 'POR FAVOR COMPLETE TODOS LOS CAMPOS CORRECTAMENTE',
+                        showConfirmButton: true,
+                        confirmButtonText: 'ENTENDIDO',
+                        confirmButtonColor: '#ffc107'
+                    });
+                    return;
+                }
+
+                $.ajax({
+                    url: '/detalles-sueldos',
+                    method: 'POST',
+                    data: {
+                        user_id: userId,
+                        mes: mes,
+                        ano: ano,
+                        descripcion: descripcion,
+                        valor: valor,
+                        _token: $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            // Mostrar notificación de éxito
+                            const Toast = Swal.mixin({
+                                toast: true,
+                                position: 'top-end',
+                                showConfirmButton: false,
+                                timer: 3000,
+                                timerProgressBar: true
+                            });
+
+                            Toast.fire({
+                                icon: 'success',
+                                title: 'DETALLE GUARDADO CORRECTAMENTE'
+                            });
+
+                            // Actualizar la interfaz
+                            $descripcion.prop('readonly', true);
+                            $valor.prop('readonly', true);
+                            $(this).hide();
+                            $row.find('.eliminar-detalle').show();
+                            $row.attr('data-detalle-id', response.data.id);
+
+                            // Recargar los detalles
+                            cargarDetalles(userId);
+                            // Recargar el rol de pagos para actualizar totales
+                            cargarRolDePagos();
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: '¡ERROR!',
+                            text: 'ERROR AL GUARDAR EL DETALLE',
+                            showConfirmButton: true,
+                            confirmButtonText: 'ENTENDIDO',
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                });
+            });
         });
     </script>
 @stop 
