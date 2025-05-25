@@ -235,7 +235,7 @@
     </div>
 
     <!-- Nueva tarjeta para Registros de Cobro -->
-    <div class="card mt-4">
+    <div class="card mt-4" hidden>
         <div class="card-header">
             <h3 class="card-title">REGISTROS DE COBRO</h3>
         </div>
