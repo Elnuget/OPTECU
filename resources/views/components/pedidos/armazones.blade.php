@@ -2,7 +2,7 @@
 
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">Armazón o Accesorio</h3>
+        <h3 class="card-title">Armazón o Accesorio (Mes Actual)</h3>
         <div class="card-tools">
             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                 <i class="fas fa-plus"></i>
@@ -18,7 +18,7 @@
                 @endif
                 <div class="row">
                     <div class="col-md-12">
-                        <label>Armazón o Accesorio (Inventario)</label>
+                        <label>Armazón o Accesorio ({{ date('F Y') }})</label>
                         <select name="a_inventario_id[]" 
                             class="form-control selectpicker" 
                             data-live-search="true"
@@ -35,6 +35,7 @@
                                 </option>
                             @endforeach
                         </select>
+                        <small class="form-text text-muted">Solo se muestran artículos del mes actual y los ya asignados a este pedido</small>
                     </div>
                 </div>
                 <div class="row mt-2">

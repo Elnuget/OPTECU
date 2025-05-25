@@ -147,12 +147,17 @@ function duplicateArmazon() {
         return `<option value="${opt.value}" data-content="${opt.getAttribute('data-content')}">${opt.text}</option>`;
     }).join('');
 
+    // Obtener el mes y año actual
+    const currentDate = new Date();
+    const currentMonth = currentDate.toLocaleString('es-ES', { month: 'long' });
+    const currentYear = currentDate.getFullYear();
+
     const template = `
         <div class="armazon-section mb-3">
             <hr>
             <div class="row">
                 <div class="col-md-12">
-                    <label>Armazón o Accesorio (Inventario)</label>
+                    <label>Armazón o Accesorio (${currentMonth} ${currentYear})</label>
                     <select name="a_inventario_id[]" class="form-control selectpicker" 
                         data-live-search="true"
                         data-style="btn-light"
@@ -162,6 +167,7 @@ function duplicateArmazon() {
                         <option value="">Seleccione un armazón o accesorio</option>
                         ${options}
                     </select>
+                    <small class="form-text text-muted">Solo se muestran artículos del mes actual y los ya asignados a este pedido</small>
                 </div>
             </div>
             <div class="row mt-2">

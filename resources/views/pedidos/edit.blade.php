@@ -92,6 +92,10 @@
         </div>
 
         <div class="card-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> En el combobox de armazón o accesorio solo se muestran los artículos del mes y año actual ({{ date('F Y') }}), además de los que ya están asignados a este pedido.
+            </div>
+            
             <form action="{{ route('pedidos.update', $pedido->id) }}" method="POST">
                 @csrf
                 @method('PUT')

@@ -318,7 +318,25 @@ class PedidosController extends Controller
     public function edit($id)
     {
         $pedido = Pedido::with(['inventarios', 'lunas', 'pagos'])->findOrFail($id);
-        $inventarioItems = Inventario::all();
+        
+        // Obtener el año y mes actual
+        $currentYear = date('Y');
+        $currentMonth = date('m');
+        
+        // Filtrar inventario por mes y año actual
+        $inventarioItems = Inventario::where('cantidad', '>', 0)
+            ->whereYear('fecha', $currentYear)
+            ->whereMonth('fecha', $currentMonth)
+            ->get();
+            
+        // Agregar también los items que ya están en este pedido (para que no desaparezcan al editar)
+        $pedidoInventarioIds = $pedido->inventarios->pluck('id')->toArray();
+        if (!empty($pedidoInventarioIds)) {
+            $inventarioItemsPedido = Inventario::whereIn('id', $pedidoInventarioIds)->get();
+            // Combinar las colecciones y eliminar duplicados
+            $inventarioItems = $inventarioItems->concat($inventarioItemsPedido)->unique('id');
+        }
+        
         $totalPagado = $pedido->pagos->sum('pago'); // Suma todos los pagos realizados
         $usuarios = \App\Models\User::all(); // Obtener todos los usuarios
 
