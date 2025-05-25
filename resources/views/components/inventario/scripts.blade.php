@@ -467,6 +467,117 @@
                     });
                 }
             });
+
+            // Función para crear automáticamente un artículo en SOPORTE
+            function createSoporteArticle(row, codigo = '') {
+                const today = new Date();
+                const fecha = today.getFullYear() + '-' + 
+                            String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                            String(today.getDate()).padStart(2, '0');
+                
+                const articleData = {
+                    fecha: fecha,
+                    numero: row.data('numero'),
+                    lugar: row.data('lugar'),
+                    columna: row.data('columna'),
+                    codigo: codigo,
+                    cantidad: 1
+                };
+
+                // Validar que el código no esté vacío
+                if (!codigo.trim()) {
+                    return false;
+                }
+
+                $.ajax({
+                    url: '{{ route("inventario.store") }}',
+                    method: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        ...articleData
+                    },
+                    success: function(response) {
+                        if (response.id) {
+                            row.attr('data-id', response.id);
+                            row.removeClass('empty-space');
+                            
+                            // Actualizar las celdas con los valores
+                            row.find('td[data-field="codigo"] .display-value').text(articleData.codigo);
+                            row.find('td[data-field="cantidad"] .display-value').text(articleData.cantidad);
+                            
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Artículo creado exitosamente',
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al crear el artículo',
+                            text: xhr.responseJSON?.message || 'Por favor, intente nuevamente',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    }
+                });
+
+                return true;
+            }
+
+            // Modificar el manejador de clics para espacios vacíos en SOPORTE
+            $('.table').on('click', 'tr.empty-space td.editable', function() {
+                const cell = $(this);
+                const row = cell.closest('tr');
+                const field = cell.data('field');
+                
+                // Solo proceder si el campo es código o cantidad
+                if (field === 'codigo' || field === 'cantidad') {
+                    const displayValue = cell.find('.display-value');
+                    
+                    // Crear input para el código
+                    const input = $('<input type="text" class="form-control">');
+                    displayValue.hide();
+                    cell.append(input);
+                    input.focus();
+                    
+                    // Manejar la pérdida de foco
+                    input.on('blur', function() {
+                        const codigo = $(this).val().trim();
+                        if (!codigo) {
+                            displayValue.show();
+                            input.remove();
+                            return;
+                        }
+                        
+                        // Intentar crear el artículo
+                        if (createSoporteArticle(row, codigo)) {
+                            displayValue.text(codigo);
+                        }
+                        displayValue.show();
+                        input.remove();
+                    });
+                    
+                    // Manejar la tecla Enter
+                    input.on('keypress', function(e) {
+                        if (e.which === 13) {
+                            $(this).blur();
+                        }
+                    });
+                    
+                    // Manejar la tecla Escape
+                    input.on('keyup', function(e) {
+                        if (e.key === 'Escape') {
+                            displayValue.show();
+                            input.remove();
+                        }
+                    });
+                }
+            });
         });
     </script>
 @endpush 

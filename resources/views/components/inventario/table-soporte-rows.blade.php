@@ -21,24 +21,28 @@
 @for($n = 1; $n <= 14; $n++)
     @php
         $item = $uniqueItems->firstWhere('numero', $n);
+        $isEmptySpace = !$item;
     @endphp
-    <tr @if($item && $item->cantidad == 0) class="table-danger" @endif data-id="{{ $item->id ?? '' }}">
+    <tr @if($item && $item->cantidad == 0) class="table-danger" @endif 
+        @if($isEmptySpace) class="empty-space" @endif
+        data-id="{{ $item->id ?? '' }}" 
+        data-numero="{{ $n }}" 
+        data-lugar="{{ $items->first()->lugar }}" 
+        data-columna="{{ $items->first()->columna }}">
         <td class="editable text-center" data-field="numero">
+            <span class="display-value">{{ $n }}</span>
             @if($item)
-                <span class="display-value">{{ $item->numero }}</span>
                 <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->numero }}">
-            @else
-                <span class="display-value">{{ $n }}</span>
             @endif
         </td>
         <td class="editable text-center" data-field="lugar">
-            <span class="display-value">{{ $item->lugar ?? $items->first()->lugar }}</span>
+            <span class="display-value">{{ $items->first()->lugar }}</span>
             @if($item)
                 <input type="text" class="form-control edit-input" style="display: none;" value="{{ $item->lugar }}">
             @endif
         </td>
         <td class="editable text-center" data-field="columna">
-            <span class="display-value">{{ $item->columna ?? $items->first()->columna }}</span>
+            <span class="display-value">{{ $items->first()->columna }}</span>
             @if($item)
                 <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->columna }}">
             @endif

@@ -212,5 +212,24 @@
         .duplicate-row:hover {
             background-color: #ffeeba !important;
         }
+
+        /* Estilos para espacios vacíos en SOPORTE */
+        .empty-space {
+            background-color: #f8f9fa;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .empty-space:hover {
+            background-color: #e9ecef;
+        }
+
+        .empty-space td {
+            color: #6c757d;
+        }
+
+        .empty-space td.editable:hover {
+            background-color: #dee2e6;
+        }
     </style>
 @endpush 
