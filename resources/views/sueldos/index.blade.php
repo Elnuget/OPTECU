@@ -392,8 +392,24 @@
                             title: 'VALOR GUARDADO CORRECTAMENTE'
                         });
 
-                        // Actualizar la tabla de registros de cobro
+                        // Actualizar la tabla de registros de cobro y el total
                         cargarRegistrosCobro();
+                        
+                        // Actualizar el total de registros de cobro
+                        $.ajax({
+                            url: '/api/sueldos/total-registros-cobro',
+                            method: 'GET',
+                            data: {
+                                user_id: userId,
+                                mes: $('#filtroMes').val(),
+                                ano: $('#filtroAno').val()
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    $('#total_registros_' + userId).text('$' + parseFloat(response.total).toFixed(2));
+                                }
+                            }
+                        });
                     } else {
                         throw new Error(data.mensaje || 'ERROR AL GUARDAR EL VALOR');
                     }
