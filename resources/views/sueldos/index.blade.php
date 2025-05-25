@@ -7,6 +7,37 @@
     <h1>ROL DE PAGOS</h1>
     <p>ADMINISTRACIÓN DE ROLES DE PAGO</p>
     @include('components.sueldos.alerts')
+
+    @php
+        $empresa = \App\Models\Empresa::first();
+        if ($empresa && $empresa->nombre !== 'Matriz') {
+            echo '
+            <div class="modal fade" id="modalRestriccion" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="modalRestriccionLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning">
+                            <h5 class="modal-title" id="modalRestriccionLabel">¡ATENCIÓN!</h5>
+                        </div>
+                        <div class="modal-body text-center">
+                            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                            <h5>DEBE GESTIONAR SU ROL DE PAGOS EN LA SUCURSAL MATRIZ</h5>
+                            <p class="mt-3">
+                                <a href="https://opticas.xyz/" class="btn btn-primary">
+                                    <i class="fas fa-building mr-2"></i>IR A MATRIZ
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    $("#modalRestriccion").modal("show");
+                });
+            </script>
+            ';
+        }
+    @endphp
 @stop
 
 @section('css')
