@@ -28,14 +28,38 @@
                 <div class="row">
                     <div class="col-md-12">
                         <label>Armazón o Accesorio ({{ $mesTexto }} {{ $anoTexto }})</label>
-                        <select name="a_inventario_id[]" class="form-control">
-                            <option value="">Seleccione un armazón o accesorio</option>
-                            @foreach($inventarioItems as $item)
-                                <option value="{{ $item->id }}" {{ $inventario->id == $item->id ? 'selected' : '' }}>
-                                    {{ $item->codigo }} - {{ $item->lugar }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}
-                                </option>
-                            @endforeach
-                        </select>
+                        
+                        <div class="input-group">
+                            <input type="text" 
+                                class="form-control armazon-search" 
+                                placeholder="Buscar armazón o accesorio..." 
+                                data-selected-id="{{ $inventario->id }}"
+                                value="{{ $inventario->codigo }} - {{ $inventario->lugar }} - {{ $inventario->fecha ? \Carbon\Carbon::parse($inventario->fecha)->format('d/m/Y') : 'Sin fecha' }}">
+                                
+                            <input type="hidden" 
+                                name="a_inventario_id[]" 
+                                value="{{ $inventario->id }}" 
+                                class="armazon-id">
+                                
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary dropdown-toggle armazon-dropdown-btn" type="button" 
+                                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <div class="dropdown-menu armazon-dropdown" style="max-height: 300px; overflow-y: auto; width: 100%;">
+                                    @foreach($inventarioItems as $item)
+                                        <a class="dropdown-item armazon-option" href="#" 
+                                           data-id="{{ $item->id }}" 
+                                           data-code="{{ $item->codigo }}"
+                                           data-place="{{ $item->lugar }}"
+                                           data-date="{{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}">
+                                            {{ $item->codigo }} - {{ $item->lugar }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                        
                         @if($inventarioItems->isEmpty())
                             <div class="text-danger mt-1">
                                 <small><i class="fas fa-exclamation-triangle"></i> No hay artículos disponibles para este mes</small>

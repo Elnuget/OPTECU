@@ -64,6 +64,36 @@
         datalist option {
             text-transform: uppercase !important;
         }
+        
+        /* Estilos para los combobox personalizados */
+        .armazon-dropdown {
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .armazon-dropdown .dropdown-item {
+            white-space: normal;
+            padding: 8px 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .armazon-dropdown .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .armazon-dropdown-btn {
+            border-color: #ced4da;
+        }
+        
+        .armazon-search {
+            border-right: 0;
+        }
+        
+        /* Mostrar el dropdown por encima de otros elementos */
+        .dropdown-menu.show {
+            z-index: 1050;
+        }
     </style>
 
     {{-- Mostrar mensajes de error --}}
@@ -163,54 +193,30 @@
 <!-- Bootstrap -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Bootstrap Select - VERSIÓN ESPECÍFICA -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js"></script>
-
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<!-- Nuestro script de pedidos -->
+<!-- Nuestros scripts -->
 <script src="{{ asset('js/pedidos.js') }}"></script>
-
-<!-- Script de corrección para selectpicker -->
 <script src="{{ asset('js/selectpicker-fix.js') }}"></script>
 
 <script>
     $(document).ready(function() {
-        // Inicializar selectpicker de forma básica
-        $('.selectpicker').selectpicker();
+        // No es necesario inicializar nada aquí, ya que todo se maneja en selectpicker-fix.js
         
-        // Cambiar el evento del botón add-armazon para usar la función simplificada
+        // Cambiar el evento del botón add-armazon para usar la función en selectpicker-fix.js
         $('#add-armazon').on('click', function(e) {
             e.preventDefault();
             console.log('Botón agregar armazón clickeado');
             
-            // Usar la función global simplificada
+            // Usar la función global
             window.addArmazon();
-            
-            // O usar la función original
-            // duplicateArmazon();
         });
         
-        // Manejar eliminación de armazones/accesorios
-        $('#armazones-container').on('click', '.remove-armazon', function(e) {
-            e.preventDefault();
-            console.log('Botón eliminar armazón clickeado');
-            
-            $(this).closest('.armazon-section').remove();
-            calculateTotal();
-            
-            Swal.fire({
-                icon: 'success',
-                title: '¡Eliminado!',
-                text: 'Armazón eliminado correctamente',
-                timer: 1500,
-                showConfirmButton: false,
-                position: 'top-end',
-                toast: true
-            });
-        });
+        // El resto de la lógica ahora se maneja en selectpicker-fix.js
+        
+        // Calcular el total inicial
+        calculateTotal();
     });
 </script>
 @stop

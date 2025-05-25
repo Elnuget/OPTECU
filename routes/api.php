@@ -39,3 +39,4 @@ Route::get('/sueldos/registros-cobro', [SueldoController::class, 'getRegistrosCo
 Route::get('/sueldos/total-registros-cobro', [SueldoController::class, 'getTotalRegistrosCobro']);
 
 Route::post('/inventario/restaurar/{id}', [InventarioController::class, 'restaurar']);
+Route::post('/inventario/restar/{id}', [InventarioController::class, 'restar']);

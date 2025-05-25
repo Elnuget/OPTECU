@@ -439,4 +439,47 @@ class InventarioController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Resta una unidad del inventario cuando se selecciona en un pedido.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function restar($id)
+    {
+        try {
+            $inventario = Inventario::findOrFail($id);
+            
+            // Verificar que haya suficiente cantidad disponible
+            if ($inventario->cantidad <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No hay unidades disponibles para restar'
+                ], 400);
+            }
+            
+            // Restar una unidad
+            $inventario->decrement('cantidad');
+            
+            // Actualizar el número de orden (opcional)
+            $pedidoActual = Pedido::orderBy('numero_orden', 'desc')->first();
+            if ($pedidoActual) {
+                $inventario->orden = $pedidoActual->numero_orden;
+                $inventario->save();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Unidad restada exitosamente del inventario',
+                'cantidad_restante' => $inventario->cantidad
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error al restar unidad de inventario: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al restar la unidad: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
