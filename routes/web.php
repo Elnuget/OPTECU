@@ -49,14 +49,14 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/puntuaciones', [AdminController::class, 'puntuacionesUsuarios'])
         ->name('admin.puntuaciones');
-        
-    // Rutas para Sueldos (solo administradores)
-    Route::resource('sueldos', SueldoController::class);
-    Route::post('sueldos/guardar-valor', [SueldoController::class, 'guardarValor'])->name('sueldos.guardar-valor');
 });
 
 // Keep these routes accessible to all authenticated users
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+    // Rutas para Sueldos (accesible para todos los usuarios autenticados)
+    Route::resource('sueldos', SueldoController::class);
+    Route::post('sueldos/guardar-valor', [SueldoController::class, 'guardarValor'])->name('sueldos.guardar-valor');
+
     // Medios de Pago
     Route::get('Configuración/MediosDePago', [mediosdepagoController::class, 'index'])->name('configuracion.mediosdepago.index');
     Route::get('Configuración/MediosDePago/Crear', [mediosdepagoController::class, 'create'])->name('configuracion.mediosdepago.create'); 

@@ -305,8 +305,7 @@ return [
             'text' => 'SUELDOS',
             'icon' => 'fas fa-money-check-alt',
             'url' => '/sueldos',
-            'active' => ['sueldos', 'sueldos/*'],
-            'can' => 'admin',
+            'active' => ['sueldos', 'sueldos/*']
         ],
 
         [
