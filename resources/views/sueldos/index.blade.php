@@ -506,7 +506,12 @@
                                         </tr>
                                     </thead>
                                     <tbody id="detalles_${selectedUserId}">
-                                        <!-- Las filas se agregarán dinámicamente -->
+                                        <tr>
+                                            <td colspan="5" class="text-center">
+                                                <i class="fas fa-spinner fa-spin mr-2"></i>
+                                                CARGANDO DETALLES...
+                                            </td>
+                                        </tr>
                                     </tbody>
                                     <tfoot>
                                         <tr>
@@ -525,8 +530,6 @@
                             </div>
                         </div>
                     `);
-                    
-                    cargarRolDePagos();
                 } else {
                     contenedor.html(`
                         <div class="text-center text-muted">
@@ -542,11 +545,18 @@
                 selectedUserId = $(this).val();
                 selectedUserName = $(this).find('option:selected').data('nombre');
                 actualizarInterfazUsuario();
+                if (selectedUserId) {
+                    cargarRolDePagos();
+                    cargarDetalles(selectedUserId); // Cargar los detalles al cambiar de usuario
+                }
             });
 
             // Manejar cambios en los filtros
             $('#filtroMes, #filtroAno, #filtroSucursal').change(function() {
                 cargarRolDePagos();
+                if (selectedUserId) {
+                    cargarDetalles(selectedUserId); // Cargar los detalles al cambiar los filtros
+                }
             });
 
             // Manejar el envío del formulario de agregar sueldo
@@ -708,10 +718,26 @@
 
             // Función para cargar los detalles existentes
             function cargarDetalles(userId) {
-                if (!userId) return;
+                console.log('Cargando detalles para usuario:', userId);
+                if (!userId) {
+                    console.log('No hay usuario seleccionado');
+                    return;
+                }
 
                 const mes = $('#filtroMes').val();
                 const ano = $('#filtroAno').val();
+                console.log('Período:', mes, ano);
+
+                // Mostrar indicador de carga
+                const $tbody = $(`#detalles_${userId}`);
+                $tbody.html(`
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>
+                            CARGANDO DETALLES...
+                        </td>
+                    </tr>
+                `);
 
                 $.ajax({
                     url: '/detalles-sueldos/periodo',
@@ -722,38 +748,126 @@
                         ano: ano
                     },
                     success: function(response) {
+                        console.log('Respuesta del servidor:', response);
                         if (response.success) {
-                            const $tbody = $(`#detalles_${userId}`);
                             $tbody.empty();
+                            let total = 0;
 
-                            response.data.forEach(detalle => {
-                                const fila = `
-                                    <tr data-detalle-id="${detalle.id}">
-                                        <td>
-                                            <input type="text" class="form-control form-control-sm" value="${detalle.mes}/${detalle.ano}" readonly>
-                                        </td>
-                                        <td>
-                                            <input type="text" class="form-control form-control-sm" value="${detalle.user.name}" readonly>
-                                        </td>
-                                        <td>
-                                            <input type="text" class="form-control form-control-sm descripcion-detalle" value="${detalle.descripcion}" readonly>
-                                        </td>
-                                        <td>
-                                            <input type="number" class="form-control form-control-sm valor-detalle" value="${detalle.valor}" readonly>
-                                        </td>
-                                        <td class="text-center">
-                                            <button type="button" class="btn btn-danger btn-sm eliminar-detalle">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                            if (response.data.length === 0) {
+                                $tbody.html(`
+                                    <tr>
+                                        <td colspan="5" class="text-center">
+                                            NO HAY DETALLES PARA ESTE PERÍODO
                                         </td>
                                     </tr>
-                                `;
-                                $tbody.append(fila);
-                            });
+                                `);
+                            } else {
+                                response.data.forEach(detalle => {
+                                    console.log('Procesando detalle:', detalle);
+                                    const nombreUsuario = selectedUserName; // Usamos el nombre del usuario seleccionado
+                                    const fila = `
+                                        <tr data-detalle-id="${detalle.id}">
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm" value="${detalle.mes}/${detalle.ano}" readonly>
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm" value="${nombreUsuario}" readonly>
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control form-control-sm descripcion-detalle" value="${detalle.descripcion}" readonly>
+                                            </td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm valor-detalle" value="${detalle.valor}" readonly>
+                                            </td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-danger btn-sm eliminar-detalle" onclick="eliminarDetalle(${detalle.id})">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                    $tbody.append(fila);
+                                    total += parseFloat(detalle.valor);
+                                });
+                            }
+
+                            // Actualizar el total
+                            $(`#total_detalles_${userId}`).text(`$${total.toFixed(2)}`);
+                        } else {
+                            $tbody.html(`
+                                <tr>
+                                    <td colspan="5" class="text-center text-danger">
+                                        ERROR AL CARGAR LOS DETALLES
+                                    </td>
+                                </tr>
+                            `);
                         }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error al cargar detalles:', error);
+                        $tbody.html(`
+                            <tr>
+                                <td colspan="5" class="text-center text-danger">
+                                    ERROR AL CARGAR LOS DETALLES: ${error}
+                                </td>
+                            </tr>
+                        `);
                     }
                 });
             }
+
+            // Función para eliminar un detalle
+            window.eliminarDetalle = function(detalleId) {
+                Swal.fire({
+                    title: '¿ESTÁ SEGURO?',
+                    text: 'ESTA ACCIÓN NO SE PUEDE DESHACER',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'SÍ, ELIMINAR',
+                    cancelButtonText: 'CANCELAR'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `/detalles-sueldos/${detalleId}`,
+                            method: 'DELETE',
+                            data: {
+                                _token: $('meta[name="csrf-token"]').attr('content')
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    const Toast = Swal.mixin({
+                                        toast: true,
+                                        position: 'top-end',
+                                        showConfirmButton: false,
+                                        timer: 3000,
+                                        timerProgressBar: true
+                                    });
+
+                                    Toast.fire({
+                                        icon: 'success',
+                                        title: 'DETALLE ELIMINADO CORRECTAMENTE'
+                                    });
+
+                                    // Recargar los detalles
+                                    cargarDetalles(selectedUserId);
+                                }
+                            },
+                            error: function() {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '¡ERROR!',
+                                    text: 'ERROR AL ELIMINAR EL DETALLE',
+                                    showConfirmButton: true,
+                                    confirmButtonText: 'ENTENDIDO',
+                                    confirmButtonColor: '#dc3545'
+                                });
+                            }
+                        });
+                    }
+                });
+            };
 
             // Actualizar la función de cargar rol de pagos para incluir los detalles
             function cargarRolDePagos() {
@@ -847,7 +961,8 @@
 
             // Manejar el clic en el botón guardar-detalle
             $(document).on('click', '.guardar-detalle', function() {
-                const $row = $(this).closest('tr');
+                const $button = $(this);
+                const $row = $button.closest('tr');
                 const $descripcion = $row.find('.descripcion-detalle');
                 const $valor = $row.find('.valor-detalle');
                 const descripcion = $descripcion.val();
@@ -895,17 +1010,8 @@
                                 title: 'DETALLE GUARDADO CORRECTAMENTE'
                             });
 
-                            // Actualizar la interfaz
-                            $descripcion.prop('readonly', true);
-                            $valor.prop('readonly', true);
-                            $(this).hide();
-                            $row.find('.eliminar-detalle').show();
-                            $row.attr('data-detalle-id', response.data.id);
-
                             // Recargar los detalles
                             cargarDetalles(userId);
-                            // Recargar el rol de pagos para actualizar totales
-                            cargarRolDePagos();
                         }
                     },
                     error: function(xhr) {

@@ -154,7 +154,8 @@ class DetalleSueldoController extends Controller
             'ano' => 'required|integer|min:2000|max:2100'
         ]);
 
-        $detalles = DetalleSueldo::where('user_id', $validated['user_id'])
+        $detalles = DetalleSueldo::with('user')
+            ->where('user_id', $validated['user_id'])
             ->where('mes', $validated['mes'])
             ->where('ano', $validated['ano'])
             ->get();
