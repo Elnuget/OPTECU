@@ -467,9 +467,15 @@
                                     <strong>PERÍODO: </strong>
                                     <span id="periodo_${selectedUserId}">-</span>
                                 </div>
-                                <div>
-                                    <strong>TOTAL VENTAS: </strong>
-                                    <span id="total_${selectedUserId}">$0.00</span>
+                                <div class="d-flex">
+                                    <div class="mr-4">
+                                        <strong>TOTAL VENTAS: </strong>
+                                        <span id="total_${selectedUserId}">$0.00</span>
+                                    </div>
+                                    <div>
+                                        <strong>TOTAL DETALLES: </strong>
+                                        <span id="total_detalles_${selectedUserId}">$0.00</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="table-responsive">
@@ -520,10 +526,6 @@
                                                     <i class="fas fa-plus"></i> AGREGAR DETALLE
                                                 </button>
                                             </td>
-                                        </tr>
-                                        <tr class="table-primary">
-                                            <td colspan="3"><strong>TOTAL</strong></td>
-                                            <td class="text-right" colspan="2"><strong id="total_detalles_${selectedUserId}">$0.00</strong></td>
                                         </tr>
                                     </tfoot>
                                 </table>
