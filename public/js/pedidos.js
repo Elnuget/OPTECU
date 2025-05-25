@@ -142,14 +142,25 @@ function duplicateArmazon() {
         return;
     }
 
+    // Crear un nuevo elemento select y copiar las opciones del primero
+    const options = Array.from(firstSelect.options).map(opt => {
+        return `<option value="${opt.value}" data-content="${opt.getAttribute('data-content')}">${opt.text}</option>`;
+    }).join('');
+
     const template = `
         <div class="armazon-section mb-3">
             <hr>
             <div class="row">
                 <div class="col-md-12">
                     <label>Armazón o Accesorio (Inventario)</label>
-                    <select name="a_inventario_id[]" class="form-control selectpicker" data-live-search="true">
-                        ${firstSelect.innerHTML}
+                    <select name="a_inventario_id[]" class="form-control selectpicker" 
+                        data-live-search="true"
+                        data-style="btn-light"
+                        data-width="100%"
+                        data-size="10"
+                        title="Seleccione un armazón o accesorio">
+                        <option value="">Seleccione un armazón o accesorio</option>
+                        ${options}
                     </select>
                 </div>
             </div>
@@ -174,32 +185,42 @@ function duplicateArmazon() {
             </div>
         </div>
     `;
+    
+    // Insertar el template
     container.insertAdjacentHTML('beforeend', template);
     console.log('Template insertado');
 
-    // Reinicializar selectpicker para el nuevo select
+    // Inicializar el nuevo selectpicker
     try {
-        $('.selectpicker').selectpicker('refresh');
-        console.log('Selectpicker reinicializado');
+        const newSection = container.lastElementChild;
+        const newSelect = newSection.querySelector('.selectpicker');
+        if (newSelect) {
+            $(newSelect).selectpicker({
+                noneSelectedText: 'Seleccione un armazón o accesorio',
+                liveSearch: true,
+                style: 'btn-light',
+                width: '100%',
+                size: 10
+            });
+            $(newSelect).selectpicker('val', '');
+            console.log('Nuevo selectpicker inicializado');
+        } else {
+            console.error('No se encontró el nuevo select');
+        }
     } catch (error) {
-        console.error('Error al reinicializar selectpicker:', error);
+        console.error('Error al inicializar selectpicker:', error);
     }
 
     // Mostrar notificación de éxito
-    try {
-        Swal.fire({
-            icon: 'success',
-            title: '¡Éxito!',
-            text: 'Se ha agregado un nuevo armazón/accesorio',
-            timer: 1500,
-            showConfirmButton: false,
-            position: 'top-end',
-            toast: true
-        });
-        console.log('Notificación mostrada');
-    } catch (error) {
-        console.error('Error al mostrar notificación:', error);
-    }
+    Swal.fire({
+        icon: 'success',
+        title: '¡Éxito!',
+        text: 'Se ha agregado un nuevo armazón/accesorio',
+        timer: 1500,
+        showConfirmButton: false,
+        position: 'top-end',
+        toast: true
+    });
 }
 
 // Función para restaurar el inventario

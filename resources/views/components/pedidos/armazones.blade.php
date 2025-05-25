@@ -19,12 +19,19 @@
                 <div class="row">
                     <div class="col-md-12">
                         <label>Armazón o Accesorio (Inventario)</label>
-                        <select name="a_inventario_id[]" class="form-control selectpicker" data-live-search="true">
+                        <select name="a_inventario_id[]" 
+                            class="form-control selectpicker" 
+                            data-live-search="true"
+                            data-style="btn-light"
+                            data-width="100%"
+                            data-size="10"
+                            title="Seleccione un armazón o accesorio">
                             <option value="">Seleccione un armazón o accesorio</option>
                             @foreach($inventarioItems as $item)
                                 <option value="{{ $item->id }}" 
-                                    {{ $inventario->id == $item->id ? 'selected' : '' }}>
-                                    {{ $item->codigo }} - {{ $item->lugar ?? '' }}
+                                    {{ $inventario->id == $item->id ? 'selected' : '' }}
+                                    data-content="{{ $item->codigo }} - {{ $item->lugar }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}">
+                                    {{ $item->codigo }} - {{ $item->lugar }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}
                                 </option>
                             @endforeach
                         </select>

@@ -139,40 +139,50 @@
 <!-- jQuery primero -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+<!-- Popper.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+
 <!-- Bootstrap -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- Bootstrap Select -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/css/bootstrap-select.min.css">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/js/bootstrap-select.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js"></script>
 
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- Nuestro script de pedidos -->
 <script>
-    // Configurar la versión de Bootstrap para bootstrap-select
-    $.fn.selectpicker.Constructor.BootstrapVersion = '4.6.0';
+    $(document).ready(function() {
+        // Inicializar todos los selectpicker existentes
+        $('.selectpicker').selectpicker({
+            noneSelectedText: 'Seleccione un armazón o accesorio',
+            noneResultsText: 'No se encontraron resultados para {0}',
+            liveSearch: true,
+            liveSearchPlaceholder: 'Buscar...',
+            style: 'btn-light',
+            size: 10,
+            width: '100%'
+        });
+
+        // Refrescar los selectpicker cada vez que se muestre el card
+        $('.card').on('shown.bs.collapse', function() {
+            $('.selectpicker').selectpicker('refresh');
+        });
+    });
 </script>
+
 <script src="{{ asset('js/pedidos.js') }}"></script>
 
 <script>
-    console.log('Vista cargada');
-    // Verificar que jQuery está cargado
-    if (typeof jQuery !== 'undefined') {
-        console.log('jQuery está cargado');
-    } else {
-        console.error('jQuery no está cargado');
-    }
-
     document.addEventListener('DOMContentLoaded', function() {
         console.log('DOM Content Loaded en la vista');
+
         // Hacer que todo el header sea clickeable
         document.querySelectorAll('.card-header').forEach(header => {
             header.addEventListener('click', function(e) {
-                // Si el clic no fue en un botón dentro del header
                 if (!e.target.closest('.btn-tool')) {
-                    // Buscar el botón de colapsar dentro del header
                     const collapseButton = this.querySelector('.btn-tool[data-card-widget="collapse"]');
                     if (collapseButton) {
                         collapseButton.click();
@@ -180,12 +190,6 @@
                 }
             });
         });
-
-        // Verificar que los elementos existen
-        const addButton = document.getElementById('add-armazon');
-        const container = document.getElementById('armazones-container');
-        console.log('Botón de agregar:', addButton);
-        console.log('Contenedor:', container);
     });
 </script>
 @stop
