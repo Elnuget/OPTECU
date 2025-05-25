@@ -102,6 +102,7 @@
     </div>
     
     <!-- Nueva tabla de sueldos registrados -->
+    @if($currentUser->is_admin)
     <div class="card mt-4">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
@@ -151,6 +152,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     <!-- Modal para agregar sueldo -->
     <div class="modal fade" id="modalAgregarSueldo" tabindex="-1" role="dialog" aria-labelledby="modalAgregarSueldoLabel" aria-hidden="true">
@@ -655,9 +657,11 @@
                                 <button class="btn btn-info mr-2" onclick="imprimirRolPagos()">
                                     <i class="fas fa-print"></i> IMPRIMIR ROL
                                 </button>
+                                @if($currentUser->is_admin)
                                 <button class="btn btn-primary" onclick="abrirModalPagarSueldo()">
                                     <i class="fas fa-money-bill-wave"></i> PAGAR SUELDO
                                 </button>
+                                @endif
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-bordered table-movimientos">
