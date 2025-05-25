@@ -6,6 +6,8 @@ use App\Models\Sueldo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SueldoController extends Controller
 {
@@ -54,38 +56,39 @@ class SueldoController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'fecha' => 'required|date',
-            'descripcion' => 'required|string|max:255',
-            'valor' => 'required|numeric|min:0',
-            'user_id' => 'required|exists:users,id'
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput()
-                ->with([
-                    'mensaje' => 'ERROR AL GUARDAR EL SUELDO',
-                    'tipo' => 'alert-danger'
-                ]);
-        }
-
         try {
-            Sueldo::create($request->all());
+            DB::beginTransaction();
 
-            return redirect()->route('sueldos.index')
-                ->with([
-                    'mensaje' => 'SUELDO REGISTRADO CORRECTAMENTE',
-                    'tipo' => 'alert-success'
-                ]);
+            $request->validate([
+                'user_id' => 'required|exists:users,id',
+                'fecha' => 'required|date',
+                'descripcion' => 'required|string',
+                'valor' => 'required|numeric'
+            ]);
+
+            $sueldo = Sueldo::create([
+                'user_id' => $request->user_id,
+                'fecha' => $request->fecha,
+                'descripcion' => $request->descripcion,
+                'valor' => $request->valor
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'mensaje' => 'SUELDO REGISTRADO CORRECTAMENTE',
+                'data' => $sueldo
+            ]);
+
         } catch (\Exception $e) {
-            return redirect()->back()
-                ->withInput()
-                ->with([
-                    'mensaje' => 'ERROR AL GUARDAR EL SUELDO: ' . $e->getMessage(),
-                    'tipo' => 'alert-danger'
-                ]);
+            DB::rollback();
+            Log::error('Error al registrar sueldo: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'ERROR AL REGISTRAR EL SUELDO: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -128,39 +131,38 @@ class SueldoController extends Controller
      * @param  \App\Models\Sueldo  $sueldo
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Sueldo $sueldo)
+    public function update(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), [
-            'fecha' => 'required|date',
-            'descripcion' => 'required|string|max:255',
-            'valor' => 'required|numeric|min:0'
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput()
-                ->with([
-                    'mensaje' => 'ERROR AL ACTUALIZAR EL SUELDO',
-                    'tipo' => 'alert-danger'
-                ]);
-        }
-
         try {
-            $sueldo->update($request->all());
+            $request->validate([
+                'user_id' => 'required|exists:users,id',
+                'fecha' => 'required|date',
+                'descripcion' => 'required|string',
+                'valor' => 'required|numeric'
+            ]);
 
-            return redirect()->route('sueldos.index')
-                ->with([
-                    'mensaje' => 'SUELDO ACTUALIZADO CORRECTAMENTE',
-                    'tipo' => 'alert-success'
-                ]);
+            $sueldo = Sueldo::findOrFail($id);
+            
+            $sueldo->update([
+                'user_id' => $request->user_id,
+                'fecha' => $request->fecha,
+                'descripcion' => $request->descripcion,
+                'valor' => $request->valor
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'mensaje' => 'SUELDO ACTUALIZADO CORRECTAMENTE',
+                'data' => $sueldo
+            ]);
+
         } catch (\Exception $e) {
-            return redirect()->back()
-                ->withInput()
-                ->with([
-                    'mensaje' => 'ERROR AL ACTUALIZAR EL SUELDO: ' . $e->getMessage(),
-                    'tipo' => 'alert-danger'
-                ]);
+            Log::error('Error al actualizar sueldo: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'ERROR AL ACTUALIZAR EL SUELDO: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -170,22 +172,24 @@ class SueldoController extends Controller
      * @param  \App\Models\Sueldo  $sueldo
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Sueldo $sueldo)
+    public function destroy($id)
     {
         try {
+            $sueldo = Sueldo::findOrFail($id);
             $sueldo->delete();
 
-            return redirect()->route('sueldos.index')
-                ->with([
-                    'mensaje' => 'SUELDO ELIMINADO CORRECTAMENTE',
-                    'tipo' => 'alert-success'
-                ]);
+            return response()->json([
+                'success' => true,
+                'mensaje' => 'SUELDO ELIMINADO CORRECTAMENTE'
+            ]);
+
         } catch (\Exception $e) {
-            return redirect()->back()
-                ->with([
-                    'mensaje' => 'ERROR AL ELIMINAR EL SUELDO: ' . $e->getMessage(),
-                    'tipo' => 'alert-danger'
-                ]);
+            Log::error('Error al eliminar sueldo: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'ERROR AL ELIMINAR EL SUELDO: ' . $e->getMessage()
+            ], 500);
         }
     }
 

@@ -293,6 +293,40 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal para pagar sueldo -->
+    <div class="modal fade" id="modalPagarSueldo" tabindex="-1" role="dialog" aria-labelledby="modalPagarSueldoLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalPagarSueldoLabel">PAGAR SUELDO</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="formPagarSueldo">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="pago_empleado">EMPLEADO:</label>
+                            <input type="text" class="form-control" id="pago_empleado" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="pago_descripcion">DESCRIPCIÓN:</label>
+                            <input type="text" class="form-control" id="pago_descripcion" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="pago_valor">VALOR A PAGAR:</label>
+                            <input type="number" step="0.01" class="form-control" id="pago_valor" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">CANCELAR</button>
+                        <button type="submit" class="btn btn-primary">PAGAR</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @stop
 
 @section('js')
@@ -306,6 +340,30 @@
         // Variables globales
         let selectedUserId = null;
         let selectedUserName = null;
+
+        // Función global para pagar sueldo
+        window.abrirModalPagarSueldo = function() {
+            if (!selectedUserId) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: '¡ATENCIÓN!',
+                    text: 'POR FAVOR SELECCIONE UN USUARIO PARA PAGAR SUELDO',
+                    confirmButtonText: 'ENTENDIDO'
+                });
+                return;
+            }
+
+            const mes = $('#filtroMes').val();
+            const ano = $('#filtroAno').val();
+            const descripcion = `SUELDO ${mes}/${ano}`;
+            const sueldoRecibir = $(`#sueldo_recibir_${selectedUserId}`).text().replace('$', '');
+
+            $('#pago_empleado').val(selectedUserName);
+            $('#pago_descripcion').val(descripcion);
+            $('#pago_valor').val(parseFloat(sueldoRecibir).toFixed(2));
+
+            $('#modalPagarSueldo').modal('show');
+        };
 
         // Función global para agregar fila de detalle
         window.agregarFilaDetalle = function(userId) {
@@ -938,8 +996,11 @@
                                 <button class="btn btn-success mr-2" onclick="exportarExcel()">
                                     <i class="fas fa-file-excel"></i> EXPORTAR A EXCEL
                                 </button>
-                                <button class="btn btn-info" onclick="imprimirRolPagos()">
+                                <button class="btn btn-info mr-2" onclick="imprimirRolPagos()">
                                     <i class="fas fa-print"></i> IMPRIMIR ROL
+                                </button>
+                                <button class="btn btn-primary" onclick="abrirModalPagarSueldo()">
+                                    <i class="fas fa-money-bill-wave"></i> PAGAR SUELDO
                                 </button>
                             </div>
                             <div class="table-responsive">
@@ -1513,6 +1574,72 @@
                             showConfirmButton: true,
                             confirmButtonText: 'ENTENDIDO',
                             confirmButtonColor: '#dc3545'
+                        });
+                    }
+                });
+            });
+
+            // Manejar el envío del formulario de pago
+            $('#formPagarSueldo').on('submit', function(e) {
+                e.preventDefault();
+                
+                const fechaActual = new Date().toISOString().split('T')[0];
+                const formData = {
+                    user_id: selectedUserId,
+                    fecha: fechaActual,
+                    descripcion: $('#pago_descripcion').val(),
+                    valor: parseFloat($('#pago_valor').val()),
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                };
+
+                Swal.fire({
+                    title: '¿ESTÁ SEGURO?',
+                    text: `VA A PAGAR $${formData.valor.toFixed(2)} A ${selectedUserName}`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'SÍ, PAGAR',
+                    cancelButtonText: 'CANCELAR'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '/sueldos',
+                            method: 'POST',
+                            data: formData,
+                            success: function(response) {
+                                if (response.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: '¡ÉXITO!',
+                                        text: 'PAGO REALIZADO CORRECTAMENTE',
+                                        showConfirmButton: true,
+                                        confirmButtonText: 'ACEPTAR'
+                                    }).then(() => {
+                                        $('#modalPagarSueldo').modal('hide');
+                                        // Recargar solo si fue exitoso
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: '¡ERROR!',
+                                        text: response.mensaje || 'ERROR AL REALIZAR EL PAGO',
+                                        showConfirmButton: true,
+                                        confirmButtonText: 'ENTENDIDO'
+                                    });
+                                }
+                            },
+                            error: function(xhr) {
+                                console.error('Error:', xhr);
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '¡ERROR!',
+                                    text: 'ERROR AL REALIZAR EL PAGO: ' + (xhr.responseJSON?.mensaje || 'ERROR DESCONOCIDO'),
+                                    showConfirmButton: true,
+                                    confirmButtonText: 'ENTENDIDO'
+                                });
+                            }
                         });
                     }
                 });
