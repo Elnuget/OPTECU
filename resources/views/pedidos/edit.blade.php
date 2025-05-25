@@ -93,7 +93,21 @@
 
         <div class="card-body">
             <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> En el combobox de armazón o accesorio solo se muestran los artículos del mes y año actual ({{ date('F Y') }}), además de los que ya están asignados a este pedido.
+                <i class="fas fa-info-circle"></i> En el combobox de armazón o accesorio solo se muestran los artículos
+                @if(isset($filtroMes) && isset($filtroAno))
+                @php
+                    $nombresMeses = [
+                        1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 
+                        5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto', 
+                        9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+                    ];
+                    $mesTexto = $nombresMeses[(int)$filtroMes] ?? 'del mes actual';
+                @endphp
+                de <strong>{{ $mesTexto }} {{ $filtroAno }}</strong>
+                @else
+                del mes y año actual ({{ date('F Y') }})
+                @endif
+                , además de los que ya están asignados a este pedido.
             </div>
             
             <form action="{{ route('pedidos.update', $pedido->id) }}" method="POST">
@@ -120,7 +134,7 @@
                 <x-pedidos.datos-cliente :pedido="$pedido" />
 
                 {{-- Armazón y Accesorios --}}
-                <x-pedidos.armazones :pedido="$pedido" :inventarioItems="$inventarioItems" />
+                <x-pedidos.armazones :pedido="$pedido" :inventarioItems="$inventarioItems" :filtroMes="$filtroMes ?? null" :filtroAno="$filtroAno ?? null" />
 
                 {{-- Lunas --}}
                 <x-pedidos.lunas :pedido="$pedido" />
@@ -149,7 +163,7 @@
 <!-- Bootstrap -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Bootstrap Select -->
+<!-- Bootstrap Select - VERSIÓN ESPECÍFICA -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js"></script>
 
@@ -157,52 +171,44 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- Nuestro script de pedidos -->
-<script>
-    $(document).ready(function() {
-        // Inicializar todos los selectpicker existentes
-        try {
-            $('.selectpicker').selectpicker('destroy');
-            $('.selectpicker').selectpicker({
-                noneSelectedText: 'Seleccione un armazón o accesorio',
-                noneResultsText: 'No se encontraron resultados para {0}',
-                liveSearch: true,
-                liveSearchPlaceholder: 'Buscar...',
-                style: 'btn-light',
-                size: 10,
-                width: '100%'
-            });
-            console.log('Selectpicker inicializado correctamente en edit.blade.php');
-        } catch (error) {
-            console.error('Error al inicializar selectpicker en edit.blade.php:', error);
-        }
-
-        // Refrescar los selectpicker cada vez que se muestre el card
-        $('.card').on('shown.bs.collapse', function() {
-            try {
-                $('.selectpicker').selectpicker('refresh');
-                console.log('Selectpicker refrescado después de mostrar card');
-            } catch (error) {
-                console.error('Error al refrescar selectpicker:', error);
-            }
-        });
-    });
-</script>
-
 <script src="{{ asset('js/pedidos.js') }}"></script>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM Content Loaded en la vista');
+<!-- Script de corrección para selectpicker -->
+<script src="{{ asset('js/selectpicker-fix.js') }}"></script>
 
-        // Hacer que todo el header sea clickeable
-        document.querySelectorAll('.card-header').forEach(header => {
-            header.addEventListener('click', function(e) {
-                if (!e.target.closest('.btn-tool')) {
-                    const collapseButton = this.querySelector('.btn-tool[data-card-widget="collapse"]');
-                    if (collapseButton) {
-                        collapseButton.click();
-                    }
-                }
+<script>
+    $(document).ready(function() {
+        // Inicializar selectpicker de forma básica
+        $('.selectpicker').selectpicker();
+        
+        // Cambiar el evento del botón add-armazon para usar la función simplificada
+        $('#add-armazon').on('click', function(e) {
+            e.preventDefault();
+            console.log('Botón agregar armazón clickeado');
+            
+            // Usar la función global simplificada
+            window.addArmazon();
+            
+            // O usar la función original
+            // duplicateArmazon();
+        });
+        
+        // Manejar eliminación de armazones/accesorios
+        $('#armazones-container').on('click', '.remove-armazon', function(e) {
+            e.preventDefault();
+            console.log('Botón eliminar armazón clickeado');
+            
+            $(this).closest('.armazon-section').remove();
+            calculateTotal();
+            
+            Swal.fire({
+                icon: 'success',
+                title: '¡Eliminado!',
+                text: 'Armazón eliminado correctamente',
+                timer: 1500,
+                showConfirmButton: false,
+                position: 'top-end',
+                toast: true
             });
         });
     });

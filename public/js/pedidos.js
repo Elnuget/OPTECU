@@ -136,6 +136,7 @@ function duplicateArmazon() {
         return;
     }
 
+    // Obtener el primer select con los datos actualizados
     const firstSelect = document.querySelector('[name="a_inventario_id[]"]');
     if (!firstSelect) {
         console.error('No se encontró el primer select de inventario');
@@ -144,13 +145,17 @@ function duplicateArmazon() {
 
     // Crear un nuevo elemento select y copiar las opciones del primero
     const options = Array.from(firstSelect.options).map(opt => {
-        return `<option value="${opt.value}" data-content="${opt.getAttribute('data-content')}">${opt.text}</option>`;
+        return `<option value="${opt.value}">${opt.text}</option>`;
     }).join('');
 
     // Obtener el mes y año actual
     const currentDate = new Date();
     const currentMonth = currentDate.toLocaleString('es-ES', { month: 'long' });
     const currentYear = currentDate.getFullYear();
+
+    // Determinar si hay opciones disponibles
+    const hasOptions = firstSelect.options.length > 1; // Considerando que siempre hay una opción vacía
+    const optionsCount = firstSelect.options.length - 1;
 
     const template = `
         <div class="armazon-section mb-3">
@@ -160,14 +165,16 @@ function duplicateArmazon() {
                     <label>Armazón o Accesorio (${currentMonth} ${currentYear})</label>
                     <select name="a_inventario_id[]" class="form-control selectpicker" 
                         data-live-search="true"
-                        data-style="btn-light"
-                        data-width="100%"
-                        data-size="10"
                         title="Seleccione un armazón o accesorio">
                         <option value="">Seleccione un armazón o accesorio</option>
                         ${options}
                     </select>
-                    <small class="form-text text-muted">Solo se muestran artículos del mes actual y los ya asignados a este pedido</small>
+                    ${hasOptions ? 
+                        `<small class="form-text text-muted">${optionsCount} artículo(s) disponible(s)</small>` : 
+                        `<div class="text-danger mt-1">
+                            <small><i class="fas fa-exclamation-triangle"></i> No hay artículos disponibles para este mes</small>
+                         </div>`
+                    }
                 </div>
             </div>
             <div class="row mt-2">
@@ -198,25 +205,10 @@ function duplicateArmazon() {
 
     // Inicializar el nuevo selectpicker
     try {
-        const newSection = container.lastElementChild;
-        const newSelect = newSection.querySelector('.selectpicker');
-        if (newSelect) {
-            $(newSelect).selectpicker('destroy');
-            $(newSelect).selectpicker({
-                noneSelectedText: 'Seleccione un armazón o accesorio',
-                liveSearch: true,
-                liveSearchPlaceholder: 'Buscar...',
-                style: 'btn-light',
-                width: '100%',
-                size: 10
-            });
-            $(newSelect).addClass('selectpicker-initialized');
-            console.log('Nuevo selectpicker inicializado correctamente');
-        } else {
-            console.error('No se encontró el nuevo select');
-        }
+        $('.selectpicker').selectpicker('refresh');
+        console.log('Selectpickers refrescados');
     } catch (error) {
-        console.error('Error al inicializar selectpicker:', error);
+        console.error('Error al refrescar selectpickers:', error);
     }
 
     // Mostrar notificación de éxito

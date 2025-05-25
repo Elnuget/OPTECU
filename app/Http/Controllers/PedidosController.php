@@ -317,30 +317,78 @@ class PedidosController extends Controller
      */
     public function edit($id)
     {
-        $pedido = Pedido::with(['inventarios', 'lunas', 'pagos'])->findOrFail($id);
-        
-        // Obtener el año y mes actual
-        $currentYear = date('Y');
-        $currentMonth = date('m');
-        
-        // Filtrar inventario por mes y año actual
-        $inventarioItems = Inventario::where('cantidad', '>', 0)
-            ->whereYear('fecha', $currentYear)
-            ->whereMonth('fecha', $currentMonth)
-            ->get();
+        try {
+            $pedido = Pedido::with(['inventarios', 'lunas', 'pagos'])->findOrFail($id);
             
-        // Agregar también los items que ya están en este pedido (para que no desaparezcan al editar)
-        $pedidoInventarioIds = $pedido->inventarios->pluck('id')->toArray();
-        if (!empty($pedidoInventarioIds)) {
-            $inventarioItemsPedido = Inventario::whereIn('id', $pedidoInventarioIds)->get();
-            // Combinar las colecciones y eliminar duplicados
-            $inventarioItems = $inventarioItems->concat($inventarioItemsPedido)->unique('id');
-        }
-        
-        $totalPagado = $pedido->pagos->sum('pago'); // Suma todos los pagos realizados
-        $usuarios = \App\Models\User::all(); // Obtener todos los usuarios
+            // Obtener el año y mes actual
+            $currentYear = date('Y');
+            $currentMonth = date('m');
+            
+            // Primer intento: Filtrar inventario por mes y año actual con cantidad > 0
+            $inventarioItems = Inventario::where('cantidad', '>', 0)
+                ->whereYear('fecha', $currentYear)
+                ->whereMonth('fecha', $currentMonth)
+                ->get();
+                
+            // Verificar si hay resultados
+            if ($inventarioItems->isEmpty()) {
+                // Segundo intento: Si no hay del mes actual, buscar el último mes con artículos
+                $ultimoArticulo = Inventario::where('cantidad', '>', 0)
+                    ->orderBy('fecha', 'desc')
+                    ->first();
+                    
+                if ($ultimoArticulo) {
+                    $lastItemDate = \Carbon\Carbon::parse($ultimoArticulo->fecha);
+                    $inventarioItems = Inventario::where('cantidad', '>', 0)
+                        ->whereYear('fecha', $lastItemDate->year)
+                        ->whereMonth('fecha', $lastItemDate->month)
+                        ->get();
+                        
+                    // Actualizar las variables de año y mes para mostrar en la vista
+                    $currentYear = $lastItemDate->year;
+                    $currentMonth = $lastItemDate->month;
+                } else {
+                    // Tercer intento: Si no hay ningún artículo con cantidad > 0, mostrar todos los artículos
+                    $inventarioItems = Inventario::all();
+                }
+            }
+                
+            // Agregar también los items que ya están en este pedido (para que no desaparezcan al editar)
+            $pedidoInventarioIds = $pedido->inventarios->pluck('id')->toArray();
+            if (!empty($pedidoInventarioIds)) {
+                $inventarioItemsPedido = Inventario::whereIn('id', $pedidoInventarioIds)->get();
+                // Combinar las colecciones y eliminar duplicados
+                $inventarioItems = $inventarioItems->concat($inventarioItemsPedido)->unique('id');
+            }
+            
+            // Log para debugging
+            \Log::info('Inventario filtrado:', [
+                'total_items' => $inventarioItems->count(),
+                'mes_filtro' => $currentMonth,
+                'año_filtro' => $currentYear,
+                'muestra' => $inventarioItems->take(5)->map(function($item) {
+                    return [
+                        'id' => $item->id,
+                        'codigo' => $item->codigo,
+                        'fecha' => $item->fecha,
+                        'cantidad' => $item->cantidad
+                    ];
+                })
+            ]);
+            
+            $totalPagado = $pedido->pagos->sum('pago'); // Suma todos los pagos realizados
+            $usuarios = \App\Models\User::all(); // Obtener todos los usuarios
+            
+            // Pasar el mes y año de filtro a la vista
+            $filtroMes = $currentMonth;
+            $filtroAno = $currentYear;
 
-        return view('pedidos.edit', compact('pedido', 'inventarioItems', 'totalPagado', 'usuarios'));
+            return view('pedidos.edit', compact('pedido', 'inventarioItems', 'totalPagado', 'usuarios', 'filtroMes', 'filtroAno'));
+            
+        } catch (\Exception $e) {
+            \Log::error('Error en PedidosController@edit: ' . $e->getMessage());
+            return back()->with('error', 'Error al cargar el pedido: ' . $e->getMessage());
+        }
     }
 
     /**

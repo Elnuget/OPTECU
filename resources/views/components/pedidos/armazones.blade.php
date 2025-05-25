@@ -1,8 +1,17 @@
-@props(['pedido', 'inventarioItems'])
+@props(['pedido', 'inventarioItems', 'filtroMes' => null, 'filtroAno' => null])
 
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">Armazón o Accesorio (Mes Actual)</h3>
+        @php
+            $nombresMeses = [
+                1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 
+                5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto', 
+                9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
+            ];
+            $mesTexto = $filtroMes ? ($nombresMeses[(int)$filtroMes] ?? date('F')) : date('F');
+            $anoTexto = $filtroAno ?? date('Y');
+        @endphp
+        <h3 class="card-title">Armazón o Accesorio ({{ $mesTexto }} {{ $anoTexto }})</h3>
         <div class="card-tools">
             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                 <i class="fas fa-plus"></i>
@@ -18,24 +27,24 @@
                 @endif
                 <div class="row">
                     <div class="col-md-12">
-                        <label>Armazón o Accesorio ({{ date('F Y') }})</label>
-                        <select name="a_inventario_id[]" 
-                            class="form-control selectpicker" 
-                            data-live-search="true"
-                            data-style="btn-light"
-                            data-width="100%"
-                            data-size="10"
-                            title="Seleccione un armazón o accesorio">
+                        <label>Armazón o Accesorio ({{ $mesTexto }} {{ $anoTexto }})</label>
+                        <select name="a_inventario_id[]" class="form-control">
                             <option value="">Seleccione un armazón o accesorio</option>
                             @foreach($inventarioItems as $item)
-                                <option value="{{ $item->id }}" 
-                                    {{ $inventario->id == $item->id ? 'selected' : '' }}
-                                    data-content="{{ $item->codigo }} - {{ $item->lugar }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}">
+                                <option value="{{ $item->id }}" {{ $inventario->id == $item->id ? 'selected' : '' }}>
                                     {{ $item->codigo }} - {{ $item->lugar }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}
                                 </option>
                             @endforeach
                         </select>
-                        <small class="form-text text-muted">Solo se muestran artículos del mes actual y los ya asignados a este pedido</small>
+                        @if($inventarioItems->isEmpty())
+                            <div class="text-danger mt-1">
+                                <small><i class="fas fa-exclamation-triangle"></i> No hay artículos disponibles para este mes</small>
+                            </div>
+                        @else
+                            <small class="form-text text-muted">
+                                {{ $inventarioItems->count() }} artículo(s) disponible(s) de {{ $mesTexto }} {{ $anoTexto }} y asignados a este pedido
+                            </small>
+                        @endif
                     </div>
                 </div>
                 <div class="row mt-2">
