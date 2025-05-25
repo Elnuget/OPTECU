@@ -429,12 +429,12 @@
                         const $cells = $row.find('td');
                         if ($cells.length >= 5) {
                             hayMovimientos = true;
-                            // Obtener valores de los inputs si existen, si no del texto de la celda
+                            // Obtener valores dando prioridad a los inputs
                             const fecha = $cells.eq(0).find('input').val() || $cells.eq(0).text().trim();
                             const movimientos = $cells.eq(1).find('input').val() || $cells.eq(1).text().trim();
                             const pedidos = $cells.eq(2).find('input').val() || $cells.eq(2).text().trim();
                             const retiros = $cells.eq(3).find('input').val() || $cells.eq(3).text().trim();
-                            let valor = $cells.eq(4).find('input').val() || $cells.eq(4).text().trim();
+                            let valor = $cells.eq(4).find('input').val() || $cells.eq(4).find('.valor-editable').val() || $cells.eq(4).text().trim();
                             
                             // Limpiar y formatear el valor
                             valor = valor.replace('$', '').trim();
@@ -477,10 +477,10 @@
                         const $cells = $row.find('td');
                         if ($cells.length >= 3) {
                             hayDetalles = true;
-                            // Obtener valores de los inputs
+                            // Obtener valores dando prioridad a los inputs
                             const fecha = $cells.eq(0).find('input').val() || $cells.eq(0).text().trim();
-                            const descripcion = $cells.eq(2).find('input').val() || $cells.eq(2).text().trim();
-                            let valor = $cells.eq(3).find('input').val() || $cells.eq(3).text().trim();
+                            const descripcion = $cells.eq(2).find('input.descripcion-detalle').val() || $cells.eq(2).text().trim();
+                            let valor = $cells.eq(3).find('input.valor-detalle').val() || $cells.eq(3).text().trim();
                             
                             // Limpiar y formatear el valor
                             valor = valor.replace('$', '').trim();
@@ -554,6 +554,215 @@
                     confirmButtonText: 'ENTENDIDO'
                 });
             });
+        };
+
+        // Función para imprimir rol de pagos
+        window.imprimirRolPagos = function() {
+            if (!selectedUserId) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: '¡ATENCIÓN!',
+                    text: 'POR FAVOR SELECCIONE UN USUARIO PARA IMPRIMIR',
+                    confirmButtonText: 'ENTENDIDO'
+                });
+                return;
+            }
+
+            // Crear el contenido para imprimir
+            const printWindow = window.open('', '_blank');
+            const nombreEmpleado = selectedUserName;
+            const periodo = `${$('#filtroMes').val()}/${$('#filtroAno').val()}`;
+            const sucursal = $('#filtroSucursal').val() || 'TODAS';
+            const totalVentas = $(`#total_${selectedUserId}`).text();
+            const totalRegistros = $(`#total_registros_${selectedUserId}`).text();
+            const totalDetalles = $(`#total_detalles_${selectedUserId}`).text();
+            const sueldoRecibir = $(`#sueldo_recibir_${selectedUserId}`).text();
+
+            // Obtener los movimientos
+            let movimientosHTML = '';
+            const $movimientosRows = $(`#desglose_${selectedUserId} tr`);
+            if ($movimientosRows.length > 0) {
+                $movimientosRows.each(function() {
+                    const $row = $(this);
+                    if (!$row.find('td[colspan]').length) {
+                        const $cells = $row.find('td');
+                        if ($cells.length >= 5) {
+                            // Obtener valores dando prioridad a los inputs
+                            const fecha = $cells.eq(0).find('input').val() || $cells.eq(0).text().trim();
+                            const movimientos = $cells.eq(1).find('input').val() || $cells.eq(1).text().trim();
+                            const pedidos = $cells.eq(2).find('input').val() || $cells.eq(2).text().trim();
+                            const retiros = $cells.eq(3).find('input').val() || $cells.eq(3).text().trim();
+                            let valor = $cells.eq(4).find('input').val() || $cells.eq(4).find('.valor-editable').val() || $cells.eq(4).text().trim();
+                            
+                            // Limpiar y formatear el valor
+                            valor = valor.replace('$', '').trim();
+                            const valorNumerico = parseFloat(valor) || 0;
+
+                            movimientosHTML += `
+                                <tr>
+                                    <td>${fecha}</td>
+                                    <td>${movimientos}</td>
+                                    <td>${pedidos}</td>
+                                    <td>${retiros}</td>
+                                    <td>$${valorNumerico.toFixed(2)}</td>
+                                </tr>
+                            `;
+                        }
+                    }
+                });
+            }
+
+            // Obtener los detalles
+            let detallesHTML = '';
+            const $detallesRows = $(`#detalles_${selectedUserId} tr`);
+            if ($detallesRows.length > 0) {
+                $detallesRows.each(function() {
+                    const $row = $(this);
+                    if (!$row.find('td[colspan]').length) {
+                        const $cells = $row.find('td');
+                        if ($cells.length >= 4) {
+                            // Obtener valores dando prioridad a los inputs
+                            const fecha = $cells.eq(0).find('input').val() || $cells.eq(0).text().trim();
+                            const descripcion = $cells.eq(2).find('input.descripcion-detalle').val() || $cells.eq(2).text().trim();
+                            let valor = $cells.eq(3).find('input.valor-detalle').val() || $cells.eq(3).text().trim();
+                            
+                            // Limpiar y formatear el valor
+                            valor = valor.replace('$', '').trim();
+                            const valorNumerico = parseFloat(valor) || 0;
+
+                            if (fecha && descripcion) {
+                                detallesHTML += `
+                                    <tr>
+                                        <td>${fecha}</td>
+                                        <td>${descripcion}</td>
+                                        <td>$${valorNumerico.toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Crear el HTML para imprimir
+            const printContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Rol de Pagos - ${nombreEmpleado}</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            margin: 20px;
+                            color: #333;
+                        }
+                        .header {
+                            text-align: center;
+                            margin-bottom: 20px;
+                            border-bottom: 2px solid #333;
+                            padding-bottom: 10px;
+                        }
+                        .info-empleado {
+                            margin-bottom: 20px;
+                        }
+                        .resumen {
+                            margin-bottom: 30px;
+                            border: 1px solid #ddd;
+                            padding: 15px;
+                            background-color: #f9f9f9;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 20px;
+                        }
+                        th, td {
+                            border: 1px solid #ddd;
+                            padding: 8px;
+                            text-align: left;
+                        }
+                        th {
+                            background-color: #f4f4f4;
+                        }
+                        .section-title {
+                            margin-top: 20px;
+                            margin-bottom: 10px;
+                            font-weight: bold;
+                            font-size: 16px;
+                        }
+                        .total-row {
+                            font-weight: bold;
+                            background-color: #f4f4f4;
+                        }
+                        @media print {
+                            body {
+                                margin: 0;
+                                padding: 15px;
+                            }
+                            .no-print {
+                                display: none;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h2>ROL DE PAGOS</h2>
+                    </div>
+                    
+                    <div class="info-empleado">
+                        <p><strong>EMPLEADO:</strong> ${nombreEmpleado}</p>
+                        <p><strong>PERÍODO:</strong> ${periodo}</p>
+                        <p><strong>SUCURSAL:</strong> ${sucursal}</p>
+                    </div>
+
+                    <div class="resumen">
+                        <h3>RESUMEN GENERAL</h3>
+                        <p><strong>TOTAL VENTAS:</strong> ${totalVentas}</p>
+                        <p><strong>TOTAL REGISTROS COBRO:</strong> ${totalRegistros}</p>
+                        <p><strong>TOTAL DETALLES:</strong> ${totalDetalles}</p>
+                        <p><strong>SUELDO A RECIBIR:</strong> ${sueldoRecibir}</p>
+                    </div>
+
+                    <div class="section-title">TABLA DE MOVIMIENTOS</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>FECHA</th>
+                                <th>MOVIMIENTOS</th>
+                                <th>PEDIDOS</th>
+                                <th>RETIROS</th>
+                                <th>VALOR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${movimientosHTML || '<tr><td colspan="5" style="text-align: center;">NO HAY MOVIMIENTOS REGISTRADOS</td></tr>'}
+                        </tbody>
+                    </table>
+
+                    <div class="section-title">TABLA DE DETALLES</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>FECHA</th>
+                                <th>DESCRIPCIÓN</th>
+                                <th>VALOR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${detallesHTML || '<tr><td colspan="3" style="text-align: center;">NO HAY DETALLES REGISTRADOS</td></tr>'}
+                        </tbody>
+                    </table>
+
+                    <div class="no-print" style="margin-top: 20px; text-align: center;">
+                        <button onclick="window.print();" style="padding: 10px 20px;">IMPRIMIR</button>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            printWindow.document.write(printContent);
+            printWindow.document.close();
         };
 
         $(document).ready(function() {
@@ -726,8 +935,11 @@
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <button class="btn btn-success" onclick="exportarExcel()">
+                                <button class="btn btn-success mr-2" onclick="exportarExcel()">
                                     <i class="fas fa-file-excel"></i> EXPORTAR A EXCEL
+                                </button>
+                                <button class="btn btn-info" onclick="imprimirRolPagos()">
+                                    <i class="fas fa-print"></i> IMPRIMIR ROL
                                 </button>
                             </div>
                             <div class="table-responsive">
