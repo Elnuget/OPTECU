@@ -1,6 +1,43 @@
 @push('js')
     <script>
         $(document).ready(function() {
+            // Función para guardar el estado de las tablas y la posición del scroll
+            function saveState() {
+                // Guardar qué tablas están expandidas
+                const expandedTables = [];
+                $('.collapse').each(function() {
+                    if ($(this).hasClass('show')) {
+                        expandedTables.push($(this).attr('id'));
+                    }
+                });
+                localStorage.setItem('expandedTables', JSON.stringify(expandedTables));
+
+                // Guardar la posición del scroll
+                localStorage.setItem('scrollPosition', window.scrollY);
+            }
+
+            // Función para restaurar el estado
+            function restoreState() {
+                // Restaurar tablas expandidas
+                const expandedTables = JSON.parse(localStorage.getItem('expandedTables') || '[]');
+                expandedTables.forEach(tableId => {
+                    $(`#${tableId}`).addClass('show');
+                    $(`[data-target="#${tableId}"]`).find('.transition-icon').addClass('fa-rotate-180');
+                });
+
+                // Restaurar posición del scroll
+                const scrollPosition = localStorage.getItem('scrollPosition');
+                if (scrollPosition) {
+                    window.scrollTo(0, parseInt(scrollPosition));
+                }
+            }
+
+            // Guardar estado antes de recargar
+            window.addEventListener('beforeunload', saveState);
+
+            // Restaurar estado después de cargar
+            restoreState();
+
             // Destruir instancias existentes de DataTables antes de reinicializar
             $('.table').each(function() {
                 if ($.fn.DataTable.isDataTable(this)) {
@@ -33,7 +70,11 @@
                         targets: 0, // Primera columna (NÚMERO)
                         type: 'num',
                     }
-                ]
+                ],
+                // Guardar estado cuando se dibuja la tabla
+                drawCallback: function() {
+                    saveState();
+                }
             });
 
             // Variable para controlar el estado de expansión
@@ -49,6 +90,7 @@
                     $('.collapse').collapse('hide');
                     $('.transition-icon').removeClass('fa-rotate-180');
                 }
+                saveState();
             });
 
             // Botón buscar y expandir
@@ -63,6 +105,7 @@
                 $('.table').each(function() {
                     $(this).DataTable().search(searchTerm).draw();
                 });
+                saveState();
             });
 
             // Búsqueda global
@@ -76,6 +119,15 @@
             // Manejar la rotación del icono en los headers de las tarjetas
             $('.card-header').on('click', function() {
                 $(this).find('.transition-icon').toggleClass('fa-rotate-180');
+                // Pequeño retraso para asegurar que el estado se guarde después de la transición
+                setTimeout(saveState, 350);
+            });
+
+            // Guardar estado cuando el usuario hace scroll
+            let scrollTimeout;
+            window.addEventListener('scroll', function() {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(saveState, 100);
             });
 
             // Funciones de navegación
@@ -209,7 +261,7 @@
                                         timer: 1500,
                                         showConfirmButton: false
                                     }).then(() => {
-                                        // Recargar la página después de mostrar el mensaje
+                                        // El estado ya se habrá guardado por el evento beforeunload
                                         window.location.reload();
                                     });
                                 } else {
@@ -369,7 +421,7 @@
                                     showConfirmButton: false,
                                     timer: 1500
                                 }).then(() => {
-                                    // Recargar la página después de mostrar el mensaje
+                                    // El estado ya se habrá guardado por el evento beforeunload
                                     window.location.reload();
                                 });
                             },
