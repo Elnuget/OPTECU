@@ -115,4 +115,21 @@
 <script src="{{ asset('js/pedidos.js') }}"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/css/bootstrap-select.min.css">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/js/bootstrap-select.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Hacer que todo el header sea clickeable
+        document.querySelectorAll('.card-header').forEach(header => {
+            header.addEventListener('click', function(e) {
+                // Si el clic no fue en un botón dentro del header
+                if (!e.target.closest('.btn-tool')) {
+                    // Buscar el botón de colapsar dentro del header
+                    const collapseButton = this.querySelector('.btn-tool[data-card-widget="collapse"]');
+                    if (collapseButton) {
+                        collapseButton.click();
+                    }
+                }
+            });
+        });
+    });
+</script>
 @stop
