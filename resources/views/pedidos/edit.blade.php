@@ -156,19 +156,30 @@
 <script>
     $(document).ready(function() {
         // Inicializar todos los selectpicker existentes
-        $('.selectpicker').selectpicker({
-            noneSelectedText: 'Seleccione un armazón o accesorio',
-            noneResultsText: 'No se encontraron resultados para {0}',
-            liveSearch: true,
-            liveSearchPlaceholder: 'Buscar...',
-            style: 'btn-light',
-            size: 10,
-            width: '100%'
-        });
+        try {
+            $('.selectpicker').selectpicker('destroy');
+            $('.selectpicker').selectpicker({
+                noneSelectedText: 'Seleccione un armazón o accesorio',
+                noneResultsText: 'No se encontraron resultados para {0}',
+                liveSearch: true,
+                liveSearchPlaceholder: 'Buscar...',
+                style: 'btn-light',
+                size: 10,
+                width: '100%'
+            });
+            console.log('Selectpicker inicializado correctamente en edit.blade.php');
+        } catch (error) {
+            console.error('Error al inicializar selectpicker en edit.blade.php:', error);
+        }
 
         // Refrescar los selectpicker cada vez que se muestre el card
         $('.card').on('shown.bs.collapse', function() {
-            $('.selectpicker').selectpicker('refresh');
+            try {
+                $('.selectpicker').selectpicker('refresh');
+                console.log('Selectpicker refrescado después de mostrar card');
+            } catch (error) {
+                console.error('Error al refrescar selectpicker:', error);
+            }
         });
     });
 </script>

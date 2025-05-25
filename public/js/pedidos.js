@@ -195,15 +195,17 @@ function duplicateArmazon() {
         const newSection = container.lastElementChild;
         const newSelect = newSection.querySelector('.selectpicker');
         if (newSelect) {
+            $(newSelect).selectpicker('destroy');
             $(newSelect).selectpicker({
                 noneSelectedText: 'Seleccione un armazón o accesorio',
                 liveSearch: true,
+                liveSearchPlaceholder: 'Buscar...',
                 style: 'btn-light',
                 width: '100%',
                 size: 10
             });
-            $(newSelect).selectpicker('val', '');
-            console.log('Nuevo selectpicker inicializado');
+            $(newSelect).addClass('selectpicker-initialized');
+            console.log('Nuevo selectpicker inicializado correctamente');
         } else {
             console.error('No se encontró el nuevo select');
         }
@@ -328,16 +330,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Inicializar selectpicker
+    // Inicializar selectpicker solo si no ha sido inicializado en otra parte
     try {
-        if ($.fn && $.fn.selectpicker) {
+        if ($.fn && $.fn.selectpicker && $('.selectpicker').length > 0 && !$('.selectpicker').hasClass('selectpicker-initialized')) {
+            console.log('Inicializando selectpicker desde pedidos.js');
+            $('.selectpicker').addClass('selectpicker-initialized');
             $('.selectpicker').selectpicker();
-            console.log('Selectpicker inicializado');
         } else {
-            console.error('Bootstrap Select no está disponible');
+            console.log('Selectpicker ya inicializado o no disponible');
         }
     } catch (error) {
-        console.error('Error al inicializar selectpicker:', error);
+        console.error('Error al inicializar selectpicker en pedidos.js:', error);
     }
 
     // Manejar el botón de agregar armazón
