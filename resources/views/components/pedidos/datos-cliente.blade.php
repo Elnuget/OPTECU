@@ -40,19 +40,14 @@
             <div class="col-md-3">
                 <label for="examen_visual" class="form-label">Examen Visual</label>
                 <input type="number" class="form-control form-control-sm" id="examen_visual" name="examen_visual"
-                       value="{{ $pedido->examen_visual }}" oninput="calculateTotal()">
-            </div>
-            <div class="col-md-3">
-                <label for="examen_visual_descuento" class="form-label">Descuento Examen (%)</label>
-                <input type="number" class="form-control form-control-sm" id="examen_visual_descuento"
-                       name="examen_visual_descuento" min="0" max="100" value="{{ $pedido->examen_visual_descuento }}" oninput="calculateTotal()">
+                       value="{{ $pedido->examen_visual }}" step="0.01" oninput="calculateTotal()">
             </div>
             <div class="col-md-3">
                 <label for="celular" class="form-label">Celular</label>
                 <input type="text" class="form-control" id="celular" name="celular"
                        value="{{ $pedido->celular }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-6">
                 <label for="correo_electronico" class="form-label">Correo Electrónico</label>
                 <input type="email" class="form-control" id="correo_electronico" name="correo_electronico"
                        value="{{ $pedido->correo_electronico }}">

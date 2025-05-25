@@ -150,7 +150,7 @@
                             <div class="row mb-3">
                                 <div class="col-md-3">
                                     <label for="examen_visual" class="form-label">Examen Visual</label>
-                                    <input type="number" class="form-control form-control-sm" id="examen_visual" name="examen_visual">
+                                    <input type="number" class="form-control form-control-sm" id="examen_visual" name="examen_visual" step="0.01" oninput="calculateTotal()">
                                 </div>
                                 <div class="col-md-3">
                                     <label for="celular" class="form-label">Celular</label>
@@ -161,7 +161,7 @@
                                         @endforeach
                                     </datalist>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-6">
                                     <label for="correo_electronico" class="form-label">Correo Electrónico</label>
                                     <input type="email" class="form-control" id="correo_electronico" name="correo_electronico" list="correos_existentes" placeholder="Seleccione o escriba un correo">
                                     <datalist id="correos_existentes">
