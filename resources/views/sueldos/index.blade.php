@@ -302,10 +302,44 @@
     @include('components.sueldos.scripts.funciones')
     @include('components.sueldos.scripts.api')
     <script>
-        $(document).ready(function() {
-            let selectedUserId = null;
-            let selectedUserName = null;
+        // Declarar las variables globalmente
+        let selectedUserId = null;
+        let selectedUserName = null;
 
+        // Declarar la función agregarFilaDetalle globalmente
+        window.agregarFilaDetalle = function(userId) {
+            const fecha = new Date();
+            const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+            const ano = fecha.getFullYear();
+            const empleado = $('#selectUsuario option:selected').text();
+            const nuevaFila = `
+                <tr>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" value="${mes}/${ano}" readonly>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" value="${empleado}" readonly>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm descripcion-detalle" placeholder="DESCRIPCIÓN">
+                    </td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm valor-detalle" value="0.00" step="0.01">
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-success btn-sm guardar-detalle">
+                            <i class="fas fa-save"></i>
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm eliminar-detalle" style="display:none;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            $(`#detalles_${userId}`).append(nuevaFila);
+        };
+
+        $(document).ready(function() {
             // Agregar el evento para manejar cambios en los valores editables
             $(document).on('change', '.valor-editable', async function() {
                 const $input = $(this);
@@ -672,54 +706,70 @@
             window.editarSueldo = editarSueldo;
             window.eliminarSueldo = eliminarSueldo;
 
-            // Función para agregar una nueva fila de detalle
-            function agregarFilaDetalle(userId) {
-                const fecha = new Date().toISOString().split('T')[0];
-                const empleado = $('#selectUsuario option:selected').text();
-                const nuevaFila = `
-                    <tr>
-                        <td>
-                            <input type="date" class="form-control form-control-sm" value="${fecha}">
-                        </td>
-                        <td>
-                            <input type="text" class="form-control form-control-sm" value="${empleado}" readonly>
-                        </td>
-                        <td>
-                            <input type="text" class="form-control form-control-sm" placeholder="DESCRIPCIÓN">
-                        </td>
-                        <td>
-                            <input type="number" class="form-control form-control-sm valor-detalle" value="0.00" step="0.01" onchange="calcularTotalDetalles(${userId})">
-                        </td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-danger btn-sm" onclick="eliminarFilaDetalle(this, ${userId})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-                $(`#detalles_${userId}`).append(nuevaFila);
-                calcularTotalDetalles(userId);
-            }
+            // Función para cargar los detalles existentes
+            function cargarDetalles(userId) {
+                if (!userId) return;
 
-            // Función para eliminar una fila de detalle
-            function eliminarFilaDetalle(boton, userId) {
-                $(boton).closest('tr').remove();
-                calcularTotalDetalles(userId);
-            }
+                const mes = $('#filtroMes').val();
+                const ano = $('#filtroAno').val();
 
-            // Función para calcular el total de los detalles
-            function calcularTotalDetalles(userId) {
-                let total = 0;
-                $(`#detalles_${userId} .valor-detalle`).each(function() {
-                    total += parseFloat($(this).val()) || 0;
+                $.ajax({
+                    url: '/detalles-sueldos/periodo',
+                    method: 'GET',
+                    data: {
+                        user_id: userId,
+                        mes: mes,
+                        ano: ano
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            const $tbody = $(`#detalles_${userId}`);
+                            $tbody.empty();
+
+                            response.data.forEach(detalle => {
+                                const fila = `
+                                    <tr data-detalle-id="${detalle.id}">
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm" value="${detalle.mes}/${detalle.ano}" readonly>
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm" value="${detalle.user.name}" readonly>
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm descripcion-detalle" value="${detalle.descripcion}" readonly>
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm valor-detalle" value="${detalle.valor}" readonly>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-danger btn-sm eliminar-detalle">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                                $tbody.append(fila);
+                            });
+                        }
+                    }
                 });
-                $(`#total_detalles_${userId}`).text(`$${total.toFixed(2)}`);
             }
 
-            // Hacer las funciones disponibles globalmente
-            window.agregarFilaDetalle = agregarFilaDetalle;
-            window.eliminarFilaDetalle = eliminarFilaDetalle;
-            window.calcularTotalDetalles = calcularTotalDetalles;
+            // Actualizar la función de cargar rol de pagos para incluir los detalles
+            function cargarRolDePagos() {
+                if (!selectedUserId) return;
+
+                const mes = $('#filtroMes').val();
+                const ano = $('#filtroAno').val();
+                
+                if (mes && ano) {
+                    obtenerRolPagos(selectedUserId, selectedUserName, ano, mes)
+                        .then(data => {
+                            actualizarDetallesRolPagos(data);
+                            cargarDetalles(selectedUserId);
+                        });
+                }
+            }
 
             // Función para cargar los registros de cobro
             function cargarRegistrosCobro() {

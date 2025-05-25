@@ -14,6 +14,7 @@ use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EgresoController;
 use App\Http\Controllers\PrestamoController;
 use App\Http\Controllers\SueldoController;
+use App\Http\Controllers\DetalleSueldoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -215,6 +216,11 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::resource('egresos', EgresoController::class);
 
     Route::resource('prestamos', PrestamoController::class);
+
+    // Rutas para detalles de sueldos
+    Route::post('/detalles-sueldos', [DetalleSueldoController::class, 'store'])->name('detalles-sueldos.store');
+    Route::delete('/detalles-sueldos/{detalleSueldo}', [DetalleSueldoController::class, 'destroy'])->name('detalles-sueldos.destroy');
+    Route::get('/detalles-sueldos/periodo', [DetalleSueldoController::class, 'getDetallesPorPeriodo'])->name('detalles-sueldos.periodo');
 });
 
 // Rutas públicas para calificación
