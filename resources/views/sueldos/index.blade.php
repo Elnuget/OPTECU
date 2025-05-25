@@ -126,7 +126,7 @@
                         @endphp
                         
                         @foreach($sueldos as $sueldo)
-                            <tr>
+                            <tr {{ $sueldo->descripcion === 'REGISTROCOBRO' ? 'hidden' : '' }}>
                                 <td>{{ $sueldo->fecha->format('d/m/Y') }}</td>
                                 <td>{{ $sueldo->user->name }}</td>
                                 <td>{{ $sueldo->descripcion }}</td>
