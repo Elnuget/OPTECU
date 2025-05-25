@@ -407,6 +407,12 @@
                             success: function(response) {
                                 if (response.success) {
                                     $('#total_registros_' + userId).text('$' + parseFloat(response.total).toFixed(2));
+                                    
+                                    // Actualizar el sueldo a recibir
+                                    const totalRegistros = parseFloat(response.total) || 0;
+                                    const totalDetalles = parseFloat($(`#total_detalles_${userId}`).text().replace('$', '')) || 0;
+                                    const sueldoRecibir = totalRegistros + totalDetalles;
+                                    $(`#sueldo_recibir_${userId}`).text(`$${sueldoRecibir.toFixed(2)}`);
                                 }
                             }
                         });
@@ -492,9 +498,13 @@
                                         <strong>TOTAL REGISTROS COBRO: </strong>
                                         <span id="total_registros_${selectedUserId}">$0.00</span>
                                     </div>
-                                    <div>
+                                    <div class="mr-4">
                                         <strong>TOTAL DETALLES: </strong>
                                         <span id="total_detalles_${selectedUserId}">$0.00</span>
+                                    </div>
+                                    <div>
+                                        <strong>SUELDO A RECIBIR: </strong>
+                                        <span id="sueldo_recibir_${selectedUserId}">$0.00</span>
                                     </div>
                                 </div>
                             </div>
@@ -761,79 +771,104 @@
                     </tr>
                 `);
 
+                // Primero obtener el total de registros de cobro
                 $.ajax({
-                    url: '/detalles-sueldos/periodo',
+                    url: '/api/sueldos/total-registros-cobro',
                     method: 'GET',
                     data: {
                         user_id: userId,
                         mes: mes,
                         ano: ano
                     },
-                    success: function(response) {
-                        console.log('Respuesta del servidor:', response);
-                        if (response.success) {
-                            $tbody.empty();
-                            let total = 0;
+                    success: function(responseRegistros) {
+                        if (responseRegistros.success) {
+                            const totalRegistros = parseFloat(responseRegistros.total) || 0;
+                            $('#total_registros_' + userId).text('$' + totalRegistros.toFixed(2));
 
-                            if (response.data.length === 0) {
-                                $tbody.html(`
-                                    <tr>
-                                        <td colspan="5" class="text-center">
-                                            NO HAY DETALLES PARA ESTE PERÍODO
-                                        </td>
-                                    </tr>
-                                `);
-                            } else {
-                                response.data.forEach(detalle => {
-                                    console.log('Procesando detalle:', detalle);
-                                    const nombreUsuario = selectedUserName; // Usamos el nombre del usuario seleccionado
-                                    const fila = `
-                                        <tr data-detalle-id="${detalle.id}">
-                                            <td>
-                                                <input type="text" class="form-control form-control-sm" value="${detalle.mes}/${detalle.ano}" readonly>
-                                            </td>
-                                            <td>
-                                                <input type="text" class="form-control form-control-sm" value="${nombreUsuario}" readonly>
-                                            </td>
-                                            <td>
-                                                <input type="text" class="form-control form-control-sm descripcion-detalle" value="${detalle.descripcion}" readonly>
-                                            </td>
-                                            <td>
-                                                <input type="number" class="form-control form-control-sm valor-detalle" value="${detalle.valor}" readonly>
-                                            </td>
-                                            <td class="text-center">
-                                                <button type="button" class="btn btn-danger btn-sm eliminar-detalle" onclick="eliminarDetalle(${detalle.id})">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
+                            // Luego cargar los detalles
+                            $.ajax({
+                                url: '/detalles-sueldos/periodo',
+                                method: 'GET',
+                                data: {
+                                    user_id: userId,
+                                    mes: mes,
+                                    ano: ano
+                                },
+                                success: function(response) {
+                                    console.log('Respuesta del servidor:', response);
+                                    if (response.success) {
+                                        $tbody.empty();
+                                        let totalDetalles = 0;
+
+                                        if (response.data.length === 0) {
+                                            $tbody.html(`
+                                                <tr>
+                                                    <td colspan="5" class="text-center">
+                                                        NO HAY DETALLES PARA ESTE PERÍODO
+                                                    </td>
+                                                </tr>
+                                            `);
+                                        } else {
+                                            response.data.forEach(detalle => {
+                                                console.log('Procesando detalle:', detalle);
+                                                const nombreUsuario = selectedUserName;
+                                                const fila = `
+                                                    <tr data-detalle-id="${detalle.id}">
+                                                        <td>
+                                                            <input type="text" class="form-control form-control-sm" value="${detalle.mes}/${detalle.ano}" readonly>
+                                                        </td>
+                                                        <td>
+                                                            <input type="text" class="form-control form-control-sm" value="${nombreUsuario}" readonly>
+                                                        </td>
+                                                        <td>
+                                                            <input type="text" class="form-control form-control-sm descripcion-detalle" value="${detalle.descripcion}" readonly>
+                                                        </td>
+                                                        <td>
+                                                            <input type="number" class="form-control form-control-sm valor-detalle" value="${detalle.valor}" readonly>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <button type="button" class="btn btn-danger btn-sm eliminar-detalle" onclick="eliminarDetalle(${detalle.id})">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                `;
+                                                $tbody.append(fila);
+                                                totalDetalles += parseFloat(detalle.valor);
+                                            });
+                                        }
+
+                                        // Actualizar el total de detalles
+                                        $(`#total_detalles_${userId}`).text(`$${totalDetalles.toFixed(2)}`);
+                                        
+                                        // Calcular y actualizar el sueldo a recibir usando el total de registros obtenido de la API
+                                        const sueldoRecibir = totalRegistros + totalDetalles;
+                                        $(`#sueldo_recibir_${userId}`).text(`$${sueldoRecibir.toFixed(2)}`);
+                                    } else {
+                                        $tbody.html(`
+                                            <tr>
+                                                <td colspan="5" class="text-center text-danger">
+                                                    ERROR AL CARGAR LOS DETALLES
+                                                </td>
+                                            </tr>
+                                        `);
+                                    }
+                                },
+                                error: function(xhr, status, error) {
+                                    console.error('Error al cargar detalles:', error);
+                                    $tbody.html(`
+                                        <tr>
+                                            <td colspan="5" class="text-center text-danger">
+                                                ERROR AL CARGAR LOS DETALLES: ${error}
                                             </td>
                                         </tr>
-                                    `;
-                                    $tbody.append(fila);
-                                    total += parseFloat(detalle.valor);
-                                });
-                            }
-
-                            // Actualizar el total
-                            $(`#total_detalles_${userId}`).text(`$${total.toFixed(2)}`);
-                        } else {
-                            $tbody.html(`
-                                <tr>
-                                    <td colspan="5" class="text-center text-danger">
-                                        ERROR AL CARGAR LOS DETALLES
-                                    </td>
-                                </tr>
-                            `);
+                                    `);
+                                }
+                            });
                         }
                     },
                     error: function(xhr, status, error) {
-                        console.error('Error al cargar detalles:', error);
-                        $tbody.html(`
-                            <tr>
-                                <td colspan="5" class="text-center text-danger">
-                                    ERROR AL CARGAR LOS DETALLES: ${error}
-                                </td>
-                            </tr>
-                        `);
+                        console.error('Error al obtener total de registros:', error);
                     }
                 });
             }
