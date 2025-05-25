@@ -16,6 +16,11 @@
                     </div>
                     @php
                         $articulosAgotadosColumna = $items->where('cantidad', 0)->count();
+                        // Calcular el siguiente número disponible
+                        $ultimoNumero = $items->max('numero');
+                        $siguienteNumero = $ultimoNumero + 1;
+                        // Obtener el lugar de la primera fila
+                        $lugarPredeterminado = $items->first()->lugar;
                     @endphp
                     <div class="badge bg-danger text-white">
                         {{ $articulosAgotadosColumna }} agotados
@@ -43,7 +48,42 @@
                     @else
                         <x-inventario.table-regular-rows :items="$items" />
                     @endif
+                    
+                    <!-- Nueva fila para agregar artículo -->
+                    <tr class="new-row" data-columna="{{ $columna }}" data-lugar="{{ $lugarPredeterminado }}" style="display: none;">
+                        <td class="text-center" data-field="numero">
+                            <span class="display-value">{{ $siguienteNumero }}</span>
+                        </td>
+                        <td class="text-center" data-field="lugar">
+                            <span class="display-value">{{ $lugarPredeterminado }}</span>
+                        </td>
+                        <td class="text-center" data-field="columna">
+                            <span class="display-value">{{ $columna }}</span>
+                        </td>
+                        <td class="editable" data-field="codigo">
+                            <span class="display-value">-</span>
+                            <input type="text" class="form-control edit-input" style="display: none;">
+                        </td>
+                        <td class="editable text-center" data-field="cantidad">
+                            <span class="display-value">-</span>
+                            <input type="number" class="form-control edit-input" style="display: none;" value="1">
+                        </td>
+                        @can('admin')
+                        <td class="text-center">
+                            <span class="text-muted">-</span>
+                        </td>
+                        @endcan
+                    </tr>
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            <button type="button" class="btn btn-sm btn-success add-row-btn" data-columna="{{ $columna }}">
+                                <i class="fas fa-plus"></i> AGREGAR ARTÍCULO
+                            </button>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </div>

@@ -315,20 +315,38 @@
                 });
             });
 
-            // Función para manejar la edición en línea de celdas vacías o con guión
+            // Función para manejar el botón de agregar fila
+            $('.add-row-btn').on('click', function() {
+                const columna = $(this).data('columna');
+                const table = $(this).closest('table');
+                const newRow = table.find('.new-row[data-columna="' + columna + '"]');
+                
+                // Mostrar la nueva fila si está oculta
+                if (newRow.is(':hidden')) {
+                    newRow.show();
+                    // Activar la edición en la celda de código
+                    newRow.find('td[data-field="codigo"]').trigger('click');
+                }
+            });
+
+            // Modificar la función de edición en línea
             $('.table').on('click', 'td.editable', function() {
                 const cell = $(this);
                 const displayValue = cell.find('.display-value');
                 const currentValue = displayValue.text().trim();
+                const row = cell.closest('tr');
+                const field = cell.data('field');
                 
-                // Si el valor actual es '-' o está vacío, tratarlo como editable
-                if (currentValue === '-' || currentValue === '') {
-                    const row = cell.closest('tr');
-                    const field = cell.data('field');
-                    
+                // Solo permitir edición de código y cantidad en filas nuevas
+                if (row.hasClass('new-row') && (field !== 'codigo' && field !== 'cantidad')) {
+                    return;
+                }
+                
+                // Si es una nueva fila o el valor es '-' o está vacío
+                if (row.hasClass('new-row') || currentValue === '-' || currentValue === '') {
                     // Crear input según el tipo de campo
                     let input;
-                    if (field === 'cantidad' || field === 'numero' || field === 'columna') {
+                    if (field === 'cantidad') {
                         input = $('<input type="number" class="form-control" value="1">');
                     } else {
                         input = $('<input type="text" class="form-control">');
@@ -348,95 +366,86 @@
                             return;
                         }
                         
-                        // Obtener la fecha actual en formato YYYY-MM-DD
-                        const today = new Date();
-                        const fecha = today.getFullYear() + '-' + 
-                                    String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-                                    String(today.getDate()).padStart(2, '0');
-                        
-                        // Recopilar datos para el nuevo artículo
-                        const articleData = {
-                            fecha: fecha, // Agregar la fecha actual
-                            numero: row.find('td[data-field="numero"] .display-value').text().trim() === '-' ? 
-                                   row.find('td[data-field="numero"] input').val() || 1 : 
-                                   row.find('td[data-field="numero"] .display-value').text().trim(),
-                            lugar: row.find('td[data-field="lugar"] .display-value').text().trim() === '-' ? 
-                                  row.find('td[data-field="lugar"] input').val() || 'SOPORTE 1' : 
-                                  row.find('td[data-field="lugar"] .display-value').text().trim(),
-                            columna: row.find('td[data-field="columna"] .display-value').text().trim() === '-' ? 
-                                    row.find('td[data-field="columna"] input').val() || 1 : 
-                                    row.find('td[data-field="columna"] .display-value').text().trim(),
-                            codigo: row.find('td[data-field="codigo"] .display-value').text().trim() === '-' ? 
-                                   row.find('td[data-field="codigo"] input').val() : 
-                                   row.find('td[data-field="codigo"] .display-value').text().trim(),
-                            cantidad: row.find('td[data-field="cantidad"] .display-value').text().trim() === '-' ? 
-                                     row.find('td[data-field="cantidad"] input').val() || 1 : 
-                                     row.find('td[data-field="cantidad"] .display-value').text().trim()
-                        };
+                        // Si es una fila nueva, crear el artículo
+                        if (row.hasClass('new-row')) {
+                            // Obtener la fecha actual
+                            const today = new Date();
+                            const fecha = today.getFullYear() + '-' + 
+                                        String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                                        String(today.getDate()).padStart(2, '0');
+                            
+                            // Recopilar datos para el nuevo artículo
+                            const articleData = {
+                                fecha: fecha,
+                                numero: row.find('td[data-field="numero"] .display-value').text().trim(),
+                                lugar: row.data('lugar'),
+                                columna: row.data('columna'),
+                                codigo: row.find('td[data-field="codigo"] .display-value').text().trim() === '-' ? 
+                                       row.find('td[data-field="codigo"] input').val() : 
+                                       row.find('td[data-field="codigo"] .display-value').text().trim(),
+                                cantidad: row.find('td[data-field="cantidad"] .display-value').text().trim() === '-' ? 
+                                         row.find('td[data-field="cantidad"] input').val() || 1 : 
+                                         row.find('td[data-field="cantidad"] .display-value').text().trim()
+                            };
 
-                        // Actualizar el campo actual con el nuevo valor
-                        articleData[field] = value;
-                        
-                        // Asegurarse de que todos los campos requeridos tengan valores válidos
-                        if (!articleData.numero || !articleData.lugar || !articleData.columna || !articleData.codigo || !articleData.cantidad) {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error de validación',
-                                text: 'Todos los campos son requeridos'
-                            });
-                            displayValue.text('-').show();
-                            input.remove();
-                            return;
-                        }
-                        
-                        // Verificar si tenemos suficientes datos para crear el artículo
-                        $.ajax({
-                            url: '{{ route("inventario.store") }}',
-                            method: 'POST',
-                            data: {
-                                _token: '{{ csrf_token() }}',
-                                ...articleData
-                            },
-                            success: function(response) {
-                                // Actualizar todas las celdas de la fila
-                                Object.keys(articleData).forEach(key => {
-                                    if (key !== 'fecha') { // No mostrar la fecha en la tabla
-                                        const targetCell = row.find(`td[data-field="${key}"] .display-value`);
-                                        targetCell.text(articleData[key]).show();
-                                    }
-                                });
-                                
-                                // Remover los inputs
-                                row.find('input').remove();
-                                
-                                // Actualizar el ID de la fila con el nuevo ID del artículo
-                                if (response.id) {
-                                    row.attr('data-id', response.id);
-                                }
-                                
-                                // Mostrar mensaje de éxito
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Artículo creado exitosamente',
-                                    showConfirmButton: false,
-                                    timer: 1500
-                                }).then(() => {
-                                    // El estado ya se habrá guardado por el evento beforeunload
-                                    window.location.reload();
-                                });
-                            },
-                            error: function(xhr) {
-                                console.error('Error response:', xhr.responseJSON);
-                                // Mostrar mensaje de error
+                            // Actualizar el campo actual
+                            articleData[field] = value;
+                            
+                            // Validar que código y cantidad estén completos
+                            if (!articleData.codigo || articleData.codigo === '-') {
                                 Swal.fire({
                                     icon: 'error',
-                                    title: 'Error al crear el artículo',
-                                    text: xhr.responseJSON?.message || 'Error desconocido',
+                                    title: 'Error de validación',
+                                    text: 'El código es requerido'
                                 });
                                 displayValue.text('-').show();
                                 input.remove();
+                                return;
                             }
-                        });
+                            
+                            // Crear el artículo
+                            $.ajax({
+                                url: '{{ route("inventario.store") }}',
+                                method: 'POST',
+                                data: {
+                                    _token: '{{ csrf_token() }}',
+                                    ...articleData
+                                },
+                                success: function(response) {
+                                    // Actualizar las celdas editables
+                                    row.find('td[data-field="codigo"] .display-value').text(articleData.codigo).show();
+                                    row.find('td[data-field="cantidad"] .display-value').text(articleData.cantidad).show();
+                                    
+                                    // Remover inputs y clase new-row
+                                    row.find('input').remove();
+                                    row.removeClass('new-row').show();
+                                    
+                                    // Actualizar el ID de la fila
+                                    if (response.id) {
+                                        row.attr('data-id', response.id);
+                                    }
+                                    
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Artículo creado exitosamente',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    }).then(() => {
+                                        window.location.reload();
+                                    });
+                                },
+                                error: function(xhr) {
+                                    console.error('Error response:', xhr.responseJSON);
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error al crear el artículo',
+                                        text: xhr.responseJSON?.message || 'Error desconocido'
+                                    });
+                                    displayValue.text('-').show();
+                                    input.remove();
+                                }
+                            });
+                        }
                     });
                     
                     // Manejar la tecla Enter
@@ -451,6 +460,9 @@
                         if (e.key === 'Escape') {
                             displayValue.show();
                             input.remove();
+                            if (row.hasClass('new-row')) {
+                                row.hide();
+                            }
                         }
                     });
                 }
