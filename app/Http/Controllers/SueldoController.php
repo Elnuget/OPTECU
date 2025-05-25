@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sueldo;
+use App\Models\Egreso;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
@@ -72,6 +73,13 @@ class SueldoController extends Controller
                 'descripcion' => $request->descripcion,
                 'valor' => $request->valor
             ]);
+
+            // Crear el registro de egreso correspondiente
+            $egreso = new Egreso();
+            $egreso->user_id = $request->user_id;
+            $egreso->valor = $request->valor;
+            $egreso->motivo = $request->descripcion;
+            $egreso->save();
 
             DB::commit();
 
