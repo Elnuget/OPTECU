@@ -445,27 +445,36 @@ class PedidosController extends Controller
                 }
             }
 
-            // Actualizar el estado del inventario
-            // 1. Restaurar la cantidad para artículos eliminados del pedido
-            $inventariosEliminados = array_diff($inventariosAnteriores, $nuevosInventarioIds);
-            foreach ($inventariosEliminados as $inventarioId) {
-                $inventario = Inventario::find($inventarioId);
-                if ($inventario) {
-                    $inventario->cantidad += 1; // Aumentar la cantidad al quitar del pedido
-                    $inventario->orden = null; // Quitar la referencia al pedido
-                    $inventario->save();
-                }
-            }
+            // Verificar si se debe actualizar el inventario o ya se hizo en el frontend
+            $actualizarInventario = $request->input('actualizar_inventario', 'true') === 'true';
             
-            // 2. Actualizar o reducir cantidad para nuevos artículos añadidos
-            $inventariosNuevos = array_diff($nuevosInventarioIds, $inventariosAnteriores);
-            foreach ($inventariosNuevos as $inventarioId) {
-                $inventario = Inventario::find($inventarioId);
-                if ($inventario) {
-                    $inventario->cantidad -= 1; // Disminuir la cantidad al añadir al pedido
-                    $inventario->orden = $pedido->numero_orden; // Asignar referencia al pedido
-                    $inventario->save();
+            if ($actualizarInventario) {
+                \Log::info('Actualizando inventario desde el backend para pedido #' . $pedido->id);
+                
+                // Actualizar el estado del inventario
+                // 1. Restaurar la cantidad para artículos eliminados del pedido
+                $inventariosEliminados = array_diff($inventariosAnteriores, $nuevosInventarioIds);
+                foreach ($inventariosEliminados as $inventarioId) {
+                    $inventario = Inventario::find($inventarioId);
+                    if ($inventario) {
+                        $inventario->cantidad += 1; // Aumentar la cantidad al quitar del pedido
+                        $inventario->orden = null; // Quitar la referencia al pedido
+                        $inventario->save();
+                    }
                 }
+                
+                // 2. Actualizar o reducir cantidad para nuevos artículos añadidos
+                $inventariosNuevos = array_diff($nuevosInventarioIds, $inventariosAnteriores);
+                foreach ($inventariosNuevos as $inventarioId) {
+                    $inventario = Inventario::find($inventarioId);
+                    if ($inventario) {
+                        $inventario->cantidad -= 1; // Disminuir la cantidad al añadir al pedido
+                        $inventario->orden = $pedido->numero_orden; // Asignar referencia al pedido
+                        $inventario->save();
+                    }
+                }
+            } else {
+                \Log::info('Omitiendo actualización de inventario en backend para pedido #' . $pedido->id . ' (ya manejado en frontend)');
             }
 
             // Update lunas

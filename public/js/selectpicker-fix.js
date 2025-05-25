@@ -2,6 +2,9 @@
  * Script para manejar los combobox personalizados
  */
 
+// Variable global para controlar si estamos en modo edición
+window.editMode = true;
+
 $(document).ready(function() {
     initializeCustomComboboxes();
     
@@ -31,14 +34,17 @@ $(document).ready(function() {
         // Cerrar el dropdown
         $inputGroup.find('.dropdown-menu').removeClass('show');
         
-        // Si había un armazón anterior seleccionado, restaurar su unidad
-        if (anteriorId && anteriorId !== id) {
-            restaurarUnidadInventario(anteriorId);
-        }
-        
-        // Si se seleccionó un nuevo armazón, restar una unidad
-        if (id) {
-            restarUnidadInventario(id);
+        // Solo actualizar el inventario si estamos en modo edición interactiva, no al cargar el formulario
+        if (window.editMode && anteriorId !== id) {
+            // Si había un armazón anterior seleccionado, restaurar su unidad
+            if (anteriorId) {
+                restaurarUnidadInventario(anteriorId);
+            }
+            
+            // Si se seleccionó un nuevo armazón, restar una unidad
+            if (id) {
+                restarUnidadInventario(id);
+            }
         }
     });
     
@@ -91,8 +97,8 @@ $(document).ready(function() {
         const $hiddenInput = $(this).closest('.armazon-section').find('.armazon-id');
         const inventarioId = $hiddenInput.val();
         
-        // Restaurar unidad al inventario si hay un ID válido
-        if (inventarioId) {
+        // Restaurar unidad al inventario si hay un ID válido y estamos en modo edición
+        if (window.editMode && inventarioId) {
             restaurarUnidadInventario(inventarioId);
         }
         
@@ -113,6 +119,13 @@ $(document).ready(function() {
             toast: true
         });
     });
+    
+    // Agregar evento al formulario para desactivar editMode al enviar
+    $('form').on('submit', function() {
+        window.editMode = false;
+        console.log('Formulario enviado - editMode desactivado');
+        return true;
+    });
 });
 
 // Inicializar los combobox personalizados existentes
@@ -126,6 +139,8 @@ function initializeCustomComboboxes() {
             $this.closest('.input-group').find('.armazon-id').data('anterior-id', selectedId);
         }
     });
+    
+    console.log('Comboboxes personalizados inicializados - editMode:', window.editMode);
 }
 
 // Función global para añadir un nuevo armazón
@@ -211,7 +226,13 @@ window.addArmazon = function() {
 function restaurarUnidadInventario(inventarioId) {
     if (!inventarioId) return;
     
-    console.log('Restaurando unidad al inventario:', inventarioId);
+    console.log('Restaurando unidad al inventario:', inventarioId, '- editMode:', window.editMode);
+    
+    // Si no estamos en modo edición, no actualizar el inventario
+    if (!window.editMode) {
+        console.log('Operación cancelada: no estamos en modo edición');
+        return;
+    }
     
     // Llamar a la API para restaurar la unidad
     fetch(`/api/inventario/restaurar/${inventarioId}`, {
@@ -249,7 +270,13 @@ function restaurarUnidadInventario(inventarioId) {
 function restarUnidadInventario(inventarioId) {
     if (!inventarioId) return;
     
-    console.log('Restando unidad del inventario:', inventarioId);
+    console.log('Restando unidad del inventario:', inventarioId, '- editMode:', window.editMode);
+    
+    // Si no estamos en modo edición, no actualizar el inventario
+    if (!window.editMode) {
+        console.log('Operación cancelada: no estamos en modo edición');
+        return;
+    }
     
     // Llamar a la API para restar la unidad
     fetch(`/api/inventario/restar/${inventarioId}`, {

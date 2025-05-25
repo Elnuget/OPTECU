@@ -146,6 +146,9 @@
 
                 {{-- Agregar id del pedido como campo oculto --}}
                 <input type="hidden" name="pedido_id" value="{{ $pedido->id }}">
+                
+                {{-- Indicar si se debe actualizar el inventario en el backend --}}
+                <input type="hidden" name="actualizar_inventario" value="false" id="actualizar_inventario">
 
                 {{-- En la sección de lunas, asegurarnos que los IDs se mantienen --}}
                 @foreach($pedido->lunas as $index => $luna)
