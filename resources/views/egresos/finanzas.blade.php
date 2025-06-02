@@ -1578,6 +1578,21 @@
                 }
             });
 
+            // Crear y mostrar desglose de totales por categoría antes del total general
+            const clasificacionTotalesCol = document.createElement('div');
+            clasificacionTotalesCol.className = 'col-12 mb-3';
+            clasificacionTotalesCol.innerHTML = `
+              <div class="list-group">
+                ${categoriasOrdenadas.map(([categoria, total]) => `
+                  <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <strong>${categoria}</strong>
+                    <span>${formatCurrency(total)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            `;
+            desgloseContainer.appendChild(clasificacionTotalesCol);
+
             // Agregar tarjeta de total (ya excluyendo depósitos)
             const totalCol = document.createElement('div');
             totalCol.className = 'col-12 mt-3';
