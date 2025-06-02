@@ -581,14 +581,19 @@
                         ]);
                         totalDetalles += parseFloat(detalle.valor);
                     });
+                      datosExcel.push([]); // Fila vacía
                     
-                    datosExcel.push([]); // Fila vacía
+                    // Totales finales - capturados directamente de la vista
+                    const totalVentas = parseFloat($(`#total_${selectedUserId}`).text().replace('$', '')) || 0;
+                    const totalRegistrosCobro = parseFloat($(`#total_registros_${selectedUserId}`).text().replace('$', '')) || 0;
+                    const totalDetallesVista = parseFloat($(`#total_detalles_${selectedUserId}`).text().replace('$', '')) || 0;
+                    const sueldoARecibir = parseFloat($(`#sueldo_recibir_${selectedUserId}`).text().replace('$', '')) || 0;
                     
-                    // Totales finales
                     datosExcel.push(['=== RESUMEN DE TOTALES ===']);
-                    datosExcel.push(['TOTAL DETALLES:', '', totalDetalles]);
-                    datosExcel.push(['TOTAL REGISTROS DE COBRO:', '', totalRegistros]);
-                    datosExcel.push(['SUELDO A RECIBIR:', '', totalDetalles + totalRegistros]);
+                    datosExcel.push(['TOTAL VENTAS:', '', totalVentas]);
+                    datosExcel.push(['TOTAL REGISTROS DE COBRO:', '', totalRegistrosCobro]);
+                    datosExcel.push(['TOTAL DETALLES:', '', totalDetallesVista]);
+                    datosExcel.push(['SUELDO A RECIBIR:', '', sueldoARecibir]);
                     
                     // Crear el workbook
                     const ws = XLSX.utils.aoa_to_sheet(datosExcel);
