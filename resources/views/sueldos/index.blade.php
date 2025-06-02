@@ -513,24 +513,48 @@
                 didOpen: () => {
                     Swal.showLoading();
                 }
-            });
-
-            // Obtener datos del rol de pagos actual
+            });            // Obtener datos del rol de pagos actual
             obtenerRolPagos(selectedUserId, selectedUserName, ano, mes).then(() => {
-                Promise.all([
-                    $.ajax({
-                        url: '/detalles-sueldos/periodo',
-                        method: 'GET',
-                        data: { user_id: selectedUserId, mes: mes, ano: ano }
-                    }),
-                    $.ajax({
-                        url: '/api/sueldos/total-registros-cobro',
-                        method: 'GET',
-                        data: { user_id: selectedUserId, mes: mes, ano: ano }
-                    })
-                ]).then(([detallesResponse, registrosResponse]) => {
-                    // Procesar los datos para el Excel
-                    const detalles = detallesResponse.detalles || [];
+                // Función para extraer detalles del HTML
+                function extraerDetallesDelHTML() {
+                    const detalles = [];
+                    const tablaDetalles = document.querySelector(`#detalles_${selectedUserId}`);
+                    
+                    if (tablaDetalles) {
+                        const filas = tablaDetalles.querySelectorAll('tr');
+                        filas.forEach(fila => {
+                            // Buscar las celdas con inputs
+                            const inputFecha = fila.querySelector('td:nth-child(1) input');
+                            const inputEmpleado = fila.querySelector('td:nth-child(2) input');
+                            const inputDescripcion = fila.querySelector('td:nth-child(3) input');
+                            const inputValor = fila.querySelector('td:nth-child(4) input');
+                            
+                            // Solo procesar filas que tengan datos válidos
+                            if (inputFecha && inputDescripcion && inputValor && 
+                                inputDescripcion.value.trim() !== '' && 
+                                !isNaN(parseFloat(inputValor.value))) {
+                                
+                                detalles.push({
+                                    fecha: inputFecha.value,
+                                    empleado: inputEmpleado ? inputEmpleado.value : selectedUserName,
+                                    descripcion: inputDescripcion.value,
+                                    valor: parseFloat(inputValor.value)
+                                });
+                            }
+                        });
+                    }
+                    
+                    return detalles;
+                }
+
+                // Solo hacer la petición AJAX para los registros de cobro que sí funciona
+                $.ajax({
+                    url: '/api/sueldos/total-registros-cobro',
+                    method: 'GET',
+                    data: { user_id: selectedUserId, mes: mes, ano: ano }
+                }).then((registrosResponse) => {
+                    // Extraer detalles del HTML en lugar de usar AJAX
+                    const detalles = extraerDetallesDelHTML();
                     const totalRegistros = registrosResponse.total || 0;
                     
                     // Crear datos para la hoja de Excel
@@ -566,8 +590,7 @@
                         });
                     }
                     
-                    datosExcel.push([]); // Fila vacía
-                    
+                    datosExcel.push([]); // Fila vacía                    
                     // Sección de detalles adicionales
                     datosExcel.push(['=== DETALLES ADICIONALES ===']);
                     datosExcel.push(['FECHA', 'DESCRIPCIÓN', 'VALOR']);
@@ -577,9 +600,9 @@
                         datosExcel.push([
                             detalle.fecha,
                             detalle.descripcion,
-                            parseFloat(detalle.valor)
+                            detalle.valor
                         ]);
-                        totalDetalles += parseFloat(detalle.valor);
+                        totalDetalles += detalle.valor;
                     });
                       datosExcel.push([]); // Fila vacía
                     
@@ -627,8 +650,7 @@
                     Swal.close();
                     const nombreArchivo = `rol_pagos_completo_${selectedUserName.replace(/\s+/g, '_')}_${mes}_${ano}.xlsx`;
                     XLSX.writeFile(wb, nombreArchivo);
-                    
-                    // Mostrar éxito
+                      // Mostrar éxito
                     Swal.fire({
                         icon: 'success',
                         title: '¡ÉXITO!',
