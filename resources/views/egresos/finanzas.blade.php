@@ -1420,13 +1420,12 @@
         // Función para clasificar los motivos de retiros
         function clasificarMotivoRetiro(motivo) {
             motivo = motivo.toLowerCase();
-            
             if (motivo.includes('deposito') || motivo.includes('depósito')) {
                 return 'DEPÓSITOS';
             } else if (motivo.includes('luz') || motivo.includes('servicios') || motivo.includes('internet')) {
                 return 'SERVICIOS';
             } else if (motivo.includes('almuerzo') || motivo.includes('ceviche') || motivo.includes('heladeria') || 
-                      motivo.includes('gaseosa') || motivo.includes('alimentacion') || motivo.includes('hogar alimentacion')) {
+                motivo.includes('gaseosa') || motivo.includes('alimentacion') || motivo.includes('hogar alimentacion')) {
                 return 'ALIMENTACIÓN';
             } else if (motivo.includes('papel') || motivo.includes('caramelos') || motivo.includes('fruta')) {
                 return 'SUMINISTROS';
@@ -1436,7 +1435,8 @@
                 return 'TRANSPORTE';
             } else if (motivo.includes('suelda') || motivo.includes('sueldo') || motivo.includes('abraham')) {
                 return 'PAGOS';
-            } else if (motivo.includes('prestamo') || motivo.includes('tarjeta')) {
+            } else if (motivo.includes('prestamo') || motivo.includes('préstamo') || motivo.includes('tarjeta')) {
+                // Detecta tanto 'prestamo', 'préstamo', como cualquier texto que contenga esas palabras
                 return 'PRÉSTAMOS';
             } else {
                 return 'OTROS';
@@ -1473,6 +1473,7 @@
                 'INSUMOS ÓPTICOS': 0,
                 'TRANSPORTE': 0,
                 'PAGOS': 0,
+                'PRÉSTAMOS': 0,
                 'OTROS': 0
             };
 
@@ -1651,7 +1652,7 @@
             } else if (motivo.includes('suelda') || motivo.includes('sueldo') || 
                       motivo.includes('pago')) {
                 return 'PAGOS DE PERSONAL';
-            } else if (motivo.includes('prestamo') || motivo.includes('tarjeta de credito') || 
+            } else if (motivo.includes('prestamo') || motivo.includes('préstamo') || motivo.includes('tarjeta de credito') || 
                       motivo.includes('tarjeta madre') || motivo.includes('tarjeta wendy')) {
                 return 'PRÉSTAMOS Y TARJETAS';
             } else {
