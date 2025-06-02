@@ -1536,8 +1536,7 @@
                     let detallesHTML = '';
                     if (detallesPorCategoria[categoria]) {
                         const detallesOrdenados = detallesPorCategoria[categoria]
-                            .sort((a, b) => b.valor - a.valor)
-                            .slice(0, 3); // Mostrar solo los 3 más altos
+                            .sort((a, b) => b.valor - a.valor); // Mostrar todos los registros
 
                         detallesHTML = `
                             <div class="mt-2 small">
@@ -1720,8 +1719,7 @@
                     let detallesHTML = '';
                     if (detallesPorCategoria[categoria]) {
                         const detallesOrdenados = detallesPorCategoria[categoria]
-                            .sort((a, b) => b.valor - a.valor)
-                            .slice(0, 3); // Mostrar solo los 3 más altos
+                            .sort((a, b) => b.valor - a.valor); // Mostrar todos los registros
 
                         detallesHTML = `
                             <div class="mt-2 small">
@@ -1886,4 +1884,4 @@
             });
         }
     </script>
-@stop 
+@stop
