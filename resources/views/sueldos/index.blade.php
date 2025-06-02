@@ -434,9 +434,61 @@
                 </tr>
             `;
             $(`#detalles_${userId}`).append(nuevaFila);
-        };
+        };        // Funciones auxiliares para extraer texto de las celdas de la tabla
+        function extraerTextoMovimientos(celda) {
+            const divs = celda.querySelectorAll('.sucursal-movimientos');
+            let texto = '';
+            divs.forEach(div => {
+                const sucursal = div.querySelector('.badge-secondary')?.textContent?.trim() || '';
+                const apertura = div.querySelector('.badge-apertura')?.textContent?.split(':')[1]?.trim() || '';
+                const cierre = div.querySelector('.badge-cierre')?.textContent?.split(':')[1]?.trim() || '';
+                if (sucursal) {
+                    texto += `${sucursal}: `;
+                    if (apertura) texto += `Apertura ${apertura}`;
+                    if (cierre) texto += `${apertura ? ', ' : ''}Cierre ${cierre}`;
+                    texto += '\n';
+                }
+            });
+            return texto.trim() || 'Sin movimientos';
+        }
 
-        // Función global para exportar a Excel
+        function extraerTextoPedidos(celda) {
+            const operaciones = celda.querySelectorAll('.sucursal-operaciones');
+            let texto = '';
+            operaciones.forEach(op => {
+                const sucursal = op.querySelector('.badge-secondary')?.textContent?.trim() || '';
+                const total = op.querySelector('strong')?.textContent?.trim() || '';
+                const pedidos = op.querySelectorAll('li');
+                if (sucursal && total) {
+                    texto += `${sucursal} - ${total}\n`;
+                    pedidos.forEach(pedido => {
+                        const contenido = pedido.textContent?.trim();
+                        if (contenido) texto += `  • ${contenido}\n`;
+                    });
+                }
+            });
+            return texto.trim() || 'Sin pedidos';
+        }
+
+        function extraerTextoRetiros(celda) {
+            const operaciones = celda.querySelectorAll('.sucursal-operaciones');
+            let texto = '';
+            operaciones.forEach(op => {
+                const sucursal = op.querySelector('.badge-secondary')?.textContent?.trim() || '';
+                const total = op.querySelector('strong')?.textContent?.trim() || '';
+                const retiros = op.querySelectorAll('li');
+                if (sucursal && total) {
+                    texto += `${sucursal} - ${total}\n`;
+                    retiros.forEach(retiro => {
+                        const contenido = retiro.textContent?.trim();
+                        if (contenido) texto += `  • ${contenido}\n`;
+                    });
+                }
+            });
+            return texto.trim() || 'Sin retiros';
+        }
+
+        // Función para exportar a Excel
         window.exportarExcel = function() {
             if (!selectedUserId) {
                 Swal.fire({
@@ -450,109 +502,152 @@
 
             const mes = $('#filtroMes').val();
             const ano = $('#filtroAno').val();
-            
-            // Mostrar indicador de carga
+
+            // Mostrar loading
             Swal.fire({
-                title: 'GENERANDO EXCEL',
-                text: 'POR FAVOR ESPERE...',
+                title: 'GENERANDO EXCEL...',
+                text: 'Por favor espere mientras se genera el archivo',
                 allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
                 didOpen: () => {
                     Swal.showLoading();
                 }
             });
 
-            // Obtener los datos necesarios
-            Promise.all([
-                // Obtener detalles
-                $.ajax({
-                    url: '/detalles-sueldos/periodo',
-                    method: 'GET',
-                    data: { user_id: selectedUserId, mes: mes, ano: ano }
-                }),
-                // Obtener total de registros de cobro
-                $.ajax({
-                    url: '/api/sueldos/total-registros-cobro',
-                    method: 'GET',
-                    data: { user_id: selectedUserId, mes: mes, ano: ano }
-                })            ]).then(([detallesResponse, registrosResponse]) => {
-                // Procesar los datos para el Excel
-                const detalles = detallesResponse.detalles || [];
-                const totalRegistros = registrosResponse.total || 0;
-                
-                // Crear datos para la hoja de Excel
-                const datosExcel = [];
-                
-                // Encabezado
-                datosExcel.push(['ROL DE PAGOS']);
-                datosExcel.push(['Empleado:', selectedUserName]);
-                datosExcel.push(['Período:', `${mes}/${ano}`]);
-                datosExcel.push(['Fecha de generación:', new Date().toLocaleDateString('es-EC')]);
-                datosExcel.push([]); // Fila vacía
-                
-                // Encabezados de la tabla
-                datosExcel.push(['FECHA', 'DESCRIPCIÓN', 'VALOR']);
-                
-                // Agregar detalles
-                let totalDetalles = 0;
-                detalles.forEach(detalle => {
-                    datosExcel.push([
-                        detalle.fecha,
-                        detalle.descripcion,
-                        parseFloat(detalle.valor)
-                    ]);
-                    totalDetalles += parseFloat(detalle.valor);
-                });
-                
-                // Totales
-                datosExcel.push([]); // Fila vacía
-                datosExcel.push(['TOTAL DETALLES:', '', totalDetalles]);
-                datosExcel.push(['TOTAL REGISTROS DE COBRO:', '', totalRegistros]);
-                datosExcel.push(['SUELDO A RECIBIR:', '', totalDetalles + totalRegistros]);
-                
-                // Crear el workbook
-                const ws = XLSX.utils.aoa_to_sheet(datosExcel);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, "Rol de Pagos");
-                
-                // Configurar el ancho de las columnas
-                ws['!cols'] = [
-                    { width: 15 }, // FECHA
-                    { width: 30 }, // DESCRIPCIÓN
-                    { width: 15 }  // VALOR
-                ];
-                
-                // Aplicar formato a los números
-                const range = XLSX.utils.decode_range(ws['!ref']);
-                for (let R = range.s.r; R <= range.e.r; ++R) {
-                    for (let C = range.s.c; C <= range.e.c; ++C) {
-                        const cell_address = XLSX.utils.encode_cell({c: C, r: R});
-                        if (!ws[cell_address]) continue;
-                        
-                        // Formatear números en la columna de valor
-                        if (C === 2 && typeof ws[cell_address].v === 'number') {
-                            ws[cell_address].z = '$#,##0.00';
+            // Obtener datos del rol de pagos actual
+            obtenerRolPagos(selectedUserId, selectedUserName, ano, mes).then(() => {
+                Promise.all([
+                    $.ajax({
+                        url: '/detalles-sueldos/periodo',
+                        method: 'GET',
+                        data: { user_id: selectedUserId, mes: mes, ano: ano }
+                    }),
+                    $.ajax({
+                        url: '/api/sueldos/total-registros-cobro',
+                        method: 'GET',
+                        data: { user_id: selectedUserId, mes: mes, ano: ano }
+                    })
+                ]).then(([detallesResponse, registrosResponse]) => {
+                    // Procesar los datos para el Excel
+                    const detalles = detallesResponse.detalles || [];
+                    const totalRegistros = registrosResponse.total || 0;
+                    
+                    // Crear datos para la hoja de Excel
+                    const datosExcel = [];
+                    
+                    // Encabezado principal
+                    datosExcel.push(['ROL DE PAGOS COMPLETO']);
+                    datosExcel.push(['Empleado:', selectedUserName]);
+                    datosExcel.push(['Período:', `${mes}/${ano}`]);
+                    datosExcel.push(['Fecha de generación:', new Date().toLocaleDateString('es-EC')]);
+                    datosExcel.push([]); // Fila vacía
+                    
+                    // Sección principal: Tabla de movimientos diarios
+                    datosExcel.push(['=== TABLA DE MOVIMIENTOS DIARIOS ===']);
+                    datosExcel.push(['FECHA', 'MOVIMIENTOS', 'PEDIDOS', 'RETIROS', 'VALOR']);
+                    
+                    // Obtener datos de la tabla actual
+                    const tbody = document.querySelector(`#desglose_${selectedUserId}`);
+                    if (tbody) {
+                        const filas = tbody.querySelectorAll('tr');
+                        filas.forEach(fila => {
+                            const celdas = fila.querySelectorAll('td');
+                            if (celdas.length >= 5) {
+                                const fecha = celdas[0].textContent.trim().split('\n')[0];
+                                const movimientos = extraerTextoMovimientos(celdas[1]);
+                                const pedidos = extraerTextoPedidos(celdas[2]);
+                                const retiros = extraerTextoRetiros(celdas[3]);
+                                const valor = celdas[4].querySelector('input') ? 
+                                    parseFloat(celdas[4].querySelector('input').value) || 0 : 0;
+                                
+                                datosExcel.push([fecha, movimientos, pedidos, retiros, valor]);
+                            }
+                        });
+                    }
+                    
+                    datosExcel.push([]); // Fila vacía
+                    
+                    // Sección de detalles adicionales
+                    datosExcel.push(['=== DETALLES ADICIONALES ===']);
+                    datosExcel.push(['FECHA', 'DESCRIPCIÓN', 'VALOR']);
+                    
+                    let totalDetalles = 0;
+                    detalles.forEach(detalle => {
+                        datosExcel.push([
+                            detalle.fecha,
+                            detalle.descripcion,
+                            parseFloat(detalle.valor)
+                        ]);
+                        totalDetalles += parseFloat(detalle.valor);
+                    });
+                    
+                    datosExcel.push([]); // Fila vacía
+                    
+                    // Totales finales
+                    datosExcel.push(['=== RESUMEN DE TOTALES ===']);
+                    datosExcel.push(['TOTAL DETALLES:', '', totalDetalles]);
+                    datosExcel.push(['TOTAL REGISTROS DE COBRO:', '', totalRegistros]);
+                    datosExcel.push(['SUELDO A RECIBIR:', '', totalDetalles + totalRegistros]);
+                    
+                    // Crear el workbook
+                    const ws = XLSX.utils.aoa_to_sheet(datosExcel);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Rol de Pagos");
+                    
+                    // Configurar el ancho de las columnas
+                    ws['!cols'] = [
+                        { width: 15 }, // FECHA
+                        { width: 50 }, // MOVIMIENTOS/DESCRIPCIÓN
+                        { width: 50 }, // PEDIDOS/VALOR
+                        { width: 50 }, // RETIROS
+                        { width: 15 }  // VALOR
+                    ];
+                    
+                    // Aplicar formato a los números
+                    const range = XLSX.utils.decode_range(ws['!ref']);
+                    for (let R = range.s.r; R <= range.e.r; ++R) {
+                        for (let C = range.s.c; C <= range.e.c; ++C) {
+                            const cell_address = XLSX.utils.encode_cell({c: C, r: R});
+                            if (!ws[cell_address]) continue;
+                            
+                            // Formatear números en las columnas de valor
+                            if ((C === 2 || C === 4) && typeof ws[cell_address].v === 'number') {
+                                ws[cell_address].z = '$#,##0.00';
+                            }
                         }
                     }
-                }
-                
-                // Generar el archivo
-                const nombreArchivo = `rol_pagos_${selectedUserName.replace(/\s+/g, '_')}_${mes}_${ano}.xlsx`;
-                XLSX.writeFile(wb, nombreArchivo);
-                
-                // Cerrar el indicador de carga
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡ÉXITO!',
-                    text: 'ARCHIVO EXCEL GENERADO CORRECTAMENTE',
-                    confirmButtonText: 'ENTENDIDO',
-                    timer: 3000
+                    
+                    // Cerrar loading y generar archivo
+                    Swal.close();
+                    const nombreArchivo = `rol_pagos_completo_${selectedUserName.replace(/\s+/g, '_')}_${mes}_${ano}.xlsx`;
+                    XLSX.writeFile(wb, nombreArchivo);
+                    
+                    // Mostrar éxito
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡ÉXITO!',
+                        text: 'ARCHIVO EXCEL GENERADO CORRECTAMENTE',
+                        confirmButtonText: 'ENTENDIDO',
+                        timer: 3000
+                    });
+                }).catch(error => {
+                    console.error('Error al exportar:', error);
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'error',
+                        title: '¡ERROR!',
+                        text: 'HUBO UN ERROR AL GENERAR EL ARCHIVO EXCEL',
+                        confirmButtonText: 'ENTENDIDO'
+                    });
                 });
             }).catch(error => {
-                console.error('Error al exportar:', error);
+                console.error('Error al obtener rol de pagos:', error);
+                Swal.close();
                 Swal.fire({
                     icon: 'error',
                     title: '¡ERROR!',
-                    text: 'HUBO UN ERROR AL GENERAR EL ARCHIVO EXCEL',
+                    text: 'ERROR AL OBTENER LOS DATOS DEL ROL DE PAGOS',
                     confirmButtonText: 'ENTENDIDO'
                 });
             });
