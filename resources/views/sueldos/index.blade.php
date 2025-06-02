@@ -474,9 +474,79 @@
                     url: '/api/sueldos/total-registros-cobro',
                     method: 'GET',
                     data: { user_id: selectedUserId, mes: mes, ano: ano }
-                })
-            ]).then(([detallesResponse, registrosResponse]) => {
-                // ... resto del código de exportación a Excel ...
+                })            ]).then(([detallesResponse, registrosResponse]) => {
+                // Procesar los datos para el Excel
+                const detalles = detallesResponse.detalles || [];
+                const totalRegistros = registrosResponse.total || 0;
+                
+                // Crear datos para la hoja de Excel
+                const datosExcel = [];
+                
+                // Encabezado
+                datosExcel.push(['ROL DE PAGOS']);
+                datosExcel.push(['Empleado:', selectedUserName]);
+                datosExcel.push(['Período:', `${mes}/${ano}`]);
+                datosExcel.push(['Fecha de generación:', new Date().toLocaleDateString('es-EC')]);
+                datosExcel.push([]); // Fila vacía
+                
+                // Encabezados de la tabla
+                datosExcel.push(['FECHA', 'DESCRIPCIÓN', 'VALOR']);
+                
+                // Agregar detalles
+                let totalDetalles = 0;
+                detalles.forEach(detalle => {
+                    datosExcel.push([
+                        detalle.fecha,
+                        detalle.descripcion,
+                        parseFloat(detalle.valor)
+                    ]);
+                    totalDetalles += parseFloat(detalle.valor);
+                });
+                
+                // Totales
+                datosExcel.push([]); // Fila vacía
+                datosExcel.push(['TOTAL DETALLES:', '', totalDetalles]);
+                datosExcel.push(['TOTAL REGISTROS DE COBRO:', '', totalRegistros]);
+                datosExcel.push(['SUELDO A RECIBIR:', '', totalDetalles + totalRegistros]);
+                
+                // Crear el workbook
+                const ws = XLSX.utils.aoa_to_sheet(datosExcel);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Rol de Pagos");
+                
+                // Configurar el ancho de las columnas
+                ws['!cols'] = [
+                    { width: 15 }, // FECHA
+                    { width: 30 }, // DESCRIPCIÓN
+                    { width: 15 }  // VALOR
+                ];
+                
+                // Aplicar formato a los números
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                for (let R = range.s.r; R <= range.e.r; ++R) {
+                    for (let C = range.s.c; C <= range.e.c; ++C) {
+                        const cell_address = XLSX.utils.encode_cell({c: C, r: R});
+                        if (!ws[cell_address]) continue;
+                        
+                        // Formatear números en la columna de valor
+                        if (C === 2 && typeof ws[cell_address].v === 'number') {
+                            ws[cell_address].z = '$#,##0.00';
+                        }
+                    }
+                }
+                
+                // Generar el archivo
+                const nombreArchivo = `rol_pagos_${selectedUserName.replace(/\s+/g, '_')}_${mes}_${ano}.xlsx`;
+                XLSX.writeFile(wb, nombreArchivo);
+                
+                // Cerrar el indicador de carga
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡ÉXITO!',
+                    text: 'ARCHIVO EXCEL GENERADO CORRECTAMENTE',
+                    confirmButtonText: 'ENTENDIDO',
+                    timer: 3000
+                });
             }).catch(error => {
                 console.error('Error al exportar:', error);
                 Swal.fire({
@@ -497,10 +567,126 @@
                     text: 'POR FAVOR SELECCIONE UN USUARIO PARA IMPRIMIR',
                     confirmButtonText: 'ENTENDIDO'
                 });
+                return;            }
+
+            const mes = $('#filtroMes').val();
+            const ano = $('#filtroAno').val();
+            
+            // Obtener el contenido del rol de pagos
+            const contenidoRol = document.getElementById(`rol_${selectedUserId}`);
+            if (!contenidoRol) {
+                Swal.fire({
+                    icon: 'error',
+                    title: '¡ERROR!',
+                    text: 'NO SE ENCONTRÓ EL CONTENIDO DEL ROL PARA IMPRIMIR',
+                    confirmButtonText: 'ENTENDIDO'
+                });
                 return;
             }
-
-            // ... resto del código de impresión ...
+            
+            // Crear ventana de impresión
+            const ventanaImpresion = window.open('', '_blank');
+            ventanaImpresion.document.write(`
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Rol de Pagos - ${selectedUserName}</title>
+                    <style>
+                        @media print {
+                            body { 
+                                font-family: Arial, sans-serif; 
+                                font-size: 12pt; 
+                                margin: 20px; 
+                            }
+                            table { 
+                                width: 100%; 
+                                border-collapse: collapse; 
+                                margin-bottom: 20px; 
+                            }
+                            th, td { 
+                                border: 1px solid #000; 
+                                padding: 8px; 
+                                text-align: left; 
+                            }
+                            th { 
+                                background-color: #f5f5f5; 
+                                font-weight: bold; 
+                            }
+                            .text-center { text-align: center; }
+                            .text-right { text-align: right; }
+                            .header { 
+                                text-align: center; 
+                                margin-bottom: 30px; 
+                            }
+                            .header h1 { 
+                                margin: 0; 
+                                color: #333; 
+                            }
+                            .info { 
+                                margin-bottom: 20px; 
+                            }
+                            .btn { display: none; }
+                            .badge { 
+                                padding: 2px 6px; 
+                                border-radius: 3px; 
+                                font-size: 10pt; 
+                            }
+                            .badge-apertura { 
+                                background-color: #d4edda; 
+                                border: 1px solid #c3e6cb; 
+                            }
+                            .badge-cierre { 
+                                background-color: #f8d7da; 
+                                border: 1px solid #f5c6cb; 
+                            }
+                        }
+                        @media screen {
+                            body { 
+                                font-family: Arial, sans-serif; 
+                                margin: 20px; 
+                            }
+                            table { 
+                                width: 100%; 
+                                border-collapse: collapse; 
+                                margin-bottom: 20px; 
+                            }
+                            th, td { 
+                                border: 1px solid #ddd; 
+                                padding: 8px; 
+                                text-align: left; 
+                            }
+                            th { 
+                                background-color: #f5f5f5; 
+                                font-weight: bold; 
+                            }
+                            .header { 
+                                text-align: center; 
+                                margin-bottom: 30px; 
+                            }
+                            .btn { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>ROL DE PAGOS</h1>
+                        <p><strong>Empleado:</strong> ${selectedUserName}</p>
+                        <p><strong>Período:</strong> ${mes}/${ano}</p>
+                        <p><strong>Fecha de impresión:</strong> ${new Date().toLocaleDateString('es-EC')}</p>
+                    </div>
+                    ${contenidoRol.innerHTML}
+                </body>
+                </html>
+            `);
+            
+            ventanaImpresion.document.close();
+            
+            // Esperar a que se cargue y luego imprimir
+            setTimeout(() => {
+                ventanaImpresion.print();
+                ventanaImpresion.close();
+            }, 500);
         };
 
         $(document).ready(function() {
