@@ -1485,7 +1485,10 @@
             // Para la visualización mostraremos todos, pero marcaremos los depósitos
             retirosAMostrar.forEach(retiro => {
                 const categoria = clasificarMotivoRetiro(retiro.motivo);
-                clasificacion[categoria] += Math.abs(parseFloat(retiro.valor));
+                const valor = Math.abs(parseFloat(retiro.valor));
+                if (!isNaN(valor)) {
+                    clasificacion[categoria] += valor;
+                }
             });
 
             const desgloseContainer = document.getElementById('desglose-clasificacion-retiros');
@@ -1578,6 +1581,14 @@
                 }
             });
 
+            // Calcular el total sumando los totales de las tarjetas por motivo (excluyendo DEPÓSITOS)
+            let totalRetirosPorMotivo = 0;
+            categoriasOrdenadas.forEach(([categoria, total]) => {
+                if (categoria !== 'DEPÓSITOS' && !isNaN(total)) {
+                    totalRetirosPorMotivo += total;
+                }
+            });
+
             // Agregar tarjeta de total (ya excluyendo depósitos)
             const totalCol = document.createElement('div');
             totalCol.className = 'col-12 mt-3';
@@ -1590,7 +1601,7 @@
                                 <small>${categoriasConDatos} categorías (DEPÓSITOS NO INCLUIDOS EN EL TOTAL)</small>
                             </div>
                             <div class="text-right">
-                                <h4 class="mb-0">${formatCurrency(totalRetiros)}</h4>
+                                <h4 class="mb-0">${formatCurrency(totalRetirosPorMotivo)}</h4>
                             </div>
                         </div>
                     </div>
