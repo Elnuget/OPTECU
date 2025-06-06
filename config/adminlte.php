@@ -250,12 +250,10 @@ return [
             'route' => 'admin.index',
             'active' => ['admin', 'admin/*'],
             'can' => 'admin'
-        ],
-
-        [
+        ],        [
             'text' => 'Pedidos',
             'icon' => 'fas fa-shopping-cart',
-            'url' => '/Pedidos?ano=' . date('Y') . '&mes=' . date('m'),
+            'url' => '/Pedidos?ano=' . now()->setTimezone('America/Guayaquil')->format('Y') . '&mes=' . now()->setTimezone('America/Guayaquil')->format('m'),
             'active' => ['Pedidos/*']
         ],
 
@@ -264,12 +262,10 @@ return [
             'icon' => 'fas fa-file-invoice',
             'route' => 'inventario.index',
             'active' => ['Inventario/*']
-        ],
-
-        [
+        ],        [
             'text' => 'Historiales Clínicos',
             'icon' => 'fas fa-notes-medical',
-            'url' => '/historiales_clinicos?ano=' . date('Y') . '&mes=' . date('m'),
+            'url' => '/historiales_clinicos?ano=' . now()->setTimezone('America/Guayaquil')->format('Y') . '&mes=' . now()->setTimezone('America/Guayaquil')->format('m'),
             'active' => ['historiales_clinicos/*', 'historiales_clinicos'],
         ],
 
@@ -288,12 +284,10 @@ return [
                     'icon' => 'fas fa-calendar-check',
                 ],
             ],
-        ],
-
-        [
+        ],        [
             'text' => 'Pagos',
             'icon' => 'fas fa-fw fa-money-bill',
-            'url' => '/Pagos?ano=' . date('Y') . '&mes=' . date('m'),
+            'url' => '/Pagos?ano=' . now()->setTimezone('America/Guayaquil')->format('Y') . '&mes=' . now()->setTimezone('America/Guayaquil')->format('m'),
             'active' => ['Pagos/*'],
         ],
 
