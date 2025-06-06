@@ -145,18 +145,17 @@
                             <span style="color: {{ $pedido->saldo == 0 ? 'green' : 'red' }}">
                                 {{ $pedido->saldo }}
                             </span>
-                        </td>
-                        <td>
+                        </td>                        <td>
                             <div class="btn-group">
                                 <a href="{{ route('pedidos.show', $pedido->id) }}"
                                     class="btn btn-xs btn-default text-primary mx-1 shadow" title="Ver">
                                     <i class="fa fa-lg fa-fw fa-eye"></i>
                                 </a>
+                                <a href="{{ route('pedidos.edit', $pedido->id) }}"
+                                    class="btn btn-xs btn-default text-primary mx-1 shadow" title="Editar">
+                                    <i class="fa fa-lg fa-fw fa-pen"></i>
+                                </a>
                                 @can('admin')
-                                    <a href="{{ route('pedidos.edit', $pedido->id) }}"
-                                        class="btn btn-xs btn-default text-primary mx-1 shadow" title="Editar">
-                                        <i class="fa fa-lg fa-fw fa-pen"></i>
-                                    </a>
                                     <a class="btn btn-xs btn-default text-danger mx-1 shadow" href="#" data-toggle="modal"
                                         data-target="#confirmarEliminarModal" data-id="{{ $pedido->id }}"
                                         data-url="{{ route('pedidos.destroy', $pedido->id) }}">
