@@ -20,9 +20,9 @@
     <span class="display-value">{{ $item->cantidad }}</span>
     <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->cantidad }}">
 </td>
-@can('admin')
 <td class="text-center">
     <div class="btn-group">
+        @can('admin')
         <form action="{{ route('inventario.destroy', $item->id) }}" method="POST" class="d-inline">
             @csrf
             @method('DELETE')
@@ -31,6 +31,8 @@
                 <i class="fa fa-trash"></i>
             </button>
         </form>
+        @else
+        <span class="text-muted">-</span>
+        @endcan
     </div>
 </td>
-@endcan 

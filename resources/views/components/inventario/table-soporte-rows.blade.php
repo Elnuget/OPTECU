@@ -52,17 +52,16 @@
             @if($item)
                 <input type="text" class="form-control edit-input" style="display: none;" value="{{ $item->codigo }}">
             @endif
-        </td>
-        <td class="editable text-center" data-field="cantidad">
+        </td>        <td class="editable text-center" data-field="cantidad">
             <span class="display-value">{{ $item->cantidad ?? '-' }}</span>
             @if($item)
                 <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->cantidad }}">
             @endif
         </td>
-        @can('admin')
         <td class="text-center">
             @if($item)
                 <div class="btn-group">
+                    @can('admin')
                     <form action="{{ route('inventario.destroy', $item->id) }}" method="POST" class="d-inline">
                         @csrf
                         @method('DELETE')
@@ -71,12 +70,14 @@
                             <i class="fa fa-trash"></i>
                         </button>
                     </form>
+                    @else
+                    <span class="text-muted">-</span>
+                    @endcan
                 </div>
             @else
                 <span class="text-muted">-</span>
             @endif
         </td>
-        @endcan
     </tr>
 @endfor
 

@@ -33,13 +33,10 @@
                 <thead>
                     <tr>
                         <th style="width: 10%">Número</th>
-                        <th style="width: 15%">Lugar</th>
-                        <th style="width: 10%">Columna</th>
+                        <th style="width: 15%">Lugar</th>                        <th style="width: 10%">Columna</th>
                         <th style="width: 35%">Código</th>
                         <th style="width: 10%">Cantidad</th>
-                        @can('admin')
                         <th style="width: 10%">Acciones</th>
-                        @endcan
                     </tr>
                 </thead>
                 <tbody>
@@ -63,16 +60,13 @@
                         <td class="editable" data-field="codigo">
                             <span class="display-value">-</span>
                             <input type="text" class="form-control edit-input" style="display: none;">
-                        </td>
-                        <td class="editable text-center" data-field="cantidad">
+                        </td>                        <td class="editable text-center" data-field="cantidad">
                             <span class="display-value">-</span>
                             <input type="number" class="form-control edit-input" style="display: none;" value="1">
                         </td>
-                        @can('admin')
                         <td class="text-center">
                             <span class="text-muted">-</span>
                         </td>
-                        @endcan
                     </tr>
                 </tbody>
                 <tfoot>

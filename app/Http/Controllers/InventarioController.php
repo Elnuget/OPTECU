@@ -10,10 +10,9 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 class InventarioController extends Controller
-{
-    public function __construct()
+{    public function __construct()
     {
-        $this->middleware('can:admin')->only(['destroy', 'update']);
+        $this->middleware('can:admin')->only(['destroy']);
     }
 
     /**

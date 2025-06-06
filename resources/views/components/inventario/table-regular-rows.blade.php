@@ -17,14 +17,13 @@
         <td class="editable" data-field="codigo">
             <span class="display-value">{{ $item->codigo }}</span>
             <input type="text" class="form-control edit-input" style="display: none;" value="{{ $item->codigo }}">
-        </td>
-        <td class="editable text-center" data-field="cantidad">
+        </td>        <td class="editable text-center" data-field="cantidad">
             <span class="display-value">{{ $item->cantidad }}</span>
             <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->cantidad }}">
         </td>
-        @can('admin')
         <td class="text-center">
             <div class="btn-group">
+                @can('admin')
                 <form action="{{ route('inventario.destroy', $item->id) }}" method="POST" class="d-inline">
                     @csrf
                     @method('DELETE')
@@ -33,8 +32,10 @@
                         <i class="fa fa-trash"></i>
                     </button>
                 </form>
+                @else
+                <span class="text-muted">-</span>
+                @endcan
             </div>
         </td>
-        @endcan
     </tr>
 @endforeach 
