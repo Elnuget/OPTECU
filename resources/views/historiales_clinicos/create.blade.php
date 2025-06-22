@@ -70,10 +70,9 @@
                             <div class="form-group col-md-4">
                                 <label for="apellidos">Apellidos <span class="text-danger">*</span></label>
                                 <input type="text" name="apellidos" id="apellidos" class="form-control" required>
-                            </div>
-                            <div class="form-group col-md-4">
+                            </div>                            <div class="form-group col-md-4">
                                 <label for="cedula">Cédula</label>
-                                <input type="text" name="cedula" id="cedula" class="form-control" list="cedulas_existentes" placeholder="Seleccione o escriba una cédula">
+                                <input type="text" name="cedula" id="cedula" class="form-control" list="cedulas_existentes" placeholder="Seleccione o escriba una cédula" autocomplete="off">
                                 <datalist id="cedulas_existentes">
                                     @foreach($cedulas as $cedula)
                                         <option value="{{ $cedula }}">
@@ -87,10 +86,9 @@
                             <div class="form-group col-md-4">
                                 <label for="fecha_nacimiento">Fecha de Nacimiento</label>
                                 <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" class="form-control">
-                            </div>
-                            <div class="form-group col-md-4">
+                            </div>                            <div class="form-group col-md-4">
                                 <label for="celular">Celular <span class="text-danger">*</span></label>
-                                <input type="text" name="celular" id="celular" class="form-control" required list="celulares_existentes" placeholder="Seleccione o escriba un número de celular">
+                                <input type="text" name="celular" id="celular" class="form-control" required list="celulares_existentes" placeholder="Seleccione o escriba un número de celular" autocomplete="off">
                                 <datalist id="celulares_existentes">
                                     @foreach($celulares as $celular)
                                         <option value="{{ $celular }}">
@@ -597,20 +595,18 @@
                         loadingIndicator.remove();
                     }
                 });
-        }
+        }        // Eventos para autocompletado eliminados
+        // $('#cedula').on('change', function() {
+        //     if (this.value.trim()) {
+        //         cargarDatosPersonales('cedula', this.value);
+        //     }
+        // });
 
-        // Eventos para autocompletado de cédula y celular
-        $('#cedula').on('change', function() {
-            if (this.value.trim()) {
-                cargarDatosPersonales('cedula', this.value);
-            }
-        });
-
-        $('#celular').on('change', function() {
-            if (this.value.trim()) {
-                cargarDatosPersonales('celular', this.value);
-            }
-        });
+        // $('#celular').on('change', function() {
+        //     if (this.value.trim()) {
+        //         cargarDatosPersonales('celular', this.value);
+        //     }
+        // });
     });
 </script>
 @stop
