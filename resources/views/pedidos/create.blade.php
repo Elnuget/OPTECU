@@ -195,24 +195,12 @@
                                 <div class="col-md-3">
                                     <label for="examen_visual" class="form-label">Examen Visual</label>
                                     <input type="number" class="form-control form-control-sm" id="examen_visual" name="examen_visual" step="0.01" oninput="calculateTotal()">
-                                </div>
-                                <div class="col-md-3">
+                                </div>                                <div class="col-md-3">
                                     <label for="celular" class="form-label">Celular</label>
-                                    <input type="text" class="form-control" id="celular" name="celular" list="celulares_existentes" placeholder="Seleccione o escriba un celular">
-                                    <datalist id="celulares_existentes">
-                                        @foreach($celulares as $celular)
-                                            <option value="{{ $celular }}">
-                                        @endforeach
-                                    </datalist>
-                                </div>
-                                <div class="col-md-6">
+                                    <input type="text" class="form-control" id="celular" name="celular" placeholder="Escriba el número de celular" autocomplete="off">
+                                </div>                                <div class="col-md-6">
                                     <label for="correo_electronico" class="form-label">Correo Electrónico</label>
-                                    <input type="email" class="form-control" id="correo_electronico" name="correo_electronico" list="correos_existentes" placeholder="Seleccione o escriba un correo">
-                                    <datalist id="correos_existentes">
-                                        @foreach($correos as $correo)
-                                            <option value="{{ $correo }}">
-                                        @endforeach
-                                    </datalist>
+                                    <input type="email" class="form-control" id="correo_electronico" name="correo_electronico" placeholder="Escriba el correo electrónico" autocomplete="off">
                                 </div>
                             </div>
                         </div>
@@ -521,26 +509,25 @@
                         cargarDatosPersonales('paciente', valor);
                     }
                 }
-            });
-
-            // Añadir eventos para cédula y otros campos
+            });            // Añadir eventos solo para cédula (mantener el autocompletado solo para cédula)
             document.getElementById('cedula').addEventListener('change', function() {
                 if (this.value.trim()) {
                     cargarDatosPersonales('cedula', this.value);
                 }
             });
 
-            document.getElementById('celular').addEventListener('change', function() {
-                if (this.value.trim()) {
-                    cargarDatosPersonales('celular', this.value);
-                }
-            });
+            // Los campos celular y correo_electronico ya NO tendrán autocompletado automático
+            // document.getElementById('celular').addEventListener('change', function() {
+            //     if (this.value.trim()) {
+            //         cargarDatosPersonales('celular', this.value);
+            //     }
+            // });
 
-            document.getElementById('correo_electronico').addEventListener('change', function() {
-                if (this.value.trim()) {
-                    cargarDatosPersonales('correo', this.value);
-                }
-            });
+            // document.getElementById('correo_electronico').addEventListener('change', function() {
+            //     if (this.value.trim()) {
+            //         cargarDatosPersonales('correo', this.value);
+            //     }
+            // });
 
             // Función para cargar datos personales según el campo proporcionado
             function cargarDatosPersonales(campo, valor) {
