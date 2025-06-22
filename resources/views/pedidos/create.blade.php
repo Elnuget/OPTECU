@@ -174,10 +174,9 @@
                             </div>
 
                             {{-- Nueva fila para cédula --}}
-                            <div class="row mb-3">
-                                <div class="col-md-6">
+                            <div class="row mb-3">                                <div class="col-md-6">
                                     <label for="cedula" class="form-label">Cédula</label>
-                                    <input type="text" class="form-control" id="cedula" name="cedula" list="cedulas_existentes" placeholder="Seleccione o escriba una cédula">
+                                    <input type="text" class="form-control" id="cedula" name="cedula" list="cedulas_existentes" placeholder="Seleccione o escriba una cédula" autocomplete="off">
                                     <datalist id="cedulas_existentes">
                                         @foreach($cedulas as $cedula)
                                             <option value="{{ $cedula }}">
@@ -509,12 +508,12 @@
                         cargarDatosPersonales('paciente', valor);
                     }
                 }
-            });            // Añadir eventos solo para cédula (mantener el autocompletado solo para cédula)
-            document.getElementById('cedula').addEventListener('change', function() {
-                if (this.value.trim()) {
-                    cargarDatosPersonales('cedula', this.value);
-                }
-            });
+            });            // Autocompletado eliminado para cédula, celular y correo_electronico
+            // document.getElementById('cedula').addEventListener('change', function() {
+            //     if (this.value.trim()) {
+            //         cargarDatosPersonales('cedula', this.value);
+            //     }
+            // });
 
             // Los campos celular y correo_electronico ya NO tendrán autocompletado automático
             // document.getElementById('celular').addEventListener('change', function() {
