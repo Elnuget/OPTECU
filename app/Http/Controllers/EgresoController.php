@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Egreso;
+use App\Models\Pedido;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -140,4 +141,54 @@ class EgresoController extends Controller
     {
         return view('egresos.finanzas');
     }
-} 
+
+    public function getPedidosPorUsuario(Request $request)
+    {
+        try {
+            $usuarioId = $request->get('usuario_id');
+            $mes = $request->get('mes');
+            $ano = $request->get('ano');
+
+            if (!$usuarioId || !$mes || !$ano) {
+                return response()->json([
+                    'total_pedidos' => 0,
+                    'total_valor' => 0,
+                    'mensaje' => 'Parámetros incompletos'
+                ]);
+            }
+
+            // Obtener el nombre del usuario
+            $usuario = \App\Models\User::find($usuarioId);
+            if (!$usuario) {
+                return response()->json([
+                    'total_pedidos' => 0,
+                    'total_valor' => 0,
+                    'mensaje' => 'Usuario no encontrado'
+                ]);
+            }
+
+            // Buscar pedidos por el nombre del usuario
+            $query = Pedido::where('usuario', $usuario->name)
+                           ->whereYear('fecha', $ano)
+                           ->whereMonth('fecha', $mes);
+
+            $pedidos = $query->get();
+            $totalPedidos = $pedidos->count();
+            $totalValor = $pedidos->sum('total');
+
+            return response()->json([
+                'total_pedidos' => $totalPedidos,
+                'total_valor' => $totalValor,
+                'mensaje' => 'Datos obtenidos correctamente',
+                'usuario_nombre' => $usuario->name
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error en EgresoController@getPedidosPorUsuario: ' . $e->getMessage());
+            return response()->json([
+                'total_pedidos' => 0,
+                'total_valor' => 0,
+                'mensaje' => 'Error al obtener los datos: ' . $e->getMessage()
+            ]);
+        }
+    }
+}

@@ -203,6 +203,38 @@
                 <form action="{{ route('egresos.store') }}" method="POST">
                     @csrf
                     <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="mes_pedidos">MES PARA CONSULTAR PEDIDOS:</label>
+                                    <select name="mes_pedidos" id="mes_pedidos" class="form-control">
+                                        <option value="">SELECCIONE MES</option>
+                                        @php
+                                            $currentMonth = date('n');
+                                        @endphp
+                                        @foreach (['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'] as $index => $month)
+                                            <option value="{{ $index + 1 }}" {{ $currentMonth == ($index + 1) ? 'selected' : '' }}>
+                                                {{ $month }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="ano_pedidos">AÑO PARA CONSULTAR PEDIDOS:</label>
+                                    <select name="ano_pedidos" id="ano_pedidos" class="form-control">
+                                        <option value="">SELECCIONE AÑO</option>
+                                        @php
+                                            $currentYear = date('Y');
+                                        @endphp
+                                        @for ($year = date('Y'); $year >= 2020; $year--)
+                                            <option value="{{ $year }}" {{ $currentYear == $year ? 'selected' : '' }}>{{ $year }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label for="usuario">SELECCIONAR USUARIO:</label>
                             <select name="usuario" id="usuario" class="form-control" required>
@@ -212,6 +244,42 @@
                                 @endforeach
                             </select>
                         </div>
+
+                        <div class="form-group text-center">
+                            <button type="button" class="btn btn-info" id="btnConsultarPedidos">
+                                <i class="fas fa-search mr-2"></i>CONSULTAR PEDIDOS
+                            </button>
+                        </div>
+                        
+                        <!-- Información de pedidos del usuario -->
+                        <div id="infoPedidos" class="card card-info" style="display: none;">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0"><i class="fas fa-shopping-cart mr-2"></i>INFORMACIÓN DE PEDIDOS DEL USUARIO</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="info-box bg-primary">
+                                            <span class="info-box-icon"><i class="fas fa-list-ol"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">TOTAL PEDIDOS</span>
+                                                <span class="info-box-number" id="totalPedidos">0</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="info-box bg-success">
+                                            <span class="info-box-icon"><i class="fas fa-dollar-sign"></i></span>
+                                            <div class="info-box-content">
+                                                <span class="info-box-text">VALOR TOTAL</span>
+                                                <span class="info-box-number">$<span id="valorTotal">0</span></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="form-group">
                             <label for="valor">VALOR DEL SUELDO:</label>
                             <input type="number" class="form-control" id="valor" name="valor" required step="0.01" min="0">
@@ -230,8 +298,17 @@
 
 @section('js')
 @include('atajos')
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap4-theme@1.0.0/dist/select2-bootstrap4.min.css" rel="stylesheet" />
+    
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
     <script>
         $(document).ready(function() {
+            console.log('JavaScript cargado correctamente');
+            
             // Configurar el modal antes de mostrarse
             $('#confirmarEliminarModal').on('show.bs.modal', function(event) {
                 var button = $(event.relatedTarget);
@@ -291,18 +368,113 @@
                 $('#filterForm').submit();
             });
 
-            // Inicializar select2 para el combobox de usuarios
+            // Inicializar select2 para los combobox
             $('#usuario').select2({
                 theme: 'bootstrap4',
                 placeholder: 'SELECCIONE UN USUARIO',
                 allowClear: true,
-                width: '100%'
+                width: '100%',
+                dropdownParent: $('#pagarSueldoModal')
+            });
+
+            $('#mes_pedidos').select2({
+                theme: 'bootstrap4',
+                placeholder: 'SELECCIONE MES',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#pagarSueldoModal')
+            });
+
+            $('#ano_pedidos').select2({
+                theme: 'bootstrap4',
+                placeholder: 'SELECCIONE AÑO',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#pagarSueldoModal')
             });
 
             // Limpiar el formulario cuando se cierre el modal
             $('#pagarSueldoModal').on('hidden.bs.modal', function () {
                 $(this).find('form').trigger('reset');
                 $('#usuario').val('').trigger('change');
+                $('#infoPedidos').hide();
+            });
+
+            // Función para obtener pedidos por usuario
+            function obtenerPedidosUsuario() {
+                var usuarioId = $('#usuario').val();
+                var mes = $('#mes_pedidos').val();
+                var ano = $('#ano_pedidos').val();
+
+                console.log('Usuario ID:', usuarioId);
+                console.log('Mes:', mes);
+                console.log('Año:', ano);
+
+                // Validar que todos los campos estén llenos
+                if (!usuarioId) {
+                    alert('POR FAVOR SELECCIONE UN USUARIO');
+                    return;
+                }
+                if (!mes) {
+                    alert('POR FAVOR SELECCIONE UN MES');
+                    return;
+                }
+                if (!ano) {
+                    alert('POR FAVOR SELECCIONE UN AÑO');
+                    return;
+                }
+
+                // Mostrar loading en el botón
+                $('#btnConsultarPedidos').prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>CONSULTANDO...');
+
+                console.log('Iniciando AJAX...');
+
+                $.ajax({
+                    url: '{{ route("egresos.pedidos-usuario") }}',
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    data: {
+                        usuario_id: usuarioId,
+                        mes: mes,
+                        ano: ano,
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        console.log('Respuesta exitosa:', response);
+                        $('#totalPedidos').text(response.total_pedidos);
+                        $('#valorTotal').text(new Intl.NumberFormat('es-CO', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        }).format(response.total_valor));
+                        $('#infoPedidos').show();
+                        
+                        // Restaurar botón
+                        $('#btnConsultarPedidos').prop('disabled', false).html('<i class="fas fa-search mr-2"></i>CONSULTAR PEDIDOS');
+                    },
+                    error: function(xhr, status, error) {
+                        console.log('Error AJAX:', xhr.responseText);
+                        console.log('Status:', status);
+                        console.log('Error:', error);
+                        $('#infoPedidos').hide();
+                        alert('ERROR AL OBTENER LA INFORMACIÓN DE PEDIDOS: ' + xhr.responseText);
+                        
+                        // Restaurar botón
+                        $('#btnConsultarPedidos').prop('disabled', false).html('<i class="fas fa-search mr-2"></i>CONSULTAR PEDIDOS');
+                    }
+                });
+            }
+
+            // Evento del botón consultar - versión simplificada
+            $(document).on('click', '#btnConsultarPedidos', function() {
+                console.log('Botón consultar clickeado');
+                obtenerPedidosUsuario();
+            });
+
+            // Limpiar información cuando cambie el usuario
+            $('#usuario, #mes_pedidos, #ano_pedidos').on('change', function() {
+                $('#infoPedidos').hide();
             });
         });
     </script>

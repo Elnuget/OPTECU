@@ -216,6 +216,11 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         ->name('egresos.finanzas')
         ->middleware(['auth']); // Mantener middleware auth si es necesario dentro del grupo
 
+    // Ruta AJAX para obtener pedidos por usuario
+    Route::get('/egresos/pedidos-usuario', [EgresoController::class, 'getPedidosPorUsuario'])
+        ->name('egresos.pedidos-usuario')
+        ->middleware(['auth']);
+
     Route::resource('egresos', EgresoController::class);
 
     Route::resource('prestamos', PrestamoController::class);
