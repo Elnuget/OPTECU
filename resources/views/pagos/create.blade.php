@@ -71,7 +71,7 @@
     </div>
     <div class="card-body">
         <div class="col-md-6">
-            <form role="form" action="{{ route('pagos.store') }}" method="POST">
+            <form role="form" action="{{ route('pagos.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 
                 <div class="form-group">
@@ -116,6 +116,12 @@
                     <label>FECHA DE CREACIÓN</label>
                     <input name="created_at" type="datetime-local" class="form-control" 
                            value="{{ old('created_at', now()->format('Y-m-d\TH:i')) }}">
+                </div>
+
+                <div class="form-group">
+                    <label>FOTO (OPCIONAL)</label>
+                    <input name="foto" type="file" class="form-control-file" accept="image/*">
+                    <small class="form-text text-muted">FORMATOS PERMITIDOS: JPEG, PNG, JPG, GIF. TAMAÑO MÁXIMO: 2MB</small>
                 </div>
 
                 <br>

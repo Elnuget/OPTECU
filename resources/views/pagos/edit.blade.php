@@ -67,7 +67,7 @@
     </div>
     <div class="card-body">
         <div class="col-md-6">
-            <form role="form" action="{{ route('pagos.update', $pago->id) }}" method="POST">
+            <form role="form" action="{{ route('pagos.update', $pago->id) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('put')
                 
@@ -117,6 +117,18 @@
                            type="datetime-local" 
                            class="form-control" 
                            value="{{ \Carbon\Carbon::parse($pago->created_at)->format('Y-m-d\TH:i') }}">
+                </div>
+
+                <div class="form-group">
+                    <label>FOTO (OPCIONAL)</label>
+                    @if($pago->foto)
+                        <div class="mb-2">
+                            <img src="{{ asset('uploads/pagos/' . $pago->foto) }}" alt="FOTO DEL PAGO" style="max-width: 200px; max-height: 200px;" class="img-thumbnail">
+                            <p class="text-muted">FOTO ACTUAL</p>
+                        </div>
+                    @endif
+                    <input name="foto" type="file" class="form-control-file" accept="image/*">
+                    <small class="form-text text-muted">FORMATOS PERMITIDOS: JPEG, PNG, JPG, GIF. TAMAÑO MÁXIMO: 2MB</small>
                 </div>
 
                 @if ($errors->any())

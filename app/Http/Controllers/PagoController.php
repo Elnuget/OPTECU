@@ -105,6 +105,7 @@ class PagoController extends Controller
             'pago' => 'required|regex:/^\d+(\.\d{1,2})?$/',
             'created_at' => 'sometimes|nullable|date',
             'TC' => 'sometimes|nullable|boolean',
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         try {
@@ -117,6 +118,14 @@ class PagoController extends Controller
 
             // Format pago to ensure exact decimal
             $validatedData['pago'] = number_format((float)$validatedData['pago'], 2, '.', '');
+
+            // Handle photo upload
+            if ($request->hasFile('foto')) {
+                $foto = $request->file('foto');
+                $nombreFoto = time() . '_' . $foto->getClientOriginalName();
+                $foto->move(public_path('uploads/pagos'), $nombreFoto);
+                $validatedData['foto'] = $nombreFoto;
+            }
 
             // Create a new pago
             $nuevoPago = Pago::create($validatedData);
@@ -213,6 +222,7 @@ class PagoController extends Controller
             'pago' => 'nullable|regex:/^\d+(\.\d{1,2})?$/',
             'created_at' => 'sometimes|nullable|date',
             'TC' => 'sometimes|nullable|boolean',
+            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         // Format pago to ensure exact decimal
@@ -221,6 +231,19 @@ class PagoController extends Controller
         try {
             $pago = Pago::findOrFail($id);
             $oldPagoAmount = $pago->pago;
+
+            // Handle photo upload
+            if ($request->hasFile('foto')) {
+                // Delete old photo if exists
+                if ($pago->foto && file_exists(public_path('uploads/pagos/' . $pago->foto))) {
+                    unlink(public_path('uploads/pagos/' . $pago->foto));
+                }
+                
+                $foto = $request->file('foto');
+                $nombreFoto = time() . '_' . $foto->getClientOriginalName();
+                $foto->move(public_path('uploads/pagos'), $nombreFoto);
+                $validatedData['foto'] = $nombreFoto;
+            }
 
             // Si se proporciona una nueva fecha de creación, actualizarla
             if (isset($validatedData['created_at'])) {
@@ -288,6 +311,11 @@ class PagoController extends Controller
                 if ($cajaEntry) {
                     $cajaEntry->delete();
                 }
+            }
+
+            // Delete photo if exists
+            if ($pago->foto && file_exists(public_path('uploads/pagos/' . $pago->foto))) {
+                unlink(public_path('uploads/pagos/' . $pago->foto));
             }
 
             $pago->delete(); // Deletes from the 'pagos' table

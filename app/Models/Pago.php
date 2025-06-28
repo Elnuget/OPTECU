@@ -18,7 +18,8 @@ class Pago extends Model
         'mediodepago_id',
         'pago',
         'created_at',
-        'TC'
+        'TC',
+        'foto'
     ];
 
     protected $casts = [

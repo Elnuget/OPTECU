@@ -70,6 +70,12 @@
                 <li><strong>PEDIDO ID:</strong> {{ $pago->pedido->id }}</li>
                 <li><strong>SALDO DEL PEDIDO:</strong> {{ $pago->pedido->saldo }}</li>
                 <li><strong>PAGO:</strong> {{ $pago->pago }}</li>
+                @if($pago->foto)
+                    <li><strong>FOTO:</strong></li>
+                    <div class="mt-2 mb-2">
+                        <img src="{{ asset('uploads/pagos/' . $pago->foto) }}" alt="FOTO DEL PAGO" style="max-width: 300px; max-height: 300px;" class="img-thumbnail">
+                    </div>
+                @endif
             </ul>
         </div>
     </div>
@@ -100,6 +106,7 @@
                     <th>PEDIDO ID</th>
                     <th>SALDO DEL PEDIDO</th>
                     <th>PAGO</th>
+                    <th>FOTO</th>
                 </tr>
             </thead>
             <tbody>
@@ -110,6 +117,13 @@
                     <td>{{ $pago->pedido->id }}</td>
                     <td>{{ $pago->pedido->saldo }}</td>
                     <td>{{ $pago->pago }}</td>
+                    <td>
+                        @if($pago->foto)
+                            <img src="{{ asset('uploads/pagos/' . $pago->foto) }}" alt="FOTO" style="max-width: 100px; max-height: 100px;" class="img-thumbnail">
+                        @else
+                            SIN FOTO
+                        @endif
+                    </td>
                 </tr>
             </tbody>
         </table>
