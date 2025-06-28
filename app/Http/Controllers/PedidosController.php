@@ -887,4 +887,53 @@ class PedidosController extends Controller
         return view('pedidos.print', compact('pedidos'));
     }
 
+    /**
+     * Imprimir cristalería de pedidos seleccionados
+     */
+    public function printCristaleria(Request $request)
+    {
+        // Obtener IDs desde POST
+        $ids = $request->input('ids');
+        
+        // Validar que se reciban IDs
+        if (empty($ids)) {
+            return redirect()->back()->with([
+                'tipo' => 'alert-danger',
+                'mensaje' => 'No se seleccionaron pedidos para imprimir cristalería'
+            ]);
+        }
+
+        // Convertir IDs de string a array si es necesario
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+        
+        // Obtener los pedidos con sus lunas
+        $pedidos = Pedido::with(['lunas'])
+            ->whereIn('id', $ids)
+            ->orderBy('numero_orden', 'desc')
+            ->get();
+
+        if ($pedidos->isEmpty()) {
+            return redirect()->back()->with([
+                'tipo' => 'alert-danger',
+                'mensaje' => 'No se encontraron pedidos para imprimir cristalería'
+            ]);
+        }
+
+        // Filtrar pedidos que tengan lunas
+        $pedidosConLunas = $pedidos->filter(function($pedido) {
+            return $pedido->lunas->count() > 0;
+        });
+
+        if ($pedidosConLunas->isEmpty()) {
+            return redirect()->back()->with([
+                'tipo' => 'alert-warning',
+                'mensaje' => 'Los pedidos seleccionados no tienen lunas especificadas'
+            ]);
+        }
+
+        return view('pedidos.print-cristaleria', ['pedidos' => $pedidosConLunas]);
+    }
+
 }

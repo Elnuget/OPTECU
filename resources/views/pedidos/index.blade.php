@@ -94,6 +94,9 @@
             <button type="button" class="btn btn-success" id="imprimirSeleccionados" disabled>
                 <i class="fas fa-print"></i> Imprimir Seleccionados
             </button>
+            <button type="button" class="btn btn-info" id="imprimirCristaleria" disabled>
+                <i class="fas fa-eye"></i> Imprimir Cristalería
+            </button>
         </div>
 
         {{-- Filtro por mes (removed) --}}
@@ -323,6 +326,7 @@ input[type="checkbox"]:after {
         function toggleImprimirButton() {
             var checkedCheckboxes = $('.pedido-checkbox:checked').length;
             $('#imprimirSeleccionados').prop('disabled', checkedCheckboxes === 0);
+            $('#imprimirCristaleria').prop('disabled', checkedCheckboxes === 0);
         }
 
         // Manejar clic en el botón de imprimir
@@ -341,6 +345,45 @@ input[type="checkbox"]:after {
             var form = $('<form>', {
                 'method': 'POST',
                 'action': '{{ route("pedidos.print.post") }}',
+                'target': '_blank'
+            });
+            
+            // Agregar token CSRF
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': '_token',
+                'value': $('meta[name="csrf-token"]').attr('content')
+            }));
+            
+            // Agregar IDs seleccionados
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'ids',
+                'value': selectedIds.join(',')
+            }));
+            
+            // Agregar al body y enviar
+            $('body').append(form);
+            form.submit();
+            form.remove();
+        });
+
+        // Manejar clic en el botón de imprimir cristalería
+        $('#imprimirCristaleria').click(function() {
+            var selectedIds = [];
+            $('.pedido-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            if (selectedIds.length === 0) {
+                alert('Por favor seleccione al menos un pedido para imprimir cristalería');
+                return;
+            }
+            
+            // Crear formulario para envío POST
+            var form = $('<form>', {
+                'method': 'POST',
+                'action': '{{ route("pedidos.print.cristaleria") }}',
                 'target': '_blank'
             });
             

@@ -102,6 +102,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('Pedidos/Crear', [PedidosController::class, 'create'])->name('pedidos.create');
     Route::get('Pedidos/Imprimir', [PedidosController::class, 'print'])->name('pedidos.print');
     Route::post('Pedidos/Imprimir', [PedidosController::class, 'print'])->name('pedidos.print.post');
+    Route::post('Pedidos/Cristaleria', [PedidosController::class, 'printCristaleria'])->name('pedidos.print.cristaleria');
     Route::post('Pedidos', [PedidosController::class, 'store'])->name('pedidos.store');
     Route::get('Pedidos/{id}', [PedidosController::class, 'show'])->name('pedidos.show');
     Route::get('Pedidos/{id}/editar', [PedidosController::class, 'edit'])->name('pedidos.edit');
