@@ -122,6 +122,11 @@ function duplicateLunas() {
                     <input type="number" class="form-control input-sm" name="l_precio_descuento[]"
                            value="0" min="0" max="100" oninput="calculateTotal()">
                 </div>
+                <div class="col-md-6">
+                    <label class="form-label">Foto Lunas (Opcional)</label>
+                    <input type="file" class="form-control form-control-sm" name="l_foto[]" accept="image/*">
+                    <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
+                </div>
             </div>
         </div>
     `;

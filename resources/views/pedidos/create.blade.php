@@ -112,7 +112,7 @@
 
         <div class="card-body">
             <div class="col-md-12">
-                <form action="{{ route('pedidos.store') }}" method="POST" id="pedidoForm">
+                <form action="{{ route('pedidos.store') }}" method="POST" id="pedidoForm" enctype="multipart/form-data">
                     @csrf
 
                     {{-- Información Básica --}}
@@ -248,6 +248,11 @@
                                     <input type="number" class="form-control form-control-sm descuento-armazon" id="a_precio_descuento"
                                            name="a_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
                                 </div>
+                                <div class="col-md-6">
+                                    <label for="a_foto" class="form-label">Foto Armazón (Opcional)</label>
+                                    <input type="file" class="form-control form-control-sm" id="a_foto" name="a_foto[]" accept="image/*">
+                                    <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
+                                </div>
                             </div>
                         </div>
                         <div class="card-footer">
@@ -334,6 +339,11 @@
                                     <label class="form-label">Desc. Lunas (%)</label>
                                     <input type="number" class="form-control input-sm" name="l_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Foto Lunas (Opcional)</label>
+                                    <input type="file" class="form-control form-control-sm" name="l_foto[]" accept="image/*">
+                                    <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
+                                </div>
                             </div>
                         </div>
                         <div class="card-footer">
@@ -372,6 +382,13 @@
                                 <div class="col-md-3">
                                     <label for="d_precio_descuento[]" class="form-label">Desc. Accesorio (%)</label>
                                     <input type="number" class="form-control input-sm" id="d_precio_descuento[]" name="d_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="d_foto[]" class="form-label">Foto Accesorio (Opcional)</label>
+                                    <input type="file" class="form-control form-control-sm" id="d_foto[]" name="d_foto[]" accept="image/*">
+                                    <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
                                 </div>
                             </div>
                         </div>
@@ -699,6 +716,11 @@
                                 <label class="form-label">Desc. Armazón (%)</label>
                                 <input type="number" class="form-control form-control-sm descuento-armazon" name="a_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Foto Armazón (Opcional)</label>
+                                <input type="file" class="form-control form-control-sm" name="a_foto[]" accept="image/*">
+                                <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -749,6 +771,11 @@
                                 <input type="number" class="form-control input-sm" name="l_precio_descuento[]" 
                                        min="0" max="100" value="0" oninput="calculateTotal()">
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Foto Lunas (Opcional)</label>
+                                <input type="file" class="form-control form-control-sm" name="l_foto[]" accept="image/*">
+                                <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -781,6 +808,13 @@
                             <div class="col-md-3">
                                 <label class="form-label">Desc. Accesorio (%)</label>
                                 <input type="number" class="form-control input-sm" name="d_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Foto Accesorio (Opcional)</label>
+                                <input type="file" class="form-control form-control-sm" name="d_foto[]" accept="image/*">
+                                <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
                             </div>
                         </div>
                     </div>

@@ -198,10 +198,20 @@ class PedidosController extends Controller
                     if (!empty($inventarioId)) {
                         $precio = $request->a_precio[$index] ?? 0;
                         $descuento = $request->a_precio_descuento[$index] ?? 0;
+                        $foto = null;
+                        
+                        // Manejar la foto si existe
+                        if ($request->hasFile('a_foto') && isset($request->file('a_foto')[$index])) {
+                            $fotoFile = $request->file('a_foto')[$index];
+                            $fotoName = time() . '_' . $index . '.' . $fotoFile->getClientOriginalExtension();
+                            $fotoFile->move(public_path('img/armazones'), $fotoName);
+                            $foto = 'img/armazones/' . $fotoName;
+                        }
 
                         $pedido->inventarios()->attach($inventarioId, [
                             'precio' => (float) $precio,
                             'descuento' => (float) $descuento,
+                            'foto' => $foto,
                         ]);
 
                         $inventarioItem = Inventario::find($inventarioId);
@@ -219,6 +229,16 @@ class PedidosController extends Controller
             if ($request->has('l_medida') && is_array($request->l_medida)) {
                 foreach ($request->l_medida as $key => $medida) {
                     if (!empty($medida)) {
+                        $foto = null;
+                        
+                        // Manejar la foto si existe
+                        if ($request->hasFile('l_foto') && isset($request->file('l_foto')[$key])) {
+                            $fotoFile = $request->file('l_foto')[$key];
+                            $fotoName = time() . '_luna_' . $key . '.' . $fotoFile->getClientOriginalExtension();
+                            $fotoFile->move(public_path('img/lunas'), $fotoName);
+                            $foto = 'img/lunas/' . $fotoName;
+                        }
+                        
                         $luna = new PedidoLuna([
                             'l_medida' => $medida,
                             'l_detalle' => $request->l_detalle[$key] ?? null,
@@ -226,7 +246,8 @@ class PedidosController extends Controller
                             'tipo_lente' => $request->tipo_lente[$key] ?? null,
                             'material' => $request->material[$key] ?? null,
                             'filtro' => $request->filtro[$key] ?? null,
-                            'l_precio_descuento' => (float)($request->l_precio_descuento[$key] ?? 0)
+                            'l_precio_descuento' => (float)($request->l_precio_descuento[$key] ?? 0),
+                            'foto' => $foto
                         ]);
                         $pedido->lunas()->save($luna);
                     }
@@ -238,8 +259,17 @@ class PedidosController extends Controller
                 foreach ($request->d_inventario_id as $index => $inventarioId) {
                     $precio = $request->d_precio[$index] ?? 0;
                     $descuento = $request->d_precio_descuento[$index] ?? 0;
+                    $foto = null;
 
                     if (!empty($inventarioId)) {
+                        // Manejar la foto si existe
+                        if ($request->hasFile('d_foto') && isset($request->file('d_foto')[$index])) {
+                            $fotoFile = $request->file('d_foto')[$index];
+                            $fotoName = time() . '_accesorio_' . $index . '.' . $fotoFile->getClientOriginalExtension();
+                            $fotoFile->move(public_path('img/armazones'), $fotoName);
+                            $foto = 'img/armazones/' . $fotoName;
+                        }
+                        
                         if (!is_numeric($inventarioId)) {
                             // Crear nuevo registro en inventario
                             $inventarioItem = new Inventario();
@@ -253,6 +283,7 @@ class PedidosController extends Controller
                         $pedido->inventarios()->attach($inventarioId, [
                             'precio' => (float) $precio,
                             'descuento' => (float) $descuento,
+                            'foto' => $foto,
                         ]);
 
                         $inventarioItem = Inventario::find($inventarioId);
@@ -412,6 +443,14 @@ class PedidosController extends Controller
             $pedido->save();
 
             // Update pedido_inventario relationships
+            // Primero guardamos las fotos existentes antes de hacer detach
+            $fotosExistentes = [];
+            foreach ($pedido->inventarios as $inventario) {
+                if ($inventario->pivot->foto) {
+                    $fotosExistentes[$inventario->id] = $inventario->pivot->foto;
+                }
+            }
+            
             $pedido->inventarios()->detach(); // Remove existing relationships
 
             // Array para almacenar los nuevos IDs de inventario
@@ -420,9 +459,23 @@ class PedidosController extends Controller
             if ($request->has('a_inventario_id')) {
                 foreach ($request->a_inventario_id as $index => $inventarioId) {
                     if (!empty($inventarioId)) {
+                        $foto = null;
+                        
+                        // Manejar la foto si existe
+                        if ($request->hasFile('a_foto') && isset($request->file('a_foto')[$index])) {
+                            $fotoFile = $request->file('a_foto')[$index];
+                            $fotoName = time() . '_update_' . $index . '.' . $fotoFile->getClientOriginalExtension();
+                            $fotoFile->move(public_path('img/armazones'), $fotoName);
+                            $foto = 'img/armazones/' . $fotoName;
+                        } else {
+                            // Si no se sube nueva foto, mantener la existente si había una
+                            $foto = $fotosExistentes[$inventarioId] ?? null;
+                        }
+                        
                         $pedido->inventarios()->attach($inventarioId, [
                             'precio' => $request->a_precio[$index] ?? 0,
                             'descuento' => $request->a_precio_descuento[$index] ?? 0,
+                            'foto' => $foto,
                         ]);
                         
                         $nuevosInventarioIds[] = $inventarioId;
@@ -434,9 +487,23 @@ class PedidosController extends Controller
             if ($request->has('d_inventario_id')) {
                 foreach ($request->d_inventario_id as $index => $accesorioId) {
                     if (!empty($accesorioId)) {
+                        $foto = null;
+                        
+                        // Manejar la foto si existe (los accesorios también pueden tener fotos)
+                        if ($request->hasFile('d_foto') && isset($request->file('d_foto')[$index])) {
+                            $fotoFile = $request->file('d_foto')[$index];
+                            $fotoName = time() . '_accesorio_update_' . $index . '.' . $fotoFile->getClientOriginalExtension();
+                            $fotoFile->move(public_path('img/armazones'), $fotoName);
+                            $foto = 'img/armazones/' . $fotoName;
+                        } else {
+                            // Si no se sube nueva foto, mantener la existente si había una
+                            $foto = $fotosExistentes[$accesorioId] ?? null;
+                        }
+                        
                         $pedido->inventarios()->attach($accesorioId, [
                             'precio' => $request->d_precio[$index] ?? 0,
                             'descuento' => $request->d_precio_descuento[$index] ?? 0,
+                            'foto' => $foto,
                         ]);
                         
                         $nuevosInventarioIds[] = $accesorioId;
@@ -477,10 +544,31 @@ class PedidosController extends Controller
             }
 
             // Update lunas
+            // Primero guardamos las fotos existentes antes de hacer delete
+            $fotosLunasExistentes = [];
+            foreach ($pedido->lunas as $index => $luna) {
+                if ($luna->foto) {
+                    $fotosLunasExistentes[$index] = $luna->foto;
+                }
+            }
+            
             $pedido->lunas()->delete(); // Remove existing lunas
             if ($request->has('l_medida')) {
                 foreach ($request->l_medida as $key => $medida) {
                     if (!empty($medida)) {
+                        $foto = null;
+                        
+                        // Manejar la foto si existe
+                        if ($request->hasFile('l_foto') && isset($request->file('l_foto')[$key])) {
+                            $fotoFile = $request->file('l_foto')[$key];
+                            $fotoName = time() . '_luna_update_' . $key . '.' . $fotoFile->getClientOriginalExtension();
+                            $fotoFile->move(public_path('img/lunas'), $fotoName);
+                            $foto = 'img/lunas/' . $fotoName;
+                        } else {
+                            // Si no se sube nueva foto, mantener la existente si había una
+                            $foto = $fotosLunasExistentes[$key] ?? null;
+                        }
+                        
                         $pedido->lunas()->create([
                             'l_medida' => $medida,
                             'l_detalle' => $request->l_detalle[$key] ?? null,
@@ -488,7 +576,8 @@ class PedidosController extends Controller
                             'tipo_lente' => $request->tipo_lente[$key] ?? null,
                             'material' => $request->material[$key] ?? null,
                             'filtro' => $request->filtro[$key] ?? null,
-                            'l_precio_descuento' => $request->l_precio_descuento[$key] ?? 0
+                            'l_precio_descuento' => $request->l_precio_descuento[$key] ?? 0,
+                            'foto' => $foto
                         ]);
                     }
                 }

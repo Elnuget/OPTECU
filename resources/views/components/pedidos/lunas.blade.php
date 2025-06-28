@@ -64,6 +64,19 @@
                         <input type="number" class="form-control input-sm" name="l_precio_descuento[]"
                                value="{{ $luna->l_precio_descuento }}" min="0" max="100" oninput="calculateTotal()">
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Foto Lunas (Opcional)</label>
+                        <input type="file" class="form-control form-control-sm" name="l_foto[]" accept="image/*">
+                        <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
+                    </div>
+                    <div class="col-md-2">
+                        @if(isset($luna->foto) && $luna->foto)
+                            <label>Foto Actual</label><br>
+                            <img src="{{ asset($luna->foto) }}" alt="Foto Luna" 
+                                 class="img-thumbnail" style="max-width: 80px; max-height: 80px;">
+                            <br><small class="text-muted">Nueva foto reemplazará</small>
+                        @endif
+                    </div>
                 </div>
             </div>
         @endforeach

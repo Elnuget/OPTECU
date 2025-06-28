@@ -20,7 +20,8 @@ class PedidoLuna extends Model
         'tipo_lente',
         'material',
         'filtro',
-        'l_precio_descuento'
+        'l_precio_descuento',
+        'foto'
     ];
 
     protected $casts = [

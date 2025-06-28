@@ -11,6 +11,14 @@ class PedidoInventario extends Pivot
 
     protected $table = 'pedido_inventario';
     
+    protected $fillable = [
+        'pedido_id',
+        'inventario_id',
+        'precio',
+        'descuento',
+        'foto'
+    ];
+    
     protected $dates = ['deleted_at'];
 
     public $timestamps = true;

@@ -106,6 +106,7 @@
                                     <th>Precio Final</th>
                                     <th>Base</th>
                                     <th>IVA</th>
+                                    <th>Foto</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -122,6 +123,38 @@
                                         <td>${{ number_format($precioConDescuento, 2, ',', '.') }}</td>
                                         <td>${{ number_format($base, 2, ',', '.') }}</td>
                                         <td>${{ number_format($iva, 2, ',', '.') }}</td>
+                                        <td class="text-center">
+                                            @if(isset($inventario->pivot->foto) && $inventario->pivot->foto)
+                                                <img src="{{ asset($inventario->pivot->foto) }}" 
+                                                     alt="Foto Armazón" 
+                                                     class="img-thumbnail" 
+                                                     style="max-width: 80px; max-height: 80px; cursor: pointer;"
+                                                     data-toggle="modal" 
+                                                     data-target="#armazonModal{{ $loop->index }}"
+                                                     title="Click para ampliar">
+                                                
+                                                <!-- Modal para ampliar imagen -->
+                                                <div class="modal fade" id="armazonModal{{ $loop->index }}" tabindex="-1" role="dialog">
+                                                    <div class="modal-dialog modal-lg" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title">Foto Armazón - {{ $inventario->codigo }}</h5>
+                                                                <button type="button" class="close" data-dismiss="modal">
+                                                                    <span>&times;</span>
+                                                                </button>
+                                                            </div>
+                                                            <div class="modal-body text-center">
+                                                                <img src="{{ asset($inventario->pivot->foto) }}" 
+                                                                     alt="Foto Armazón" 
+                                                                     class="img-fluid">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <small class="text-muted">Sin foto</small>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -153,6 +186,7 @@
                                     <th>Desc. (%)</th>
                                     <th>Base</th>
                                     <th>IVA</th>
+                                    <th>Foto</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -172,6 +206,38 @@
                                         <td>{{ $luna->l_precio_descuento }}%</td>
                                         <td>${{ number_format($base, 2, ',', '.') }}</td>
                                         <td>${{ number_format($iva, 2, ',', '.') }}</td>
+                                        <td class="text-center">
+                                            @if(isset($luna->foto) && $luna->foto)
+                                                <img src="{{ asset($luna->foto) }}" 
+                                                     alt="Foto Luna" 
+                                                     class="img-thumbnail" 
+                                                     style="max-width: 80px; max-height: 80px; cursor: pointer;"
+                                                     data-toggle="modal" 
+                                                     data-target="#lunaModal{{ $loop->index }}"
+                                                     title="Click para ampliar">
+                                                
+                                                <!-- Modal para ampliar imagen -->
+                                                <div class="modal fade" id="lunaModal{{ $loop->index }}" tabindex="-1" role="dialog">
+                                                    <div class="modal-dialog modal-lg" role="document">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title">Foto Luna - {{ $luna->l_medida }}</h5>
+                                                                <button type="button" class="close" data-dismiss="modal">
+                                                                    <span>&times;</span>
+                                                                </button>
+                                                            </div>
+                                                            <div class="modal-body text-center">
+                                                                <img src="{{ asset($luna->foto) }}" 
+                                                                     alt="Foto Luna" 
+                                                                     class="img-fluid">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <small class="text-muted">Sin foto</small>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>

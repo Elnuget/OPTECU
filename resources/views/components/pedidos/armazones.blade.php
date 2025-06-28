@@ -83,6 +83,21 @@
                             value="{{ $inventario->pivot->descuento }}" min="0" max="100" oninput="calculateTotal()">
                     </div>
                 </div>
+                <div class="row mt-2">
+                    <div class="col-md-8">
+                        <label>Foto Armazón (Opcional)</label>
+                        <input type="file" name="a_foto[]" class="form-control form-control-sm" accept="image/*">
+                        <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
+                    </div>
+                    <div class="col-md-4">
+                        @if(isset($inventario->pivot->foto) && $inventario->pivot->foto)
+                            <label>Foto Actual</label><br>
+                            <img src="{{ asset($inventario->pivot->foto) }}" alt="Foto Armazón" 
+                                 class="img-thumbnail" style="max-width: 100px; max-height: 100px;">
+                            <br><small class="text-muted">Subir nueva foto para reemplazar</small>
+                        @endif
+                    </div>
+                </div>
                 @if($index > 0)
                     <div class="row mt-2">
                         <div class="col-12 text-right">

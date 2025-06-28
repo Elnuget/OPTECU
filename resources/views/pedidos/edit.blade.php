@@ -140,7 +140,7 @@
                 , además de los que ya están asignados a este pedido.
             </div>
             
-            <form action="{{ route('pedidos.update', $pedido->id) }}" method="POST">
+            <form action="{{ route('pedidos.update', $pedido->id) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
 

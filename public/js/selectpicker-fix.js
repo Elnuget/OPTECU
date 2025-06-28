@@ -209,6 +209,13 @@ window.addArmazon = function() {
                 </div>
             </div>
             <div class="row mt-2">
+                <div class="col-md-8">
+                    <label>Foto Armazón (Opcional)</label>
+                    <input type="file" name="a_foto[]" class="form-control form-control-sm" accept="image/*">
+                    <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
+                </div>
+            </div>
+            <div class="row mt-2">
                 <div class="col-12 text-right">
                     <button type="button" class="btn btn-danger btn-sm remove-armazon">
                         <i class="fas fa-times"></i> Eliminar
