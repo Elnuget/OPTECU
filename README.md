@@ -29,3 +29,6 @@ sudo php artisan route:cache
 
 
 php artisan storage:link
+
+php artisan optimize:clear
+composer dump-autoload

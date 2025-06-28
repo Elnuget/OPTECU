@@ -312,29 +312,6 @@ return [
         ],
 
         [
-            'text' => 'PRÉSTAMOS',
-            'icon' => 'fas fa-hand-holding-usd',
-            'url' => '/prestamos',
-            'active' => ['prestamos', 'prestamos/*'],
-            'can' => 'admin',
-        ],
-        
-        [
-            'text' => 'SUELDOS',
-            'icon' => 'fas fa-money-check-alt',
-            'url' => '/sueldos',
-            'active' => ['sueldos', 'sueldos/*']
-        ],
-
-        [
-            'text' => 'FINANZAS',
-            'icon' => 'fas fa-dollar-sign',
-            'url' => '/egresos/finanzas',
-            'active' => ['egresos/finanzas'],
-            'can' => 'admin',
-        ],
-
-        [
             'text' => 'Configuracion',
             'icon' => 'fas fa-cog',
             'active' => ['Configuracion/*'],
