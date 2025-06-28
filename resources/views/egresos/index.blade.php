@@ -285,6 +285,8 @@
                             <input type="number" class="form-control" id="valor" name="valor" required step="0.01" min="0">
                         </div>
                         <input type="hidden" name="motivo" value="PAGO DE SUELDO">
+                        <input type="hidden" name="mes_pedidos" id="hidden_mes_pedidos">
+                        <input type="hidden" name="ano_pedidos" id="hidden_ano_pedidos">
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">CANCELAR</button>
@@ -472,9 +474,67 @@
                 obtenerPedidosUsuario();
             });
 
-            // Limpiar información cuando cambie el usuario
-            $('#usuario, #mes_pedidos, #ano_pedidos').on('change', function() {
+            // Limpiar información cuando cambien mes y año (pero no cuando cambie usuario)
+            $('#mes_pedidos, #ano_pedidos').on('change', function() {
                 $('#infoPedidos').hide();
+            });
+
+            // Función para obtener el último sueldo del usuario
+            function obtenerUltimoSueldo(usuarioId) {
+                if (!usuarioId) return;
+                
+                $.ajax({
+                    url: '{{ route("egresos.ultimo-sueldo-usuario") }}',
+                    method: 'GET',
+                    data: { usuario_id: usuarioId },
+                    success: function(response) {
+                        if (response.ultimo_sueldo) {
+                            $('#valor').val(response.ultimo_sueldo);
+                            console.log('Último sueldo autocompleted:', response.ultimo_sueldo);
+                        } else {
+                            $('#valor').val('');
+                            console.log('No hay sueldo anterior para este usuario');
+                        }
+                    },
+                    error: function() {
+                        console.log('Error al obtener el último sueldo');
+                        $('#valor').val('');
+                    }
+                });
+            }
+
+            // Evento cuando cambia el usuario - autocompletar último sueldo
+            $('#usuario').on('change', function() {
+                var usuarioId = $(this).val();
+                obtenerUltimoSueldo(usuarioId);
+                $('#infoPedidos').hide(); // Ocultar info de pedidos cuando cambie usuario
+            });
+
+            // Función para actualizar campos ocultos antes de enviar
+            function actualizarCamposOcultos() {
+                var mes = $('#mes_pedidos').val();
+                var ano = $('#ano_pedidos').val();
+                
+                $('#hidden_mes_pedidos').val(mes);
+                $('#hidden_ano_pedidos').val(ano);
+                
+                console.log('Campos ocultos actualizados - Mes:', mes, 'Año:', ano);
+            }
+
+            // Actualizar campos ocultos cuando cambien los selects
+            $('#mes_pedidos, #ano_pedidos').on('change', function() {
+                actualizarCamposOcultos();
+            });
+
+            // Actualizar campos ocultos antes de enviar el formulario
+            $('form[action="{{ route('egresos.store') }}"]').on('submit', function() {
+                actualizarCamposOcultos();
+                return true; // Continuar con el envío
+            });
+
+            // Inicializar campos ocultos al abrir el modal
+            $('#pagarSueldoModal').on('shown.bs.modal', function() {
+                actualizarCamposOcultos();
             });
         });
     </script>

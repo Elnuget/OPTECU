@@ -221,6 +221,11 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         ->name('egresos.pedidos-usuario')
         ->middleware(['auth']);
 
+    // Ruta AJAX para obtener último sueldo del usuario
+    Route::get('/egresos/ultimo-sueldo-usuario', [EgresoController::class, 'getUltimoSueldoUsuario'])
+        ->name('egresos.ultimo-sueldo-usuario')
+        ->middleware(['auth']);
+
     Route::resource('egresos', EgresoController::class);
 
     Route::resource('prestamos', PrestamoController::class);

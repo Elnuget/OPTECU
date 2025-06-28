@@ -62,7 +62,24 @@ class EgresoController extends Controller
             $egreso = new Egreso();
             $egreso->user_id = $request->motivo === 'PAGO DE SUELDO' ? $request->usuario : auth()->id();
             $egreso->valor = $request->valor;
-            $egreso->motivo = strtoupper($request->motivo);
+            
+            // Si es pago de sueldo, generar motivo con mes y año
+            if ($request->motivo === 'PAGO DE SUELDO') {
+                $mes = $request->get('mes_pedidos', date('n'));
+                $ano = $request->get('ano_pedidos', date('Y'));
+                
+                $meses = [
+                    1 => 'ENERO', 2 => 'FEBRERO', 3 => 'MARZO', 4 => 'ABRIL',
+                    5 => 'MAYO', 6 => 'JUNIO', 7 => 'JULIO', 8 => 'AGOSTO',
+                    9 => 'SEPTIEMBRE', 10 => 'OCTUBRE', 11 => 'NOVIEMBRE', 12 => 'DICIEMBRE'
+                ];
+                
+                $nombreMes = $meses[$mes] ?? 'MES_DESCONOCIDO';
+                $egreso->motivo = "SUELDO ({$nombreMes} {$ano})";
+            } else {
+                $egreso->motivo = strtoupper($request->motivo);
+            }
+            
             $egreso->save();
 
             return redirect()->route('egresos.index')->with([
@@ -188,6 +205,46 @@ class EgresoController extends Controller
                 'total_pedidos' => 0,
                 'total_valor' => 0,
                 'mensaje' => 'Error al obtener los datos: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getUltimoSueldoUsuario(Request $request)
+    {
+        try {
+            $usuarioId = $request->get('usuario_id');
+            
+            if (!$usuarioId) {
+                return response()->json([
+                    'ultimo_sueldo' => null,
+                    'mensaje' => 'Usuario no especificado'
+                ]);
+            }
+
+            // Obtener el nombre del usuario
+            $usuario = \App\Models\User::find($usuarioId);
+            if (!$usuario) {
+                return response()->json([
+                    'ultimo_sueldo' => null,
+                    'mensaje' => 'Usuario no encontrado'
+                ]);
+            }
+
+            // Buscar el último egreso de sueldo para este usuario
+            $ultimoSueldo = Egreso::where('user_id', $usuarioId)
+                                  ->where('motivo', 'LIKE', 'SUELDO%')
+                                  ->orderBy('created_at', 'desc')
+                                  ->first();
+
+            return response()->json([
+                'ultimo_sueldo' => $ultimoSueldo ? $ultimoSueldo->valor : null,
+                'mensaje' => $ultimoSueldo ? 'Último sueldo encontrado' : 'No hay sueldos anteriores'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error en EgresoController@getUltimoSueldoUsuario: ' . $e->getMessage());
+            return response()->json([
+                'ultimo_sueldo' => null,
+                'mensaje' => 'Error al obtener el último sueldo'
             ]);
         }
     }
