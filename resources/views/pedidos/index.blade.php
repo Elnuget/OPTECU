@@ -89,14 +89,28 @@
         </form>
 
         {{-- Botones de acción --}}
-        <div class="btn-group mb-3">
-            <a href="{{ route('pedidos.create') }}" class="btn btn-primary">Crear Pedido</a>
-            <button type="button" class="btn btn-success" id="imprimirSeleccionados" disabled>
-                <i class="fas fa-print"></i> Imprimir Seleccionados
-            </button>
-            <button type="button" class="btn btn-info" id="imprimirCristaleria" disabled>
-                <i class="fas fa-eye"></i> Imprimir Cristalería
-            </button>
+        <div class="row mb-3">
+            <div class="col-md-8">
+                <div class="btn-group">
+                    <a href="{{ route('pedidos.create') }}" class="btn btn-primary">Crear Pedido</a>
+                    <button type="button" class="btn btn-success" id="imprimirSeleccionados" disabled>
+                        <i class="fas fa-print"></i> Imprimir Seleccionados
+                    </button>
+                    <button type="button" class="btn btn-info" id="imprimirCristaleria" disabled>
+                        <i class="fas fa-eye"></i> Imprimir Cristalería
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="date" class="form-control" id="fechaSeleccion" value="{{ date('Y-m-d') }}">
+                    <div class="input-group-append">
+                        <button type="button" class="btn btn-warning" id="seleccionarDiarios">
+                            <i class="fas fa-calendar-day"></i> Seleccionar Diarios
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         {{-- Filtro por mes (removed) --}}
@@ -328,6 +342,44 @@ input[type="checkbox"]:after {
             $('#imprimirSeleccionados').prop('disabled', checkedCheckboxes === 0);
             $('#imprimirCristaleria').prop('disabled', checkedCheckboxes === 0);
         }
+
+        // Manejar clic en el botón de seleccionar diarios
+        $('#seleccionarDiarios').click(function() {
+            var fechaSeleccionada = $('#fechaSeleccion').val();
+            
+            if (!fechaSeleccionada) {
+                alert('Por favor seleccione una fecha');
+                return;
+            }
+            
+            // Desmarcar todos los checkboxes primero
+            $('.pedido-checkbox').prop('checked', false);
+            $('#selectAll').prop('checked', false);
+            
+            var pedidosSeleccionados = 0;
+            
+            // Recorrer todas las filas de la tabla
+            $('#pedidosTable tbody tr').each(function() {
+                var fila = $(this);
+                var fechaPedido = fila.find('td:nth-child(2)').text().trim(); // Columna de fecha (índice 2)
+                
+                // Comparar fechas
+                if (fechaPedido === fechaSeleccionada) {
+                    fila.find('.pedido-checkbox').prop('checked', true);
+                    pedidosSeleccionados++;
+                }
+            });
+            
+            // Actualizar estado de los botones
+            toggleImprimirButton();
+            
+            // Mostrar mensaje informativo
+            if (pedidosSeleccionados > 0) {
+                alert('Se seleccionaron ' + pedidosSeleccionados + ' pedidos de la fecha ' + fechaSeleccionada);
+            } else {
+                alert('No se encontraron pedidos para la fecha ' + fechaSeleccionada);
+            }
+        });
 
         // Manejar clic en el botón de imprimir
         $('#imprimirSeleccionados').click(function() {
