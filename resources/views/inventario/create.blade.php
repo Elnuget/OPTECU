@@ -75,88 +75,126 @@
             </div>
         </div>
         <div class="card-body">
-            <div class="col-md-10">
+            <div class="col-md-12">
                 <form role="form" action="{{ route('inventario.store') }}" method="POST">
                     @csrf
 
-                    <div class="form-group row">
-                        <div class="col-12">
-                            <label>Fecha</label>
-                            <input name="fecha" required type="date" class="form-control" value="{{ now()->format('Y-m-d') }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card card-primary">
+                                <div class="card-header">
+                                    <h3 class="card-title">Información del Artículo</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="codigo">Código</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text"><i class="fas fa-barcode"></i></span>
+                                            </div>
+                                            <input name="codigo" id="codigo" required type="text" class="form-control text-uppercase" style="text-transform:uppercase" oninput="this.value = this.value.toUpperCase()" placeholder="CÓDIGO DEL ARTÍCULO">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cantidad">Cantidad</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text"><i class="fas fa-cubes"></i></span>
+                                            </div>
+                                            <input name="cantidad" id="cantidad" required type="number" class="form-control" value="1" min="1">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="fecha">Fecha</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                            </div>
+                                            <input name="fecha" id="fecha" required type="date" class="form-control" value="{{ now()->format('Y-m-d') }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card card-info">
+                                <div class="card-header">
+                                    <h3 class="card-title">Ubicación del Artículo</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <label for="lugar">Lugar</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                                            </div>
+                                            <input list="lugares" name="lugar" id="lugar" class="form-control" required value="{{ request('lugar') }}" placeholder="SELECCIONE O ESCRIBA UN LUGAR">
+                                            <datalist id="lugares">
+                                                <option value="Soporte">
+                                                <option value="Vitrina">
+                                                <option value="Estuches">
+                                                <option value="Cosas Extras">
+                                                <option value="Armazones Extras">
+                                                <option value="Líquidos">
+                                                <option value="Goteros">
+                                            </datalist>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="columna">Columna</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text"><i class="fas fa-columns"></i></span>
+                                            </div>
+                                            <input name="columna" id="columna" required type="text" class="form-control" value="{{ request('columna') }}" placeholder="EJ: A, B, 1, 2...">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="numero">Número</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text"><i class="fas fa-sort-numeric-down"></i></span>
+                                            </div>
+                                            <input name="numero" id="numero" class="form-control" required type="number" placeholder="EJ: 1, 2, 3...">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="form-group row">
-                        <div class="col-6">
-                            <label>Lugar</label>
-                            <input list="lugares" name="lugar" class="form-control" required value="{{ request('lugar') }}">
-                            <datalist id="lugares">
-                                <option value="Soporte">
-                                <option value="Vitrina">
-                                <option value="Estuches">
-                                <option value="Cosas Extras">
-                                <option value="Armazones Extras">
-                                <option value="Líquidos">
-                                <option value="Goteros">
-                            </datalist>
-                        </div>
-                    </div>
-                    <div class="form-group row">
-                        <div class="col-4">
-                            <label>Columna</label> <!-- renamed from Fila -->
-                            <input name="columna" required type="text" class="form-control" value="{{ request('columna') }}">
-                        </div>
-                        <div class="col-4">
-                            <label>Número</label>
-                            <input name="numero" id="numero" class="form-control" required type="number">
-                        </div>
-                        <div class="col-4">
-                            <label>Código</label>
-                            <input name="codigo" id="codigo" required type="text" class="form-control text-uppercase" style="text-transform:uppercase" oninput="this.value = this.value.toUpperCase()">
-                        </div>
-                        
-                    </div>
 
-                    <div class="form-goup row">
-                        <div class="col-4">
-                            <label>Cantidad</label>
-                            <input name="cantidad" id="cantidad" required type="number" class="form-control" value="1">
-                        </div>
-                    </div>
-
-                    <br>
-
-
-                    <button type="button" class="btn btn-primary pull-left" data-toggle="modal" data-target="#modal">Crear
-                        Articulo</button>
-                        <a href="{{ route('inventario.index') }}" class="btn btn-secondary ">
-                            Cancelar
+                    <div class="form-group">
+                        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modal">
+                            <i class="fas fa-plus-circle"></i> Crear Artículo
+                        </button>
+                        <a href="{{ route('inventario.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-times-circle"></i> Cancelar
                         </a>
+                    </div>
+
                     <div class="modal fade" id="modal">
                         <div class="modal-dialog">
                             <div class="modal-content">
                                 <div class="modal-header">
 
-                                    <h4 class="modal-title">Crear Articulo</h4>
+                                    <h4 class="modal-title">Confirmar Creación</h4>
                                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                         <span aria-hidden="true">&times;</span></button>
                                 </div>
                                 <div class="modal-body">
-                                    <p>¿Estás seguro que desea guardar?</p>
+                                    <p>¿Está seguro de que desea guardar este nuevo artículo?</p>
                                 </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-default pull-left"
-                                        data-dismiss="modal">Cancelar</button>
-                                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                                <div class="modal-footer justify-content-between">
+                                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Cambios</button>
                                 </div>
                             </div>
                             <!-- /.modal-content -->
                         </div>
                         <!-- /.modal-dialog -->
+                    </div>
                 </form>
             </div>
-
-            <br>
-            <!-- Fin contenido -->
         </div>
     </div>
     <!-- /.card-body -->
@@ -176,19 +214,6 @@ document.addEventListener('keydown', function(event) {
     if (event.key === "Home") { // Verifica si la tecla presionada es 'Inicio'
         window.location.href = '/dashboard'; // Redirecciona a '/dashboard'
     }
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    const lugarSelect = document.getElementById('lugar');
-    const newLugarInput = document.getElementById('newLugar');
-
-    lugarSelect.addEventListener('change', function() {
-        if (this.value === 'new') {
-            newLugarInput.style.display = 'block';
-        } else {
-            newLugarInput.style.display = 'none';
-        }
-    });
 });
 </script>
 @stop
