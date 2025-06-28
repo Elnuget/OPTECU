@@ -850,4 +850,41 @@ class PedidosController extends Controller
         }
     }
 
+    /**
+     * Imprimir pedidos seleccionados
+     */
+    public function print(Request $request)
+    {
+        // Obtener IDs desde GET o POST
+        $ids = $request->input('ids');
+        
+        // Validar que se reciban IDs
+        if (empty($ids)) {
+            return redirect()->back()->with([
+                'tipo' => 'alert-danger',
+                'mensaje' => 'No se seleccionaron pedidos para imprimir'
+            ]);
+        }
+
+        // Convertir IDs de string a array si es necesario
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+        
+        // Obtener los pedidos con sus relaciones
+        $pedidos = Pedido::with(['inventarios', 'lunas'])
+            ->whereIn('id', $ids)
+            ->orderBy('numero_orden', 'desc')
+            ->get();
+
+        if ($pedidos->isEmpty()) {
+            return redirect()->back()->with([
+                'tipo' => 'alert-danger',
+                'mensaje' => 'No se encontraron pedidos para imprimir'
+            ]);
+        }
+
+        return view('pedidos.print', compact('pedidos'));
+    }
+
 }

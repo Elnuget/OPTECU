@@ -4,6 +4,7 @@
 @section('content_header')
 <h1>Pedidos</h1>
 <p>Administracion de ventas</p>
+<meta name="csrf-token" content="{{ csrf_token() }}">
 @if (session('error'))
     <div class="alert {{ session('tipo') }} alert-dismissible fade show" role="alert">
         <strong>{{ session('mensaje') }}</strong>
@@ -90,6 +91,9 @@
         {{-- Botones de acción --}}
         <div class="btn-group mb-3">
             <a href="{{ route('pedidos.create') }}" class="btn btn-primary">Crear Pedido</a>
+            <button type="button" class="btn btn-success" id="imprimirSeleccionados" disabled>
+                <i class="fas fa-print"></i> Imprimir Seleccionados
+            </button>
         </div>
 
         {{-- Filtro por mes (removed) --}}
@@ -299,6 +303,7 @@ input[type="checkbox"]:after {
         // Manejar el checkbox "Seleccionar todos"
         $('#selectAll').change(function() {
             $('.pedido-checkbox').prop('checked', this.checked);
+            toggleImprimirButton();
         });
 
         // Si se deselecciona algún checkbox individual, deseleccionar el "Seleccionar todos"
@@ -311,6 +316,52 @@ input[type="checkbox"]:after {
                 var checkedCheckboxes = $('.pedido-checkbox:checked').length;
                 $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
             }
+            toggleImprimirButton();
+        });
+
+        // Función para habilitar/deshabilitar el botón de imprimir
+        function toggleImprimirButton() {
+            var checkedCheckboxes = $('.pedido-checkbox:checked').length;
+            $('#imprimirSeleccionados').prop('disabled', checkedCheckboxes === 0);
+        }
+
+        // Manejar clic en el botón de imprimir
+        $('#imprimirSeleccionados').click(function() {
+            var selectedIds = [];
+            $('.pedido-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            if (selectedIds.length === 0) {
+                alert('Por favor seleccione al menos un pedido para imprimir');
+                return;
+            }
+            
+            // Crear formulario para envío POST
+            var form = $('<form>', {
+                'method': 'POST',
+                'action': '{{ route("pedidos.print.post") }}',
+                'target': '_blank'
+            });
+            
+            // Agregar token CSRF
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': '_token',
+                'value': $('meta[name="csrf-token"]').attr('content')
+            }));
+            
+            // Agregar IDs seleccionados
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'ids',
+                'value': selectedIds.join(',')
+            }));
+            
+            // Agregar al body y enviar
+            $('body').append(form);
+            form.submit();
+            form.remove();
         });
 
         // Configurar el modal antes de mostrarse
