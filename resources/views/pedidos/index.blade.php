@@ -99,9 +99,12 @@
             <table id="pedidosTable" class="table table-striped table-bordered">
                 <thead>
                     <tr>
+                        <th class="checkbox-cell">
+                            <input type="checkbox" id="selectAll">
+                        </th>
                         <th>Fecha</th>
                         <th>Orden</th>
-                        <th>Factura</th>
+                        <th>Estado</th>
                         <th>Cliente</th>
                         <th>Celular</th>
                         <th>Paciente</th>
@@ -114,6 +117,9 @@
                 <tbody>
                     @foreach ($pedidos as $pedido)
                     <tr>
+                        <td class="checkbox-cell">
+                            <input type="checkbox" name="pedidos_selected[]" value="{{ $pedido->id }}" class="pedido-checkbox">
+                        </td>
                         <td>{{ $pedido->fecha ? $pedido->fecha->format('Y-m-d') : 'Sin fecha' }}</td>
                         <td>{{ $pedido->numero_orden }}</td>
                         <td>
@@ -261,6 +267,27 @@
 .btn-whatsapp-mensaje .button-text {
     font-size: 0.875rem;
 }
+
+/* Estilos para los checkboxes */
+input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+    position: relative !important;
+    display: inline-block !important;
+}
+
+input[type="checkbox"]:before,
+input[type="checkbox"]:after {
+    display: none !important;
+}
+
+.checkbox-cell {
+    text-align: center !important;
+    vertical-align: middle !important;
+    width: 50px !important;
+}
 </style>
 @endpush
 @stop
@@ -269,6 +296,23 @@
 @parent
 <script>
     $(document).ready(function () {
+        // Manejar el checkbox "Seleccionar todos"
+        $('#selectAll').change(function() {
+            $('.pedido-checkbox').prop('checked', this.checked);
+        });
+
+        // Si se deselecciona algún checkbox individual, deseleccionar el "Seleccionar todos"
+        $(document).on('change', '.pedido-checkbox', function() {
+            if (!this.checked) {
+                $('#selectAll').prop('checked', false);
+            } else {
+                // Si todos están seleccionados, marcar el "Seleccionar todos"
+                var totalCheckboxes = $('.pedido-checkbox').length;
+                var checkedCheckboxes = $('.pedido-checkbox:checked').length;
+                $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
+            }
+        });
+
         // Configurar el modal antes de mostrarse
         $('#confirmarEliminarModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget); // Botón que activó el modal
@@ -281,7 +325,7 @@
         var pedidosTable = $('#pedidosTable').DataTable({
             "processing": true,
             "scrollX": true,
-            "order": [[1, "desc"]], // Ordenar por número de orden descendente
+            "order": [[2, "desc"]], // Ordenar por número de orden descendente (ahora es la columna 2)
             "paging": false, // Deshabilitar paginación
             "lengthChange": false,
             "info": false,
@@ -291,7 +335,7 @@
                     extend: 'excel',
                     text: 'Excel',
                     exportOptions: {
-                        columns: [0,1,2,3,4,5,6,7,9]
+                        columns: [1,2,3,4,5,6,7,8,10] // Excluir la columna de checkbox (0) y acciones (9)
                     },
                     filename: 'Pedidos_' + new Date().toISOString().split('T')[0]
                 },
@@ -299,7 +343,7 @@
                     extend: 'pdf',
                     text: 'PDF',
                     exportOptions: {
-                        columns: [0,1,2,3,4,5,6,7,9]
+                        columns: [1,2,3,4,5,6,7,8,10] // Excluir la columna de checkbox (0) y acciones (9)
                     },
                     filename: 'Pedidos_' + new Date().toISOString().split('T')[0],
                     orientation: 'landscape',
