@@ -66,6 +66,13 @@
         .bootstrap-select .dropdown-menu li a {
             text-transform: uppercase !important;
         }
+
+        /* Mejorar la experiencia de los datalist - SIMPLIFICADO */
+        input[list]:focus {
+            outline: 2px solid #007bff;
+            outline-offset: 2px;
+            border-color: #007bff !important;
+        }
     </style>
 
     {{-- Mostrar mensajes de error --}}
@@ -493,40 +500,38 @@
                 });
             });
 
-            // Manejar la búsqueda unificada de cliente/paciente
-            document.getElementById('buscar_cliente_paciente').addEventListener('change', function() {
-                const selectedOption = document.querySelector(`#clientes_pacientes_list option[value="${this.value}"]`);
-                if (selectedOption) {
-                    const tipo = selectedOption.dataset.tipo;
+            // Aplicar el método exitoso del historial clínico usando jQuery
+            // Manejar la búsqueda unificada de cliente/paciente con jQuery (más estable)
+            $('#buscar_cliente_paciente').on('input', function() {
+                const selectedOption = $('#clientes_pacientes_list option[value="' + this.value + '"]');
+                if (selectedOption.length) {
+                    const tipo = selectedOption.data('tipo');
                     const valor = this.value;
 
                     if (tipo === 'cliente') {
-                        document.getElementById('cliente').value = valor;
+                        $('#cliente').val(valor);
                         cargarDatosPersonales('cliente', valor);
                     } else if (tipo === 'paciente') {
-                        document.getElementById('paciente').value = valor;
+                        $('#paciente').val(valor);
                         cargarDatosPersonales('paciente', valor);
                     }
                 }
-            });            // Autocompletado eliminado para cédula, celular y correo_electronico
-            // document.getElementById('cedula').addEventListener('change', function() {
-            //     if (this.value.trim()) {
-            //         cargarDatosPersonales('cedula', this.value);
-            //     }
-            // });
+            });
 
-            // Los campos celular y correo_electronico ya NO tendrán autocompletado automático
-            // document.getElementById('celular').addEventListener('change', function() {
-            //     if (this.value.trim()) {
-            //         cargarDatosPersonales('celular', this.value);
-            //     }
-            // });
-
-            // document.getElementById('correo_electronico').addEventListener('change', function() {
-            //     if (this.value.trim()) {
-            //         cargarDatosPersonales('correo', this.value);
-            //     }
-            // });
+            // Manejar cédula con jQuery (más estable)
+            $('#cedula').on('input', function() {
+                // Este evento se dispara cuando se selecciona del datalist
+                const valor = this.value;
+                if (valor && valor.trim()) {
+                    // Pequeño delay para asegurar que el valor se estableció correctamente
+                    setTimeout(() => {
+                        const valorActual = $('#cedula').val();
+                        if (valorActual === valor) {
+                            cargarDatosPersonales('cedula', valor);
+                        }
+                    }, 100);
+                }
+            });
 
             // Función para cargar datos personales según el campo proporcionado
             function cargarDatosPersonales(campo, valor) {
@@ -557,21 +562,21 @@
                         }
 
                         if (data.success && data.pedido) {
-                            // Autocompletar campos excepto el que generó la búsqueda
+                            // Autocompletar campos excepto el que generó la búsqueda usando jQuery
                             if (campo !== 'cliente') {
-                                document.getElementById('cliente').value = data.pedido.cliente || '';
+                                $('#cliente').val(data.pedido.cliente || '');
                             }
                             if (campo !== 'cedula') {
-                                document.getElementById('cedula').value = data.pedido.cedula || '';
+                                $('#cedula').val(data.pedido.cedula || '');
                             }
                             if (campo !== 'paciente') {
-                                document.getElementById('paciente').value = data.pedido.paciente || '';
+                                $('#paciente').val(data.pedido.paciente || '');
                             }
                             if (campo !== 'celular') {
-                                document.getElementById('celular').value = data.pedido.celular || '';
+                                $('#celular').val(data.pedido.celular || '');
                             }
                             if (campo !== 'correo') {
-                                document.getElementById('correo_electronico').value = data.pedido.correo_electronico || '';
+                                $('#correo_electronico').val(data.pedido.correo_electronico || '');
                             }
                         }
                     })
@@ -645,11 +650,18 @@
             }
         });
 
-        // Mostrar todas las opciones del datalist al hacer clic en el input
-        document.querySelectorAll('input[list]').forEach(input => {
-            input.addEventListener('click', function() {
-                this.setAttribute('list', this.getAttribute('list'));
-            });
+        // Mostrar todas las opciones del datalist al hacer clic en el input - MÉTODO SIMPLE
+        $('input[list]').on('click', function() {
+            // Forzar que se muestren todas las opciones
+            if (this.value === '') {
+                this.value = ' ';
+                this.value = '';
+            }
+        });
+
+        // Aplicar el estilo de mayúsculas como en historial clínico
+        $('input[type="text"], input[type="email"], textarea').on('input', function() {
+            $(this).val($(this).val().toUpperCase());
         });
 
         function createNewFields(type) {
@@ -787,6 +799,15 @@
                 newPrecioInput.addEventListener('input', calculateTotal);
                 newDescuentoInput.addEventListener('input', calculateTotal);
             }
+            
+            // Aplicar el comportamiento simple de datalist a los nuevos campos también
+            $('input[list]').off('click').on('click', function() {
+                if (this.value === '') {
+                    this.value = ' ';
+                    this.value = '';
+                }
+            });
+            
             $('.selectpicker').selectpicker('refresh'); // Reevaluar el nuevo select
         }
 
