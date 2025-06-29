@@ -203,9 +203,18 @@ class PedidosController extends Controller
                         // Manejar la foto si existe
                         if ($request->hasFile('a_foto') && isset($request->file('a_foto')[$index])) {
                             $fotoFile = $request->file('a_foto')[$index];
-                            $fotoName = time() . '_' . $index . '.' . $fotoFile->getClientOriginalExtension();
-                            $fotoFile->move(public_path('img/armazones'), $fotoName);
+                            $fotoName = 'armazon_' . time() . '_' . $index . '_' . uniqid() . '.' . $fotoFile->getClientOriginalExtension();
+                            
+                            // Verificar que la carpeta existe
+                            $carpetaDestino = public_path('img/armazones');
+                            if (!file_exists($carpetaDestino)) {
+                                mkdir($carpetaDestino, 0755, true);
+                            }
+                            
+                            $fotoFile->move($carpetaDestino, $fotoName);
                             $foto = 'img/armazones/' . $fotoName;
+                            
+                            \Log::info('Foto de armazón guardada: ' . $foto);
                         }
 
                         $pedido->inventarios()->attach($inventarioId, [
@@ -265,9 +274,18 @@ class PedidosController extends Controller
                         // Manejar la foto si existe
                         if ($request->hasFile('d_foto') && isset($request->file('d_foto')[$index])) {
                             $fotoFile = $request->file('d_foto')[$index];
-                            $fotoName = time() . '_accesorio_' . $index . '.' . $fotoFile->getClientOriginalExtension();
-                            $fotoFile->move(public_path('img/armazones'), $fotoName);
-                            $foto = 'img/armazones/' . $fotoName;
+                            $fotoName = 'accesorio_' . time() . '_' . $index . '_' . uniqid() . '.' . $fotoFile->getClientOriginalExtension();
+                            
+                            // Verificar que la carpeta existe
+                            $carpetaDestino = public_path('img/accesorios');
+                            if (!file_exists($carpetaDestino)) {
+                                mkdir($carpetaDestino, 0755, true);
+                            }
+                            
+                            $fotoFile->move($carpetaDestino, $fotoName);
+                            $foto = 'img/accesorios/' . $fotoName;
+                            
+                            \Log::info('Foto de accesorio guardada: ' . $foto);
                         }
                         
                         if (!is_numeric($inventarioId)) {
@@ -464,9 +482,18 @@ class PedidosController extends Controller
                         // Manejar la foto si existe
                         if ($request->hasFile('a_foto') && isset($request->file('a_foto')[$index])) {
                             $fotoFile = $request->file('a_foto')[$index];
-                            $fotoName = time() . '_update_' . $index . '.' . $fotoFile->getClientOriginalExtension();
-                            $fotoFile->move(public_path('img/armazones'), $fotoName);
+                            $fotoName = 'armazon_update_' . time() . '_' . $index . '_' . uniqid() . '.' . $fotoFile->getClientOriginalExtension();
+                            
+                            // Verificar que la carpeta existe
+                            $carpetaDestino = public_path('img/armazones');
+                            if (!file_exists($carpetaDestino)) {
+                                mkdir($carpetaDestino, 0755, true);
+                            }
+                            
+                            $fotoFile->move($carpetaDestino, $fotoName);
                             $foto = 'img/armazones/' . $fotoName;
+                            
+                            \Log::info('Foto de armazón actualizada: ' . $foto);
                         } else {
                             // Si no se sube nueva foto, mantener la existente si había una
                             $foto = $fotosExistentes[$inventarioId] ?? null;
@@ -492,9 +519,18 @@ class PedidosController extends Controller
                         // Manejar la foto si existe (los accesorios también pueden tener fotos)
                         if ($request->hasFile('d_foto') && isset($request->file('d_foto')[$index])) {
                             $fotoFile = $request->file('d_foto')[$index];
-                            $fotoName = time() . '_accesorio_update_' . $index . '.' . $fotoFile->getClientOriginalExtension();
-                            $fotoFile->move(public_path('img/armazones'), $fotoName);
-                            $foto = 'img/armazones/' . $fotoName;
+                            $fotoName = 'accesorio_update_' . time() . '_' . $index . '_' . uniqid() . '.' . $fotoFile->getClientOriginalExtension();
+                            
+                            // Verificar que la carpeta existe
+                            $carpetaDestino = public_path('img/accesorios');
+                            if (!file_exists($carpetaDestino)) {
+                                mkdir($carpetaDestino, 0755, true);
+                            }
+                            
+                            $fotoFile->move($carpetaDestino, $fotoName);
+                            $foto = 'img/accesorios/' . $fotoName;
+                            
+                            \Log::info('Foto de accesorio actualizada: ' . $foto);
                         } else {
                             // Si no se sube nueva foto, mantener la existente si había una
                             $foto = $fotosExistentes[$accesorioId] ?? null;

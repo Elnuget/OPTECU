@@ -67,7 +67,7 @@ class Pedido extends Model
     {
         return $this->belongsToMany(Inventario::class, 'pedido_inventario')
                     ->using(PedidoInventario::class)
-                    ->withPivot(['precio', 'descuento'])
+                    ->withPivot(['precio', 'descuento', 'foto'])
                     ->withTimestamps();
     }
 
