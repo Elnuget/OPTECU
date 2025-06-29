@@ -304,6 +304,13 @@ return [
         ],
 
         [
+            'text' => 'ASISTENCIAS',
+            'icon' => 'fas fa-user-clock',
+            'route' => 'asistencias.index',
+            'active' => ['asistencias', 'asistencias/*'],
+        ],
+
+        [
             'text' => 'Egresos',
             'icon' => 'fas fa-file-invoice-dollar',
             'url' => '/egresos',
@@ -345,7 +352,7 @@ return [
             'route'  => 'admin.puntuaciones',
             'icon' => 'fas fa-star',
             'can' => 'admin',
-        ],
+        },
         */
 
     ],

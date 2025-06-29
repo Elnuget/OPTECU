@@ -15,6 +15,7 @@ use App\Http\Controllers\EgresoController;
 use App\Http\Controllers\PrestamoController;
 use App\Http\Controllers\SueldoController;
 use App\Http\Controllers\DetalleSueldoController;
+use App\Http\Controllers\AsistenciaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,6 +57,12 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Rutas para Sueldos (accesible para todos los usuarios autenticados)
     Route::resource('sueldos', SueldoController::class);
     Route::post('sueldos/guardar-valor', [SueldoController::class, 'guardarValor'])->name('sueldos.guardar-valor');
+
+    // Asistencias
+    Route::get('asistencias/reporte', [AsistenciaController::class, 'reporte'])->name('asistencias.reporte');
+    Route::post('asistencias/marcar-entrada', [AsistenciaController::class, 'marcarEntrada'])->name('asistencias.marcar-entrada');
+    Route::post('asistencias/marcar-salida', [AsistenciaController::class, 'marcarSalida'])->name('asistencias.marcar-salida');
+    Route::resource('asistencias', AsistenciaController::class);
 
     // Medios de Pago
     Route::get('Configuración/MediosDePago', [mediosdepagoController::class, 'index'])->name('configuracion.mediosdepago.index');

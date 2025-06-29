@@ -66,4 +66,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Egreso::class);
     }
+
+    /**
+     * Obtener las asistencias del usuario
+     */
+    public function asistencias()
+    {
+        return $this->hasMany(Asistencia::class);
+    }
 }
