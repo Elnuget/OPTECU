@@ -60,6 +60,9 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     // Asistencias
     Route::get('asistencias/reporte', [AsistenciaController::class, 'reporte'])->name('asistencias.reporte');
+    Route::get('asistencias/mi-qr', [AsistenciaController::class, 'miQr'])->name('asistencias.mi-qr');
+    Route::get('asistencias/scan', [AsistenciaController::class, 'scan'])->name('asistencias.scan');
+    Route::post('asistencias/procesar-qr', [AsistenciaController::class, 'procesarQr'])->name('asistencias.procesar-qr');
     Route::post('asistencias/marcar-entrada', [AsistenciaController::class, 'marcarEntrada'])->name('asistencias.marcar-entrada');
     Route::post('asistencias/marcar-salida', [AsistenciaController::class, 'marcarSalida'])->name('asistencias.marcar-salida');
     Route::resource('asistencias', AsistenciaController::class);

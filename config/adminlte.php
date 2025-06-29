@@ -306,8 +306,29 @@ return [
         [
             'text' => 'ASISTENCIAS',
             'icon' => 'fas fa-user-clock',
-            'route' => 'asistencias.index',
             'active' => ['asistencias', 'asistencias/*'],
+            'submenu' => [
+                [
+                    'text' => 'VER ASISTENCIAS',
+                    'route' => 'asistencias.index',
+                    'icon' => 'fas fa-list'
+                ],
+                [
+                    'text' => 'MI CÓDIGO QR',
+                    'route' => 'asistencias.mi-qr',
+                    'icon' => 'fas fa-qrcode'
+                ],
+                [
+                    'text' => 'ESCANEAR QR',
+                    'route' => 'asistencias.scan',
+                    'icon' => 'fas fa-camera'
+                ],
+                [
+                    'text' => 'REPORTES',
+                    'route' => 'asistencias.reporte',
+                    'icon' => 'fas fa-chart-bar'
+                ],
+            ],
         ],
 
         [

@@ -240,4 +240,91 @@ class AsistenciaController extends Controller
 
         return view('asistencias.reporte', compact('asistencias', 'estadisticas', 'fechaInicio', 'fechaFin'));
     }
+
+    /**
+     * Mostrar vista de QR personal del usuario.
+     */
+    public function miQr()
+    {
+        return view('asistencias.mi-qr');
+    }
+
+    /**
+     * Mostrar vista del escáner QR.
+     */
+    public function scan()
+    {
+        return view('asistencias.scan');
+    }
+
+    /**
+     * Procesar código QR escaneado.
+     */
+    public function procesarQr(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'qr_data' => 'required|string',
+        ]);
+
+        $user = User::find($validated['user_id']);
+        
+        if (!$user || !$user->active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Usuario no encontrado o inactivo.'
+            ]);
+        }
+
+        $hoy = Carbon::today();
+        $horaActual = Carbon::now();
+
+        // Buscar asistencia existente para hoy
+        $asistenciaHoy = Asistencia::where('user_id', $user->id)
+            ->whereDate('fecha_hora', $hoy)
+            ->first();
+
+        $accion = '';
+        $hora = $horaActual->format('H:i:s');
+        $estado = $hora > '08:00:00' ? 'tardanza' : 'presente';
+
+        if (!$asistenciaHoy) {
+            // Primera vez del día - marcar entrada
+            Asistencia::create([
+                'user_id' => $user->id,
+                'fecha_hora' => $horaActual,
+                'hora_entrada' => $hora,
+                'estado' => $estado
+            ]);
+            $accion = 'ENTRADA REGISTRADA';
+        } elseif (!$asistenciaHoy->hora_entrada) {
+            // Actualizar entrada
+            $asistenciaHoy->update([
+                'hora_entrada' => $hora,
+                'estado' => $estado
+            ]);
+            $accion = 'ENTRADA REGISTRADA';
+        } elseif (!$asistenciaHoy->hora_salida) {
+            // Marcar salida
+            $asistenciaHoy->update([
+                'hora_salida' => $hora
+            ]);
+            $accion = 'SALIDA REGISTRADA';
+        } else {
+            // Ya tiene entrada y salida
+            return response()->json([
+                'success' => false,
+                'message' => 'Ya has marcado entrada y salida hoy.'
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $accion . ' EXITOSAMENTE',
+            'action' => $accion,
+            'hora' => $hora,
+            'user_name' => strtoupper($user->name),
+            'estado' => $estado
+        ]);
+    }
 }

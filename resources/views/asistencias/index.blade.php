@@ -106,8 +106,18 @@
             <div class="mb-3">
                 <a type="button" class="btn btn-success" href="{{ route('asistencias.create') }}">REGISTRAR ASISTENCIA</a>
                 <a type="button" class="btn btn-info" href="{{ route('asistencias.reporte') }}">VER REPORTE</a>
-                <button type="button" class="btn btn-warning" onclick="marcarEntrada()">MARCAR ENTRADA</button>
-                <button type="button" class="btn btn-danger" onclick="marcarSalida()">MARCAR SALIDA</button>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-warning" onclick="marcarEntrada()">MARCAR ENTRADA</button>
+                    <button type="button" class="btn btn-danger" onclick="marcarSalida()">MARCAR SALIDA</button>
+                </div>
+                <div class="btn-group" role="group">
+                    <a type="button" class="btn btn-primary" href="{{ route('asistencias.mi-qr') }}">
+                        <i class="fas fa-qrcode"></i> MI QR
+                    </a>
+                    <a type="button" class="btn btn-secondary" href="{{ route('asistencias.scan') }}">
+                        <i class="fas fa-camera"></i> ESCANEAR QR
+                    </a>
+                </div>
             </div>
 
             <div class="table-responsive">
