@@ -319,13 +319,46 @@ class AsistenciaController extends Controller
             ]);
         }
 
+        // Obtener información de pedidos del usuario
+        $pedidos = \App\Models\Pedido::where('usuario', $user->user)->get();
+        $totalPedidos = $pedidos->count();
+        $totalVentas = $pedidos->sum('total');
+
+        // Pedidos del mes actual
+        $pedidosMesActual = \App\Models\Pedido::where('usuario', $user->user)
+            ->whereMonth('fecha', Carbon::now()->month)
+            ->whereYear('fecha', Carbon::now()->year)
+            ->get();
+        
+        $totalPedidosMes = $pedidosMesActual->count();
+        $totalVentasMes = $pedidosMesActual->sum('total');
+
+        // Último pedido
+        $ultimoPedido = \App\Models\Pedido::where('usuario', $user->user)
+            ->orderBy('fecha', 'desc')
+            ->first();
+
         return response()->json([
             'success' => true,
             'message' => $accion . ' EXITOSAMENTE',
             'action' => $accion,
             'hora' => $hora,
             'user_name' => strtoupper($user->name),
-            'estado' => $estado
+            'user_username' => strtoupper($user->user),
+            'estado' => $estado,
+            // Información de pedidos
+            'pedidos_info' => [
+                'total_pedidos' => $totalPedidos,
+                'total_ventas' => number_format($totalVentas, 2),
+                'total_pedidos_mes' => $totalPedidosMes,
+                'total_ventas_mes' => number_format($totalVentasMes, 2),
+                'ultimo_pedido' => $ultimoPedido ? [
+                    'fecha' => $ultimoPedido->fecha->format('d/m/Y'),
+                    'numero_orden' => $ultimoPedido->numero_orden,
+                    'cliente' => $ultimoPedido->cliente,
+                    'total' => number_format($ultimoPedido->total, 2)
+                ] : null
+            ]
         ]);
     }
 }

@@ -163,6 +163,30 @@
                 </div>
             </div>
 
+            <!-- Resumen del usuario escaneado -->
+            <div class="card" id="user-summary" style="display: none;">
+                <div class="card-header bg-success">
+                    <h3 class="card-title">RESUMEN DEL USUARIO</h3>
+                </div>
+                <div class="card-body">
+                    <div id="user-info">
+                        <p><strong>NOMBRE:</strong> <span id="user-name">-</span></p>
+                        <p><strong>USUARIO:</strong> <span id="user-username">-</span></p>
+                        <hr>
+                        <h5>ESTADÍSTICAS DE PEDIDOS:</h5>
+                        <p><strong>TOTAL PEDIDOS:</strong> <span id="total-pedidos" class="badge badge-primary">0</span></p>
+                        <p><strong>TOTAL VENTAS:</strong> <span id="total-ventas" class="badge badge-success">$0.00</span></p>
+                        <hr>
+                        <h6>ESTE MES:</h6>
+                        <p><strong>PEDIDOS:</strong> <span id="pedidos-mes" class="badge badge-info">0</span></p>
+                        <p><strong>VENTAS:</strong> <span id="ventas-mes" class="badge badge-warning">$0.00</span></p>
+                        <div id="ultimo-pedido-info">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Instrucciones -->
             <div class="card">
                 <div class="card-header bg-warning">
@@ -403,6 +427,9 @@
                 addRecentScan(result);
                 $('#last-action').text(result.action + ' - ' + result.hora);
                 
+                // Mostrar resumen del usuario
+                showUserSummary(result);
+                
                 // Sonido de éxito
                 playSuccessSound();
             } else {
@@ -413,6 +440,8 @@
                     hora: new Date().toLocaleTimeString(),
                     success: false
                 });
+                // Ocultar resumen en caso de error
+                $('#user-summary').hide();
             }
 
         } catch (error) {
@@ -498,6 +527,49 @@
         });
 
         container.html(html);
+    }
+
+    function showUserSummary(result) {
+        if (!result.pedidos_info) return;
+
+        const pedidosInfo = result.pedidos_info;
+        
+        // Actualizar información básica del usuario
+        $('#user-name').text(result.user_name || 'N/A');
+        $('#user-username').text(result.user_username || 'N/A');
+        
+        // Actualizar estadísticas de pedidos
+        $('#total-pedidos').text(pedidosInfo.total_pedidos || 0);
+        $('#total-ventas').text('$' + (pedidosInfo.total_ventas || '0.00'));
+        $('#pedidos-mes').text(pedidosInfo.total_pedidos_mes || 0);
+        $('#ventas-mes').text('$' + (pedidosInfo.total_ventas_mes || '0.00'));
+        
+        // Actualizar información del último pedido
+        const ultimoPedidoDiv = $('#ultimo-pedido-info');
+        if (pedidosInfo.ultimo_pedido) {
+            const ultimo = pedidosInfo.ultimo_pedido;
+            ultimoPedidoDiv.html(`
+                <hr>
+                <h6>ÚLTIMO PEDIDO:</h6>
+                <p><strong>FECHA:</strong> ${ultimo.fecha}</p>
+                <p><strong>ORDEN:</strong> ${ultimo.numero_orden}</p>
+                <p><strong>CLIENTE:</strong> ${ultimo.cliente}</p>
+                <p><strong>TOTAL:</strong> <span class="badge badge-primary">$${ultimo.total}</span></p>
+            `);
+        } else {
+            ultimoPedidoDiv.html(`
+                <hr>
+                <p class="text-muted">NO HAY PEDIDOS REGISTRADOS</p>
+            `);
+        }
+        
+        // Mostrar el panel de resumen
+        $('#user-summary').show();
+        
+        // Auto-ocultar después de 15 segundos
+        setTimeout(() => {
+            $('#user-summary').fadeOut();
+        }, 15000);
     }
 
     function playSuccessSound() {
