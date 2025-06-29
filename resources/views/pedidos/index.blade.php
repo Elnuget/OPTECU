@@ -554,6 +554,49 @@ input[type="checkbox"]:after {
             });
         });
 
+        // Función para detectar si es dispositivo móvil
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        // Función para limpiar y formatear número de teléfono chileno
+        function formatChileanPhone(phone) {
+            // Remover todos los caracteres no numéricos
+            let cleanPhone = phone.replace(/\D/g, '');
+            
+            // Si empieza con 56 (código de Chile), mantenerlo
+            if (cleanPhone.startsWith('56')) {
+                return cleanPhone;
+            }
+            
+            // Si empieza con 9 (celular chileno), agregar código de país
+            if (cleanPhone.startsWith('9') && cleanPhone.length === 9) {
+                return '56' + cleanPhone;
+            }
+            
+            // Si tiene 8 dígitos, asumir que falta el 9 inicial
+            if (cleanPhone.length === 8) {
+                return '569' + cleanPhone;
+            }
+            
+            // Si no cumple ningún patrón, devolver tal como está para validación posterior
+            return cleanPhone;
+        }
+
+        // Función para generar URL de WhatsApp más segura
+        function generateWhatsAppURL(phoneNumber, message) {
+            const formattedPhone = formatChileanPhone(phoneNumber);
+            const encodedMessage = encodeURIComponent(message);
+            
+            if (isMobileDevice()) {
+                // Para móviles, usar el esquema whatsapp://
+                return `whatsapp://send?phone=${formattedPhone}&text=${encodedMessage}`;
+            } else {
+                // Para escritorio, usar WhatsApp Web con api.whatsapp.com (más confiable)
+                return `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodedMessage}`;
+            }
+        }
+
         // Manejar el envío del mensaje de WhatsApp con encuesta
         $('.btn-whatsapp-mensaje').click(function(e) {
             e.preventDefault();
@@ -562,6 +605,19 @@ input[type="checkbox"]:after {
             var celular = button.data('celular');
             var cliente = button.data('cliente');
             var estadoActual = button.data('estado-actual');
+
+            // Validar número de teléfono
+            if (!celular || celular.trim() === '') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se encontró un número de teléfono válido para este cliente.'
+                });
+                return;
+            }
+
+            // Deshabilitar botón temporalmente para evitar múltiples clics
+            button.prop('disabled', true);
 
             // Primero obtener la URL de la encuesta y actualizar estado
             $.ajax({
@@ -572,34 +628,70 @@ input[type="checkbox"]:after {
                 },
                 success: function(response) {
                     if (response.success) {
-                        // Construir mensaje con saludo personalizado al cliente
-                        var mensajeSaludo = "Estimado(a) paciente " + cliente + ",";
-                        var mensajeLentes = "Le informamos que sus lentes recetados ya están listos para ser recogidos en ESCLERÓPTICA 👀👁. Puede pasar a retirarlos cuando le sea más conveniente. ¡Lo esperamos pronto! Muchas gracias por confiar en nosotros. 🤓👓😊";
+                        // Crear mensaje personalizado para Chile
+                        var mensajeCompleto = `¡Hola ${cliente}! 👋
+
+¡Excelentes noticias! Sus lentes ya están listos para ser retirados en nuestra óptica. �✨
+
+� *Detalles del pedido:*
+• Orden: ${response.numero_orden || 'N/A'}
+• Estado: ${response.estado || 'Listo para retiro'}
+
+🏪 Puede pasar a recogerlos en el horario que más le convenga.
+
+🔗 *Califica nuestro servicio:*
+${response.url}
+
+Su opinión es muy importante para nosotros. 
+
+¡Que tenga un excelente día!`;
+
+                        // Generar URL de WhatsApp optimizada
+                        const whatsappURL = generateWhatsAppURL(celular, mensajeCompleto);
                         
-                        // El enlace debe ir por separado, para que WhatsApp lo reconozca como clicable
-                        var mensajeEncuesta = "\n\nNos gustaría conocer su opinión. Por favor, complete nuestra breve encuesta de satisfacción:";
+                        // Abrir WhatsApp
+                        const whatsappWindow = window.open(whatsappURL, '_blank');
                         
-                        // Crear el mensaje completo con texto amigable para el enlace
-                        var mensajeCompleto = encodeURIComponent(
-                            mensajeSaludo + "\n\n" + 
-                            mensajeLentes + "\n" + 
-                            mensajeEncuesta + "\n\n" + 
-                            "Copia y pega el siguiente enlace en tu navegador para completar la encuesta:" + "\n" + 
-                            response.url
-                        );
-                        
-                        // Abrir WhatsApp con el mensaje completo
-                        window.open("https://api.whatsapp.com/send?phone=593" + celular + "&text=" + mensajeCompleto, '_blank');
+                        // Verificar si se abrió correctamente y ofrecer alternativa
+                        setTimeout(() => {
+                            if (!whatsappWindow || whatsappWindow.closed) {
+                                // Si no se abrió, intentar con URL alternativa
+                                const alternativeURL = `https://web.whatsapp.com/send?phone=${formatChileanPhone(celular)}&text=${encodeURIComponent(mensajeCompleto)}`;
+                                window.open(alternativeURL, '_blank');
+                            }
+                        }, 1000);
 
                         // Actualizar el estado visual del botón solo si fue exitoso
                         button.removeClass('btn-success').addClass('btn-warning');
                         button.attr('title', 'Volver a enviar mensaje y encuesta');
                         button.find('.button-text').text('Volver a enviar');
                         button.data('estado-actual', 'enviado');
+
+                        // Mostrar mensaje de confirmación
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡WhatsApp Abierto!',
+                            text: 'Se ha abierto WhatsApp con el mensaje y enlace de encuesta.',
+                            timer: 3000,
+                            timerProgressBar: true
+                        });
                     }
                 },
                 error: function(xhr) {
-                    alert('Error al generar el enlace de la encuesta: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Error desconocido'));
+                    let errorMessage = 'Error al generar el enlace de encuesta';
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMessage = xhr.responseJSON.error;
+                    }
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: errorMessage
+                    });
+                },
+                complete: function() {
+                    // Rehabilitar botón
+                    button.prop('disabled', false);
                 }
             });
         });
