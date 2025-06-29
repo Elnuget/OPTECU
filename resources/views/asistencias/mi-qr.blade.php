@@ -139,8 +139,9 @@
                             <ul>
                                 <li>Este QR es único y personal</li>
                                 <li>Manténlo seguro y no lo compartas</li>
-                                <li>Si llegas después de las 8:00 AM se marcará como tardanza</li>
+                                <li>Al escanear tu QR siempre se marcará como PRESENTE</li>
                                 <li>Puedes imprimirlo o guardarlo en tu teléfono</li>
+                                <li>Ideal para uso en dispositivos móviles</li>
                             </ul>
                         </div>
                     </div>

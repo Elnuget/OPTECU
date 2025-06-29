@@ -286,7 +286,8 @@ class AsistenciaController extends Controller
 
         $accion = '';
         $hora = $horaActual->format('H:i:s');
-        $estado = $hora > '08:00:00' ? 'tardanza' : 'presente';
+        // Para QR escaneado, siempre marcar como presente independientemente de la hora
+        $estado = 'presente';
 
         if (!$asistenciaHoy) {
             // Primera vez del día - marcar entrada
