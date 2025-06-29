@@ -47,6 +47,12 @@
             width: 100%;
             max-width: 500px;
             margin: 0 auto;
+            min-height: 400px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #scanner-video {
@@ -56,34 +62,14 @@
             object-fit: cover;
         }
 
-        .scanner-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border: 2px solid #28a745;
-            width: 200px;
-            height: 200px;
+        /* Estilos para Html5Qrcode */
+        #scanner-container video {
             border-radius: 8px;
-            pointer-events: none;
         }
 
-        .scanner-overlay::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            border: 2px solid rgba(40, 167, 69, 0.3);
+        #scanner-container > div {
+            width: 100% !important;
             border-radius: 8px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
         }
 
         .camera-controls {
@@ -139,8 +125,7 @@
                 </div>
                 <div class="card-body">
                     <div id="scanner-container">
-                        <video id="scanner-video" autoplay muted playsinline></video>
-                        <div class="scanner-overlay"></div>
+                        <video id="scanner-video" autoplay muted playsinline style="display: none;"></video>
                     </div>
 
                     <div class="camera-controls">
@@ -232,12 +217,12 @@
 @stop
 
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/qr-scanner@1.4.2/qr-scanner.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script>
-    let qrScanner = null;
+    let html5QrCode = null;
     let isScanning = false;
     let cameras = [];
-    let currentCameraIndex = 0;
+    let currentCameraId = null;
     let recentScans = [];
 
     $(document).ready(function() {
@@ -258,47 +243,58 @@
 
     async function getCameras() {
         try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            cameras = devices.filter(device => device.kind === 'videoinput');
+            cameras = await Html5Qrcode.getCameras();
             
-            if (cameras.length > 0) {
+            if (cameras && cameras.length > 0) {
+                currentCameraId = cameras[0].id;
                 $('#camera-label').text(cameras.length + ' CÁMARA(S) DISPONIBLE(S)');
                 if (cameras.length > 1) {
                     $('#switch-camera').show();
                 }
+                console.log('Cámaras encontradas:', cameras);
             } else {
                 updateStatus('NO SE ENCONTRARON CÁMARAS', 'error');
             }
         } catch (error) {
             console.error('Error obteniendo cámaras:', error);
-            updateStatus('ERROR AL ACCEDER A LAS CÁMARAS', 'error');
+            updateStatus('ERROR AL ACCEDER A LAS CÁMARAS: ' + error.message, 'error');
         }
     }
 
     async function startScanning() {
-        if (isScanning) return;
+        if (isScanning || !currentCameraId) return;
 
         try {
-            const videoElement = document.getElementById('scanner-video');
+            html5QrCode = new Html5Qrcode("scanner-container");
             
-            // Configurar QR Scanner
-            qrScanner = new QrScanner(
-                videoElement,
-                result => processQRResult(result.data),
-                {
-                    returnDetailedScanResult: true,
-                    highlightScanRegion: true,
-                    highlightCodeOutline: true,
+            const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            };
+
+            await html5QrCode.start(
+                currentCameraId,
+                config,
+                (decodedText, decodedResult) => {
+                    console.log('QR detectado:', decodedText);
+                    processQRResult(decodedText);
+                },
+                (errorMessage) => {
+                    // Error de escaneo (normal cuando no hay QR visible)
+                    // console.log('Escaneando...', errorMessage);
                 }
             );
 
-            await qrScanner.start();
             isScanning = true;
             
             $('#start-scan').hide();
             $('#stop-scan').show();
             $('#camera-status').text('ACTIVO');
             updateStatus('ESCÁNER ACTIVO - APUNTA LA CÁMARA AL QR', 'info');
+            
+            // Ocultar el video element ya que Html5Qrcode maneja su propio elemento
+            $('#scanner-video').hide();
 
         } catch (error) {
             console.error('Error iniciando escáner:', error);
@@ -306,52 +302,82 @@
         }
     }
 
-    function stopScanning() {
-        if (!isScanning) return;
+    async function stopScanning() {
+        if (!isScanning || !html5QrCode) return;
 
-        if (qrScanner) {
-            qrScanner.stop();
-            qrScanner.destroy();
-            qrScanner = null;
+        try {
+            await html5QrCode.stop();
+            html5QrCode.clear();
+            html5QrCode = null;
+            
+            isScanning = false;
+            $('#start-scan').show();
+            $('#stop-scan').hide();
+            $('#camera-status').text('DETENIDO');
+            updateStatus('ESCÁNER DETENIDO', 'info');
+            
+            // Mostrar nuevamente el elemento video
+            $('#scanner-video').show();
+            
+        } catch (error) {
+            console.error('Error deteniendo escáner:', error);
         }
-
-        isScanning = false;
-        $('#start-scan').show();
-        $('#stop-scan').hide();
-        $('#camera-status').text('DETENIDO');
-        updateStatus('ESCÁNER DETENIDO', 'info');
     }
 
-    function switchCamera() {
+    async function switchCamera() {
         if (!isScanning || cameras.length <= 1) return;
 
-        currentCameraIndex = (currentCameraIndex + 1) % cameras.length;
-        
-        if (qrScanner) {
-            qrScanner.setCamera(cameras[currentCameraIndex].deviceId);
-            $('#camera-label').text('CÁMARA: ' + (currentCameraIndex + 1) + '/' + cameras.length);
+        try {
+            // Detener el escáner actual
+            await stopScanning();
+            
+            // Cambiar a la siguiente cámara
+            const currentIndex = cameras.findIndex(cam => cam.id === currentCameraId);
+            const nextIndex = (currentIndex + 1) % cameras.length;
+            currentCameraId = cameras[nextIndex].id;
+            
+            $('#camera-label').text('CÁMARA: ' + (nextIndex + 1) + '/' + cameras.length);
+            
+            // Reiniciar con la nueva cámara
+            setTimeout(() => {
+                startScanning();
+            }, 500);
+            
+        } catch (error) {
+            console.error('Error cambiando cámara:', error);
         }
     }
 
     async function processQRResult(data) {
+        if (!data) return;
+        
         try {
+            console.log('Procesando QR:', data);
+            
             // Intentar parsear JSON
             let qrData;
             try {
                 qrData = JSON.parse(data);
+                console.log('QR parseado como JSON:', qrData);
             } catch {
                 // Si no es JSON, asumir que es solo el user_id
                 qrData = { user_id: parseInt(data), type: 'asistencia' };
+                console.log('QR parseado como ID simple:', qrData);
             }
 
-            if (!qrData.user_id || qrData.type !== 'asistencia') {
+            if (!qrData.user_id) {
+                updateStatus('QR INVÁLIDO - NO CONTIENE ID DE USUARIO', 'error');
+                return;
+            }
+
+            if (qrData.type && qrData.type !== 'asistencia') {
                 updateStatus('QR INVÁLIDO - NO ES UN CÓDIGO DE ASISTENCIA', 'error');
                 return;
             }
 
-            // Detener escáner temporalmente
-            if (qrScanner) {
-                qrScanner.stop();
+            // Detener escáner temporalmente para evitar múltiples lecturas
+            if (html5QrCode && isScanning) {
+                await html5QrCode.stop();
             }
 
             updateStatus('PROCESANDO QR...', 'info');
@@ -370,27 +396,56 @@
             });
 
             const result = await response.json();
+            console.log('Respuesta del servidor:', result);
 
             if (result.success) {
                 updateStatus(result.message, 'success');
                 addRecentScan(result);
                 $('#last-action').text(result.action + ' - ' + result.hora);
                 
-                // Sonido de éxito (opcional)
+                // Sonido de éxito
                 playSuccessSound();
             } else {
                 updateStatus('ERROR: ' + result.message, 'error');
+                addRecentScan({
+                    user_name: 'ERROR',
+                    action: 'ERROR',
+                    hora: new Date().toLocaleTimeString(),
+                    success: false
+                });
             }
 
         } catch (error) {
             console.error('Error procesando QR:', error);
-            updateStatus('ERROR AL PROCESAR QR', 'error');
+            updateStatus('ERROR AL PROCESAR QR: ' + error.message, 'error');
         }
 
         // Reanudar escáner después de 3 segundos
-        setTimeout(() => {
-            if (qrScanner && isScanning) {
-                qrScanner.start();
+        setTimeout(async () => {
+            if (html5QrCode && currentCameraId) {
+                try {
+                    const config = {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 },
+                        aspectRatio: 1.0
+                    };
+
+                    await html5QrCode.start(
+                        currentCameraId,
+                        config,
+                        (decodedText, decodedResult) => {
+                            processQRResult(decodedText);
+                        },
+                        (errorMessage) => {
+                            // Error de escaneo normal
+                        }
+                    );
+                    
+                    isScanning = true;
+                    updateStatus('ESCÁNER REACTIVADO - LISTO PARA SIGUIENTE QR', 'info');
+                } catch (error) {
+                    console.error('Error reactivando escáner:', error);
+                }
             }
         }, 3000);
     }
@@ -400,6 +455,7 @@
         statusElement.removeClass('status-success status-error status-info');
         statusElement.addClass('status-' + type);
         statusElement.text(message);
+        console.log('Status:', type, message);
     }
 
     function addRecentScan(scanData) {
@@ -408,7 +464,7 @@
             user: scanData.user_name || 'USUARIO',
             action: scanData.action || 'ACCIÓN',
             hora: scanData.hora || '',
-            status: scanData.success ? 'ÉXITO' : 'ERROR'
+            status: scanData.success !== false ? 'ÉXITO' : 'ERROR'
         };
 
         recentScans.unshift(scanItem);
@@ -445,28 +501,36 @@
     }
 
     function playSuccessSound() {
-        // Crear sonido de éxito simple
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
+        try {
+            // Crear sonido de éxito simple
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
 
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
 
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        } catch (error) {
+            console.log('No se pudo reproducir sonido:', error);
+        }
     }
 
     // Limpiar al salir de la página
-    window.addEventListener('beforeunload', () => {
-        if (qrScanner) {
-            qrScanner.stop();
-            qrScanner.destroy();
+    window.addEventListener('beforeunload', async () => {
+        if (html5QrCode && isScanning) {
+            try {
+                await html5QrCode.stop();
+                html5QrCode.clear();
+            } catch (error) {
+                console.error('Error limpiando escáner:', error);
+            }
         }
     });
 </script>

@@ -151,40 +151,55 @@
 @stop
 
 @section('js')
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 <script>
     $(document).ready(function() {
-        // Generar QR con la ID del usuario
-        const userId = {{ Auth::user()->id }};
-        const qrData = JSON.stringify({
-            user_id: userId,
-            type: 'asistencia',
-            timestamp: Date.now()
-        });
+        try {
+            // Generar QR con la ID del usuario
+            const userId = {{ Auth::user()->id }};
+            const qrData = JSON.stringify({
+                user_id: userId,
+                type: 'asistencia',
+                timestamp: Date.now()
+            });
 
-        QRCode.toCanvas(document.getElementById('qrcode'), qrData, {
-            width: 256,
-            height: 256,
-            colorDark: '#000000',
-            colorLight: '#ffffff',
-            correctLevel: QRCode.CorrectLevel.M
-        }, function (error) {
-            if (error) {
-                console.error('Error generando QR:', error);
-                $('#qrcode').html('<p class="text-danger">ERROR AL GENERAR QR</p>');
-            }
-        });
+            // Crear canvas element
+            const canvas = document.createElement('canvas');
+            document.getElementById('qrcode').appendChild(canvas);
+
+            // Generar QR usando QRious
+            const qr = new QRious({
+                element: canvas,
+                value: qrData,
+                size: 256,
+                background: 'white',
+                foreground: 'black',
+                level: 'M'
+            });
+
+            console.log('QR generado exitosamente');
+            
+        } catch (error) {
+            console.error('Error generando QR:', error);
+            $('#qrcode').html('<p class="text-danger">ERROR AL GENERAR QR: ' + error.message + '</p>');
+        }
     });
 
     function downloadQR() {
-        const canvas = document.querySelector('#qrcode canvas');
-        if (canvas) {
-            const link = document.createElement('a');
-            link.download = 'mi_qr_asistencia_{{ Auth::user()->id }}.png';
-            link.href = canvas.toDataURL();
-            link.click();
-        } else {
-            alert('ERROR AL DESCARGAR QR');
+        try {
+            const canvas = document.querySelector('#qrcode canvas');
+            if (canvas) {
+                const link = document.createElement('a');
+                link.download = 'mi_qr_asistencia_{{ Auth::user()->id }}.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                console.log('QR descargado exitosamente');
+            } else {
+                alert('ERROR AL DESCARGAR QR - CANVAS NO ENCONTRADO');
+            }
+        } catch (error) {
+            console.error('Error descargando QR:', error);
+            alert('ERROR AL DESCARGAR QR: ' + error.message);
         }
     }
 </script>
