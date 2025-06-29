@@ -307,6 +307,7 @@ return [
             'text' => 'ASISTENCIAS',
             'icon' => 'fas fa-user-clock',
             'active' => ['asistencias', 'asistencias/*'],
+            'can' => 'admin',
             'submenu' => [
                 [
                     'text' => 'VER ASISTENCIAS',
@@ -329,6 +330,15 @@ return [
                     'icon' => 'fas fa-chart-bar'
                 ],
             ],
+        ],
+
+        // Menú específico para usuarios no administradores
+        [
+            'text' => 'MI CÓDIGO QR',
+            'icon' => 'fas fa-qrcode',
+            'route' => 'asistencias.mi-qr',
+            'active' => ['asistencias/mi-qr'],
+            'cannot' => 'admin'
         ],
 
         [

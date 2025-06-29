@@ -50,6 +50,23 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
 
     Route::get('/admin/puntuaciones', [AdminController::class, 'puntuacionesUsuarios'])
         ->name('admin.puntuaciones');
+
+    // Asistencias - Solo para administradores
+    Route::get('asistencias/reporte', [AsistenciaController::class, 'reporte'])->name('asistencias.reporte');
+    Route::get('asistencias/scan', [AsistenciaController::class, 'scan'])->name('asistencias.scan');
+    Route::post('asistencias/procesar-qr', [AsistenciaController::class, 'procesarQr'])->name('asistencias.procesar-qr');
+    Route::post('asistencias/marcar-entrada', [AsistenciaController::class, 'marcarEntrada'])->name('asistencias.marcar-entrada');
+    Route::post('asistencias/marcar-salida', [AsistenciaController::class, 'marcarSalida'])->name('asistencias.marcar-salida');
+    Route::resource('asistencias', AsistenciaController::class);
+
+    // Egresos - Solo para administradores
+    Route::get('/egresos/finanzas', [EgresoController::class, 'finanzas'])
+        ->name('egresos.finanzas');
+    Route::get('/egresos/pedidos-usuario', [EgresoController::class, 'getPedidosPorUsuario'])
+        ->name('egresos.pedidos-usuario');
+    Route::get('/egresos/ultimo-sueldo-usuario', [EgresoController::class, 'getUltimoSueldoUsuario'])
+        ->name('egresos.ultimo-sueldo-usuario');
+    Route::resource('egresos', EgresoController::class);
 });
 
 // Keep these routes accessible to all authenticated users
@@ -58,14 +75,8 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::resource('sueldos', SueldoController::class);
     Route::post('sueldos/guardar-valor', [SueldoController::class, 'guardarValor'])->name('sueldos.guardar-valor');
 
-    // Asistencias
-    Route::get('asistencias/reporte', [AsistenciaController::class, 'reporte'])->name('asistencias.reporte');
+    // Asistencias - Solo MI CÓDIGO QR para usuarios no administradores
     Route::get('asistencias/mi-qr', [AsistenciaController::class, 'miQr'])->name('asistencias.mi-qr');
-    Route::get('asistencias/scan', [AsistenciaController::class, 'scan'])->name('asistencias.scan');
-    Route::post('asistencias/procesar-qr', [AsistenciaController::class, 'procesarQr'])->name('asistencias.procesar-qr');
-    Route::post('asistencias/marcar-entrada', [AsistenciaController::class, 'marcarEntrada'])->name('asistencias.marcar-entrada');
-    Route::post('asistencias/marcar-salida', [AsistenciaController::class, 'marcarSalida'])->name('asistencias.marcar-salida');
-    Route::resource('asistencias', AsistenciaController::class);
 
     // Medios de Pago
     Route::get('Configuración/MediosDePago', [mediosdepagoController::class, 'index'])->name('configuracion.mediosdepago.index');
@@ -220,23 +231,6 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     
     // Ruta para mensajes predeterminados
     Route::post('/configuraciones/mensajes-predeterminados', [App\Http\Controllers\ConfiguracionController::class, 'guardarMensajePredeterminado'])->name('configuraciones.mensajes-predeterminados');
-
-    // Mover esta ruta específica antes del resource
-    Route::get('/egresos/finanzas', [EgresoController::class, 'finanzas'])
-        ->name('egresos.finanzas')
-        ->middleware(['auth']); // Mantener middleware auth si es necesario dentro del grupo
-
-    // Ruta AJAX para obtener pedidos por usuario
-    Route::get('/egresos/pedidos-usuario', [EgresoController::class, 'getPedidosPorUsuario'])
-        ->name('egresos.pedidos-usuario')
-        ->middleware(['auth']);
-
-    // Ruta AJAX para obtener último sueldo del usuario
-    Route::get('/egresos/ultimo-sueldo-usuario', [EgresoController::class, 'getUltimoSueldoUsuario'])
-        ->name('egresos.ultimo-sueldo-usuario')
-        ->middleware(['auth']);
-
-    Route::resource('egresos', EgresoController::class);
 
     Route::resource('prestamos', PrestamoController::class);
 
