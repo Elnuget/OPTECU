@@ -65,6 +65,7 @@
                     <form action="{{ route('inventario.destroy', $item->id) }}" method="POST" class="d-inline">
                         @csrf
                         @method('DELETE')
+                        <input type="hidden" name="fecha" value="{{ request('fecha') }}">
                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"
                                 onclick="return confirm('¿Está seguro de que desea eliminar este artículo?')">
                             <i class="fa fa-trash"></i>

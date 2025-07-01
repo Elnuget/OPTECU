@@ -184,19 +184,31 @@ class InventarioController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         try {
             $inventario = Inventario::findOrFail($id);
             $inventario->delete();
 
-            return redirect()->route('inventario.index')->with([
+            // Mantener el parámetro de fecha si existe
+            $redirectParams = [];
+            if ($request->has('fecha')) {
+                $redirectParams['fecha'] = $request->input('fecha');
+            }
+
+            return redirect()->route('inventario.index', $redirectParams)->with([
                 'error' => 'Exito',
                 'mensaje' => 'Artículo eliminado exitosamente',
                 'tipo' => 'alert-success'
             ]);
         } catch (\Exception $e) {
-            return redirect()->route('inventario.index')->with([
+            // Mantener el parámetro de fecha si existe
+            $redirectParams = [];
+            if ($request->has('fecha')) {
+                $redirectParams['fecha'] = $request->input('fecha');
+            }
+
+            return redirect()->route('inventario.index', $redirectParams)->with([
                 'error' => 'Error',
                 'mensaje' => 'No se puede eliminar el artículo del inventario porque está asociado a pedidos existentes. Por favor, elimine los pedidos que contienen este artículo antes de intentar eliminarlo.',
                 'tipo' => 'alert-danger'
