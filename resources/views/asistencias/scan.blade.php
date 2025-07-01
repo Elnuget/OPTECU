@@ -172,6 +172,7 @@
                     <div id="user-info">
                         <p><strong>NOMBRE:</strong> <span id="user-name">-</span></p>
                         <p><strong>USUARIO:</strong> <span id="user-username">-</span></p>
+                        <p><strong>EMPRESA:</strong> <span id="user-empresa">-</span></p>
                         <hr>
                         <h5>ESTADÍSTICAS DE PEDIDOS:</h5>
                         <p><strong>TOTAL PEDIDOS:</strong> <span id="total-pedidos" class="badge badge-primary">0</span></p>
@@ -197,8 +198,14 @@
                         <li>Presiona "INICIAR ESCÁNER"</li>
                         <li>Permite el acceso a la cámara</li>
                         <li>Apunta la cámara al código QR</li>
-                        <li>Espera la confirmación</li>
-                        <li>¡Asistencia marcada automáticamente!</li>
+                        <li>El sistema evaluará automáticamente:</li>
+                        <ul>
+                            <li><strong>Sin empresa:</strong> Siempre presente</li>
+                            <li><strong>Con empresa:</strong> Evalúa horario</li>
+                            <li><strong>+10 min tarde:</strong> Marca atraso</li>
+                            <li><strong>Salida pendiente:</strong> Registra salida anterior</li>
+                        </ul>
+                        <li>¡Asistencia procesada automáticamente!</li>
                     </ol>
                 </div>
             </div>
@@ -537,6 +544,7 @@
         // Actualizar información básica del usuario
         $('#user-name').text(result.user_name || 'N/A');
         $('#user-username').text(result.user_username || 'N/A');
+        $('#user-empresa').text(result.empresa || 'SIN EMPRESA');
         
         // Actualizar estadísticas de pedidos
         $('#total-pedidos').text(pedidosInfo.total_pedidos || 0);

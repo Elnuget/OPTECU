@@ -275,7 +275,7 @@ class AsistenciaController extends Controller
             'qr_data' => 'required|string',
         ]);
 
-        $user = User::find($validated['user_id']);
+        $user = User::with('empresa')->find($validated['user_id']);
         
         if (!$user || !$user->active) {
             return response()->json([
@@ -286,6 +286,7 @@ class AsistenciaController extends Controller
 
         $hoy = Carbon::today();
         $horaActual = Carbon::now();
+        $hora = $horaActual->format('H:i:s');
 
         // Buscar asistencia existente para hoy
         $asistenciaHoy = Asistencia::where('user_id', $user->id)
@@ -293,38 +294,134 @@ class AsistenciaController extends Controller
             ->first();
 
         $accion = '';
-        $hora = $horaActual->format('H:i:s');
-        // Para QR escaneado, siempre marcar como presente independientemente de la hora
-        $estado = 'presente';
+        $estado = 'presente'; // Valor por defecto
 
-        if (!$asistenciaHoy) {
-            // Primera vez del día - marcar entrada
-            Asistencia::create([
-                'user_id' => $user->id,
-                'fecha_hora' => $horaActual,
-                'hora_entrada' => $hora,
-                'estado' => $estado
-            ]);
-            $accion = 'ENTRADA REGISTRADA';
-        } elseif (!$asistenciaHoy->hora_entrada) {
-            // Actualizar entrada
-            $asistenciaHoy->update([
-                'hora_entrada' => $hora,
-                'estado' => $estado
-            ]);
-            $accion = 'ENTRADA REGISTRADA';
-        } elseif (!$asistenciaHoy->hora_salida) {
-            // Marcar salida
-            $asistenciaHoy->update([
-                'hora_salida' => $hora
-            ]);
-            $accion = 'SALIDA REGISTRADA';
+        // LÓGICA PRINCIPAL: Determinar acción según empresa y horarios
+        if (!$user->empresa_id) {
+            // CASO 1: Usuario SIN empresa - siempre marcar como presente
+            $estado = 'presente';
+            
+            if (!$asistenciaHoy) {
+                // Primera vez del día - crear nueva asistencia
+                Asistencia::create([
+                    'user_id' => $user->id,
+                    'fecha_hora' => $horaActual,
+                    'hora_entrada' => $hora,
+                    'estado' => $estado
+                ]);
+                $accion = 'ENTRADA REGISTRADA (SIN EMPRESA)';
+            } elseif (!$asistenciaHoy->hora_entrada) {
+                // Actualizar entrada
+                $asistenciaHoy->update([
+                    'hora_entrada' => $hora,
+                    'estado' => $estado
+                ]);
+                $accion = 'ENTRADA REGISTRADA (SIN EMPRESA)';
+            } elseif (!$asistenciaHoy->hora_salida) {
+                // Marcar salida
+                $asistenciaHoy->update([
+                    'hora_salida' => $hora
+                ]);
+                $accion = 'SALIDA REGISTRADA (SIN EMPRESA)';
+            } else {
+                // Ya tiene entrada y salida - crear nueva entrada para el día siguiente o rechazar
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ya has completado tu jornada de hoy (entrada y salida registradas).'
+                ]);
+            }
         } else {
-            // Ya tiene entrada y salida
-            return response()->json([
-                'success' => false,
-                'message' => 'Ya has marcado entrada y salida hoy.'
-            ]);
+            // CASO 2: Usuario CON empresa - consultar horario de la empresa
+            $horarioEmpresa = \App\Models\Horario::where('empresa_id', $user->empresa_id)->first();
+            
+            if (!$horarioEmpresa) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No hay horario configurado para su empresa. Contacte al administrador.'
+                ]);
+            }
+
+            // Convertir horarios a Carbon para comparación
+            $horaEntradaEmpresa = Carbon::createFromFormat('H:i:s', $horarioEmpresa->hora_entrada);
+            $horaActualCarbon = Carbon::createFromFormat('H:i:s', $hora);
+            
+            // Calcular diferencias en minutos
+            $diferenciaMinutos = $horaActualCarbon->diffInMinutes($horaEntradaEmpresa, false);
+            
+            // Determinar estado según la hora
+            if ($diferenciaMinutos <= -10) {
+                // Más de 10 minutos después de la hora de entrada = ATRASO
+                $estado = 'tardanza';
+            } elseif ($diferenciaMinutos >= -10) {
+                // 10 minutos antes o hasta 10 minutos después = PRESENTE
+                $estado = 'presente';
+            }
+
+            // Verificar si hay asistencia del día anterior sin salida registrada
+            $ayer = Carbon::yesterday();
+            $asistenciaAyer = Asistencia::where('user_id', $user->id)
+                ->whereDate('fecha_hora', $ayer)
+                ->whereNotNull('hora_entrada')
+                ->whereNull('hora_salida')
+                ->first();
+
+            if ($asistenciaAyer) {
+                // CASO ESPECIAL: Marcar salida del día anterior primero
+                $asistenciaAyer->update([
+                    'hora_salida' => $hora
+                ]);
+                
+                // Luego proceder con la entrada de hoy
+                if (!$asistenciaHoy) {
+                    Asistencia::create([
+                        'user_id' => $user->id,
+                        'fecha_hora' => $horaActual,
+                        'hora_entrada' => $hora,
+                        'estado' => $estado
+                    ]);
+                } else {
+                    $asistenciaHoy->update([
+                        'hora_entrada' => $hora,
+                        'estado' => $estado
+                    ]);
+                }
+                
+                $estadoTexto = $estado == 'tardanza' ? 'CON ATRASO' : 'A TIEMPO';
+                $accion = "SALIDA ANTERIOR REGISTRADA Y ENTRADA {$estadoTexto}";
+            } else {
+                // Lógica normal para empresa
+                if (!$asistenciaHoy) {
+                    // Primera vez del día - crear nueva asistencia
+                    Asistencia::create([
+                        'user_id' => $user->id,
+                        'fecha_hora' => $horaActual,
+                        'hora_entrada' => $hora,
+                        'estado' => $estado
+                    ]);
+                    $estadoTexto = $estado == 'tardanza' ? 'CON ATRASO' : 'A TIEMPO';
+                    $accion = "ENTRADA REGISTRADA {$estadoTexto}";
+                } elseif (!$asistenciaHoy->hora_entrada) {
+                    // Actualizar entrada
+                    $asistenciaHoy->update([
+                        'hora_entrada' => $hora,
+                        'estado' => $estado
+                    ]);
+                    $estadoTexto = $estado == 'tardanza' ? 'CON ATRASO' : 'A TIEMPO';
+                    $accion = "ENTRADA REGISTRADA {$estadoTexto}";
+                } elseif (!$asistenciaHoy->hora_salida) {
+                    // Marcar salida
+                    $asistenciaHoy->update([
+                        'hora_salida' => $hora
+                    ]);
+                    $accion = 'SALIDA REGISTRADA';
+                } else {
+                    // Ya tiene entrada y salida
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Ya has completado tu jornada de hoy (entrada y salida registradas).'
+                    ]);
+                }
+            }
         }
 
         // Obtener información de pedidos del usuario
@@ -346,14 +443,21 @@ class AsistenciaController extends Controller
             ->orderBy('fecha', 'desc')
             ->first();
 
+        // Información adicional sobre el procesamiento
+        $mensajeDetallado = $accion;
+        if ($user->empresa_id && isset($horarioEmpresa)) {
+            $mensajeDetallado .= " (Horario empresa: {$horarioEmpresa->hora_entrada} - {$horarioEmpresa->hora_salida})";
+        }
+
         return response()->json([
             'success' => true,
-            'message' => $accion . ' EXITOSAMENTE',
+            'message' => $mensajeDetallado,
             'action' => $accion,
             'hora' => $hora,
             'user_name' => strtoupper($user->name),
             'user_username' => strtoupper($user->user),
             'estado' => $estado,
+            'empresa' => $user->empresa ? strtoupper($user->empresa->nombre) : 'SIN EMPRESA',
             // Información de pedidos
             'pedidos_info' => [
                 'total_pedidos' => $totalPedidos,
