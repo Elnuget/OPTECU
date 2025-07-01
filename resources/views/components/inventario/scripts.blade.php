@@ -368,11 +368,17 @@
                         
                         // Si es una fila nueva, crear el artículo
                         if (row.hasClass('new-row')) {
-                            // Obtener la fecha actual
-                            const today = new Date();
-                            const fecha = today.getFullYear() + '-' + 
+                            // Obtener la fecha del filtro o usar la fecha actual como fallback
+                            let fecha;
+                            const fechaFiltro = $('input[name="fecha"]').val();
+                            if (fechaFiltro) {
+                                fecha = fechaFiltro + '-01';
+                            } else {
+                                const today = new Date();
+                                fecha = today.getFullYear() + '-' + 
                                         String(today.getMonth() + 1).padStart(2, '0') + '-' + 
                                         String(today.getDate()).padStart(2, '0');
+                            }
                             
                             // Recopilar datos para el nuevo artículo
                             const articleData = {
@@ -470,10 +476,17 @@
 
             // Función para crear automáticamente un artículo en SOPORTE
             function createSoporteArticle(row, codigo = '') {
-                const today = new Date();
-                const fecha = today.getFullYear() + '-' + 
+                // Obtener la fecha del filtro o usar la fecha actual como fallback
+                let fecha;
+                const fechaFiltro = $('input[name="fecha"]').val();
+                if (fechaFiltro) {
+                    fecha = fechaFiltro + '-01';
+                } else {
+                    const today = new Date();
+                    fecha = today.getFullYear() + '-' + 
                             String(today.getMonth() + 1).padStart(2, '0') + '-' + 
                             String(today.getDate()).padStart(2, '0');
+                }
                 
                 const articleData = {
                     fecha: fecha,
