@@ -71,12 +71,16 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
 
 // Keep these routes accessible to all authenticated users
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+    
+    // IMPORTANTE: Ruta directa para MI CÓDIGO QR - más simple y sin conflictos
+    Route::get('mi-qr', [AsistenciaController::class, 'miQr'])->name('mi-qr');
+    
+    // También mantener la ruta original por compatibilidad
+    Route::get('asistencias/mi-qr', [AsistenciaController::class, 'miQr'])->name('asistencias.mi-qr');
+    
     // Rutas para Sueldos (accesible para todos los usuarios autenticados)
     Route::resource('sueldos', SueldoController::class);
     Route::post('sueldos/guardar-valor', [SueldoController::class, 'guardarValor'])->name('sueldos.guardar-valor');
-
-    // Asistencias - Solo MI CÓDIGO QR para usuarios no administradores
-    Route::get('asistencias/mi-qr', [AsistenciaController::class, 'miQr'])->name('asistencias.mi-qr');
 
     // Medios de Pago
     Route::get('Configuración/MediosDePago', [mediosdepagoController::class, 'index'])->name('configuracion.mediosdepago.index');

@@ -316,7 +316,7 @@ return [
                 ],
                 [
                     'text' => 'MI CÓDIGO QR',
-                    'route' => 'asistencias.mi-qr',
+                    'route' => 'mi-qr',
                     'icon' => 'fas fa-qrcode'
                 ],
                 [
@@ -336,8 +336,8 @@ return [
         [
             'text' => 'MI CÓDIGO QR',
             'icon' => 'fas fa-qrcode',
-            'route' => 'asistencias.mi-qr',
-            'active' => ['asistencias/mi-qr'],
+            'route' => 'mi-qr',
+            'active' => ['mi-qr'],
             'cannot' => 'admin'
         ],
 
