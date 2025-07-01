@@ -101,6 +101,37 @@
                 </div>
             </div>
 
+            <!-- Tarjetas por empresa -->
+            <div class="row mb-4">
+                @foreach($totalesPorEmpresa as $item)
+                <div class="col-md-4 mb-3">
+                    <div class="info-box {{ $item['total'] >= 0 ? 'bg-info' : 'bg-warning' }}">
+                        <span class="info-box-icon">
+                            <i class="fas fa-building"></i>
+                        </span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">{{ strtoupper($item['empresa']->nombre) }}</span>
+                            <span class="info-box-number">${{ number_format($item['total'], 2, ',', '.') }}</span>
+                        </div>
+                    </div>
+                </div>
+                @endforeach
+                
+                @if($totalSinEmpresa != 0)
+                <div class="col-md-4 mb-3">
+                    <div class="info-box {{ $totalSinEmpresa >= 0 ? 'bg-secondary' : 'bg-danger' }}">
+                        <span class="info-box-icon">
+                            <i class="fas fa-question-circle"></i>
+                        </span>
+                        <div class="info-box-content">
+                            <span class="info-box-text">SIN EMPRESA ASIGNADA</span>
+                            <span class="info-box-number">${{ number_format($totalSinEmpresa, 2, ',', '.') }}</span>
+                        </div>
+                    </div>
+                </div>
+                @endif
+            </div>
+
             <!-- Formulario para nuevo movimiento -->
             <div class="mb-4">
                 <h4>RETIRO</h4>
@@ -205,11 +236,17 @@
                                 <td>${{ number_format($movimiento->valor, 2, ',', '.') }}</td>
                                 <td>
                                     @can('admin')
+                                    <button type="button" class="btn btn-xs btn-primary mr-1" 
+                                            onclick="editarMovimiento({{ $movimiento->id }})"
+                                            title="Editar">
+                                        <i class="fa fa-lg fa-fw fa-edit"></i>
+                                    </button>
                                     <form action="{{ route('caja.destroy', $movimiento->id) }}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-xs btn-danger" 
-                                                onclick="return confirm('¿ESTÁ SEGURO DE ELIMINAR ESTE MOVIMIENTO?')">
+                                                onclick="return confirm('¿ESTÁ SEGURO DE ELIMINAR ESTE MOVIMIENTO?')"
+                                                title="Eliminar">
                                             <i class="fa fa-lg fa-fw fa-trash"></i>
                                         </button>
                                     </form>
@@ -219,6 +256,52 @@
                         @endforeach
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar movimiento -->
+    <div class="modal fade" id="editarModal" tabindex="-1" role="dialog" aria-labelledby="editarModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editarModalLabel">EDITAR MOVIMIENTO</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form id="editarForm" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>VALOR</label>
+                            <input type="number" id="edit_valor" name="valor" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>MOTIVO</label>
+                            <input type="text" id="edit_motivo" name="motivo" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>EMPRESA</label>
+                            <select id="edit_empresa_id" name="empresa_id" class="form-control">
+                                <option value="">SELECCIONAR EMPRESA</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>USUARIO</label>
+                            <input type="text" id="edit_usuario" class="form-control" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>FECHA</label>
+                            <input type="text" id="edit_fecha" class="form-control" readonly>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">CANCELAR</button>
+                        <button type="submit" class="btn btn-primary">ACTUALIZAR</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -263,5 +346,38 @@
                 return true;
             });
         });
+
+        // Función para editar movimiento
+        function editarMovimiento(id) {
+            $.ajax({
+                url: '/caja/' + id + '/edit',
+                type: 'GET',
+                success: function(response) {
+                    // Llenar el formulario con los datos
+                    $('#edit_valor').val(response.caja.valor);
+                    $('#edit_motivo').val(response.caja.motivo);
+                    $('#edit_empresa_id').val(response.caja.empresa_id || '');
+                    $('#edit_usuario').val(response.caja.user ? response.caja.user.name : 'N/A');
+                    $('#edit_fecha').val(new Date(response.caja.created_at).toLocaleString());
+                    
+                    // Llenar el select de empresas
+                    $('#edit_empresa_id').empty();
+                    $('#edit_empresa_id').append('<option value="">SELECCIONAR EMPRESA</option>');
+                    response.empresas.forEach(function(empresa) {
+                        var selected = empresa.id == response.caja.empresa_id ? 'selected' : '';
+                        $('#edit_empresa_id').append('<option value="' + empresa.id + '" ' + selected + '>' + empresa.nombre.toUpperCase() + '</option>');
+                    });
+                    
+                    // Configurar la acción del formulario
+                    $('#editarForm').attr('action', '/caja/' + id);
+                    
+                    // Mostrar el modal
+                    $('#editarModal').modal('show');
+                },
+                error: function(xhr) {
+                    alert('ERROR AL CARGAR LOS DATOS DEL MOVIMIENTO');
+                }
+            });
+        }
     </script>
 @stop

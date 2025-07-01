@@ -15,7 +15,7 @@ class CajaController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('can:admin')->only(['destroy']);
+        $this->middleware('can:admin')->only(['destroy', 'edit', 'update']);
     }
 
     public function index(Request $request)
@@ -36,7 +36,20 @@ class CajaController extends Controller
         $totalCaja = Caja::sum('valor'); // Calculate total from all records
         $empresas = Empresa::all(); // Get all companies for the dropdown
         
-        return view('caja.index', compact('movimientos', 'fechaFiltro', 'totalCaja', 'empresas'));
+        // Calculate total per company
+        $totalesPorEmpresa = [];
+        foreach($empresas as $empresa) {
+            $totalEmpresa = Caja::where('empresa_id', $empresa->id)->sum('valor');
+            $totalesPorEmpresa[] = [
+                'empresa' => $empresa,
+                'total' => $totalEmpresa
+            ];
+        }
+        
+        // Calculate total for movements without company assigned
+        $totalSinEmpresa = Caja::whereNull('empresa_id')->sum('valor');
+        
+        return view('caja.index', compact('movimientos', 'fechaFiltro', 'totalCaja', 'empresas', 'totalesPorEmpresa', 'totalSinEmpresa'));
     }
 
     public function store(Request $request)
@@ -81,6 +94,33 @@ class CajaController extends Controller
         }
 
         return redirect()->back()->with('success', 'Movimiento registrado exitosamente');
+    }
+
+    public function edit(Caja $caja)
+    {
+        $empresas = Empresa::all();
+        return response()->json([
+            'caja' => $caja->load('user', 'empresa'),
+            'empresas' => $empresas
+        ]);
+    }
+
+    public function update(Request $request, Caja $caja)
+    {
+        $request->validate([
+            'valor' => 'required|numeric',
+            'motivo' => 'required|string',
+            'empresa_id' => 'nullable|exists:empresas,id'
+        ]);
+
+        // Update the caja entry
+        $caja->update([
+            'valor' => $request->valor,
+            'motivo' => $request->motivo,
+            'empresa_id' => $request->empresa_id
+        ]);
+
+        return redirect()->back()->with('success', 'Movimiento actualizado exitosamente');
     }
 
     public function destroy(Caja $caja)
