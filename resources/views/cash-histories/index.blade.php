@@ -81,16 +81,37 @@
             <div class="input-group mr-2">
                 <input type="date" name="fecha_filtro" class="form-control" value="{{ request('fecha_filtro', now()->format('Y-m-d')) }}">
             </div>
+            
             <div class="input-group mr-2">
-                <select name="empresa_id" class="form-control">
-                    <option value="">TODAS LAS EMPRESAS</option>
-                    @foreach($empresas as $empresa)
-                        <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
-                            {{ strtoupper($empresa->nombre) }}
-                        </option>
-                    @endforeach
-                </select>
+                @if($currentUser->is_admin)
+                    {{-- Si es admin, puede seleccionar cualquier empresa --}}
+                    <select name="empresa_id" class="form-control">
+                        <option value="">TODAS LAS EMPRESAS</option>
+                        @foreach($empresas as $empresa)
+                            <option value="{{ $empresa->id }}" {{ request('empresa_id', '') == $empresa->id ? 'selected' : '' }}>
+                                {{ strtoupper($empresa->nombre) }}
+                            </option>
+                        @endforeach
+                    </select>
+                @elseif($currentUser->empresa_id)
+                    {{-- Si no es admin y tiene empresa asignada, muestra solo su empresa --}}
+                    <select name="empresa_id" class="form-control" disabled>
+                        @foreach($empresas as $empresa)
+                            <option value="{{ $empresa->id }}" {{ $currentUser->empresa_id == $empresa->id ? 'selected' : '' }}>
+                                {{ strtoupper($empresa->nombre) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    {{-- Campo oculto para enviar el valor en el formulario --}}
+                    <input type="hidden" name="empresa_id" value="{{ $currentUser->empresa_id }}">
+                @else
+                    {{-- Si no tiene empresa asignada --}}
+                    <select name="empresa_id" class="form-control" disabled>
+                        <option value="">SIN EMPRESA ASIGNADA</option>
+                    </select>
+                @endif
             </div>
+            
             <div class="input-group">
                 <button type="submit" class="btn btn-primary">FILTRAR</button>
                 <a href="{{ route('cash-histories.index') }}" class="btn btn-secondary">LIMPIAR</a>
@@ -124,17 +145,21 @@
                     <td>${{ number_format($history->monto, 2) }}</td>
                     <td>{{ strtoupper($history->estado) }}</td>
                     <td>
-                        <a href="{{ route('cash-histories.edit', $history) }}" class="btn btn-warning btn-sm">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <form action="{{ route('cash-histories.destroy', $history) }}" method="POST" class="d-inline">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm" 
-                                    onclick="return confirm('¿ESTÁ SEGURO DE ELIMINAR ESTE REGISTRO?')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
+                        @if($currentUser->is_admin)
+                            <a href="{{ route('cash-histories.edit', $history) }}" class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form action="{{ route('cash-histories.destroy', $history) }}" method="POST" class="d-inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger btn-sm" 
+                                        onclick="return confirm('¿ESTÁ SEGURO DE ELIMINAR ESTE REGISTRO?')">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        @else
+                            <span class="text-muted">SIN PERMISOS</span>
+                        @endif
                     </td>
                 </tr>
             @endforeach

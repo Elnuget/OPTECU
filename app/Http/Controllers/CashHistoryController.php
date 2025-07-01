@@ -12,23 +12,35 @@ class CashHistoryController extends Controller
 {
     public function index(Request $request)
     {
+        $currentUser = Auth::user();
         $query = CashHistory::with(['user', 'empresa']);
+        
+        // Si el usuario no es administrador, solo muestra registros de su empresa
+        if ($currentUser && !$currentUser->is_admin && $currentUser->empresa_id) {
+            $query->where('empresa_id', $currentUser->empresa_id);
+        }
         
         // Filtrar por fecha si se proporciona
         if ($request->has('fecha_filtro') && $request->fecha_filtro) {
             $query->whereDate('created_at', $request->fecha_filtro);
         }
         
-        // Filtrar por empresa si se proporciona
-        if ($request->has('empresa_id') && $request->empresa_id) {
+        // Filtrar por empresa si se proporciona y el usuario es administrador
+        if ($currentUser && $currentUser->is_admin && $request->has('empresa_id') && $request->empresa_id) {
             $query->where('empresa_id', $request->empresa_id);
         }
         
         $cashHistories = $query->latest()->get();
         $sumCaja = Caja::sum('valor');
-        $empresas = \App\Models\Empresa::orderBy('nombre')->get();
         
-        return view('cash-histories.index', compact('cashHistories', 'sumCaja', 'empresas'));
+        // Si el usuario no es administrador, solo muestra su empresa asignada
+        if ($currentUser && !$currentUser->is_admin && $currentUser->empresa_id) {
+            $empresas = \App\Models\Empresa::where('id', $currentUser->empresa_id)->get();
+        } else {
+            $empresas = \App\Models\Empresa::orderBy('nombre')->get();
+        }
+        
+        return view('cash-histories.index', compact('cashHistories', 'sumCaja', 'empresas', 'currentUser'));
     }
 
     public function store(Request $request)
@@ -95,6 +107,12 @@ class CashHistoryController extends Controller
 
     public function update(Request $request, CashHistory $cashHistory)
     {
+        // Verificar si el usuario es administrador
+        if (!Auth::user()->is_admin) {
+            return redirect()->route('cash-histories.index')
+                ->with('error', 'No tienes permisos para actualizar registros de caja');
+        }
+        
         $request->validate([
             'monto' => 'required|numeric',
             'estado' => 'required|string',
@@ -112,6 +130,12 @@ class CashHistoryController extends Controller
 
     public function destroy(CashHistory $cashHistory)
     {
+        // Verificar si el usuario es administrador
+        if (!Auth::user()->is_admin) {
+            return redirect()->route('cash-histories.index')
+                ->with('error', 'No tienes permisos para eliminar registros de caja');
+        }
+        
         $cashHistory->delete();
 
         return redirect()->back()->with([
@@ -135,6 +159,12 @@ class CashHistoryController extends Controller
 
     public function edit(CashHistory $cashHistory)
     {
+        // Verificar si el usuario es administrador
+        if (!Auth::user()->is_admin) {
+            return redirect()->route('cash-histories.index')
+                ->with('error', 'No tienes permisos para editar registros de caja');
+        }
+        
         $empresas = \App\Models\Empresa::orderBy('nombre')->get();
         return view('cash-histories.edit', compact('cashHistory', 'empresas'));
     }
