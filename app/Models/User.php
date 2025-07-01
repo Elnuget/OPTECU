@@ -25,6 +25,7 @@ class User extends Authenticatable
         'password',
         'active',
         'is_admin',
+        'empresa_id',
     ];
 
     /**
@@ -73,5 +74,13 @@ class User extends Authenticatable
     public function asistencias()
     {
         return $this->hasMany(Asistencia::class);
+    }
+
+    /**
+     * Obtener la empresa del usuario
+     */
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
     }
 }

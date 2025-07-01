@@ -33,6 +33,7 @@
                     <td>Nombre</td>
                     <td>Usuario</td>
                     <td>Mail</td>
+                    <td>Empresa</td>
                     <td>Activo</td>
                     <td>Administrador</td>
                     <td>Acciones</td>
@@ -45,6 +46,13 @@
                         <td>{{$u->name}}</td>
                         <td>{{$u->user}}</td>
                         <td>{{$u->email}}</td>
+                        <td>
+                        @if ($u->empresa)
+                           {{$u->empresa->nombre}}
+                        @else
+                           <span class="text-muted">Sin empresa</span>
+                        @endif       
+                        </td>
                         <td>
                         @if ($u->active === 1)
                            Activo

@@ -25,4 +25,12 @@ class Empresa extends Model
         }
         return 'todas';
     }
+
+    /**
+     * Obtener los usuarios de la empresa
+     */
+    public function usuarios()
+    {
+        return $this->hasMany(User::class);
+    }
 }

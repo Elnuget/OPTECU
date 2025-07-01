@@ -10,13 +10,13 @@ class UsuariosController extends Controller
 {
     public function index()
     {
-        $usuarios = User::all();
+        $usuarios = User::with('empresa')->get();
         return view('administracion.usuarios.index', compact('usuarios'));
     }
     public function create()
     {
-
-        return view('administracion.usuarios.crear');
+        $empresas = \App\Models\Empresa::all();
+        return view('administracion.usuarios.crear', compact('empresas'));
     }
     public function store(Request $request)
     {
@@ -27,6 +27,7 @@ class UsuariosController extends Controller
         $usuario->email = $request->email;
         $usuario->active = $request->activo;
         $usuario->is_admin = $request->is_admin;
+        $usuario->empresa_id = $request->empresa_id;
         $usuario->password = Hash::make($request->password);
         try {
             $usuario->save();
@@ -45,8 +46,9 @@ class UsuariosController extends Controller
     }
     public function show($id)
     {
-        $usuario = User::find($id);
-        return view('administracion.usuarios.editar', compact('usuario'));
+        $usuario = User::with('empresa')->find($id);
+        $empresas = \App\Models\Empresa::all();
+        return view('administracion.usuarios.editar', compact('usuario', 'empresas'));
     }
 
     public function update(Request $request, User $usuario)
@@ -56,6 +58,7 @@ class UsuariosController extends Controller
         $usuario->email = $request->email;
         $usuario->active = $request->activo;
         $usuario->is_admin = $request->is_admin;
+        $usuario->empresa_id = $request->empresa_id;
         
         // Actualizar la contraseña solo si se proporciona una nueva
         if ($request->filled('password')) {

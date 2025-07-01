@@ -41,6 +41,15 @@
                                 <input name="email" required type="mail" class="form-control" >
                         </div>
                         <div class ="form-group">
+                                <label>EMPRESA</label>
+                                <select id="empresa_id" name="empresa_id" class="form-control">
+                                <option value="">Sin empresa</option>
+                                @foreach($empresas as $empresa)
+                                    <option value="{{$empresa->id}}">{{$empresa->nombre}}</option>
+                                @endforeach
+                                </select>
+                        </div>
+                        <div class ="form-group">
                                 <label>ACTIVO</label>
                                 <select id="activo" name="activo" class="form-control">
                                 <option value="1">ACTIVO</option>

@@ -42,6 +42,18 @@
                                 <small class="text-muted">Ingrese una nueva contraseña solo si desea cambiarla</small>
                         </div>
                         <div class ="form-group">
+                                <label>EMPRESA</label>
+                                <select id="empresa_id" name="empresa_id" class="form-control">
+                                <option value="">Sin empresa</option>
+                                @foreach($empresas as $empresa)
+                                    <option value="{{$empresa->id}}" 
+                                        @if($usuario->empresa_id == $empresa->id) selected @endif>
+                                        {{$empresa->nombre}}
+                                    </option>
+                                @endforeach
+                                </select>
+                        </div>
+                        <div class ="form-group">
                                 <label>ACTIVO</label>
                                 <select id="activo" name="activo" class="form-control">
                                 @if ($usuario->active === 1)
