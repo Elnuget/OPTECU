@@ -3,10 +3,15 @@
     $lastCashHistory = null;
     $previousCashHistory = null;
     $isClosed = true;
+    $userEmpresa = null;
+    $sumCaja = 0;
     
     if ($currentUser) {
-        // Obtener el último registro de caja para la empresa del usuario
+        // Obtener la empresa del usuario
         if ($currentUser->empresa_id) {
+            $userEmpresa = \App\Models\Empresa::find($currentUser->empresa_id);
+            
+            // Obtener el último registro de caja para la empresa del usuario
             $lastCashHistory = \App\Models\CashHistory::where('empresa_id', $currentUser->empresa_id)
                                                      ->latest()
                                                      ->first();
@@ -18,13 +23,13 @@
             
             // Verificar si la caja está cerrada para esta empresa
             $isClosed = !$lastCashHistory || $lastCashHistory->estado !== 'Apertura';
+            
+            // Obtener la suma de caja específica para esta empresa
+            $sumCaja = \App\Models\Caja::where('empresa_id', $currentUser->empresa_id)->sum('valor');
         }
     }
     
     $showClosingCard = session('showClosingCard', false);
-    
-    // Updated: Get sum from Caja model
-    $sumCaja = \App\Models\Caja::sum('valor');
 @endphp
 
 {{-- Tarjeta de Apertura de Caja (solo para usuarios no administradores) --}}
@@ -35,6 +40,9 @@
         <div class="text-center mb-4">
             <h1><i class="fas fa-cash-register fa-3x mb-3"></i></h1>
             <h2>Apertura de Caja</h2>
+            @if($userEmpresa)
+                <h3 class="text-warning">{{ strtoupper($userEmpresa->nombre) }}</h3>
+            @endif
             
             @if($previousCashHistory)
                 <div class="alert alert-info">
@@ -51,7 +59,7 @@
                 <form action="{{ route('cash-histories.store') }}" method="POST">
                     @csrf
                     <div class="form-group">
-                        <label for="monto">Monto Inicial</label>
+                        <label for="monto">Monto Inicial ({{ $userEmpresa ? $userEmpresa->nombre : 'Sucursal' }})</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <span class="input-group-text">$</span>
@@ -90,6 +98,9 @@
         <div class="text-center mb-4">
             <h1><i class="fas fa-cash-register fa-3x mb-3 text-danger"></i></h1>
             <h2>Cierre de Caja</h2>
+            @if($userEmpresa)
+                <h3 class="text-warning">{{ strtoupper($userEmpresa->nombre) }}</h3>
+            @endif
             <p>Usuario actual: {{ auth()->user()->name }}</p>
         </div>
 
@@ -98,7 +109,7 @@
                 <form id="closeCashForm" action="{{ route('cash-histories.store') }}" method="POST">
                     @csrf
                     <div class="form-group">
-                        <label for="monto_cierre">Monto Final</label>
+                        <label for="monto_cierre">Monto Final ({{ $userEmpresa ? $userEmpresa->nombre : 'Sucursal' }})</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <span class="input-group-text">$</span>
@@ -188,7 +199,8 @@
 
 {{-- Content Wrapper --}}
 <div class="content-wrapper {{ config('adminlte.classes_content_wrapper', '') }}" 
-     @if(($currentUser && !$currentUser->is_admin && $isClosed && $currentUser->empresa_id) || $showClosingCard) style="filter: blur(5px);" @endif>
+     @if(($currentUser && !$currentUser->is_admin && $isClosed && $currentUser->empresa_id) || 
+         ($showClosingCard && $currentUser && !$currentUser->is_admin)) style="filter: blur(5px);" @endif>
     {{-- Content Header --}}
     @hasSection('content_header')
         <div class="content-header">

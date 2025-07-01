@@ -129,33 +129,76 @@
             </li>
         @endif
 
-        {{-- Botón de cierre de caja (solo si está abierta) --}}
-        @php
-            $lastCashHistory = \App\Models\CashHistory::latest()->first();
-        @endphp
-        
-        @if($lastCashHistory && $lastCashHistory->estado === 'Apertura')
-            <li class="nav-item">
-                @auth
-                    <form action="{{ route('show-closing-card') }}" method="POST" style="display: inline;">
-                        @csrf
-                        <button type="submit" class="btn btn-outline-danger nav-link d-flex align-items-center" 
-                                style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
-                            <i class="fas fa-cash-register mr-2" style="font-size: 1.1em;"></i>
-                            <span class="d-none d-sm-inline" style="font-weight: 500;">CERRAR CAJA ({{ Auth::user()->name }})</span>
-                            <span class="d-inline d-sm-none" style="font-weight: 500;">CERRAR</span>
-                        </button>
-                    </form>
-                @else
-                    <a href="{{ route('login') }}" class="btn btn-outline-danger nav-link d-flex align-items-center" 
+        {{-- Botón de cierre de caja (solo para no administradores) o cierre de sesión (para administradores) --}}
+        @auth
+            @if(Auth::user()->is_admin)
+                {{-- Botón de cierre de sesión para administradores --}}
+                <li class="nav-item">
+                    <a href="{{ route('logout') }}" 
+                       onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                       class="btn btn-outline-danger nav-link d-flex align-items-center" 
                        style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
-                        <i class="fas fa-sign-in-alt mr-2" style="font-size: 1.1em;"></i>
-                        <span class="d-none d-sm-inline" style="font-weight: 500;">INICIAR SESIÓN</span>
-                        <span class="d-inline d-sm-none" style="font-weight: 500;">LOGIN</span>
+                        <i class="fas fa-sign-out-alt mr-2" style="font-size: 1.1em;"></i>
+                        <span class="d-none d-sm-inline" style="font-weight: 500;">CERRAR SESIÓN</span>
+                        <span class="d-inline d-sm-none" style="font-weight: 500;">SALIR</span>
                     </a>
-                @endauth
+                    <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                        @csrf
+                    </form>
+                </li>
+            @else
+                {{-- Verificar si hay caja abierta para la empresa del usuario --}}
+                @php
+                    $cajaAbierta = null;
+                    if(Auth::user()->empresa_id) {
+                        $cajaAbierta = \App\Models\CashHistory::where('empresa_id', Auth::user()->empresa_id)
+                                                            ->where('estado', 'Apertura')
+                                                            ->latest()
+                                                            ->first();
+                    }
+                @endphp
+
+                @if($cajaAbierta)
+                    {{-- Botón de cierre de caja para usuarios no administradores --}}
+                    <li class="nav-item">
+                        <form action="{{ route('show-closing-card') }}" method="POST" style="display: inline;">
+                            @csrf
+                            <button type="submit" class="btn btn-outline-danger nav-link d-flex align-items-center" 
+                                    style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
+                                <i class="fas fa-cash-register mr-2" style="font-size: 1.1em;"></i>
+                                <span class="d-none d-sm-inline" style="font-weight: 500;">CERRAR CAJA</span>
+                                <span class="d-inline d-sm-none" style="font-weight: 500;">CERRAR</span>
+                            </button>
+                        </form>
+                    </li>
+                @else
+                    {{-- Botón de cierre de sesión cuando no hay caja abierta --}}
+                    <li class="nav-item">
+                        <a href="{{ route('logout') }}" 
+                           onclick="event.preventDefault(); document.getElementById('logout-form-alt').submit();"
+                           class="btn btn-outline-danger nav-link d-flex align-items-center" 
+                           style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
+                            <i class="fas fa-sign-out-alt mr-2" style="font-size: 1.1em;"></i>
+                            <span class="d-none d-sm-inline" style="font-weight: 500;">CERRAR SESIÓN</span>
+                            <span class="d-inline d-sm-none" style="font-weight: 500;">SALIR</span>
+                        </a>
+                        <form id="logout-form-alt" action="{{ route('logout') }}" method="POST" style="display: none;">
+                            @csrf
+                        </form>
+                    </li>
+                @endif
+            @endif
+        @else
+            {{-- Botón para usuarios no autenticados --}}
+            <li class="nav-item">
+                <a href="{{ route('login') }}" class="btn btn-outline-danger nav-link d-flex align-items-center" 
+                   style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
+                    <i class="fas fa-sign-in-alt mr-2" style="font-size: 1.1em;"></i>
+                    <span class="d-none d-sm-inline" style="font-weight: 500;">INICIAR SESIÓN</span>
+                    <span class="d-inline d-sm-none" style="font-weight: 500;">LOGIN</span>
+                </a>
             </li>
-        @endif
+        @endauth
 
         {{-- Custom right links --}}
         @yield('content_top_nav_right')
