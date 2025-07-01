@@ -123,4 +123,52 @@ class Asistencia extends Model
 
         return $entrada->diff($salida)->format('%H:%I');
     }
+
+    /**
+     * Calcular minutos de retraso basado en el horario de la empresa
+     */
+    public function getMinutosRetrasoAttribute()
+    {
+        if (!$this->hora_entrada || !$this->user || !$this->user->empresa_id) {
+            return 0;
+        }
+
+        $horario = \App\Models\Horario::where('empresa_id', $this->user->empresa_id)->first();
+        if (!$horario) {
+            return 0;
+        }
+
+        $horaEntradaEsperada = \Carbon\Carbon::parse($horario->hora_entrada);
+        $horaEntradaReal = \Carbon\Carbon::parse($this->hora_entrada);
+
+        if ($horaEntradaReal->gt($horaEntradaEsperada)) {
+            return $horaEntradaEsperada->diffInMinutes($horaEntradaReal);
+        }
+
+        return 0;
+    }
+
+    /**
+     * Calcular horas extra basado en el horario de la empresa
+     */
+    public function getHorasExtraAttribute()
+    {
+        if (!$this->hora_entrada || !$this->hora_salida || !$this->user || !$this->user->empresa_id) {
+            return 0;
+        }
+
+        $horario = \App\Models\Horario::where('empresa_id', $this->user->empresa_id)->first();
+        if (!$horario) {
+            return 0;
+        }
+
+        $horaSalidaEsperada = \Carbon\Carbon::parse($horario->hora_salida);
+        $horaSalidaReal = \Carbon\Carbon::parse($this->hora_salida);
+
+        if ($horaSalidaReal->gt($horaSalidaEsperada)) {
+            return round($horaSalidaEsperada->diffInHours($horaSalidaReal, true), 2);
+        }
+
+        return 0;
+    }
 }

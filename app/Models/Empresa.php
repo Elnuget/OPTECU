@@ -33,4 +33,20 @@ class Empresa extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    /**
+     * Obtener los horarios de la empresa
+     */
+    public function horarios()
+    {
+        return $this->hasMany(Horario::class);
+    }
+
+    /**
+     * Obtener el horario principal de la empresa
+     */
+    public function horario()
+    {
+        return $this->hasOne(Horario::class);
+    }
 }

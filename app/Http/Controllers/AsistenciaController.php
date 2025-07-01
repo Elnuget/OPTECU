@@ -233,20 +233,152 @@ class AsistenciaController extends Controller
     {
         $fechaInicio = $request->input('fecha_inicio', Carbon::now()->startOfMonth()->toDateString());
         $fechaFin = $request->input('fecha_fin', Carbon::now()->endOfMonth()->toDateString());
+        $empresaId = $request->input('empresa_id');
 
-        $asistencias = Asistencia::with('user')
-            ->whereBetween('fecha_hora', [$fechaInicio, $fechaFin])
-            ->orderBy('fecha_hora', 'desc')
-            ->get();
+        // Obtener todas las empresas para el filtro
+        $empresas = \App\Models\Empresa::all();
+
+        // Query base
+        $query = Asistencia::with(['user.empresa'])
+            ->whereBetween('fecha_hora', [$fechaInicio, $fechaFin]);
+
+        // Filtrar por empresa si se especifica
+        if ($empresaId) {
+            $query->whereHas('user', function($q) use ($empresaId) {
+                $q->where('empresa_id', $empresaId);
+            });
+        }
+
+        $asistencias = $query->orderBy('fecha_hora', 'desc')->get();
+
+        // Calcular estadísticas mejoradas
+        $totalHorasTrabajadas = 0;
+        $totalMinutosRetraso = 0;
+        $totalHorasExtra = 0;
+        $resumenPorUsuario = [];
+
+        foreach ($asistencias as $asistencia) {
+            $user = $asistencia->user;
+            $userId = $user->id;
+            
+            // Inicializar resumen del usuario si no existe
+            if (!isset($resumenPorUsuario[$userId])) {
+                $resumenPorUsuario[$userId] = [
+                    'nombre' => $user->name,
+                    'empresa' => $user->empresa ? $user->empresa->nombre : 'Sin empresa',
+                    'total_horas' => 0,
+                    'total_retraso' => 0,
+                    'total_horas_extra' => 0,
+                    'dias_trabajados' => 0
+                ];
+            }
+
+            // Calcular minutos de retraso y horas extra
+            $minutosRetraso = $this->calcularMinutosRetraso($asistencia);
+            $horasExtra = $this->calcularHorasExtra($asistencia);
+            $horasTrabajadas = $this->calcularHorasTrabajadas($asistencia);
+
+            // Agregar datos calculados a la asistencia
+            $asistencia->minutos_retraso = $minutosRetraso;
+            $asistencia->horas_extra = $horasExtra;
+            $asistencia->horas_trabajadas_decimal = $horasTrabajadas;
+
+            // Acumular totales
+            $totalMinutosRetraso += $minutosRetraso;
+            $totalHorasExtra += $horasExtra;
+            $totalHorasTrabajadas += $horasTrabajadas;
+
+            // Acumular por usuario
+            $resumenPorUsuario[$userId]['total_horas'] += $horasTrabajadas;
+            $resumenPorUsuario[$userId]['total_retraso'] += $minutosRetraso;
+            $resumenPorUsuario[$userId]['total_horas_extra'] += $horasExtra;
+            if ($asistencia->hora_entrada && $asistencia->hora_salida) {
+                $resumenPorUsuario[$userId]['dias_trabajados']++;
+            }
+        }
 
         $estadisticas = [
             'total' => $asistencias->count(),
             'presentes' => $asistencias->where('estado', 'presente')->count(),
             'ausentes' => $asistencias->where('estado', 'ausente')->count(),
             'tardanzas' => $asistencias->where('estado', 'tardanza')->count(),
+            'total_horas_trabajadas' => round($totalHorasTrabajadas, 2),
+            'total_minutos_retraso' => $totalMinutosRetraso,
+            'total_horas_extra' => round($totalHorasExtra, 2),
         ];
 
-        return view('asistencias.reporte', compact('asistencias', 'estadisticas', 'fechaInicio', 'fechaFin'));
+        return view('asistencias.reporte', compact(
+            'asistencias', 
+            'estadisticas', 
+            'fechaInicio', 
+            'fechaFin', 
+            'empresas', 
+            'empresaId',
+            'resumenPorUsuario'
+        ));
+    }
+
+    /**
+     * Calcular minutos de retraso basado en el horario de la empresa
+     */
+    private function calcularMinutosRetraso($asistencia)
+    {
+        if (!$asistencia->hora_entrada || !$asistencia->user->empresa_id) {
+            return 0;
+        }
+
+        $horario = \App\Models\Horario::where('empresa_id', $asistencia->user->empresa_id)->first();
+        if (!$horario) {
+            return 0;
+        }
+
+        $horaEntradaEsperada = Carbon::parse($horario->hora_entrada);
+        $horaEntradaReal = Carbon::parse($asistencia->hora_entrada);
+
+        if ($horaEntradaReal->gt($horaEntradaEsperada)) {
+            return $horaEntradaEsperada->diffInMinutes($horaEntradaReal);
+        }
+
+        return 0;
+    }
+
+    /**
+     * Calcular horas extra basado en el horario de la empresa
+     */
+    private function calcularHorasExtra($asistencia)
+    {
+        if (!$asistencia->hora_entrada || !$asistencia->hora_salida || !$asistencia->user->empresa_id) {
+            return 0;
+        }
+
+        $horario = \App\Models\Horario::where('empresa_id', $asistencia->user->empresa_id)->first();
+        if (!$horario) {
+            return 0;
+        }
+
+        $horaSalidaEsperada = Carbon::parse($horario->hora_salida);
+        $horaSalidaReal = Carbon::parse($asistencia->hora_salida);
+
+        if ($horaSalidaReal->gt($horaSalidaEsperada)) {
+            return round($horaSalidaEsperada->diffInHours($horaSalidaReal, true), 2);
+        }
+
+        return 0;
+    }
+
+    /**
+     * Calcular horas trabajadas en formato decimal
+     */
+    private function calcularHorasTrabajadas($asistencia)
+    {
+        if (!$asistencia->hora_entrada || !$asistencia->hora_salida) {
+            return 0;
+        }
+
+        $entrada = Carbon::parse($asistencia->hora_entrada);
+        $salida = Carbon::parse($asistencia->hora_salida);
+
+        return round($entrada->diffInHours($salida, true), 2);
     }
 
     /**
