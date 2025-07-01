@@ -16,6 +16,7 @@ use App\Http\Controllers\PrestamoController;
 use App\Http\Controllers\SueldoController;
 use App\Http\Controllers\DetalleSueldoController;
 use App\Http\Controllers\AsistenciaController;
+use App\Http\Controllers\HorarioController;
 
 /*
 |--------------------------------------------------------------------------
@@ -68,6 +69,11 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
     Route::get('/egresos/ultimo-sueldo-usuario', [EgresoController::class, 'getUltimoSueldoUsuario'])
         ->name('egresos.ultimo-sueldo-usuario');
     Route::resource('egresos', EgresoController::class);
+
+    // Horarios - Solo para administradores
+    Route::get('horarios/activos', [HorarioController::class, 'activos'])->name('horarios.activos');
+    Route::get('horarios/empresa/{empresaId}', [HorarioController::class, 'getByEmpresa'])->name('horarios.por-empresa');
+    Route::resource('horarios', HorarioController::class);
 });
 
 // Keep these routes accessible to all authenticated users

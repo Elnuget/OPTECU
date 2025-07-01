@@ -327,6 +327,25 @@ return [
             ],
         ],
 
+        [
+            'text' => 'HORARIOS',
+            'icon' => 'fas fa-clock',
+            'active' => ['horarios', 'horarios/*'],
+            'can' => 'admin',
+            'submenu' => [
+                [
+                    'text' => 'VER HORARIOS',
+                    'route' => 'horarios.index',
+                    'icon' => 'fas fa-list'
+                ],
+                [
+                    'text' => 'CREAR HORARIO',
+                    'route' => 'horarios.create',
+                    'icon' => 'fas fa-plus'
+                ],
+            ],
+        ],
+
         // Menú específico para usuarios no administradores
         [
             'text' => 'MI CÓDIGO QR',
