@@ -315,11 +315,6 @@ return [
                     'icon' => 'fas fa-list'
                 ],
                 [
-                    'text' => 'MI CÓDIGO QR',
-                    'route' => 'mi-qr',
-                    'icon' => 'fas fa-qrcode'
-                ],
-                [
                     'text' => 'ESCANEAR QR',
                     'route' => 'asistencias.scan',
                     'icon' => 'fas fa-camera'
