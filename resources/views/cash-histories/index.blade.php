@@ -89,55 +89,7 @@
     </div>
 </div>
 
-<div class="accordion" id="cashHistoryAccordion">
-    <!-- Apertura de Caja Card -->
-    <div class="card bg-light">
-        <div class="card-header" id="openingHeader">
-            <h2 class="mb-0">
-                <button class="btn btn-link text-success" type="button" data-toggle="collapse" data-target="#openingCollapse">
-                    APERTURA DE CAJA
-                </button>
-            </h2>
-        </div>
-        <div id="openingCollapse" class="collapse" data-parent="#cashHistoryAccordion">
-            <div class="card-body">
-                <form action="{{ route('cash-histories.store') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="estado" value="Apertura">
-                    <div class="form-group">
-                        <label>MONTO</label>
-                        <input type="number" name="monto" class="form-control" step="0.01" required>
-                    </div>
-                    <button type="submit" class="btn btn-success">REGISTRAR APERTURA</button>
-                </form>
-            </div>
-        </div>
-    </div>
 
-    <!-- Cierre de Caja Card -->
-    <div class="card bg-light">
-        <div class="card-header" id="closingHeader">
-            <h2 class="mb-0">
-                <button class="btn btn-link text-danger" type="button" data-toggle="collapse" data-target="#closingCollapse">
-                    CIERRE DE CAJA
-                </button>
-            </h2>
-        </div>
-        <div id="closingCollapse" class="collapse" data-parent="#cashHistoryAccordion">
-            <div class="card-body">
-                <form action="{{ route('cash-histories.store') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="estado" value="Cierre">
-                    <div class="form-group">
-                        <label>MONTO</label>
-                        <input type="number" name="monto" class="form-control" step="0.01" required>
-                    </div>
-                    <button type="submit" class="btn btn-danger">REGISTRAR CIERRE</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
 
 <div class="table-responsive mt-4">
     <table id="cashHistoryTable" class="table table-striped table-bordered">
@@ -160,6 +112,9 @@
                     <td>${{ number_format($history->monto, 2) }}</td>
                     <td>{{ strtoupper($history->estado) }}</td>
                     <td>
+                        <a href="{{ route('cash-histories.edit', $history) }}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit"></i>
+                        </a>
                         <form action="{{ route('cash-histories.destroy', $history) }}" method="POST" class="d-inline">
                             @csrf
                             @method('DELETE')

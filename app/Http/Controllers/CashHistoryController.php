@@ -10,10 +10,18 @@ use Illuminate\Support\Facades\Auth;
 
 class CashHistoryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $cashHistories = CashHistory::with('user')->latest()->get();
+        $query = CashHistory::with('user');
+        
+        // Filtrar por fecha si se proporciona
+        if ($request->has('fecha_filtro') && $request->fecha_filtro) {
+            $query->whereDate('created_at', $request->fecha_filtro);
+        }
+        
+        $cashHistories = $query->latest()->get();
         $sumCaja = Caja::sum('valor');
+        
         return view('cash-histories.index', compact('cashHistories', 'sumCaja'));
     }
 
@@ -108,5 +116,10 @@ class CashHistoryController extends Controller
     {
         session()->forget('showClosingCard');
         return redirect()->route('dashboard');
+    }
+
+    public function edit(CashHistory $cashHistory)
+    {
+        return view('cash-histories.edit', compact('cashHistory'));
     }
 }
