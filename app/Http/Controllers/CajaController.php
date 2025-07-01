@@ -20,16 +20,23 @@ class CajaController extends Controller
 
     public function index(Request $request)
     {
-        $query = Caja::with('user');
+        $query = Caja::with(['user', 'empresa']);
         
         // Use current date as default if no date filter is provided
         $fechaFiltro = $request->fecha_filtro ?? now()->format('Y-m-d');
-        $query->whereDate('created_at', $fechaFiltro);
+        
+        // If no date filter is provided or "todos" is selected, don't apply date filter
+        if ($request->has('mostrar_todos') || $request->fecha_filtro === 'todos') {
+            // Don't apply date filter
+        } else {
+            $query->whereDate('created_at', $fechaFiltro);
+        }
         
         $movimientos = $query->latest()->get();
         $totalCaja = Caja::sum('valor'); // Calculate total from all records
+        $empresas = Empresa::all(); // Get all companies for the dropdown
         
-        return view('caja.index', compact('movimientos', 'fechaFiltro', 'totalCaja'));
+        return view('caja.index', compact('movimientos', 'fechaFiltro', 'totalCaja', 'empresas'));
     }
 
     public function store(Request $request)
@@ -37,7 +44,8 @@ class CajaController extends Controller
         $request->validate([
             'valor' => 'required|numeric',
             'motivo' => 'required|string',
-            'user_email' => 'required|email'
+            'user_email' => 'required|email',
+            'empresa_id' => 'nullable|exists:empresas,id'
         ]);
 
         // Verificar si es un cuadre de caja (positivo) o un retiro (negativo)
@@ -53,7 +61,8 @@ class CajaController extends Controller
         $caja = Caja::create([
             'valor' => $valor,
             'motivo' => $request->motivo,
-            'user_id' => Auth::id()
+            'user_id' => Auth::id(),
+            'empresa_id' => $request->empresa_id
         ]);
 
         // Send email notification

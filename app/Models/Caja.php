@@ -15,7 +15,8 @@ class Caja extends Model
     protected $fillable = [
         'valor',
         'motivo',
-        'user_id'
+        'user_id',
+        'empresa_id'
     ];
 
     protected $dates = ['deleted_at'];
@@ -23,5 +24,10 @@ class Caja extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
     }
 }

@@ -71,17 +71,22 @@
         <div class="card-body">
             <!-- Add date filter form -->
             <div class="row mb-3">
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <form action="{{ route('caja.index') }}" method="GET" class="form-inline">
                         <div class="input-group">
                             <input type="date" name="fecha_filtro" class="form-control" 
-                                   value="{{ $fechaFiltro }}">
+                                   value="{{ $fechaFiltro != 'todos' ? $fechaFiltro : '' }}">
                             <div class="input-group-append">
                                 <button type="submit" class="btn btn-primary">FILTRAR</button>
                                 <a href="{{ route('caja.index') }}" class="btn btn-secondary">LIMPIAR</a>
                             </div>
                         </div>
                     </form>
+                </div>
+                <div class="col-md-6">
+                    <a href="{{ route('caja.index', ['mostrar_todos' => 1]) }}" class="btn btn-info">
+                        <i class="fas fa-list"></i> MOSTRAR TODOS LOS MOVIMIENTOS
+                    </a>
                 </div>
             </div>
 
@@ -101,16 +106,27 @@
                 <h4>RETIRO</h4>
                 <form action="{{ route('caja.store') }}" method="POST" class="row">
                     @csrf
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="form-group">
                             <label>VALOR</label>
                             <input type="number" name="valor" class="form-control" step="0.01" required>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label>MOTIVO</label>
                             <input type="text" name="motivo" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>EMPRESA</label>
+                            <select name="empresa_id" class="form-control">
+                                <option value="">SELECCIONAR EMPRESA</option>
+                                @foreach($empresas as $empresa)
+                                    <option value="{{ $empresa->id }}">{{ strtoupper($empresa->nombre) }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -129,7 +145,7 @@
                 <h4>CUADRAR CAJA</h4>
                 <form action="{{ route('caja.store') }}" method="POST" class="row" id="formCuadrarCaja">
                     @csrf
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="form-group">
                             <label>VALOR</label>
                             <input type="number" name="valor" id="valorCuadre" class="form-control" step="0.01" min="0.01" required>
@@ -137,10 +153,21 @@
                             <input type="hidden" name="is_positive" value="1">
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="form-group">
                             <label>MOTIVO</label>
                             <input type="text" name="motivo" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label>EMPRESA</label>
+                            <select name="empresa_id" class="form-control">
+                                <option value="">SELECCIONAR EMPRESA</option>
+                                @foreach($empresas as $empresa)
+                                    <option value="{{ $empresa->id }}">{{ strtoupper($empresa->nombre) }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -162,6 +189,7 @@
                             <th>FECHA</th>
                             <th>MOTIVO</th>
                             <th>USUARIO</th>
+                            <th>EMPRESA</th>
                             <th>VALOR</th>
                             <th>ACCIONES</th>
                         </tr>
@@ -172,7 +200,8 @@
                                 <td>{{ $movimiento->id }}</td>
                                 <td>{{ $movimiento->created_at->format('Y-m-d H:i') }}</td>
                                 <td>{{ strtoupper($movimiento->motivo) }}</td>
-                                <td>{{ strtoupper($movimiento->user->name) }}</td>
+                                <td>{{ $movimiento->user ? strtoupper($movimiento->user->name) : 'N/A' }}</td>
+                                <td>{{ $movimiento->empresa ? strtoupper($movimiento->empresa->nombre) : 'N/A' }}</td>
                                 <td>${{ number_format($movimiento->valor, 2, ',', '.') }}</td>
                                 <td>
                                     @can('admin')
