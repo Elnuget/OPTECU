@@ -32,3 +32,6 @@ php artisan storage:link
 
 php artisan optimize:clear
 composer dump-autoload
+
+sudo php artisan optimize:clear
+sudo composer dump-autoload

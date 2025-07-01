@@ -26,22 +26,28 @@ class PagoController extends Controller
      */
     public function index(Request $request)
     {
+        // Si no hay parámetros de fecha, redirigir al mes actual
+        if (!$request->filled('ano') || !$request->filled('mes')) {
+            $currentDate = now()->setTimezone('America/Guayaquil');
+            return redirect()->route('pagos.index', [
+                'ano' => $currentDate->format('Y'),
+                'mes' => $currentDate->format('m')
+            ]);
+        }
+
         $mediosdepago = mediosdepago::all();
         $query = Pago::with(['pedido', 'mediodepago']);
 
-        if ($request->filled('ano')) {
-            $query->whereYear('created_at', '=', $request->ano)
-                  ->whereHas('pedido', function($q) use ($request) {
-                      $q->whereYear('fecha', '=', $request->ano);
-                  });
-        }
+        // Aplicar filtros de fecha (ahora siempre se aplicarán)
+        $query->whereYear('created_at', '=', $request->ano)
+              ->whereHas('pedido', function($q) use ($request) {
+                  $q->whereYear('fecha', '=', $request->ano);
+              });
 
-        if ($request->filled('mes')) {
-            $query->whereMonth('created_at', '=', (int)$request->mes)
-                  ->whereHas('pedido', function($q) use ($request) {
-                      $q->whereMonth('fecha', '=', (int)$request->mes);
-                  });
-        }
+        $query->whereMonth('created_at', '=', (int)$request->mes)
+              ->whereHas('pedido', function($q) use ($request) {
+                  $q->whereMonth('fecha', '=', (int)$request->mes);
+              });
 
         if ($request->filled('metodo_pago')) {
             $query->where('mediodepago_id', '=', $request->metodo_pago);

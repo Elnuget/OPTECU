@@ -253,7 +253,7 @@ return [
         ],        [
             'text' => 'Pedidos',
             'icon' => 'fas fa-shopping-cart',
-            'url' => '/Pedidos?ano=' . now()->setTimezone('America/Guayaquil')->format('Y') . '&mes=' . now()->setTimezone('America/Guayaquil')->format('m'),
+            'route' => 'pedidos.index',
             'active' => ['Pedidos/*']
         ],
 
@@ -265,7 +265,7 @@ return [
         ],        [
             'text' => 'Historiales Clínicos',
             'icon' => 'fas fa-notes-medical',
-            'url' => '/historiales_clinicos?ano=' . now()->setTimezone('America/Guayaquil')->format('Y') . '&mes=' . now()->setTimezone('America/Guayaquil')->format('m'),
+            'route' => 'historiales_clinicos.index',
             'active' => ['historiales_clinicos/*', 'historiales_clinicos'],
         ],
 
@@ -287,7 +287,7 @@ return [
         ],        [
             'text' => 'Pagos',
             'icon' => 'fas fa-fw fa-money-bill',
-            'url' => '/Pagos?ano=' . now()->setTimezone('America/Guayaquil')->format('Y') . '&mes=' . now()->setTimezone('America/Guayaquil')->format('m'),
+            'route' => 'pagos.index',
             'active' => ['Pagos/*'],
         ],
 

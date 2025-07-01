@@ -25,6 +25,15 @@ class PedidosController extends Controller
     public function index(Request $request)
     {
         try {
+            // Si no hay parámetros de fecha, redirigir al mes actual
+            if (!$request->filled('ano') || !$request->filled('mes')) {
+                $currentDate = now()->setTimezone('America/Guayaquil');
+                return redirect()->route('pedidos.index', [
+                    'ano' => $currentDate->format('Y'),
+                    'mes' => $currentDate->format('m')
+                ]);
+            }
+
             $query = Pedido::query()
                 ->with([
                     'aInventario:id,codigo,cantidad',
@@ -32,13 +41,9 @@ class PedidosController extends Controller
                     'pagos:id,pedido_id,pago'
                 ]);
 
-            // Solo aplicar filtros si se proporcionan año y mes
-            if ($request->filled('ano') && $request->filled('mes')) {
-                $query->whereYear('fecha', $request->ano)
-                      ->whereMonth('fecha', $request->mes);
-            } else if ($request->filled('ano')) {
-                $query->whereYear('fecha', $request->ano);
-            }
+            // Aplicar filtros de fecha (ahora siempre se aplicarán)
+            $query->whereYear('fecha', $request->ano)
+                  ->whereMonth('fecha', $request->mes);
 
             $pedidos = $query->select([
                 'id',
