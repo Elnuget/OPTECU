@@ -363,10 +363,11 @@ return [
                     'active' => ['Configuración/MediosDePago/*']
                 ],
                 [
-                    'text' => 'Empresas',
+                    'text' => 'Sucursales',
                     'icon' => 'fas fa-building',
                     'route' => 'empresas.index',
-                    'active' => ['empresas/*', 'empresas']
+                    'active' => ['empresas/*', 'empresas'],
+                    'can' => 'admin'
                 ],
             ],
         ],

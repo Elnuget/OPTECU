@@ -35,7 +35,7 @@
                     <td>Mail</td>
                     <td>Activo</td>
                     <td>Administrador</td>
-                    <td>Editar</td>
+                    <td>Acciones</td>
                 </tr>
             </thead>
             <tbody>
@@ -62,8 +62,12 @@
                         @endif       
                         </td>
                         <td><div class="btn-group">
-                            <a type="button" class="btn btn-success" href="{{route('configuracion.usuarios.editar', $u->id)}}">Datos</a>
-                            
+                            <a type="button" class="btn btn-primary btn-sm" href="{{route('configuracion.usuarios.editar', $u->id)}}">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="confirmarEliminar({{$u->id}}, '{{$u->name}}')">
+                                <i class="fas fa-trash"></i> Eliminar
+                            </button>
                           </div></td>
                     </tr>
                    
@@ -78,14 +82,42 @@
 
 @section('js')
 @include('atajos')
-    <script> $(document).ready(function() {
-        $('#example').DataTable({
-            "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
+    <script> 
+        $(document).ready(function() {
+            $('#example').DataTable({
+                "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
+            }
         }
-    }
-        );
-    } ); </script>
+            );
+        } );
+        
+        function confirmarEliminar(id, nombre) {
+            if (confirm('¿Está seguro que desea eliminar al usuario "' + nombre + '"?')) {
+                // Crear un formulario dinámico para enviar la petición DELETE
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route("configuracion.usuarios.destroy", ":id") }}'.replace(':id', id);
+                
+                // Agregar token CSRF
+                var csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+                form.appendChild(csrfToken);
+                
+                // Agregar método DELETE
+                var methodField = document.createElement('input');
+                methodField.type = 'hidden';
+                methodField.name = '_method';
+                methodField.value = 'DELETE';
+                form.appendChild(methodField);
+                
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
 @stop
 
 @section('footer')

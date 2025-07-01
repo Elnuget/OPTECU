@@ -40,6 +40,7 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
     Route::post('Configuracion/Usuarios', [UsuariosController::class, 'store'])->name('configuracion.usuarios.store');
     Route::get('Configuracion/Usuarios/{id}', [UsuariosController::class, 'show'])->name('configuracion.usuarios.editar');
     Route::put('Configuracion/Usuarios/{usuario}', [UsuariosController::class, 'update'])->name('configuracion.usuarios.update');
+    Route::delete('Configuracion/Usuarios/{id}', [UsuariosController::class, 'destroy'])->name('configuracion.usuarios.destroy');
     Route::patch('Configuracion/Usuarios/{id}/toggle-admin', [UsuariosController::class, 'toggleAdmin'])->name('configuracion.usuarios.toggleAdmin');
 
     // Admin dashboard

@@ -86,4 +86,36 @@ class UsuariosController extends Controller
             'tipo' => 'alert-success'
         ]);
     }
+
+    public function destroy($id)
+    {
+        try {
+            $usuario = User::findOrFail($id);
+            
+            // Verificar que no se esté intentando eliminar al usuario actual
+            if (auth()->id() == $usuario->id) {
+                return redirect()->route('configuracion.usuarios.index')->with([
+                    'error' => 'Error',
+                    'mensaje' => 'No puedes eliminar tu propio usuario',
+                    'tipo' => 'alert-danger'
+                ]);
+            }
+
+            $nombreUsuario = $usuario->name;
+            $usuario->delete();
+
+            return redirect()->route('configuracion.usuarios.index')->with([
+                'error' => 'Éxito',
+                'mensaje' => "Usuario '{$nombreUsuario}' eliminado correctamente",
+                'tipo' => 'alert-success'
+            ]);
+
+        } catch (\Exception $e) {
+            return redirect()->route('configuracion.usuarios.index')->with([
+                'error' => 'Error',
+                'mensaje' => 'No se pudo eliminar el usuario',
+                'tipo' => 'alert-danger'
+            ]);
+        }
+    }
 }

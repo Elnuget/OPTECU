@@ -1,16 +1,16 @@
 @extends('adminlte::page')
 
-@section('title', 'Empresas')
+@section('title', 'Sucursal')
 
 @section('content_header')
-    <h1>Gestión de Empresas</h1>
+    <h1>Gestión de Sucursales</h1>
 @stop
 
 @section('content')
     <div class="card">
         <div class="card-header">
             <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#createEmpresaModal">
-                <i class="fas fa-plus"></i> Nueva Empresa
+                <i class="fas fa-plus"></i> Nueva Sucursal
             </button>
         </div>
         <div class="card-body">
@@ -51,7 +51,7 @@
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger" 
-                                            onclick="return confirm('¿Está seguro de que desea eliminar esta empresa?')">
+                                            onclick="return confirm('¿Está seguro de que desea eliminar esta Sucursal?')">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
@@ -68,7 +68,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="createEmpresaModalLabel">Nueva Empresa</h5>
+                    <h5 class="modal-title" id="createEmpresaModalLabel">Nueva Sucursal</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -99,7 +99,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="editEmpresaModalLabel">Editar Empresa</h5>
+                    <h5 class="modal-title" id="editEmpresaModalLabel">Editar Sucursal</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
