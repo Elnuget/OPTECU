@@ -11,8 +11,11 @@ class HistorialClinicoController extends Controller
 {
     public function index(Request $request)
     {
-        // Si no hay parámetros de fecha, redirigir al mes actual
-        if (!$request->filled('ano') || !$request->filled('mes')) {
+        // Iniciar la consulta con la relación usuario
+        $query = HistorialClinico::with('usuario');
+
+        // Si no se solicitan todos los registros y no hay parámetros de fecha, redirigir al mes actual
+        if (!$request->has('todos') && (!$request->filled('ano') || !$request->filled('mes'))) {
             $currentDate = now()->setTimezone('America/Guayaquil');
             return redirect()->route('historiales_clinicos.index', [
                 'ano' => $currentDate->format('Y'),
@@ -20,12 +23,11 @@ class HistorialClinicoController extends Controller
             ]);
         }
 
-        // Iniciar la consulta con la relación usuario
-        $query = HistorialClinico::with('usuario');
-
-        // Aplicar filtros de fecha (ahora siempre se aplicarán)
-        $query->whereYear('fecha', $request->get('ano'))
-              ->whereMonth('fecha', $request->get('mes'));
+        // Aplicar filtros de fecha solo si no se solicitan todos los registros
+        if (!$request->has('todos')) {
+            $query->whereYear('fecha', $request->get('ano'))
+                  ->whereMonth('fecha', $request->get('mes'));
+        }
 
         // Obtener los historiales
         $historiales = $query->get();

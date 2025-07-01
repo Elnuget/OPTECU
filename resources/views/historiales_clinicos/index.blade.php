@@ -306,7 +306,9 @@
         $('#mostrarTodosButton').click(function() {
             $('#mes').val('');
             $('#ano').val('');
-            $(this).closest('form').submit();
+            const form = $(this).closest('form');
+            form.append('<input type="hidden" name="todos" value="1">');
+            form.submit();
         });
 
         // Manejo del botón de ver historiales relacionados

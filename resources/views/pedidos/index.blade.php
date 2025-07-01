@@ -523,7 +523,9 @@ input[type="checkbox"]:after {
         $('#mostrarTodosButton').click(function() {
             $('#filtroAno').val('');
             $('#filtroMes').val('');
-            $('#filterForm').submit();
+            const form = $('#filterForm');
+            form.append('<input type="hidden" name="todos" value="1">');
+            form.submit();
         });
 
         // Configurar el modal de eliminación

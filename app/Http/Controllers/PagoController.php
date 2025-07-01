@@ -26,8 +26,11 @@ class PagoController extends Controller
      */
     public function index(Request $request)
     {
-        // Si no hay parámetros de fecha, redirigir al mes actual
-        if (!$request->filled('ano') || !$request->filled('mes')) {
+        $mediosdepago = mediosdepago::all();
+        $query = Pago::with(['pedido', 'mediodepago']);
+
+        // Si no se solicitan todos los registros y no hay parámetros de fecha, redirigir al mes actual
+        if (!$request->has('todos') && (!$request->filled('ano') || !$request->filled('mes'))) {
             $currentDate = now()->setTimezone('America/Guayaquil');
             return redirect()->route('pagos.index', [
                 'ano' => $currentDate->format('Y'),
@@ -35,52 +38,24 @@ class PagoController extends Controller
             ]);
         }
 
-        $mediosdepago = mediosdepago::all();
-        $query = Pago::with(['pedido', 'mediodepago']);
+        // Aplicar filtros de fecha solo si no se solicitan todos los registros
+        if (!$request->has('todos')) {
+            $query->whereYear('created_at', '=', $request->ano)
+                  ->whereMonth('created_at', '=', (int)$request->mes);
+        }
 
-        // Aplicar filtros de fecha (ahora siempre se aplicarán)
-        $query->whereYear('created_at', '=', $request->ano)
-              ->whereHas('pedido', function($q) use ($request) {
-                  $q->whereYear('fecha', '=', $request->ano);
-              });
-
-        $query->whereMonth('created_at', '=', (int)$request->mes)
-              ->whereHas('pedido', function($q) use ($request) {
-                  $q->whereMonth('fecha', '=', (int)$request->mes);
-              });
-
+        // Aplicar filtro por método de pago si está seleccionado
         if ($request->filled('metodo_pago')) {
-            $query->where('mediodepago_id', '=', $request->metodo_pago);
+            $query->where('mediodepago_id', $request->metodo_pago);
         }
 
-        // Nuevo filtro por estado TC
-        if ($request->filled('tc_status')) {
-            // Filtrar siempre por Tarjeta de Crédito (ID 4) cuando se usa el filtro TC
-            $query->where('mediodepago_id', 4);
-
-            if ($request->tc_status === 'pendientes') {
-                $query->where(function ($q) {
-                    $q->where('TC', false)->orWhereNull('TC');
-                });
-            } elseif ($request->tc_status === 'pagados') {
-                $query->where('TC', true);
-            }
-        }
-
-        // Solo incluir pagos que tienen pedidos asociados y válidos
-        $query->whereHas('pedido', function($q) {
-            $q->whereNotNull('id');
-        });
-
-        $pagos = $query->get();
+        // Obtener los pagos
+        $pagos = $query->orderBy('created_at', 'desc')->get();
         
-        // Calcular el total solo de pagos con pedidos válidos
+        // Calcular el total de pagos
         $totalPagos = $pagos->sum('pago');
 
-        // Pasar el estado actual del filtro TC a la vista
-        $tcStatus = $request->input('tc_status');
-
-        return view('pagos.index', compact('pagos', 'mediosdepago', 'totalPagos', 'tcStatus'));
+        return view('pagos.index', compact('pagos', 'mediosdepago', 'totalPagos'));
     }
 
     /**

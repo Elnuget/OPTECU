@@ -111,11 +111,11 @@
                     <label for="filtroMes">SELECCIONAR MES:</label>
                     <select name="mes" class="form-control custom-select" id="filtroMes">
                         <option value="">SELECCIONE MES</option>
-                        @foreach (['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'] as $index => $month)
-                            <option value="{{ $index + 1 }}" {{ request('mes') == ($index + 1) ? 'selected' : '' }}>
-                                {{ $month }}
+                        @for ($i = 1; $i <= 12; $i++)
+                            <option value="{{ str_pad($i, 2, '0', STR_PAD_LEFT) }}" {{ request('mes') == str_pad($i, 2, '0', STR_PAD_LEFT) ? 'selected' : '' }}>
+                                {{ strtoupper(date('F', mktime(0, 0, 0, $i, 1))) }}
                             </option>
-                        @endforeach
+                        @endfor
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -129,8 +129,9 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-2 align-self-end">
-                    <button type="button" class="btn btn-primary" id="actualButton">ACTUAL</button>
+                <div class="col-md-4 align-self-end">
+                    <button type="button" class="btn btn-primary mr-2" id="actualButton">ACTUAL</button>
+                    <button type="button" class="btn btn-success" id="mostrarTodosButton">MOSTRAR TODOS</button>
                 </div>
             </form>
 
@@ -295,6 +296,29 @@
         }
 
         $(document).ready(function() {
+            // Manejar clic en el botón MOSTRAR TODOS
+            $('#mostrarTodosButton').click(function() {
+                $('#filtroAno').val('');
+                $('#filtroMes').val('');
+                $('#metodo_pago').val('');
+                const form = $('#filterForm');
+                form.append('<input type="hidden" name="todos" value="1">');
+                form.submit();
+            });
+
+            // Manejar clic en el botón ACTUAL
+            $('#actualButton').click(function() {
+                const currentDate = new Date();
+                $('#filtroAno').val(currentDate.getFullYear());
+                $('#filtroMes').val(String(currentDate.getMonth() + 1).padStart(2, '0'));
+                $('#metodo_pago').val('');
+                $('#filterForm').submit();
+            });
+
+            // Manejar cambios en los filtros
+            $('#filtroAno, #filtroMes, #metodo_pago').change(function() {
+                $('#filterForm').submit();
+            });
 
             // Configurar el modal antes de mostrarse
             $('#confirmarEliminarModal').on('show.bs.modal', function(event) {
@@ -352,37 +376,6 @@
                     "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
                 }
             });
-
-            document.getElementById('filtroAno').addEventListener('change', function() {
-                document.getElementById('filterForm').submit();
-            });
-            document.getElementById('filtroMes').addEventListener('change', function() {
-                document.getElementById('filterForm').submit();
-            });
-
-            // Añadir evento al botón "Actual"
-            document.getElementById('actualButton').addEventListener('click', function() {
-                const currentDate = new Date();
-                const currentYear = currentDate.getFullYear();
-                const currentMonth = currentDate.getMonth() + 1; // getMonth() es 0-indexado
-
-                document.getElementById('filtroAno').value = currentYear;
-                document.getElementById('filtroMes').value = currentMonth;
-
-                document.getElementById('filterForm').submit();
-            });
-
-            // Add event listener for payment method filter
-            document.getElementById('metodo_pago').addEventListener('change', function() {
-                document.getElementById('filterForm').submit();
-            });
-
-            // Removed Paciente filter
-            // $('#filtroPaciente').select2();
-            // $('#filtroPaciente').on('change', function() {
-            //     var pacienteId = $(this).val();
-            //     pagosTable.column(1).search(pacienteId).draw();
-            // });
         });
     </script>
 @stop
