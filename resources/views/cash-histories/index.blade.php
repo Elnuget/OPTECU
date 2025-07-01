@@ -118,9 +118,15 @@
             </div>
         </form>
     </div>
+    
+    @if(Auth::user()->is_admin)
+    <div class="col-md-4 text-right">
+        <button type="button" class="btn btn-success" data-toggle="modal" data-target="#adminCajaModal">
+            <i class="fas fa-cash-register mr-1"></i> ABRIR/CERRAR CAJA
+        </button>
+    </div>
+    @endif
 </div>
-
-
 
 <div class="table-responsive mt-4">
     <table id="cashHistoryTable" class="table table-striped table-bordered">
@@ -166,6 +172,65 @@
         </tbody>
     </table>
 </div>
+
+<!-- Modal para abrir/cerrar caja (solo para administradores) -->
+<div class="modal fade" id="adminCajaModal" tabindex="-1" role="dialog" aria-labelledby="adminCajaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="adminCajaModalLabel">ABRIR/CERRAR CAJA</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="adminCajaForm" action="{{ route('cash-histories.store') }}" method="POST">
+                    @csrf
+                    <div class="form-group">
+                        <label for="empresa_select">SELECCIONAR EMPRESA</label>
+                        <select name="empresa_id" id="empresa_select" class="form-control" required>
+                            <option value="">SELECCIONE UNA EMPRESA</option>
+                            @foreach($empresas as $empresa)
+                                <option value="{{ $empresa->id }}">{{ strtoupper($empresa->nombre) }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>SALDO ACTUAL EN CAJA</label>
+                        <div class="alert alert-info">
+                            <h4 class="text-center" id="caja_value">$0.00</h4>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="estado_select">OPERACIÓN</label>
+                        <select name="estado" id="estado_select" class="form-control" required>
+                            <option value="">SELECCIONE UNA OPERACIÓN</option>
+                            <option value="Apertura">APERTURA DE CAJA</option>
+                            <option value="Cierre">CIERRE DE CAJA</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="monto_admin">MONTO</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">$</span>
+                            </div>
+                            <input type="number" step="0.01" name="monto" id="monto_admin" class="form-control" required readonly>
+                        </div>
+                        <small class="form-text text-muted">EL MONTO SE CARGA AUTOMÁTICAMENTE SEGÚN LA EMPRESA SELECCIONADA</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">CANCELAR</button>
+                <button type="submit" form="adminCajaForm" class="btn btn-success">CONFIRMAR</button>
+            </div>
+        </div>
+    </div>
+</div>
 @stop
 
 @section('js')
@@ -189,6 +254,46 @@
                 ],
                 "language": {
                     "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
+                }
+            });
+
+            // Código para gestionar el modal de caja para administradores
+            const empresaSelect = $('#empresa_select');
+            const estadoSelect = $('#estado_select');
+            const montoInput = $('#monto_admin');
+            const cajaValueDisplay = $('#caja_value');
+
+            // Cargar el valor de caja cuando se selecciona una empresa
+            empresaSelect.on('change', function() {
+                const empresaId = $(this).val();
+                if (empresaId) {
+                    // Verificar el estado de la caja para esta empresa
+                    $.ajax({
+                        url: '{{ route("cash-histories.checkStatus") }}',
+                        type: 'GET',
+                        data: { empresa_id: empresaId },
+                        success: function(response) {
+                            // Actualizar el estado de la caja y el valor
+                            estadoSelect.val(response.estado);
+                            cajaValueDisplay.text('$' + response.valor);
+                            montoInput.val(response.valor);
+                            
+                            // Habilitar/deshabilitar campos según el estado
+                            if (response.estado === 'Cierre') {
+                                estadoSelect.find('option[value="Apertura"]').prop('disabled', true);
+                                estadoSelect.find('option[value="Cierre"]').prop('disabled', false);
+                            } else {
+                                estadoSelect.find('option[value="Apertura"]').prop('disabled', false);
+                                estadoSelect.find('option[value="Cierre"]').prop('disabled', true);
+                            }
+                        },
+                        error: function() {
+                            alert('Error al obtener el estado de la caja');
+                        }
+                    });
+                } else {
+                    cajaValueDisplay.text('$0.00');
+                    montoInput.val('');
                 }
             });
         });

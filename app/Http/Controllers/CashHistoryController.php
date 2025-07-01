@@ -168,4 +168,34 @@ class CashHistoryController extends Controller
         $empresas = \App\Models\Empresa::orderBy('nombre')->get();
         return view('cash-histories.edit', compact('cashHistory', 'empresas'));
     }
+
+    public function checkStatus(Request $request)
+    {
+        // Validar el request
+        $request->validate([
+            'empresa_id' => 'required|exists:empresas,id'
+        ]);
+
+        $empresaId = $request->empresa_id;
+        
+        // Obtener el último registro de caja para esta empresa
+        $lastCashHistory = CashHistory::where('empresa_id', $empresaId)
+                                     ->latest()
+                                     ->first();
+        
+        // Obtener el valor en caja para esta empresa
+        $cajaValue = Caja::where('empresa_id', $empresaId)->sum('valor');
+        
+        // Determinar estado (Apertura o Cierre)
+        $estado = 'Apertura'; // Por defecto, permitir apertura
+        if ($lastCashHistory && $lastCashHistory->estado === 'Apertura') {
+            $estado = 'Cierre'; // Caja abierta, permitir cierre
+        }
+        
+        return response()->json([
+            'estado' => $estado,
+            'valor' => $cajaValue,
+            'lastCashHistory' => $lastCashHistory
+        ]);
+    }
 }

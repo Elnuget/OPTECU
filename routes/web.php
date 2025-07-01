@@ -210,6 +210,11 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::resource('caja', 'App\Http\Controllers\CajaController');
 
     Route::resource('cash-histories', CashHistoryController::class);
+    
+    // Ruta para verificar el estado de la caja (para administradores)
+    Route::get('/cash-histories-check-status', [CashHistoryController::class, 'checkStatus'])
+        ->name('cash-histories.checkStatus')
+        ->middleware('admin');
 
     Route::get('/generar-qr', function () {
         return view('inventario.generarQR');
