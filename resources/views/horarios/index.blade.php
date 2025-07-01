@@ -94,9 +94,6 @@
                 <a type="button" class="btn btn-success" href="{{ route('horarios.create') }}">
                     <i class="fas fa-plus"></i> CREAR HORARIO
                 </a>
-                <button type="button" class="btn btn-info" onclick="mostrarHorariosActivos()">
-                    <i class="fas fa-clock"></i> HORARIOS ACTIVOS
-                </button>
             </div>
 
             <div class="table-responsive">
@@ -148,62 +145,10 @@
             </div>
         </div>
     </div>
-
-    <!-- Modal para horarios activos -->
-    <div class="modal fade" id="horariosActivosModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">HORARIOS ACTIVOS</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div id="horariosActivosContent">
-                        <div class="text-center">
-                            <i class="fas fa-spinner fa-spin"></i> CARGANDO...
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 @stop
 
 @section('js')
 <script>
-    function mostrarHorariosActivos() {
-        $('#horariosActivosModal').modal('show');
-        
-        fetch('{{ route("horarios.activos") }}')
-        .then(response => response.json())
-        .then(data => {
-            let content = '';
-            if (data.length > 0) {
-                content = '<div class="table-responsive"><table class="table table-striped"><thead><tr><th>EMPRESA</th><th>HORA ENTRADA</th><th>HORA SALIDA</th></tr></thead><tbody>';
-                data.forEach(horario => {
-                    content += `
-                        <tr>
-                            <td>${horario.empresa.nombre.toUpperCase()}</td>
-                            <td>${horario.hora_entrada}</td>
-                            <td>${horario.hora_salida}</td>
-                        </tr>
-                    `;
-                });
-                content += '</tbody></table></div>';
-            } else {
-                content = '<div class="alert alert-info">NO HAY HORARIOS ACTIVOS EN ESTE MOMENTO</div>';
-            }
-            
-            document.getElementById('horariosActivosContent').innerHTML = content;
-        })
-        .catch(error => {
-            document.getElementById('horariosActivosContent').innerHTML = 
-                '<div class="alert alert-danger">ERROR AL CARGAR HORARIOS ACTIVOS</div>';
-        });
-    }
-
     $(document).ready(function() {
         $('#example').DataTable({
             "language": {

@@ -167,40 +167,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Reloj en tiempo real -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">HORA ACTUAL</h3>
-                </div>
-                <div class="card-body text-center">
-                    <div id="reloj" class="display-4 mb-3"></div>
-                    <small class="text-muted">HORA DEL SISTEMA</small>
-                </div>
-            </div>
         </div>
     </div>
-@stop
-
-@section('js')
-<script>
-    // Reloj en tiempo real
-    function actualizarReloj() {
-        const ahora = new Date();
-        const hora = ahora.toLocaleTimeString('es-ES', { 
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
-        
-        document.getElementById('reloj').textContent = hora;
-    }
-
-    // Actualizar cada segundo
-    setInterval(actualizarReloj, 1000);
-    
-    // Ejecutar inmediatamente
-    actualizarReloj();
-</script>
 @stop
