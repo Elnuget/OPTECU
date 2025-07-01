@@ -156,7 +156,7 @@
                 <tr>
                     <td>{{ $history->id }}</td>
                     <td>{{ $history->created_at->format('Y-m-d H:i') }}</td>
-                    <td>{{ strtoupper($history->user->name) }}</td>
+                    <td>{{ $history->user ? strtoupper($history->user->name) : 'USUARIO NO DISPONIBLE' }}</td>
                     <td>${{ number_format($history->monto, 2) }}</td>
                     <td>{{ strtoupper($history->estado) }}</td>
                     <td>
