@@ -71,25 +71,51 @@
         <div class="card-body">
             <!-- Add date filter form -->
             <div class="row mb-3">
-                <div class="col-md-6">
+                <div class="col-md-8">
                     <form action="{{ route('caja.index') }}" method="GET" class="form-inline">
-                        <div class="input-group">
+                        <div class="input-group mr-2">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">FECHA:</span>
+                            </div>
                             <input type="date" name="fecha_filtro" class="form-control" 
                                    value="{{ $fechaFiltro != 'todos' ? $fechaFiltro : '' }}">
-                            <div class="input-group-append">
-                                <button type="submit" class="btn btn-primary">FILTRAR</button>
-                                <a href="{{ route('caja.index') }}" class="btn btn-secondary">LIMPIAR</a>
+                        </div>
+                        
+                        <div class="input-group mr-2">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">EMPRESA:</span>
                             </div>
+                            <select name="empresa_filtro" class="form-control">
+                                @if($currentUser->empresa_id && !$currentUser->is_admin)
+                                    <option value="{{ $currentUser->empresa_id }}" selected>
+                                        {{ strtoupper($currentUser->empresa->nombre) }}
+                                    </option>
+                                @else
+                                    <option value="todas" {{ $empresaFiltro == 'todas' ? 'selected' : '' }}>TODAS LAS EMPRESAS</option>
+                                    @foreach($empresas as $empresa)
+                                        <option value="{{ $empresa->id }}" {{ $empresaFiltro == $empresa->id ? 'selected' : '' }}>
+                                            {{ strtoupper($empresa->nombre) }}
+                                        </option>
+                                    @endforeach
+                                    <option value="sin_empresa" {{ $empresaFiltro == 'sin_empresa' ? 'selected' : '' }}>SIN EMPRESA ASIGNADA</option>
+                                @endif
+                            </select>
+                        </div>
+                        
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary">FILTRAR</button>
+                            <a href="{{ route('caja.index') }}" class="btn btn-secondary">LIMPIAR</a>
                         </div>
                     </form>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <a href="{{ route('caja.index', ['mostrar_todos' => 1]) }}" class="btn btn-info">
                         <i class="fas fa-list"></i> MOSTRAR TODOS LOS MOVIMIENTOS
                     </a>
                 </div>
             </div>
 
+            @if($currentUser->is_admin)
             <div class="row mb-4">
                 <div class="col-md-4">
                     <div class="info-box bg-success">
@@ -100,6 +126,7 @@
                     </div>
                 </div>
             </div>
+            @endif
 
             <!-- Tarjetas por empresa -->
             <div class="row mb-4">
@@ -152,12 +179,19 @@
                     <div class="col-md-3">
                         <div class="form-group">
                             <label>EMPRESA</label>
-                            <select name="empresa_id" class="form-control">
-                                <option value="">SELECCIONAR EMPRESA</option>
-                                @foreach($empresas as $empresa)
-                                    <option value="{{ $empresa->id }}">{{ strtoupper($empresa->nombre) }}</option>
-                                @endforeach
-                            </select>
+                            @if($currentUser->empresa_id && !$currentUser->is_admin)
+                                <input type="hidden" name="empresa_id" value="{{ $currentUser->empresa_id }}">
+                                <input type="text" class="form-control" value="{{ strtoupper($currentUser->empresa->nombre) }}" readonly>
+                            @else
+                                <select name="empresa_id" class="form-control">
+                                    <option value="">SELECCIONAR EMPRESA</option>
+                                    @foreach($empresas as $empresa)
+                                        <option value="{{ $empresa->id }}" {{ $currentUser->empresa_id == $empresa->id ? 'selected' : '' }}>
+                                            {{ strtoupper($empresa->nombre) }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            @endif
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -193,12 +227,19 @@
                     <div class="col-md-3">
                         <div class="form-group">
                             <label>EMPRESA</label>
-                            <select name="empresa_id" class="form-control">
-                                <option value="">SELECCIONAR EMPRESA</option>
-                                @foreach($empresas as $empresa)
-                                    <option value="{{ $empresa->id }}">{{ strtoupper($empresa->nombre) }}</option>
-                                @endforeach
-                            </select>
+                            @if($currentUser->empresa_id && !$currentUser->is_admin)
+                                <input type="hidden" name="empresa_id" value="{{ $currentUser->empresa_id }}">
+                                <input type="text" class="form-control" value="{{ strtoupper($currentUser->empresa->nombre) }}" readonly>
+                            @else
+                                <select name="empresa_id" class="form-control">
+                                    <option value="">SELECCIONAR EMPRESA</option>
+                                    @foreach($empresas as $empresa)
+                                        <option value="{{ $empresa->id }}" {{ $currentUser->empresa_id == $empresa->id ? 'selected' : '' }}>
+                                            {{ strtoupper($empresa->nombre) }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            @endif
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -284,9 +325,14 @@
                         </div>
                         <div class="form-group">
                             <label>EMPRESA</label>
-                            <select id="edit_empresa_id" name="empresa_id" class="form-control">
-                                <option value="">SELECCIONAR EMPRESA</option>
-                            </select>
+                            @if($currentUser->empresa_id && !$currentUser->is_admin)
+                                <input type="hidden" id="edit_empresa_id_hidden" name="empresa_id">
+                                <input type="text" id="edit_empresa_readonly" class="form-control" readonly>
+                            @else
+                                <select id="edit_empresa_id" name="empresa_id" class="form-control">
+                                    <option value="">SELECCIONAR EMPRESA</option>
+                                </select>
+                            @endif
                         </div>
                         <div class="form-group">
                             <label>USUARIO</label>
@@ -356,17 +402,22 @@
                     // Llenar el formulario con los datos
                     $('#edit_valor').val(response.caja.valor);
                     $('#edit_motivo').val(response.caja.motivo);
-                    $('#edit_empresa_id').val(response.caja.empresa_id || '');
                     $('#edit_usuario').val(response.caja.user ? response.caja.user.name : 'N/A');
                     $('#edit_fecha').val(new Date(response.caja.created_at).toLocaleString());
                     
-                    // Llenar el select de empresas
-                    $('#edit_empresa_id').empty();
-                    $('#edit_empresa_id').append('<option value="">SELECCIONAR EMPRESA</option>');
-                    response.empresas.forEach(function(empresa) {
-                        var selected = empresa.id == response.caja.empresa_id ? 'selected' : '';
-                        $('#edit_empresa_id').append('<option value="' + empresa.id + '" ' + selected + '>' + empresa.nombre.toUpperCase() + '</option>');
-                    });
+                    @if($currentUser->empresa_id && !$currentUser->is_admin)
+                        // Si el usuario no es admin y pertenece a una empresa, mostrar campo readonly
+                        $('#edit_empresa_id_hidden').val(response.caja.empresa_id || '');
+                        $('#edit_empresa_readonly').val(response.caja.empresa ? response.caja.empresa.nombre.toUpperCase() : 'N/A');
+                    @else
+                        // Si es admin o no pertenece a empresa, llenar el select
+                        $('#edit_empresa_id').empty();
+                        $('#edit_empresa_id').append('<option value="">SELECCIONAR EMPRESA</option>');
+                        response.empresas.forEach(function(empresa) {
+                            var selected = empresa.id == response.caja.empresa_id ? 'selected' : '';
+                            $('#edit_empresa_id').append('<option value="' + empresa.id + '" ' + selected + '>' + empresa.nombre.toUpperCase() + '</option>');
+                        });
+                    @endif
                     
                     // Configurar la acción del formulario
                     $('#editarForm').attr('action', '/caja/' + id);

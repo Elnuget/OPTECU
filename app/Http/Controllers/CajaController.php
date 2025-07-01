@@ -21,6 +21,7 @@ class CajaController extends Controller
     public function index(Request $request)
     {
         $query = Caja::with(['user', 'empresa']);
+        $currentUser = Auth::user();
         
         // Use current date as default if no date filter is provided
         $fechaFiltro = $request->fecha_filtro ?? now()->format('Y-m-d');
@@ -31,25 +32,49 @@ class CajaController extends Controller
         } else {
             $query->whereDate('created_at', $fechaFiltro);
         }
+
+        // Filter by company if specified
+        $empresaFiltro = $request->empresa_filtro ?? ($currentUser->empresa_id ? $currentUser->empresa_id : 'todas');
+        
+        if ($empresaFiltro && $empresaFiltro !== 'todas') {
+            if ($empresaFiltro === 'sin_empresa') {
+                $query->whereNull('empresa_id');
+            } else {
+                $query->where('empresa_id', $empresaFiltro);
+            }
+        }
         
         $movimientos = $query->latest()->get();
-        $totalCaja = Caja::sum('valor'); // Calculate total from all records
+        $totalCaja = $currentUser->is_admin ? Caja::sum('valor') : 0; // Calculate total from all records only for admins
         $empresas = Empresa::all(); // Get all companies for the dropdown
         
         // Calculate total per company
         $totalesPorEmpresa = [];
-        foreach($empresas as $empresa) {
-            $totalEmpresa = Caja::where('empresa_id', $empresa->id)->sum('valor');
-            $totalesPorEmpresa[] = [
-                'empresa' => $empresa,
-                'total' => $totalEmpresa
-            ];
+        
+        if ($currentUser->is_admin) {
+            // Si es admin, mostrar todas las empresas
+            foreach($empresas as $empresa) {
+                $totalEmpresa = Caja::where('empresa_id', $empresa->id)->sum('valor');
+                $totalesPorEmpresa[] = [
+                    'empresa' => $empresa,
+                    'total' => $totalEmpresa
+                ];
+            }
+        } else {
+            // Si no es admin y tiene empresa, mostrar solo su empresa
+            if ($currentUser->empresa_id) {
+                $totalEmpresa = Caja::where('empresa_id', $currentUser->empresa_id)->sum('valor');
+                $totalesPorEmpresa[] = [
+                    'empresa' => $currentUser->empresa,
+                    'total' => $totalEmpresa
+                ];
+            }
         }
         
-        // Calculate total for movements without company assigned
-        $totalSinEmpresa = Caja::whereNull('empresa_id')->sum('valor');
+        // Calculate total for movements without company assigned (solo para admins)
+        $totalSinEmpresa = $currentUser->is_admin ? Caja::whereNull('empresa_id')->sum('valor') : 0;
         
-        return view('caja.index', compact('movimientos', 'fechaFiltro', 'totalCaja', 'empresas', 'totalesPorEmpresa', 'totalSinEmpresa'));
+        return view('caja.index', compact('movimientos', 'fechaFiltro', 'totalCaja', 'empresas', 'totalesPorEmpresa', 'totalSinEmpresa', 'empresaFiltro', 'currentUser'));
     }
 
     public function store(Request $request)
