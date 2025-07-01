@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Asistencia;
 use App\Models\User;
+use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -15,11 +16,17 @@ class AsistenciaController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Asistencia::with('user');
+        $query = Asistencia::with(['user', 'user.empresa']);
 
         // Filtros
         if ($request->filled('user_id')) {
             $query->where('user_id', $request->user_id);
+        }
+
+        if ($request->filled('empresa_id')) {
+            $query->whereHas('user', function ($q) use ($request) {
+                $q->where('empresa_id', $request->empresa_id);
+            });
         }
 
         if ($request->filled('fecha')) {
@@ -32,8 +39,9 @@ class AsistenciaController extends Controller
 
         $asistencias = $query->orderBy('fecha_hora', 'desc')->paginate(15);
         $usuarios = User::where('active', true)->get();
+        $empresas = Empresa::all();
 
-        return view('asistencias.index', compact('asistencias', 'usuarios'));
+        return view('asistencias.index', compact('asistencias', 'usuarios', 'empresas'));
     }
 
     /**

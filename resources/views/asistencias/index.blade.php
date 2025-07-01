@@ -78,6 +78,19 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
+                                <label for="empresa_id">EMPRESA</label>
+                                <select name="empresa_id" class="form-control">
+                                    <option value="">TODAS LAS EMPRESAS</option>
+                                    @foreach($empresas as $empresa)
+                                        <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                                            {{ strtoupper($empresa->nombre) }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-3">
                                 <label for="fecha">FECHA</label>
                                 <input type="date" name="fecha" class="form-control" value="{{ request('fecha') }}">
                             </div>
@@ -107,10 +120,6 @@
                 <a type="button" class="btn btn-success" href="{{ route('asistencias.create') }}">REGISTRAR ASISTENCIA</a>
                 <a type="button" class="btn btn-info" href="{{ route('asistencias.reporte') }}">VER REPORTE</a>
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-warning" onclick="marcarEntrada()">MARCAR ENTRADA</button>
-                    <button type="button" class="btn btn-danger" onclick="marcarSalida()">MARCAR SALIDA</button>
-                </div>
-                <div class="btn-group" role="group">
                     <a type="button" class="btn btn-primary" href="{{ route('asistencias.mi-qr') }}">
                         <i class="fas fa-qrcode"></i> MI QR
                     </a>
@@ -126,6 +135,7 @@
                         <tr>
                             <th>ID</th>
                             <th>USUARIO</th>
+                            <th>EMPRESA</th>
                             <th>FECHA</th>
                             <th>HORA ENTRADA</th>
                             <th>HORA SALIDA</th>
@@ -139,6 +149,7 @@
                             <tr>
                                 <td>{{ $asistencia->id }}</td>
                                 <td>{{ strtoupper($asistencia->user->name) }}</td>
+                                <td>{{ $asistencia->user->empresa ? strtoupper($asistencia->user->empresa->nombre) : '-' }}</td>
                                 <td>{{ $asistencia->fecha_hora->format('d/m/Y') }}</td>
                                 <td>{{ $asistencia->hora_entrada ? $asistencia->hora_entrada->format('H:i') : '-' }}</td>
                                 <td>{{ $asistencia->hora_salida ? $asistencia->hora_salida->format('H:i') : '-' }}</td>
@@ -175,50 +186,6 @@
 
 @section('js')
 <script>
-    function marcarEntrada() {
-        fetch('{{ route("asistencias.marcar-entrada") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('ENTRADA REGISTRADA: ' + data.hora);
-                location.reload();
-            } else {
-                alert('ERROR: ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('ERROR AL REGISTRAR ENTRADA');
-        });
-    }
-
-    function marcarSalida() {
-        fetch('{{ route("asistencias.marcar-salida") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('SALIDA REGISTRADA: ' + data.hora);
-                location.reload();
-            } else {
-                alert('ERROR: ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('ERROR AL REGISTRAR SALIDA');
-        });
-    }
-
     $(document).ready(function() {
         $('#example').DataTable({
             "language": {
