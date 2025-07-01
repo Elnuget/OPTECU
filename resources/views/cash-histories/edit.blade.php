@@ -86,6 +86,22 @@
             </div>
 
             <div class="form-group">
+                <label for="empresa_id">EMPRESA</label>
+                <select name="empresa_id" id="empresa_id" class="form-control">
+                    <option value="">SIN EMPRESA</option>
+                    @foreach($empresas as $empresa)
+                        <option value="{{ $empresa->id }}" {{ old('empresa_id', $cashHistory->empresa_id) == $empresa->id ? 'selected' : '' }}>
+                            {{ strtoupper($empresa->nombre) }}
+                        </option>
+                    @endforeach
+                </select>
+                <small class="form-text text-muted">OPCIONAL</small>
+                @error('empresa_id')
+                    <span class="text-danger">{{ $message }}</span>
+                @enderror
+            </div>
+
+            <div class="form-group">
                 <label>USUARIO</label>
                 <input type="text" 
                        class="form-control" 

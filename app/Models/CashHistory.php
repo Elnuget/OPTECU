@@ -12,7 +12,8 @@ class CashHistory extends Model
     protected $fillable = [
         'monto',
         'estado',
-        'user_id'
+        'user_id',
+        'empresa_id'
     ];
 
     protected $dates = ['deleted_at'];
@@ -20,5 +21,10 @@ class CashHistory extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
     }
 }

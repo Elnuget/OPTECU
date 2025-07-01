@@ -76,14 +76,24 @@
 </style>
 
 <div class="row mb-3">
-    <div class="col-md-4">
+    <div class="col-md-8">
         <form action="{{ route('cash-histories.index') }}" method="GET" class="form-inline">
-            <div class="input-group">
+            <div class="input-group mr-2">
                 <input type="date" name="fecha_filtro" class="form-control" value="{{ request('fecha_filtro', now()->format('Y-m-d')) }}">
-                <div class="input-group-append">
-                    <button type="submit" class="btn btn-primary">FILTRAR</button>
-                    <a href="{{ route('cash-histories.index') }}" class="btn btn-secondary">LIMPIAR</a>
-                </div>
+            </div>
+            <div class="input-group mr-2">
+                <select name="empresa_id" class="form-control">
+                    <option value="">TODAS LAS EMPRESAS</option>
+                    @foreach($empresas as $empresa)
+                        <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                            {{ strtoupper($empresa->nombre) }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="input-group">
+                <button type="submit" class="btn btn-primary">FILTRAR</button>
+                <a href="{{ route('cash-histories.index') }}" class="btn btn-secondary">LIMPIAR</a>
             </div>
         </form>
     </div>
@@ -98,6 +108,7 @@
                 <th>ID</th>
                 <th>FECHA</th>
                 <th>USUARIO</th>
+                <th>EMPRESA</th>
                 <th>MONTO</th>
                 <th>ESTADO</th>
                 <th>ACCIONES</th>
@@ -109,6 +120,7 @@
                     <td>{{ $history->id }}</td>
                     <td>{{ $history->created_at->format('Y-m-d H:i') }}</td>
                     <td>{{ $history->user ? strtoupper($history->user->name) : 'USUARIO NO DISPONIBLE' }}</td>
+                    <td>{{ $history->empresa ? strtoupper($history->empresa->nombre) : 'NO ASIGNADA' }}</td>
                     <td>${{ number_format($history->monto, 2) }}</td>
                     <td>{{ strtoupper($history->estado) }}</td>
                     <td>

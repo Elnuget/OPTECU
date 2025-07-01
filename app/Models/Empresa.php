@@ -49,4 +49,12 @@ class Empresa extends Model
     {
         return $this->hasOne(Horario::class);
     }
+
+    /**
+     * Obtener los historiales de caja de la empresa
+     */
+    public function cashHistories()
+    {
+        return $this->hasMany(CashHistory::class);
+    }
 }

@@ -12,17 +12,23 @@ class CashHistoryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = CashHistory::with('user');
+        $query = CashHistory::with(['user', 'empresa']);
         
         // Filtrar por fecha si se proporciona
         if ($request->has('fecha_filtro') && $request->fecha_filtro) {
             $query->whereDate('created_at', $request->fecha_filtro);
         }
         
+        // Filtrar por empresa si se proporciona
+        if ($request->has('empresa_id') && $request->empresa_id) {
+            $query->where('empresa_id', $request->empresa_id);
+        }
+        
         $cashHistories = $query->latest()->get();
         $sumCaja = Caja::sum('valor');
+        $empresas = \App\Models\Empresa::orderBy('nombre')->get();
         
-        return view('cash-histories.index', compact('cashHistories', 'sumCaja'));
+        return view('cash-histories.index', compact('cashHistories', 'sumCaja', 'empresas'));
     }
 
     public function store(Request $request)
@@ -51,6 +57,14 @@ class CashHistoryController extends Controller
             $cashHistory->monto = $request->monto;
             $cashHistory->estado = $requestedState;
             $cashHistory->user_id = auth()->id();
+            
+            // Asignar empresa_id si está disponible en la solicitud o usar la empresa del usuario autenticado
+            if ($request->has('empresa_id')) {
+                $cashHistory->empresa_id = $request->empresa_id;
+            } elseif (auth()->user()->empresa_id) {
+                $cashHistory->empresa_id = auth()->user()->empresa_id;
+            }
+            
             $cashHistory->save();
 
             $message = $requestedState === 'Apertura' ? 'Caja abierta exitosamente' : 'Caja cerrada exitosamente';
@@ -83,7 +97,8 @@ class CashHistoryController extends Controller
     {
         $request->validate([
             'monto' => 'required|numeric',
-            'estado' => 'required|string'
+            'estado' => 'required|string',
+            'empresa_id' => 'nullable|exists:empresas,id'
         ]);
 
         $cashHistory->update($request->all());
@@ -120,6 +135,7 @@ class CashHistoryController extends Controller
 
     public function edit(CashHistory $cashHistory)
     {
-        return view('cash-histories.edit', compact('cashHistory'));
+        $empresas = \App\Models\Empresa::orderBy('nombre')->get();
+        return view('cash-histories.edit', compact('cashHistory', 'empresas'));
     }
 }
