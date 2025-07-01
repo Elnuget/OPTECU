@@ -49,41 +49,49 @@
         {{-- Lista de Empresas en fila --}}
         <li class="nav-item d-flex align-items-center">
             <i class="fas fa-building ml-2 mr-2 text-secondary"></i>
-            @foreach(\App\Models\Empresa::all() as $empresa)
-                <span class="badge badge-info mr-2" style="font-size: 0.9rem; padding: 8px 12px;">
-                    {{ $empresa->nombre }}
-                </span>
-            @endforeach
+            @if(Auth::user() && Auth::user()->is_admin)
+                {{-- Si es admin, mostrar todas las empresas --}}
+                @foreach(\App\Models\Empresa::all() as $empresa)
+                    <span class="badge badge-info mr-2" style="font-size: 0.9rem; padding: 8px 12px;">
+                        {{ $empresa->nombre }}
+                    </span>
+                @endforeach
+            @elseif(Auth::user() && Auth::user()->empresa_id)
+                {{-- Si no es admin, mostrar solo su empresa --}}
+                @php
+                    $userEmpresa = \App\Models\Empresa::find(Auth::user()->empresa_id);
+                @endphp
+                @if($userEmpresa)
+                    <span class="badge badge-info mr-2" style="font-size: 0.9rem; padding: 8px 12px;">
+                        {{ $userEmpresa->nombre }}
+                    </span>
+                @else
+                    <span class="badge badge-secondary mr-2" style="font-size: 0.9rem; padding: 8px 12px;">
+                        SIN EMPRESA ASIGNADA
+                    </span>
+                @endif
+            @endif
         </li>
 
         {{-- Mensaje de advertencia de cierre de caja --}}
-        @if($lastCashHistory)
-            <li class="nav-item d-none d-md-block">
-                <div class="alert alert-danger py-1 px-3 mb-0 ml-3 d-flex align-items-center" style="font-size: 0.9rem;">
-                    <i class="fas fa-exclamation-triangle mr-2"></i>
-                    El usuario {{ $lastCashHistory->user->name }} debe cerrar caja antes de salir
-                </div>
-            </li>
+        @if(Auth::user() && Auth::user()->empresa_id)
+            @php
+                $cajaAbierta = \App\Models\CashHistory::where('empresa_id', Auth::user()->empresa_id)
+                                                    ->where('estado', 'Apertura')
+                                                    ->latest()
+                                                    ->first();
+            @endphp
+            @if($cajaAbierta && (!Auth::user()->is_admin || (Auth::user()->is_admin && $cajaAbierta->user_id == Auth::id())))
+                <li class="nav-item d-none d-md-block">
+                    <div class="alert alert-danger py-1 px-3 mb-0 ml-3 d-flex align-items-center" style="font-size: 0.9rem;">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Debe cerrar caja de {{ \App\Models\Empresa::find($cajaAbierta->empresa_id)->nombre ?? 'EMPRESA' }} antes de salir
+                    </div>
+                </li>
+            @endif
         @endif
 
-        {{-- Notificaciones de mensajes pendientes --}}
-        @if($cumpleañerosPendientes > 0)
-            <li class="nav-item d-none d-md-block">
-                <a href="{{ route('mensajes.cumpleanos') }}" class="alert alert-info py-1 px-3 mb-0 ml-3 d-flex align-items-center" style="font-size: 0.9rem; text-decoration: none;">
-                    <i class="fas fa-birthday-cake mr-2"></i>
-                    {{ $cumpleañerosPendientes }} cumpleañeros pendientes de felicitar
-                </a>
-            </li>
-        @endif
-
-        @if($consultasPendientes > 0)
-            <li class="nav-item d-none d-md-block">
-                <a href="{{ route('mensajes.recordatorios') }}" class="alert alert-warning py-1 px-3 mb-0 ml-3 d-flex align-items-center" style="font-size: 0.9rem; text-decoration: none;">
-                    <i class="fas fa-calendar-check mr-2"></i>
-                    {{ $consultasPendientes }} recordatorios de consulta pendientes
-                </a>
-            </li>
-        @endif
+        {{-- Notificaciones ahora están en el icono de campana en la derecha --}}
 
         {{-- Configured left links --}}
         @each('adminlte::partials.navbar.menu-item', $adminlte->menu('navbar-left'), 'item')
@@ -94,27 +102,27 @@
 
     {{-- Navbar right links --}}
     <ul class="navbar-nav ml-auto">
-        {{-- Notificaciones para dispositivos móviles --}}
+        {{-- Notificaciones con icono de campana para todos los dispositivos --}}
         @if($cumpleañerosPendientes > 0 || $consultasPendientes > 0)
-            <li class="nav-item dropdown d-md-none">
+            <li class="nav-item dropdown">
                 <a class="nav-link" data-toggle="dropdown" href="#" aria-expanded="false">
                     <i class="far fa-bell"></i>
                     <span class="badge badge-danger navbar-badge">{{ $cumpleañerosPendientes + $consultasPendientes }}</span>
                 </a>
                 <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right" style="left: inherit; right: 0px;">
-                    <span class="dropdown-item dropdown-header">{{ $cumpleañerosPendientes + $consultasPendientes }} Notificaciones</span>
+                    <span class="dropdown-item dropdown-header">{{ $cumpleañerosPendientes + $consultasPendientes }} NOTIFICACIONES</span>
                     
                     @if($cumpleañerosPendientes > 0)
                         <div class="dropdown-divider"></div>
                         <a href="{{ route('mensajes.cumpleanos') }}" class="dropdown-item">
-                            <i class="fas fa-birthday-cake mr-2"></i> {{ $cumpleañerosPendientes }} cumpleañeros pendientes
+                            <i class="fas fa-birthday-cake mr-2"></i> {{ $cumpleañerosPendientes }} CUMPLEAÑEROS PENDIENTES
                         </a>
                     @endif
                     
                     @if($consultasPendientes > 0)
                         <div class="dropdown-divider"></div>
                         <a href="{{ route('mensajes.recordatorios') }}" class="dropdown-item">
-                            <i class="fas fa-calendar-check mr-2"></i> {{ $consultasPendientes }} recordatorios pendientes
+                            <i class="fas fa-calendar-check mr-2"></i> {{ $consultasPendientes }} RECORDATORIOS PENDIENTES
                         </a>
                     @endif
                 </div>

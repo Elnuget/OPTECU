@@ -1,17 +1,34 @@
 @php
-    $lastCashHistory = \App\Models\CashHistory::latest()->first();
-    $previousCashHistory = \App\Models\CashHistory::where('estado', 'Cierre')
-                                                 ->latest()
-                                                 ->first();
-    $isClosed = !$lastCashHistory || $lastCashHistory->estado !== 'Apertura';
+    $currentUser = Auth::user();
+    $lastCashHistory = null;
+    $previousCashHistory = null;
+    $isClosed = true;
+    
+    if ($currentUser) {
+        // Obtener el último registro de caja para la empresa del usuario
+        if ($currentUser->empresa_id) {
+            $lastCashHistory = \App\Models\CashHistory::where('empresa_id', $currentUser->empresa_id)
+                                                     ->latest()
+                                                     ->first();
+            
+            $previousCashHistory = \App\Models\CashHistory::where('empresa_id', $currentUser->empresa_id)
+                                                         ->where('estado', 'Cierre')
+                                                         ->latest()
+                                                         ->first();
+            
+            // Verificar si la caja está cerrada para esta empresa
+            $isClosed = !$lastCashHistory || $lastCashHistory->estado !== 'Apertura';
+        }
+    }
+    
     $showClosingCard = session('showClosingCard', false);
     
     // Updated: Get sum from Caja model
     $sumCaja = \App\Models\Caja::sum('valor');
 @endphp
 
-{{-- Tarjeta de Apertura de Caja --}}
-@if($isClosed)
+{{-- Tarjeta de Apertura de Caja (solo para usuarios no administradores) --}}
+@if($currentUser && !$currentUser->is_admin && $isClosed && $currentUser->empresa_id)
 <div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center" 
      style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;">
     <div class="text-white" style="max-width: 500px;">
@@ -44,6 +61,7 @@
                         </div>
                     </div>
                     <input type="hidden" name="estado" value="Apertura">
+                    <input type="hidden" name="empresa_id" value="{{ $currentUser->empresa_id }}">
                     
                     <div class="d-flex justify-content-between mt-4">
                         <button type="submit" class="btn btn-success btn-lg flex-grow-1 mr-2">
@@ -65,7 +83,7 @@
 @endif
 
 {{-- Tarjeta de Cierre de Caja --}}
-@if($showClosingCard && !$isClosed)
+@if($showClosingCard && $currentUser && $currentUser->empresa_id && !$isClosed)
 <div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center" 
      style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;">
     <div class="text-white" style="max-width: 500px;">
@@ -90,6 +108,7 @@
                         </div>
                     </div>
                     <input type="hidden" name="estado" value="Cierre">
+                    <input type="hidden" name="empresa_id" value="{{ $currentUser->empresa_id }}">
                     
                     <div class="d-flex justify-content-between mt-4">
                         <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg flex-grow-1 mr-2">
@@ -130,6 +149,7 @@
                             body: JSON.stringify({
                                 monto: document.getElementById('monto_cierre').value,
                                 estado: 'Cierre',
+                                empresa_id: {{ $currentUser->empresa_id ?? 'null' }},
                                 _token: token
                             })
                         })
@@ -168,7 +188,7 @@
 
 {{-- Content Wrapper --}}
 <div class="content-wrapper {{ config('adminlte.classes_content_wrapper', '') }}" 
-     @if($isClosed || $showClosingCard) style="filter: blur(5px);" @endif>
+     @if(($currentUser && !$currentUser->is_admin && $isClosed && $currentUser->empresa_id) || $showClosingCard) style="filter: blur(5px);" @endif>
     {{-- Content Header --}}
     @hasSection('content_header')
         <div class="content-header">
