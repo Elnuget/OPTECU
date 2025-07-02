@@ -100,6 +100,10 @@
                                 <input type="text" name="ocupacion" id="ocupacion" class="form-control">
                             </div>
                             <div class="form-group col-md-4">
+                                <label for="proxima_consulta">Próxima Consulta</label>
+                                <input type="date" name="proxima_consulta" id="proxima_consulta" class="form-control">
+                            </div>
+                            <div class="form-group col-md-4">
                                 <label for="empresa_id">Empresa</label>
                                 <select name="empresa_id" id="empresa_id" class="form-control">
                                     <option value="">Seleccione una empresa...</option>
@@ -647,6 +651,16 @@
                         
                         document.getElementById('ocupacion').value = historial.ocupacion || '';
                         
+                        // Próxima consulta
+                        document.getElementById('proxima_consulta').value = historial.proxima_consulta ? new Date(historial.proxima_consulta).toISOString().split('T')[0] : '';
+                        
+                        // Empresa
+                        if (historial.empresa_id) {
+                            document.getElementById('empresa_id').value = historial.empresa_id;
+                        } else {
+                            document.getElementById('empresa_id').value = '';
+                        }
+                        
                         // Motivo de consulta y enfermedad actual
                         document.getElementsByName('motivo_consulta')[0].value = historial.motivo_consulta || '';
                         document.getElementsByName('enfermedad_actual')[0].value = historial.enfermedad_actual || '';
@@ -678,6 +692,7 @@
                         
                         // Diagnóstico y tratamiento
                         // El diagnóstico se maneja a través de checkboxes más adelante
+                        document.getElementById('proxima_consulta').value = historial.proxima_consulta ? new Date(historial.proxima_consulta).toISOString().split('T')[0] : '';
                         
                         // Receta - Valores OD y OI
                         document.getElementsByName('od_esfera')[0].value = historial.od_esfera || '';
