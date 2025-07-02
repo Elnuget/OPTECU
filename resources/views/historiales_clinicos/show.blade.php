@@ -46,210 +46,234 @@
             </div>
         </div>
 
-        {{-- MOTIVO DE CONSULTA Y ENFERMEDAD ACTUAL --}}
+        {{-- PRESCRIPCIÓN / RECETA --}}
+        @if($historialClinico->recetas && $historialClinico->recetas->count() > 0)
         <div class="card mb-4">
-            <div class="card-header" data-toggle="collapse" data-target="#motivoConsulta" style="cursor: pointer">
+            <div class="card-header" data-toggle="collapse" data-target="#prescripcion" style="cursor: pointer">
                 <h5 class="mb-0">
-                    <i class="fas fa-notes-medical mr-2"></i> Motivo de Consulta y Enfermedad Actual
+                    <i class="fas fa-prescription mr-2"></i> Receta
                 </h5>
             </div>
-            <div id="motivoConsulta" class="collapse show">
+            <div id="prescripcion" class="collapse show">
                 <div class="card-body">
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered text-center">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th></th>
+                                    <th>ESFERA</th>
+                                    <th>CILINDRO</th>
+                                    <th>EJE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>OD</strong></td>
+                                    <td>{{ $historialClinico->recetas->first()->od_esfera ?? 'N/A' }}</td>
+                                    <td>{{ $historialClinico->recetas->first()->od_cilindro ?? 'N/A' }}</td>
+                                    <td>{{ $historialClinico->recetas->first()->od_eje ?? 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>OI</strong></td>
+                                    <td>{{ $historialClinico->recetas->first()->oi_esfera ?? 'N/A' }}</td>
+                                    <td>{{ $historialClinico->recetas->first()->oi_cilindro ?? 'N/A' }}</td>
+                                    <td>{{ $historialClinico->recetas->first()->oi_eje ?? 'N/A' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                     <dl class="row">
-                        <dt class="col-sm-3">MOTIVO CONSULTA:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->motivo_consulta) }}</dd>
-                        <dt class="col-sm-3">ENFERMEDAD ACTUAL:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->enfermedad_actual) }}</dd>
-                    </dl>
-                </div>
-            </div>
-        </div>
-
-        {{-- ANTECEDENTES --}}
-        <div class="card mb-4">
-            <div class="card-header" data-toggle="collapse" data-target="#antecedentes" style="cursor: pointer">
-                <h5 class="mb-0">
-                    <i class="fas fa-history mr-2"></i> Antecedentes
-                </h5>
-            </div>
-            <div id="antecedentes" class="collapse show">
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-3">PERSONALES OCULARES:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->antecedentes_personales_oculares) }}</dd>
-                        <dt class="col-sm-3">PERSONALES GENERALES:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->antecedentes_personales_generales) }}</dd>
-                        <dt class="col-sm-3">FAMILIARES OCULARES:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->antecedentes_familiares_oculares) }}</dd>
-                        <dt class="col-sm-3">FAMILIARES GENERALES:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->antecedentes_familiares_generales) }}</dd>
-                    </dl>
-                </div>
-            </div>
-        </div>
-
-        {{-- AGUDEZA VISUAL Y PH --}}
-        <div class="card mb-4">
-            <div class="card-header" data-toggle="collapse" data-target="#agudezaVisual" style="cursor: pointer">
-                <h5 class="mb-0">
-                    <i class="fas fa-eye mr-2"></i> Agudeza Visual y PH
-                </h5>
-            </div>
-            <div id="agudezaVisual" class="collapse show">
-                <div class="card-body">
-                    <h6>Agudeza Visual VL sin Corrección</h6>
-                    <dl class="row">
-                        <dt class="col-sm-3">OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->agudeza_visual_vl_sin_correccion_od) }}</dd>
-                        <dt class="col-sm-3">OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->agudeza_visual_vl_sin_correccion_oi) }}</dd>
-                        <dt class="col-sm-3">AO:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->agudeza_visual_vl_sin_correccion_ao) }}</dd>
-                    </dl>
-
-                    <h6 class="mt-4">Agudeza Visual VP sin Corrección</h6>
-                    <dl class="row">
-                        <dt class="col-sm-3">OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->agudeza_visual_vp_sin_correccion_od) }}</dd>
-                        <dt class="col-sm-3">OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->agudeza_visual_vp_sin_correccion_oi) }}</dd>
-                        <dt class="col-sm-3">AO:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->agudeza_visual_vp_sin_correccion_ao) }}</dd>
-                    </dl>
-
-                    <h6 class="mt-4">Pin Hole (PH)</h6>
-                    <dl class="row">
-                        <dt class="col-sm-3">PH OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->ph_od) }}</dd>
-                        <dt class="col-sm-3">PH OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->ph_oi) }}</dd>
-                        <dt class="col-sm-3">OPTOTIPO:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->optotipo ?? 'N/A') }}</dd>
-                    </dl>
-                </div>
-            </div>
-        </div>
-
-        {{-- LENSOMETRÍA --}}
-        <div class="card mb-4">
-            <div class="card-header" data-toggle="collapse" data-target="#lensometria" style="cursor: pointer">
-                <h5 class="mb-0">
-                    <i class="fas fa-glasses mr-2"></i> Lensometría
-                </h5>
-            </div>
-            <div id="lensometria" class="collapse show">
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-3">LENSOMETRÍA OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->lensometria_od ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">LENSOMETRÍA OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->lensometria_oi ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">TIPO DE LENTE:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->tipo_lente ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">MATERIAL:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->material ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">FILTRO:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->filtro ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">TIEMPO DE USO:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->tiempo_uso ?? 'N/A') }}</dd>
-                    </dl>
-                </div>
-            </div>
-        </div>
-
-        {{-- RX FINAL --}}
-        <div class="card mb-4">
-            <div class="card-header" data-toggle="collapse" data-target="#rxFinal" style="cursor: pointer">
-                <h5 class="mb-0">
-                    <i class="fas fa-prescription mr-2"></i> Rx Final
-                </h5>
-            </div>
-            <div id="rxFinal" class="collapse show">
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-3">REFRACCIÓN OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->refraccion_od) }}</dd>
-                        <dt class="col-sm-3">REFRACCIÓN OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->refraccion_oi) }}</dd>
-                        <dt class="col-sm-3">DP OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->rx_final_dp_od) }}</dd>
-                        <dt class="col-sm-3">DP OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->rx_final_dp_oi) }}</dd>
-                        <dt class="col-sm-3">AV VL OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->rx_final_av_vl_od) }}</dd>
-                        <dt class="col-sm-3">AV VL OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->rx_final_av_vl_oi) }}</dd>
-                        <dt class="col-sm-3">AV VP OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->rx_final_av_vp_od) }}</dd>
-                        <dt class="col-sm-3">AV VP OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->rx_final_av_vp_oi) }}</dd>
-                        <dt class="col-sm-3">ADD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->add ?? 'N/A') }}</dd>
-                    </dl>
-                </div>
-            </div>
-        </div>
-
-        {{-- DIAGNÓSTICO Y TRATAMIENTO --}}
-        <div class="card mb-4">
-            <div class="card-header" data-toggle="collapse" data-target="#diagnostico" style="cursor: pointer">
-                <h5 class="mb-0">
-                    <i class="fas fa-file-medical mr-2"></i> Diagnóstico y Tratamiento
-                </h5>
-            </div>
-            <div id="diagnostico" class="collapse show">
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-3">DIAGNÓSTICO:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->diagnostico) }}</dd>
-                        <dt class="col-sm-3">TRATAMIENTO:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->tratamiento) }}</dd>
-                        <dt class="col-sm-3">COTIZACIÓN:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->cotizacion ?? 'N/A') }}</dd>
-                    </dl>
-                </div>
-            </div>
-        </div>
-
-        {{-- RECETA --}}
-        @if($historialClinico->receta)
-        <div class="card mb-4">
-            <div class="card-header" data-toggle="collapse" data-target="#recetaCard" style="cursor: pointer">
-                <h5 class="mb-0">
-                    <i class="fas fa-prescription-bottle-alt mr-2"></i> Receta
-                </h5>
-            </div>
-            <div id="recetaCard" class="collapse show">
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-3">ESFERA OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->esfera_od ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">ESFERA OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->esfera_oi ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">CILINDRO OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->cilindro_od ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">CILINDRO OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->cilindro_oi ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">EJE OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->eje_od ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">EJE OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->eje_oi ?? 'N/A') }}</dd>
                         <dt class="col-sm-3">ADD OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->add_od ?? 'N/A') }}</dd>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->recetas->first()->od_adicion ?? 'N/A') }}</dd>
                         <dt class="col-sm-3">ADD OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->add_oi ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">TIPO DE LENTE:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->tipo_lente ?? 'N/A') }}</dd>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->recetas->first()->oi_adicion ?? 'N/A') }}</dd>
+                        <dt class="col-sm-3">DP:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->recetas->first()->dp ?? 'N/A') }}</dd>
                         <dt class="col-sm-3">OBSERVACIONES:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->observaciones ?? 'N/A') }}</dd>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->recetas->first()->observaciones ?? 'N/A') }}</dd>
                     </dl>
                 </div>
             </div>
         </div>
         @endif
 
+        {{-- BOTÓN PARA MOSTRAR/OCULTAR SECCIONES OPCIONALES --}}
+        <div class="text-center mb-4">
+            <button type="button" id="btnMostrarOpcionales" class="btn btn-outline-primary">
+                <i class="fas fa-plus-circle mr-2"></i>Mostrar información adicional
+            </button>
+        </div>
+
+        {{-- SECCIONES OPCIONALES --}}
+        <div id="seccionesOpcionales" style="display: none;">
+            {{-- MOTIVO DE CONSULTA Y ENFERMEDAD ACTUAL --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#motivoConsulta" style="cursor: pointer">
+                    <h5 class="mb-0">
+                        <i class="fas fa-notes-medical mr-2"></i> Motivo de Consulta y Enfermedad Actual
+                    </h5>
+                </div>
+                <div id="motivoConsulta" class="collapse">
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-3">MOTIVO CONSULTA:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->motivo_consulta) }}</dd>
+                            <dt class="col-sm-3">ENFERMEDAD ACTUAL:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->enfermedad_actual) }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            {{-- ANTECEDENTES --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#antecedentes" style="cursor: pointer">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history mr-2"></i> Antecedentes
+                    </h5>
+                </div>
+                <div id="antecedentes" class="collapse">
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-3">PERSONALES OCULARES:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->antecedentes_personales_oculares) }}</dd>
+                            <dt class="col-sm-3">PERSONALES GENERALES:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->antecedentes_personales_generales) }}</dd>
+                            <dt class="col-sm-3">FAMILIARES OCULARES:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->antecedentes_familiares_oculares) }}</dd>
+                            <dt class="col-sm-3">FAMILIARES GENERALES:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->antecedentes_familiares_generales) }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            {{-- AGUDEZA VISUAL Y PH --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#agudezaVisual" style="cursor: pointer">
+                    <h5 class="mb-0">
+                        <i class="fas fa-eye mr-2"></i> Agudeza Visual y PH
+                    </h5>
+                </div>
+                <div id="agudezaVisual" class="collapse">
+                    <div class="card-body">
+                        <h6>Agudeza Visual VL sin Corrección</h6>
+                        <dl class="row">
+                            <dt class="col-sm-3">OD:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->agudeza_visual_vl_sin_correccion_od) }}</dd>
+                            <dt class="col-sm-3">OI:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->agudeza_visual_vl_sin_correccion_oi) }}</dd>
+                            <dt class="col-sm-3">AO:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->agudeza_visual_vl_sin_correccion_ao) }}</dd>
+                        </dl>
+
+                        <h6 class="mt-4">Agudeza Visual VP sin Corrección</h6>
+                        <dl class="row">
+                            <dt class="col-sm-3">OD:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->agudeza_visual_vp_sin_correccion_od) }}</dd>
+                            <dt class="col-sm-3">OI:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->agudeza_visual_vp_sin_correccion_oi) }}</dd>
+                            <dt class="col-sm-3">AO:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->agudeza_visual_vp_sin_correccion_ao) }}</dd>
+                        </dl>
+
+                        <h6 class="mt-4">Pin Hole (PH)</h6>
+                        <dl class="row">
+                            <dt class="col-sm-3">PH OD:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->ph_od) }}</dd>
+                            <dt class="col-sm-3">PH OI:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->ph_oi) }}</dd>
+                            <dt class="col-sm-3">OPTOTIPO:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->optotipo ?? 'N/A') }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            {{-- LENSOMETRÍA --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#lensometria" style="cursor: pointer">
+                    <h5 class="mb-0">
+                        <i class="fas fa-glasses mr-2"></i> Lensometría
+                    </h5>
+                </div>
+                <div id="lensometria" class="collapse">
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-3">LENSOMETRÍA OD:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->lensometria_od ?? 'N/A') }}</dd>
+                            <dt class="col-sm-3">LENSOMETRÍA OI:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->lensometria_oi ?? 'N/A') }}</dd>
+                            <dt class="col-sm-3">TIPO DE LENTE:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->tipo_lente ?? 'N/A') }}</dd>
+                            <dt class="col-sm-3">MATERIAL:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->material ?? 'N/A') }}</dd>
+                            <dt class="col-sm-3">FILTRO:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->filtro ?? 'N/A') }}</dd>
+                            <dt class="col-sm-3">TIEMPO DE USO:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->tiempo_uso ?? 'N/A') }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            {{-- RX FINAL --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#rxFinal" style="cursor: pointer">
+                    <h5 class="mb-0">
+                        <i class="fas fa-prescription mr-2"></i> Rx Final
+                    </h5>
+                </div>
+                <div id="rxFinal" class="collapse">
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-3">REFRACCIÓN OD:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->refraccion_od) }}</dd>
+                            <dt class="col-sm-3">REFRACCIÓN OI:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->refraccion_oi) }}</dd>
+                            <dt class="col-sm-3">DP OD:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->rx_final_dp_od) }}</dd>
+                            <dt class="col-sm-3">DP OI:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->rx_final_dp_oi) }}</dd>
+                            <dt class="col-sm-3">AV VL OD:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->rx_final_av_vl_od) }}</dd>
+                            <dt class="col-sm-3">AV VL OI:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->rx_final_av_vl_oi) }}</dd>
+                            <dt class="col-sm-3">AV VP OD:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->rx_final_av_vp_od) }}</dd>
+                            <dt class="col-sm-3">AV VP OI:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->rx_final_av_vp_oi) }}</dd>
+                            <dt class="col-sm-3">ADD:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->add ?? 'N/A') }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            {{-- DIAGNÓSTICO Y TRATAMIENTO --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#diagnostico" style="cursor: pointer">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-medical mr-2"></i> Diagnóstico y Tratamiento
+                    </h5>
+                </div>
+                <div id="diagnostico" class="collapse">
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-3">DIAGNÓSTICO:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->diagnostico) }}</dd>
+                            <dt class="col-sm-3">TRATAMIENTO:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->tratamiento) }}</dd>
+                            <dt class="col-sm-3">COTIZACIÓN:</dt>
+                            <dd class="col-sm-9">{{ strtoupper($historialClinico->cotizacion ?? 'N/A') }}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- BOTONES DE ACCIÓN --}}
-        <div class="d-flex justify-content-end">
+        <div class="d-flex justify-content-end mt-4">
             <a href="{{ route('historiales_clinicos.index') }}" class="btn btn-secondary mr-2">
                 <i class="fas fa-arrow-left mr-2"></i>VOLVER AL LISTADO
             </a>
@@ -295,12 +319,28 @@
 @section('js')
 <script>
     $(document).ready(function() {
-        // Inicialmente mostrar todas las secciones
-        $('.collapse').addClass('show');
-        
-        // Permitir colapsar/expandir secciones
-        $('.card-header').click(function() {
-            $(this).next('.collapse').collapse('toggle');
+        // Botón para mostrar/ocultar secciones opcionales
+        $('#btnMostrarOpcionales').click(function() {
+            const $seccionesOpcionales = $('#seccionesOpcionales');
+            const $boton = $(this);
+            
+            if ($seccionesOpcionales.is(':visible')) {
+                $seccionesOpcionales.slideUp();
+                $boton.html('<i class="fas fa-plus-circle mr-2"></i>Mostrar información adicional');
+                // Opcional: colapsar todas las tarjetas internas al ocultar el contenedor
+                $seccionesOpcionales.find('.collapse').collapse('hide');
+            } else {
+                $seccionesOpcionales.slideDown();
+                $boton.html('<i class="fas fa-minus-circle mr-2"></i>Ocultar información adicional');
+                // Opcional: expandir todas las tarjetas internas al mostrar el contenedor
+                $seccionesOpcionales.find('.collapse').collapse('show');
+            }
+        });
+
+        // Permitir colapsar/expandir secciones individuales
+        $('.card-header[data-toggle="collapse"]').click(function() {
+            const target = $(this).data('target');
+            $(target).collapse('toggle');
         });
     });
 </script>
