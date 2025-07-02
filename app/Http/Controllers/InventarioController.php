@@ -45,6 +45,9 @@ class InventarioController extends Controller
             // Aplicar el filtro de fecha
             $query->where('fecha', 'like', $request->fecha . '%');
             
+            // Incluir relación con empresa
+            $query->with('empresa');
+            
             // Obtener todos los datos ordenados por lugar y columna
             $inventario = $query->orderBy('lugar')
                                ->orderBy('columna')
@@ -73,7 +76,8 @@ class InventarioController extends Controller
      */
     public function create()
     {
-        return view('inventario.create');
+        $empresas = \App\Models\Empresa::orderBy('nombre')->get();
+        return view('inventario.create', compact('empresas'));
     }
 
     /**
@@ -91,6 +95,7 @@ class InventarioController extends Controller
             'numero' => 'required|integer',
             'codigo' => 'required|string|max:255',
             'cantidad' => 'required|integer',
+            'empresa_id' => 'nullable|exists:empresas,id',
         ]);
 
         if ($request->input('lugar') === 'new') {
@@ -138,7 +143,8 @@ class InventarioController extends Controller
     public function edit($id)
     {
         $inventario = Inventario::findOrFail($id);
-        return view('inventario.edit', compact('inventario'));
+        $empresas = \App\Models\Empresa::orderBy('nombre')->get();
+        return view('inventario.edit', compact('inventario', 'empresas'));
     }
 
     /**
@@ -158,6 +164,7 @@ class InventarioController extends Controller
             'codigo' => 'required|string|max:255',
             'valor' => 'nullable|numeric',
             'cantidad' => 'required|integer',
+            'empresa_id' => 'nullable|exists:empresas,id',
         ]);
 
         try {

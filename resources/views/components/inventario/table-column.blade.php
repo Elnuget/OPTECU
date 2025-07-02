@@ -33,8 +33,10 @@
                 <thead>
                     <tr>
                         <th style="width: 10%">Número</th>
-                        <th style="width: 15%">Lugar</th>                        <th style="width: 10%">Columna</th>
-                        <th style="width: 35%">Código</th>
+                        <th style="width: 15%">Lugar</th>
+                        <th style="width: 10%">Columna</th>
+                        <th style="width: 25%">Código</th>
+                        <th style="width: 10%">Empresa</th>
                         <th style="width: 10%">Cantidad</th>
                         <th style="width: 10%">Acciones</th>
                     </tr>

@@ -41,6 +41,20 @@
                     </div>
 
                     <div class="form-group row">
+                        <div class="col-12">
+                            <label>Empresa</label>
+                            <select name="empresa_id" class="form-control">
+                                <option value="">Seleccione una Empresa</option>
+                                @foreach ($empresas as $empresa)
+                                    <option value="{{ $empresa->id }}" {{ $inventario->empresa_id == $empresa->id ? 'selected' : '' }}>
+                                        {{ $empresa->nombre }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
                         <div class="col-6">
                             <label>Lugar</label>
                             <input list="lugares" name="lugar" class="form-control" required value="{{ $inventario->lugar }}">

@@ -113,6 +113,20 @@
                                             <input name="fecha" id="fecha" required type="date" class="form-control" value="{{ now()->format('Y-m-d') }}">
                                         </div>
                                     </div>
+                                    <div class="form-group">
+                                        <label for="empresa_id">Empresa</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text"><i class="fas fa-building"></i></span>
+                                            </div>
+                                            <select name="empresa_id" id="empresa_id" class="form-control">
+                                                <option value="">Seleccione una Empresa</option>
+                                                @foreach ($empresas as $empresa)
+                                                    <option value="{{ $empresa->id }}">{{ $empresa->nombre }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -20,7 +20,8 @@ class Inventario extends Model
         'codigo',
         'valor',
         'cantidad',
-        'orden'
+        'orden',
+        'empresa_id'
     ];
 
     protected $dates = ['deleted_at'];
@@ -45,5 +46,10 @@ class Inventario extends Model
                     ->using(PedidoInventario::class)
                     ->withPivot(['precio', 'descuento'])
                     ->withTimestamps();
+    }
+    
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
     }
 }

@@ -57,4 +57,12 @@ class Empresa extends Model
     {
         return $this->hasMany(CashHistory::class);
     }
+    
+    /**
+     * Obtener los inventarios de la empresa
+     */
+    public function inventarios()
+    {
+        return $this->hasMany(Inventario::class);
+    }
 }

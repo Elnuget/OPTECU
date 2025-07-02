@@ -16,6 +16,9 @@
     <span class="display-value">{{ $item->codigo }}</span>
     <input type="text" class="form-control edit-input" style="display: none;" value="{{ $item->codigo }}">
 </td>
+<td class="text-center">
+    <span class="display-value">{{ $item->empresa ? $item->empresa->nombre : 'N/A' }}</span>
+</td>
 <td class="editable text-center" data-field="cantidad">
     <span class="display-value">{{ $item->cantidad }}</span>
     <input type="number" class="form-control edit-input" style="display: none;" value="{{ $item->cantidad }}">
