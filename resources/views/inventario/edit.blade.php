@@ -43,14 +43,21 @@
                     <div class="form-group row">
                         <div class="col-12">
                             <label>Empresa</label>
-                            <select name="empresa_id" class="form-control">
+                            <select name="empresa_id" class="form-control" {{ !auth()->user()->is_admin && isset($userEmpresaId) ? 'readonly disabled' : '' }}>
                                 <option value="">Seleccione una Empresa</option>
                                 @foreach ($empresas as $empresa)
-                                    <option value="{{ $empresa->id }}" {{ $inventario->empresa_id == $empresa->id ? 'selected' : '' }}>
+                                    <option value="{{ $empresa->id }}" 
+                                        {{ 
+                                            (isset($userEmpresaId) && $userEmpresaId == $empresa->id) || 
+                                            (!isset($userEmpresaId) && $inventario->empresa_id == $empresa->id) ? 'selected' : '' 
+                                        }}>
                                         {{ $empresa->nombre }}
                                     </option>
                                 @endforeach
                             </select>
+                            @if(!auth()->user()->is_admin && isset($userEmpresaId))
+                                <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}">
+                            @endif
                         </div>
                     </div>
 

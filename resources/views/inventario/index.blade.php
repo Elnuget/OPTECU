@@ -13,7 +13,16 @@
 
     <h1>Inventario</h1>
     <p>Administración de Artículos</p>
-    @if(request('empresa_id'))
+    @if(!auth()->user()->is_admin && auth()->user()->empresa_id)
+        @php
+            $empresaUsuario = $empresas->where('id', auth()->user()->empresa_id)->first();
+        @endphp
+        @if($empresaUsuario)
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Usted está viendo el inventario de su empresa: <strong>{{ $empresaUsuario->nombre }}</strong>
+            </div>
+        @endif
+    @elseif(request('empresa_id'))
         @php
             $empresaSeleccionada = $empresas->where('id', request('empresa_id'))->first();
         @endphp

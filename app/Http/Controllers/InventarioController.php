@@ -42,6 +42,20 @@ class InventarioController extends Controller
             // Obtener el inventario completo
             $query = Inventario::query();
             
+            // Restricción por empresa para usuarios no administradores
+            $user = auth()->user();
+            $userEmpresaId = $user->empresa_id;
+            
+            // Si el usuario no es admin y tiene una empresa asignada, restringir a esa empresa
+            if (!$user->is_admin && $userEmpresaId) {
+                $query->where('empresa_id', $userEmpresaId);
+                // Forzar el filtro de empresa_id para usuarios no admin
+                $request->merge(['empresa_id' => $userEmpresaId]);
+            } else if ($request->filled('empresa_id')) {
+                // Si es admin o no tiene empresa asignada, aplicar el filtro seleccionado
+                $query->where('empresa_id', $request->empresa_id);
+            }
+            
             // Aplicar el filtro de fecha
             $query->where('fecha', 'like', $request->fecha . '%');
             
@@ -84,8 +98,20 @@ class InventarioController extends Controller
      */
     public function create()
     {
-        $empresas = \App\Models\Empresa::orderBy('nombre')->get();
-        return view('inventario.create', compact('empresas'));
+        // Obtener el usuario autenticado
+        $user = auth()->user();
+        
+        // Si el usuario no es admin y tiene empresa asignada, solo mostrar esa empresa
+        if (!$user->is_admin && $user->empresa_id) {
+            $empresas = \App\Models\Empresa::where('id', $user->empresa_id)->get();
+            $userEmpresaId = $user->empresa_id;
+        } else {
+            // Si es admin o no tiene empresa, mostrar todas las empresas
+            $empresas = \App\Models\Empresa::orderBy('nombre')->get();
+            $userEmpresaId = null;
+        }
+        
+        return view('inventario.create', compact('empresas', 'userEmpresaId'));
     }
 
     /**
@@ -108,6 +134,13 @@ class InventarioController extends Controller
 
         if ($request->input('lugar') === 'new') {
             $validatedData['lugar'] = $request->input('new_lugar');
+        }
+        
+        // Restricción para usuarios no administradores
+        $user = auth()->user();
+        if (!$user->is_admin && $user->empresa_id) {
+            // Forzar que el empresa_id sea el del usuario actual
+            $validatedData['empresa_id'] = $user->empresa_id;
         }
 
         // Convertir código a mayúsculas
@@ -151,8 +184,30 @@ class InventarioController extends Controller
     public function edit($id)
     {
         $inventario = Inventario::findOrFail($id);
-        $empresas = \App\Models\Empresa::orderBy('nombre')->get();
-        return view('inventario.edit', compact('inventario', 'empresas'));
+        
+        // Obtener el usuario autenticado
+        $user = auth()->user();
+        
+        // Verificar si el usuario no admin está intentando editar un inventario que no pertenece a su empresa
+        if (!$user->is_admin && $user->empresa_id && $inventario->empresa_id != $user->empresa_id) {
+            return back()->with([
+                'error' => 'Error',
+                'mensaje' => 'No tiene permisos para editar este artículo',
+                'tipo' => 'alert-danger'
+            ]);
+        }
+        
+        // Si el usuario no es admin y tiene empresa asignada, solo mostrar esa empresa
+        if (!$user->is_admin && $user->empresa_id) {
+            $empresas = \App\Models\Empresa::where('id', $user->empresa_id)->get();
+            $userEmpresaId = $user->empresa_id;
+        } else {
+            // Si es admin o no tiene empresa, mostrar todas las empresas
+            $empresas = \App\Models\Empresa::orderBy('nombre')->get();
+            $userEmpresaId = null;
+        }
+        
+        return view('inventario.edit', compact('inventario', 'empresas', 'userEmpresaId'));
     }
 
     /**
@@ -177,6 +232,23 @@ class InventarioController extends Controller
 
         try {
             $inventario = Inventario::findOrFail($id);
+            
+            // Restricción para usuarios no administradores
+            $user = auth()->user();
+            
+            // Verificar si el usuario no admin está intentando editar un inventario que no pertenece a su empresa
+            if (!$user->is_admin && $user->empresa_id && $inventario->empresa_id != $user->empresa_id) {
+                return back()->with([
+                    'error' => 'Error',
+                    'mensaje' => 'No tiene permisos para editar este artículo',
+                    'tipo' => 'alert-danger'
+                ]);
+            }
+            
+            // Si el usuario no es admin, forzar que el empresa_id sea el del usuario
+            if (!$user->is_admin && $user->empresa_id) {
+                $validatedData['empresa_id'] = $user->empresa_id;
+            }
             $inventario->update($validatedData);
 
             return redirect()->route('inventario.actualizar')->with([

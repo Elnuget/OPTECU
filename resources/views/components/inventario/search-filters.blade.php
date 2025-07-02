@@ -9,14 +9,21 @@
         </div>
         <div class="col-md-5">
             <label for="empresa_id">EMPRESA:</label>
-            <select name="empresa_id" id="empresa_id" class="form-control">
-                <option value="">TODAS LAS EMPRESAS</option>
+            <select name="empresa_id" id="empresa_id" class="form-control" {{ !auth()->user()->is_admin && auth()->user()->empresa_id ? 'readonly disabled' : '' }}>
+                @if(auth()->user()->is_admin || !auth()->user()->empresa_id)
+                    <option value="">TODAS LAS EMPRESAS</option>
+                @endif
                 @foreach($empresas as $empresa)
-                    <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                    <option value="{{ $empresa->id }}" 
+                        {{ request('empresa_id') == $empresa->id || 
+                          (!auth()->user()->is_admin && auth()->user()->empresa_id == $empresa->id) ? 'selected' : '' }}>
                         {{ $empresa->nombre }}
                     </option>
                 @endforeach
             </select>
+            @if(!auth()->user()->is_admin && auth()->user()->empresa_id)
+                <input type="hidden" name="empresa_id" value="{{ auth()->user()->empresa_id }}">
+            @endif
         </div>
         <div class="col-md-2">
             <label>&nbsp;</label>

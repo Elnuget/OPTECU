@@ -119,12 +119,17 @@
                                             <div class="input-group-prepend">
                                                 <span class="input-group-text"><i class="fas fa-building"></i></span>
                                             </div>
-                                            <select name="empresa_id" id="empresa_id" class="form-control">
+                                            <select name="empresa_id" id="empresa_id" class="form-control" {{ !auth()->user()->is_admin && isset($userEmpresaId) ? 'readonly disabled' : '' }}>
                                                 <option value="">Seleccione una Empresa</option>
                                                 @foreach ($empresas as $empresa)
-                                                    <option value="{{ $empresa->id }}">{{ $empresa->nombre }}</option>
+                                                    <option value="{{ $empresa->id }}" {{ isset($userEmpresaId) && $userEmpresaId == $empresa->id ? 'selected' : '' }}>
+                                                        {{ $empresa->nombre }}
+                                                    </option>
                                                 @endforeach
                                             </select>
+                                            @if(!auth()->user()->is_admin && isset($userEmpresaId))
+                                                <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}">
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
