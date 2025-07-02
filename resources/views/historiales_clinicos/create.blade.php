@@ -113,306 +113,326 @@
                 </div>
             </div>
 
-            {{-- MOTIVO DE CONSULTA Y ENFERMEDAD ACTUAL --}}
+            {{-- PRESCRIPCIÓN / RECETA --}}
             <div class="card mb-4">
-                <div class="card-header" data-toggle="collapse" data-target="#motivoConsulta">
+                <div class="card-header" data-toggle="collapse" data-target="#prescripcion" style="cursor: pointer">
                     <h5 class="mb-0">
-                        <i class="fas fa-notes-medical mr-2"></i> Motivo de Consulta y Enfermedad Actual
+                        <i class="fas fa-prescription mr-2"></i> Receta
                     </h5>
                 </div>
-                <div id="motivoConsulta" class="collapse">
+                <div id="prescripcion" class="collapse">
                     <div class="card-body">
-                        <div class="form-row">
-                            <div class="form-group col-md-6">
-                                <label>Motivo de Consulta</label>
-                                <input type="text" name="motivo_consulta" class="form-control">
+                        <div class="table-responsive mb-3">
+                            <table class="table table-bordered">
+                                <thead class="bg-primary text-white">
+                                    <tr>
+                                        <th></th>
+                                        <th class="text-center">Esfera</th>
+                                        <th class="text-center">Cilindro</th>
+                                        <th class="text-center">Eje</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="font-weight-bold">OD</td>
+                                        <td><input type="text" name="od_esfera" class="form-control"></td>
+                                        <td><input type="text" name="od_cilindro" class="form-control"></td>
+                                        <td><input type="text" name="od_eje" class="form-control"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="font-weight-bold">OI</td>
+                                        <td><input type="text" name="oi_esfera" class="form-control"></td>
+                                        <td><input type="text" name="oi_cilindro" class="form-control"></td>
+                                        <td><input type="text" name="oi_eje" class="form-control"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="add">ADD</label>
+                                    <input type="text" name="add" id="add" class="form-control">
+                                </div>
                             </div>
-                            <div class="form-group col-md-6">
-                                <label>Enfermedad Actual</label>
-                                <input type="text" name="enfermedad_actual" class="form-control">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="dp">DP pl/pc</label>
+                                    <input type="text" name="dp" id="dp" class="form-control">
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- ANTECEDENTES --}}
-            <div class="card mb-4">
-                <div class="card-header" data-toggle="collapse" data-target="#antecedentes">
-                    <h5 class="mb-0">
-                        <i class="fas fa-history mr-2"></i> Antecedentes
-                    </h5>
-                </div>
-                <div id="antecedentes" class="collapse">
-                    <div class="card-body">
-                        <div class="form-row">
-                            <div class="form-group col-md-6">
-                                <label>Antecedentes Personales Oculares</label>
-                                <input list="antecedentesPersonalesOcularesList" name="antecedentes_personales_oculares" class="form-control">
-                                <datalist id="antecedentesPersonalesOcularesList">
-                                    @foreach($antecedentesPersonalesOculares as $antecedente)
-                                        <option value="{{ $antecedente }}">
-                                    @endforeach
-                                </datalist>
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label>Antecedentes Personales Generales</label>
-                                <input list="antecedentesPersonalesGeneralesList" name="antecedentes_personales_generales" class="form-control">
-                                <datalist id="antecedentesPersonalesGeneralesList">
-                                    @foreach($antecedentesPersonalesGenerales as $antecedente)
-                                        <option value="{{ $antecedente }}">
-                                    @endforeach
-                                </datalist>
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label>Antecedentes Familiares Oculares</label>
-                                <input list="antecedentesFamiliaresOcularesList" name="antecedentes_familiares_oculares" class="form-control">
-                                <datalist id="antecedentesFamiliaresOcularesList">
-                                    @foreach($antecedentesFamiliaresOculares as $antecedente)
-                                        <option value="{{ $antecedente }}">
-                                    @endforeach
-                                </datalist>
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label>Antecedentes Familiares Generales</label>
-                                <input list="antecedentesFamiliaresGeneralesList" name="antecedentes_familiares_generales" class="form-control">
-                                <datalist id="antecedentesFamiliaresGeneralesList">
-                                    @foreach($antecedentesFamiliaresGenerales as $antecedente)
-                                        <option value="{{ $antecedente }}">
-                                    @endforeach
-                                </datalist>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- AGUDEZA VISUAL Y PH --}}
-            <div class="card mb-4">
-                <div class="card-header" data-toggle="collapse" data-target="#agudezaVisual">
-                    <h5 class="mb-0">
-                        <i class="fas fa-eye mr-2"></i> Agudeza Visual y PH
-                    </h5>
-                </div>
-                <div id="agudezaVisual" class="collapse">
-                    <div class="card-body">
+                        
                         <div class="row">
                             <div class="col-md-6">
-                                <h6>Agudeza Visual VL sin Corrección</h6>
-                                <div class="form-row">
-                                    <div class="form-group col-md-4">
-                                        <label>OD</label>
-                                        <input type="text" name="agudeza_visual_vl_sin_correccion_od" class="form-control">
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0">Diagnóstico:</h6>
                                     </div>
-                                    <div class="form-group col-md-4">
-                                        <label>OI</label>
-                                        <input type="text" name="agudeza_visual_vl_sin_correccion_oi" class="form-control">
-                                    </div>
-                                    <div class="form-group col-md-4">
-                                        <label>AO</label>
-                                        <input type="text" name="agudeza_visual_vl_sin_correccion_ao" class="form-control">
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Astigmatismo" id="astigmatismo">
+                                            <label class="form-check-label" for="astigmatismo">
+                                                Astigmatismo
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Hipermetropía" id="hipermetropia">
+                                            <label class="form-check-label" for="hipermetropia">
+                                                Hipermetropía
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Miopía" id="miopia">
+                                            <label class="form-check-label" for="miopia">
+                                                Miopía
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Presbicia" id="presbicia">
+                                            <label class="form-check-label" for="presbicia">
+                                                Presbicia
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <h6>Agudeza Visual VP sin Corrección</h6>
-                                <div class="form-row">
-                                    <div class="form-group col-md-4">
-                                        <label>OD</label>
-                                        <input type="text" name="agudeza_visual_vp_sin_correccion_od" class="form-control">
-                                    </div>
-                                    <div class="form-group col-md-4">
-                                        <label>OI</label>
-                                        <input type="text" name="agudeza_visual_vp_sin_correccion_oi" class="form-control">
-                                    </div>
-                                    <div class="form-group col-md-4">
-                                        <label>AO</label>
-                                        <input type="text" name="agudeza_visual_vp_sin_correccion_ao" class="form-control">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">NOTA IMPORTANTE:</h6>
+                                        <p class="card-text">
+                                            El período de adaptación del lente óptico varía de 2 a 3 semanas, puede tener molestias como:
+                                            mareos, dolor de cabeza, visión a desnivel.
+                                            Estas desaparecerán a medida que se adapte al lente.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="row mt-3">
-                            <div class="col-md-6">
-                                <h6>Pin Hole (PH)</h6>
-                                <div class="form-row">
-                                    <div class="form-group col-md-6">
-                                        <label>PH OD</label>
-                                        <input type="text" name="ph_od" class="form-control">
-                                    </div>
-                                    <div class="form-group col-md-6">
-                                        <label>PH OI</label>
-                                        <input type="text" name="ph_oi" class="form-control">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Optotipo</label> <!-- Removido text-danger -->
-                            <textarea name="optotipo" class="form-control" rows="2"></textarea>
+                        
+                        <div class="form-group mt-4">
+                            <label for="observaciones">Observaciones:</label>
+                            <textarea name="observaciones" id="observaciones" class="form-control" rows="3"></textarea>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- LENSOMETRÍA --}}
-            <div class="card mb-4">
-                <div class="card-header" data-toggle="collapse" data-target="#lensometria">
-                    <h5 class="mb-0">
-                        <i class="fas fa-glasses mr-2"></i> Lensometría
-                    </h5>
-                </div>
-                <div id="lensometria" class="collapse">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6>Lensometría</h6> <!-- Removido text-danger -->
-                                <div class="form-row">
-                                    <div class="form-group col-md-6">
-                                        <label>OD</label> <!-- Removido text-danger -->
-                                        <input type="text" name="lensometria_od" class="form-control">
-                                    </div>
-                                    <div class="form-group col-md-6">
-                                        <label>OI</label> <!-- Removido text-danger -->
-                                        <input type="text" name="lensometria_oi" class="form-control">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Tipo de Lente</label> <!-- Removido text-danger y required -->
-                                    <input type="text" name="tipo_lente" class="form-control">
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Material</label> <!-- Removido text-danger y required -->
-                                    <input type="text" name="material" class="form-control">
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Filtro</label> <!-- Removido text-danger y required -->
-                                    <input type="text" name="filtro" class="form-control">
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>Tiempo de Uso</label> <!-- Ya estaba como no obligatorio -->
-                                    <input type="text" name="tiempo_uso" class="form-control">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- RX FINAL --}}
-            <div class="card mb-4">
-                <div class="card-header" data-toggle="collapse" data-target="#rxFinal">
-                    <h5 class="mb-0">
-                        <i class="fas fa-prescription mr-2"></i> Rx Final
-                    </h5>
-                </div>
-                <div id="rxFinal" class="collapse">
-                    <div class="card-body">
-                        <div class="form-row mb-3">
-                            <div class="form-group col-md-6">
-                                <label>Refracción OD</label>
-                                <input type="text" name="refraccion_od" class="form-control">
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label>Refracción OI</label>
-                                <input type="text" name="refraccion_oi" class="form-control">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group col-md-3">
-                                <label>DP OD</label>
-                                <input type="text" name="rx_final_dp_od" class="form-control">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>DP OI</label>
-                                <input type="text" name="rx_final_dp_oi" class="form-control">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>AV VL OD</label>
-                                <input type="text" name="rx_final_av_vl_od" class="form-control">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>AV VL OI</label>
-                                <input type="text" name="rx_final_av_vl_oi" class="form-control">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group col-md-3">
-                                <label>AV VP OD</label>
-                                <input type="text" name="rx_final_av_vp_od" class="form-control">
-                            </div>
-                            <div class="form-group col-md-3">
-                                <label>AV VP OI</label>
-                                <input type="text" name="rx_final_av_vp_oi" class="form-control">
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label>ADD</label> <!-- Removido text-danger -->
-                                <input type="text" name="add" class="form-control">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- DIAGNÓSTICO, TRATAMIENTO Y COTIZACIÓN --}}
-            <div class="card mb-4">
-                <div class="card-header" data-toggle="collapse" data-target="#diagnostico">
-                    <h5 class="mb-0">
-                        <i class="fas fa-file-medical mr-2"></i> Diagnóstico y Cotización
-                    </h5>
-                </div>
-                <div id="diagnostico" class="collapse">
-                    <div class="card-body">
-                        <div class="form-row">
-                            <div class="form-group col-12">
-                                <label>Diagnóstico</label>
-                                <textarea name="diagnostico" class="form-control" rows="3"></textarea>
-                            </div>
-                            <div class="form-group col-12">
-                                <label>Tratamiento</label>
-                                <textarea name="tratamiento" class="form-control" rows="3"></textarea>
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label>Cotización</label>
-                                <input type="text" name="cotizacion" class="form-control">
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label>Próxima Consulta (en meses)</label>
-                                <div class="input-group">
-                                    <input type="number" id="meses_proxima_consulta" class="form-control" min="1" step="1">
-                                    <select id="meses_predefinidos" class="form-control">
-                                        <option value="">Seleccione meses</option>
-                                        <option value="3">3 meses</option>
-                                        <option value="6">6 meses</option>
-                                        <option value="9">9 meses</option>
-                                    </select>
-                                    <input type="hidden" name="proxima_consulta" id="proxima_consulta">
-                                </div>
-                            </div>
-                            <input type="hidden" name="usuario_id" value="{{ Auth::id() }}">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- BOTONES DE ACCIÓN --}}
-            <div class="d-flex justify-content-end">
-                <a href="{{ route('historiales_clinicos.index') }}" class="btn btn-secondary mr-2">
-                    Cancelar
-                </a>
-                <button type="submit" class="btn btn-primary">
-                    Guardar
+            {{-- BOTÓN PARA MOSTRAR/OCULTAR SECCIONES OPCIONALES --}}
+            <div class="text-center mb-4">
+                <button type="button" id="btnMostrarOpcionales" class="btn btn-outline-primary">
+                    <i class="fas fa-plus-circle mr-2"></i>Mostrar información adicional
                 </button>
+            </div>
+
+            {{-- SECCIONES OPCIONALES --}}
+            <div id="seccionesOpcionales" style="display: none;">
+                {{-- MOTIVO DE CONSULTA Y ENFERMEDAD ACTUAL --}}
+                <div class="card mb-4">
+                    <div class="card-header" data-toggle="collapse" data-target="#motivoConsulta">
+                        <h5 class="mb-0">
+                            <i class="fas fa-notes-medical mr-2"></i> Motivo de Consulta y Enfermedad Actual
+                        </h5>
+                    </div>
+                    <div id="motivoConsulta" class="collapse">
+                        <div class="card-body">
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label>Motivo de Consulta</label>
+                                    <input type="text" name="motivo_consulta" class="form-control">
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label>Enfermedad Actual</label>
+                                    <input type="text" name="enfermedad_actual" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ANTECEDENTES --}}
+                <div class="card mb-4">
+                    <div class="card-header" data-toggle="collapse" data-target="#antecedentes">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history mr-2"></i> Antecedentes
+                        </h5>
+                    </div>
+                    <div id="antecedentes" class="collapse">
+                        <div class="card-body">
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label>Antecedentes Personales Oculares</label>
+                                    <input list="antecedentesPersonalesOcularesList" name="antecedentes_personales_oculares" class="form-control">
+                                    <datalist id="antecedentesPersonalesOcularesList">
+                                        @foreach($antecedentesPersonalesOculares as $antecedente)
+                                            <option value="{{ $antecedente }}">
+                                        @endforeach
+                                    </datalist>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label>Antecedentes Personales Generales</label>
+                                    <input list="antecedentesPersonalesGeneralesList" name="antecedentes_personales_generales" class="form-control">
+                                    <datalist id="antecedentesPersonalesGeneralesList">
+                                        @foreach($antecedentesPersonalesGenerales as $antecedente)
+                                            <option value="{{ $antecedente }}">
+                                        @endforeach
+                                    </datalist>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label>Antecedentes Familiares Oculares</label>
+                                    <input list="antecedentesFamiliaresOcularesList" name="antecedentes_familiares_oculares" class="form-control">
+                                    <datalist id="antecedentesFamiliaresOcularesList">
+                                        @foreach($antecedentesFamiliaresOculares as $antecedente)
+                                            <option value="{{ $antecedente }}">
+                                        @endforeach
+                                    </datalist>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label>Antecedentes Familiares Generales</label>
+                                    <input list="antecedentesFamiliaresGeneralesList" name="antecedentes_familiares_generales" class="form-control">
+                                    <datalist id="antecedentesFamiliaresGeneralesList">
+                                        @foreach($antecedentesFamiliaresGenerales as $antecedente)
+                                            <option value="{{ $antecedente }}">
+                                        @endforeach
+                                    </datalist>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- AGUDEZA VISUAL Y PH --}}
+                <div class="card mb-4">
+                    <div class="card-header" data-toggle="collapse" data-target="#agudezaVisual">
+                        <h5 class="mb-0">
+                            <i class="fas fa-eye mr-2"></i> Agudeza Visual y PH
+                        </h5>
+                    </div>
+                    <div id="agudezaVisual" class="collapse">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Agudeza Visual VL sin Corrección</h6>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-4">
+                                            <label>OD</label>
+                                            <input type="text" name="agudeza_visual_vl_sin_correccion_od" class="form-control">
+                                        </div>
+                                        <div class="form-group col-md-4">
+                                            <label>OI</label>
+                                            <input type="text" name="agudeza_visual_vl_sin_correccion_oi" class="form-control">
+                                        </div>
+                                        <div class="form-group col-md-4">
+                                            <label>AO</label>
+                                            <input type="text" name="agudeza_visual_vl_sin_correccion_ao" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Agudeza Visual VP sin Corrección</h6>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-4">
+                                            <label>OD</label>
+                                            <input type="text" name="agudeza_visual_vp_sin_correccion_od" class="form-control">
+                                        </div>
+                                        <div class="form-group col-md-4">
+                                            <label>OI</label>
+                                            <input type="text" name="agudeza_visual_vp_sin_correccion_oi" class="form-control">
+                                        </div>
+                                        <div class="form-group col-md-4">
+                                            <label>AO</label>
+                                            <input type="text" name="agudeza_visual_vp_sin_correccion_ao" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <h6>Pin Hole (PH)</h6>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-6">
+                                            <label>PH OD</label>
+                                            <input type="text" name="ph_od" class="form-control">
+                                        </div>
+                                        <div class="form-group col-md-6">
+                                            <label>PH OI</label>
+                                            <input type="text" name="ph_oi" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Optotipo</label> <!-- Removido text-danger -->
+                                <textarea name="optotipo" class="form-control" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- LENSOMETRÍA --}}
+                <div class="card mb-4">
+                    <div class="card-header" data-toggle="collapse" data-target="#lensometria">
+                        <h5 class="mb-0">
+                            <i class="fas fa-glasses mr-2"></i> Lensometría
+                        </h5>
+                    </div>
+                    <div id="lensometria" class="collapse">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Lensometría</h6> <!-- Removido text-danger -->
+                                    <div class="form-row">
+                                        <div class="form-group col-md-6">
+                                            <label>OD</label> <!-- Removido text-danger -->
+                                            <input type="text" name="lensometria_od" class="form-control">
+                                        </div>
+                                        <div class="form-group col-md-6">
+                                            <label>OI</label> <!-- Removido text-danger -->
+                                            <input type="text" name="lensometria_oi" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Tipo de Lente</label> <!-- Removido text-danger y required -->
+                                        <input type="text" name="tipo_lente" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Material</label> <!-- Removido text-danger y required -->
+                                        <input type="text" name="material" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Filtro</label> <!-- Removido text-danger y required -->
+                                        <input type="text" name="filtro" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Tiempo de Uso</label> <!-- Ya estaba como no obligatorio -->
+                                        <input type="text" name="tiempo_uso" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group text-center mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save mr-2"></i>Guardar Historial Clínico
+                </button>
+                <a href="{{ route('historiales_clinicos.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-times mr-2"></i>Cancelar
+                </a>
             </div>
         </form>
     </div>
@@ -440,6 +460,20 @@
 @section('js')
 <script>
     $(document).ready(function() {
+        // Botón para mostrar/ocultar secciones opcionales
+        $('#btnMostrarOpcionales').click(function() {
+            const $seccionesOpcionales = $('#seccionesOpcionales');
+            const $boton = $(this);
+            
+            if ($seccionesOpcionales.is(':visible')) {
+                $seccionesOpcionales.slideUp();
+                $boton.html('<i class="fas fa-plus-circle mr-2"></i>Mostrar información adicional');
+            } else {
+                $seccionesOpcionales.slideDown();
+                $boton.html('<i class="fas fa-minus-circle mr-2"></i>Ocultar información adicional');
+            }
+        });
+    
         // Convertir input a mayúsculas mientras se escribe
         $('input[type="text"], textarea').on('input', function() {
             $(this).val($(this).val().toUpperCase());

@@ -76,4 +76,10 @@ class HistorialClinico extends Model
     {
         return $this->belongsTo(User::class, 'usuario_id');
     }
+
+    // Definir la relación con las recetas
+    public function recetas()
+    {
+        return $this->hasMany(Receta::class, 'historial_clinico_id');
+    }
 }

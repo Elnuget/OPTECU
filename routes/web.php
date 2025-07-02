@@ -254,6 +254,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::post('/detalles-sueldos', [DetalleSueldoController::class, 'store'])->name('detalles-sueldos.store');
     Route::delete('/detalles-sueldos/{detalleSueldo}', [DetalleSueldoController::class, 'destroy'])->name('detalles-sueldos.destroy');
     Route::get('/detalles-sueldos/periodo', [DetalleSueldoController::class, 'getDetallesPorPeriodo'])->name('detalles-sueldos.periodo');
+
+    // Rutas para recetas
+    Route::resource('recetas', \App\Http\Controllers\RecetaController::class);
+    Route::get('/recetas/create/{historialId}', [\App\Http\Controllers\RecetaController::class, 'create'])->name('recetas.create.from.historial');
 });
 
 // Rutas públicas para calificación
