@@ -47,6 +47,11 @@ class PedidosController extends Controller
                 $query->whereYear('fecha', $request->ano)
                       ->whereMonth('fecha', $request->mes);
             }
+            
+            // Aplicar filtro de empresa si se especifica
+            if ($request->filled('empresa_id')) {
+                $query->where('empresa_id', $request->get('empresa_id'));
+            }
 
             $pedidos = $query->select([
                 'id',
@@ -85,7 +90,10 @@ class PedidosController extends Controller
                 })
             ];
 
-            return view('pedidos.index', compact('pedidos', 'totales'));
+            // Obtener todas las empresas para el filtro
+            $empresas = Empresa::orderBy('nombre')->get();
+
+            return view('pedidos.index', compact('pedidos', 'totales', 'empresas'));
         } catch (\Exception $e) {
             \Log::error('Error en PedidosController@index: ' . $e->getMessage());
             return back()->with('error', 'Error al cargar los pedidos: ' . $e->getMessage());

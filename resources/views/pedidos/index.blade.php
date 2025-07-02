@@ -65,26 +65,38 @@
         {{-- Agregar formulario de filtro --}}
         <form method="GET" class="form-row mb-3" id="filterForm">
             <div class="col-md-2">
-                <label for="filtroAno">Seleccionar Año:</label>
+                <label for="filtroAno">SELECCIONAR AÑO:</label>
                 <select name="ano" class="form-control" id="filtroAno">
-                    <option value="">Seleccione Año</option>
+                    <option value="">SELECCIONE AÑO</option>
                     @for ($year = date('Y'); $year >= 2000; $year--)
                         <option value="{{ $year }}" {{ request('ano', date('Y')) == $year ? 'selected' : '' }}>{{ $year }}</option>
                     @endfor
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="filtroMes">Seleccionar Mes:</label>
+                <label for="filtroMes">SELECCIONAR MES:</label>
                 <select name="mes" class="form-control custom-select" id="filtroMes">
-                    <option value="">Seleccione Mes</option>
+                    <option value="">SELECCIONE MES</option>
                     @foreach (['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] as $index => $month)
-                        <option value="{{ $index + 1 }}" {{ request('mes') == ($index + 1) ? 'selected' : '' }}>{{ $month }}</option>
+                        <option value="{{ $index + 1 }}" {{ request('mes') == ($index + 1) ? 'selected' : '' }}>{{ strtoupper($month) }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-4 align-self-end">
-                <button type="button" class="btn btn-primary" id="actualButton">Actual</button>
-                <button type="button" class="btn btn-success" id="mostrarTodosButton">Mostrar Todos los Pedidos</button>
+            <div class="col-md-3">
+                <label for="empresa_id">EMPRESA:</label>
+                <select name="empresa_id" class="form-control" id="empresa_id">
+                    <option value="">TODAS LAS EMPRESAS</option>
+                    @foreach($empresas ?? [] as $empresa)
+                        <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                            {{ strtoupper($empresa->nombre) }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-5 align-self-end">
+                <button type="submit" class="btn btn-primary mr-2">FILTRAR</button>
+                <button type="button" class="btn btn-info" id="actualButton">ACTUAL</button>
+                <button type="button" class="btn btn-success" id="mostrarTodosButton">MOSTRAR TODOS</button>
             </div>
         </form>
 
@@ -516,6 +528,7 @@ input[type="checkbox"]:after {
             const now = new Date();
             $('#filtroAno').val(now.getFullYear());
             $('#filtroMes').val(now.getMonth() + 1);
+            // No cambiamos el filtro de empresa, mantenemos el valor actual
             $('#filterForm').submit();
         });
 
@@ -523,6 +536,7 @@ input[type="checkbox"]:after {
         $('#mostrarTodosButton').click(function() {
             $('#filtroAno').val('');
             $('#filtroMes').val('');
+            $('#empresa_id').val('');
             const form = $('#filterForm');
             form.append('<input type="hidden" name="todos" value="1">');
             form.submit();
