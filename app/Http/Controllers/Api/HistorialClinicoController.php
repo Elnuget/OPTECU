@@ -31,10 +31,12 @@ class HistorialClinicoController extends Controller
             }
             
             // Buscar el último historial que coincida con el campo y valor
-            $historial = HistorialClinico::with('recetas')
-                ->where($campo, $valorDecodificado)
-                ->orderBy('created_at', 'desc')
-                ->first();
+            $historial = HistorialClinico::with(['recetas' => function($query) {
+                $query->orderBy('created_at', 'desc');
+            }])
+            ->where($campo, $valorDecodificado)
+            ->orderBy('created_at', 'desc')
+            ->first();
                 
             if (!$historial) {
                 return response()->json([
@@ -42,23 +44,26 @@ class HistorialClinicoController extends Controller
                     'message' => "No se encontraron historiales con este $campo"
                 ], 404);
             }
-            
-            // Agregar los campos de la receta al historial
+
+            // Si tiene recetas, agregar los datos de la última receta al objeto historial
             if ($historial->recetas && $historial->recetas->count() > 0) {
-                $receta = $historial->recetas->first();
-                $historial->od_esfera = $receta->od_esfera;
-                $historial->od_cilindro = $receta->od_cilindro;
-                $historial->od_eje = $receta->od_eje;
-                $historial->oi_esfera = $receta->oi_esfera;
-                $historial->oi_cilindro = $receta->oi_cilindro;
-                $historial->oi_eje = $receta->oi_eje;
-                // Asegurarse de que ADD solo se asigna una vez, 
-                // ya que en el formulario es un campo único
-                if (!$historial->add && $receta->od_adicion) {
-                    $historial->add = $receta->od_adicion;
+                $ultimaReceta = $historial->recetas->first();
+                
+                // Agregar los campos de la receta directamente al historial para el frontend
+                $historial->od_esfera = $ultimaReceta->od_esfera;
+                $historial->od_cilindro = $ultimaReceta->od_cilindro;
+                $historial->od_eje = $ultimaReceta->od_eje;
+                $historial->oi_esfera = $ultimaReceta->oi_esfera;
+                $historial->oi_cilindro = $ultimaReceta->oi_cilindro;
+                $historial->oi_eje = $ultimaReceta->oi_eje;
+                
+                // Asegurarse de que ADD solo se asigna una vez
+                if (!$historial->add && $ultimaReceta->od_adicion) {
+                    $historial->add = $ultimaReceta->od_adicion;
                 }
-                $historial->dp = $receta->dp;
-                $historial->observaciones = $receta->observaciones;
+                
+                $historial->dp = $ultimaReceta->dp;
+                $historial->observaciones = $ultimaReceta->observaciones;
             }
             
             return response()->json([

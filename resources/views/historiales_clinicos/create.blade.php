@@ -118,7 +118,7 @@
                 <div class="card-header" data-toggle="collapse" data-target="#prescripcion" style="cursor: pointer">
                     <h5 class="mb-0">
                         <i class="fas fa-prescription mr-2"></i> Receta
-                        <small class="text-muted ml-2">(Los datos se guardarán tanto en el historial como en una receta separada)</small>
+                        <small class="text-muted ml-2">(Al buscar un paciente, se cargarán los datos de su última receta)</small>
                     </h5>
                 </div>
                 <div id="prescripcion" class="collapse">
@@ -572,7 +572,7 @@
             if (!elemento.nextElementSibling || !elemento.nextElementSibling.classList.contains('loading-indicator')) {
                 const loadingIndicator = document.createElement('small');
                 loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
-                loadingIndicator.textContent = 'Cargando datos...';
+                loadingIndicator.textContent = 'Cargando datos y última receta...';
                 elemento.parentNode.appendChild(loadingIndicator);
             }
 
@@ -585,6 +585,8 @@
                     return response.json();
                 })
                 .then(data => {
+                    console.log('Respuesta de la API:', data); // Añadir para depuración
+
                     // Remover indicador de carga
                     const loadingIndicator = elemento.parentNode.querySelector('.loading-indicator');
                     if (loadingIndicator) {
@@ -597,6 +599,31 @@
                         
                         // Abrir sección de receta automáticamente cuando se cargan datos
                         mostrarSeccionReceta();
+                        
+                        // Indicador visual de que se cargó la receta
+                        const tieneReceta = historial.od_esfera || historial.oi_esfera;
+                        if (tieneReceta) {
+                            // Mostrar notificación temporal
+                            const notificacion = document.createElement('div');
+                            notificacion.classList.add('alert', 'alert-success', 'alert-dismissible', 'fade', 'show', 'mt-2', 'mb-0');
+                            notificacion.setAttribute('role', 'alert');
+                            notificacion.innerHTML = `
+                                <strong><i class="fas fa-check-circle mr-2"></i>Receta cargada:</strong> Se han cargado los datos de la última receta del paciente.
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            `;
+                            
+                            // Agregar notificación después del título de la sección Receta
+                            const seccionReceta = document.querySelector('#prescripcion .card-body');
+                            seccionReceta.insertBefore(notificacion, seccionReceta.firstChild);
+                            
+                            // Auto-eliminar después de 5 segundos
+                            setTimeout(() => {
+                                notificacion.classList.remove('show');
+                                setTimeout(() => notificacion.remove(), 150);
+                            }, 5000);
+                        }
                         
                         // Autocompletar campos excepto el que generó la búsqueda y la fecha
                         // Datos personales
@@ -649,29 +676,14 @@
                         document.getElementsByName('filtro')[0].value = historial.filtro || '';
                         document.getElementsByName('tiempo_uso')[0].value = historial.tiempo_uso || '';
                         
-                        // RX Final
-                        document.getElementsByName('refraccion_od')[0].value = historial.refraccion_od || '';
-                        document.getElementsByName('refraccion_oi')[0].value = historial.refraccion_oi || '';
-                        document.getElementsByName('rx_final_dp_od')[0].value = historial.rx_final_dp_od || '';
-                        document.getElementsByName('rx_final_dp_oi')[0].value = historial.rx_final_dp_oi || '';
-                        document.getElementsByName('rx_final_av_vl_od')[0].value = historial.rx_final_av_vl_od || '';
-                        document.getElementsByName('rx_final_av_vl_oi')[0].value = historial.rx_final_av_vl_oi || '';
-                        document.getElementsByName('rx_final_av_vp_od')[0].value = historial.rx_final_av_vp_od || '';
-                        document.getElementsByName('rx_final_av_vp_oi')[0].value = historial.rx_final_av_vp_oi || '';
-                        document.getElementsByName('add')[0].value = historial.add || '';
-                        
                         // Diagnóstico y tratamiento
-                        document.getElementsByName('diagnostico')[0].value = historial.diagnostico || '';
-                        document.getElementsByName('tratamiento')[0].value = historial.tratamiento || '';
-                        document.getElementsByName('cotizacion')[0].value = historial.cotizacion || '';
+                        // El diagnóstico se maneja a través de checkboxes más adelante
                         
                         // Receta - Valores OD y OI
                         document.getElementsByName('od_esfera')[0].value = historial.od_esfera || '';
                         document.getElementsByName('od_cilindro')[0].value = historial.od_cilindro || '';
                         document.getElementsByName('od_eje')[0].value = historial.od_eje || '';
                         document.getElementsByName('oi_esfera')[0].value = historial.oi_esfera || '';
-                        document.getElementsByName('oi_cilindro')[0].value = historial.oi_cilindro || '';
-                        document.getElementsByName('oi_eje')[0].value = historial.oi_eje || '';
                         document.getElementsByName('oi_cilindro')[0].value = historial.oi_cilindro || '';
                         document.getElementsByName('oi_eje')[0].value = historial.oi_eje || '';
                         
@@ -710,18 +722,18 @@
                         loadingIndicator.remove();
                     }
                 });
-        }        // Eventos para autocompletado eliminados
-        // $('#cedula').on('change', function() {
-        //     if (this.value.trim()) {
-        //         cargarDatosPersonales('cedula', this.value);
-        //     }
-        // });
+        }        // Eventos para autocompletado
+        $('#cedula').on('change', function() {
+            if (this.value.trim()) {
+                cargarDatosPersonales('cedula', this.value);
+            }
+        });
 
-        // $('#celular').on('change', function() {
-        //     if (this.value.trim()) {
-        //         cargarDatosPersonales('celular', this.value);
-        //     }
-        // });
+        $('#celular').on('change', function() {
+            if (this.value.trim()) {
+                cargarDatosPersonales('celular', this.value);
+            }
+        });
     });
 </script>
 @stop
