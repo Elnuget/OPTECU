@@ -118,6 +118,7 @@
                 <div class="card-header" data-toggle="collapse" data-target="#prescripcion" style="cursor: pointer">
                     <h5 class="mb-0">
                         <i class="fas fa-prescription mr-2"></i> Receta
+                        <small class="text-muted ml-2">(Los datos se guardarán tanto en el historial como en una receta separada)</small>
                     </h5>
                 </div>
                 <div id="prescripcion" class="collapse">
@@ -195,6 +196,8 @@
                                                 Presbicia
                                             </label>
                                         </div>
+                                        <!-- Campo oculto para almacenar diagnósticos como string -->
+                                        <input type="hidden" name="diagnostico" id="diagnostico_string" value="">
                                     </div>
                                 </div>
                             </div>
@@ -479,6 +482,18 @@
             $(this).val($(this).val().toUpperCase());
         });
 
+        // Función para actualizar el campo diagnóstico basado en los checkboxes seleccionados
+        function actualizarDiagnosticoString() {
+            const diagnosticoSeleccionados = $('input[name="diagnostico[]"]:checked').map(function() {
+                return this.value;
+            }).get();
+            
+            $('#diagnostico_string').val(diagnosticoSeleccionados.join(', '));
+        }
+        
+        // Inicializar el campo diagnóstico al cargar la página
+        actualizarDiagnosticoString();
+        
         // Manejar la selección de paciente existente
         $('#buscar_paciente').on('input', function() {
             const selectedOption = $('#pacientes_existentes option[value="' + this.value + '"]');
@@ -492,6 +507,24 @@
                 // Cargar datos adicionales del paciente
                 cargarDatosPersonales('nombres', nombre);
             }
+        });
+
+        // Abrir automáticamente la sección de receta cuando se carga la página o se selecciona un paciente
+        function mostrarSeccionReceta() {
+            // Asegurarse de que la sección esté abierta
+            if (!$('#prescripcion').hasClass('show')) {
+                $('#prescripcion').collapse('show');
+            }
+        }
+
+        // Convertir checkboxes de diagnóstico a string antes de enviar el formulario
+        $('form').on('submit', function(e) {
+            actualizarDiagnosticoString();
+        });
+        
+        // Actualizar campo oculto cuando se seleccionen/deseleccionen checkboxes
+        $('input[name="diagnostico[]"]').on('change', function() {
+            actualizarDiagnosticoString();
         });
 
         // Función para calcular la próxima consulta basada en la fecha de registro
@@ -562,6 +595,9 @@
                         // Cargar todos los datos del historial, excepto la fecha
                         const historial = data.historial;
                         
+                        // Abrir sección de receta automáticamente cuando se cargan datos
+                        mostrarSeccionReceta();
+                        
                         // Autocompletar campos excepto el que generó la búsqueda y la fecha
                         // Datos personales
                         if (campo !== 'nombres') document.getElementById('nombres').value = historial.nombres || '';
@@ -628,6 +664,42 @@
                         document.getElementsByName('diagnostico')[0].value = historial.diagnostico || '';
                         document.getElementsByName('tratamiento')[0].value = historial.tratamiento || '';
                         document.getElementsByName('cotizacion')[0].value = historial.cotizacion || '';
+                        
+                        // Receta - Valores OD y OI
+                        document.getElementsByName('od_esfera')[0].value = historial.od_esfera || '';
+                        document.getElementsByName('od_cilindro')[0].value = historial.od_cilindro || '';
+                        document.getElementsByName('od_eje')[0].value = historial.od_eje || '';
+                        document.getElementsByName('oi_esfera')[0].value = historial.oi_esfera || '';
+                        document.getElementsByName('oi_cilindro')[0].value = historial.oi_cilindro || '';
+                        document.getElementsByName('oi_eje')[0].value = historial.oi_eje || '';
+                        document.getElementsByName('oi_cilindro')[0].value = historial.oi_cilindro || '';
+                        document.getElementsByName('oi_eje')[0].value = historial.oi_eje || '';
+                        
+                        // Poblar ADD y DP
+                        document.getElementById('add').value = historial.add || '';
+                        document.getElementById('dp').value = historial.dp || '';
+                        
+                        // Si hay diagnóstico, marcar los checkboxes correspondientes
+                        if (historial.diagnostico) {
+                            const diagnosticos = historial.diagnostico.split(',').map(d => d.trim().toUpperCase());
+                            
+                            // Limpiar selecciones previas
+                            $('input[name="diagnostico[]"]').prop('checked', false);
+                            
+                            // Marcar las casillas correspondientes
+                            $('input[name="diagnostico[]"]').each(function() {
+                                const valorCheckbox = $(this).val().toUpperCase();
+                                if (diagnosticos.some(d => d === valorCheckbox)) {
+                                    $(this).prop('checked', true);
+                                }
+                            });
+                            
+                            // Actualizar el campo oculto
+                            $('#diagnostico_string').val(historial.diagnostico);
+                        }
+                        
+                        // Poblar observaciones
+                        document.getElementById('observaciones').value = historial.observaciones || '';
                     }
                 })
                 .catch(error => {

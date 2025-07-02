@@ -31,7 +31,8 @@ class HistorialClinicoController extends Controller
             }
             
             // Buscar el último historial que coincida con el campo y valor
-            $historial = HistorialClinico::where($campo, $valorDecodificado)
+            $historial = HistorialClinico::with('recetas')
+                ->where($campo, $valorDecodificado)
                 ->orderBy('created_at', 'desc')
                 ->first();
                 
@@ -40,6 +41,24 @@ class HistorialClinicoController extends Controller
                     'success' => false,
                     'message' => "No se encontraron historiales con este $campo"
                 ], 404);
+            }
+            
+            // Agregar los campos de la receta al historial
+            if ($historial->recetas && $historial->recetas->count() > 0) {
+                $receta = $historial->recetas->first();
+                $historial->od_esfera = $receta->od_esfera;
+                $historial->od_cilindro = $receta->od_cilindro;
+                $historial->od_eje = $receta->od_eje;
+                $historial->oi_esfera = $receta->oi_esfera;
+                $historial->oi_cilindro = $receta->oi_cilindro;
+                $historial->oi_eje = $receta->oi_eje;
+                // Asegurarse de que ADD solo se asigna una vez, 
+                // ya que en el formulario es un campo único
+                if (!$historial->add && $receta->od_adicion) {
+                    $historial->add = $receta->od_adicion;
+                }
+                $historial->dp = $receta->dp;
+                $historial->observaciones = $receta->observaciones;
             }
             
             return response()->json([
@@ -53,4 +72,4 @@ class HistorialClinicoController extends Controller
             ], 500);
         }
     }
-} 
+}
