@@ -172,6 +172,14 @@ class PedidosController extends Controller
 
         // Obtener todas las empresas para el select
         $empresas = Empresa::orderBy('nombre')->get();
+        
+        // Verificar si el usuario está asociado a una empresa y no es admin
+        $userEmpresaId = null;
+        $isUserAdmin = auth()->user()->is_admin;
+        
+        if (!$isUserAdmin && auth()->user()->empresa_id) {
+            $userEmpresaId = auth()->user()->empresa_id;
+        }
 
         $currentDate = date('Y-m-d');
         $lastOrder = Pedido::orderBy('numero_orden', 'desc')->first();
@@ -189,7 +197,9 @@ class PedidosController extends Controller
             'pacientes',
             'celulares',
             'correos',
-            'empresas'
+            'empresas',
+            'userEmpresaId',
+            'isUserAdmin'
         ));
     }
 
@@ -465,11 +475,19 @@ class PedidosController extends Controller
             // Obtener todas las empresas para el select
             $empresas = Empresa::orderBy('nombre')->get();
             
+            // Verificar si el usuario está asociado a una empresa y no es admin
+            $userEmpresaId = null;
+            $isUserAdmin = auth()->user()->is_admin;
+            
+            if (!$isUserAdmin && auth()->user()->empresa_id) {
+                $userEmpresaId = auth()->user()->empresa_id;
+            }
+            
             // Pasar el mes y año de filtro a la vista
             $filtroMes = $currentMonth;
             $filtroAno = $currentYear;
 
-            return view('pedidos.edit', compact('pedido', 'inventarioItems', 'totalPagado', 'usuarios', 'filtroMes', 'filtroAno', 'empresas'));
+            return view('pedidos.edit', compact('pedido', 'inventarioItems', 'totalPagado', 'usuarios', 'filtroMes', 'filtroAno', 'empresas', 'userEmpresaId', 'isUserAdmin'));
             
         } catch (\Exception $e) {
             \Log::error('Error en PedidosController@edit: ' . $e->getMessage());

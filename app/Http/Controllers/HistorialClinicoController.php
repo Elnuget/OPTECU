@@ -99,6 +99,14 @@ class HistorialClinicoController extends Controller
         // Obtener todas las empresas para el select
         $empresas = Empresa::orderBy('nombre')->get();
 
+        // Verificar si el usuario está asociado a una empresa y no es admin
+        $userEmpresaId = null;
+        $isUserAdmin = auth()->user()->is_admin;
+        
+        if (!$isUserAdmin && auth()->user()->empresa_id) {
+            $userEmpresaId = auth()->user()->empresa_id;
+        }
+
         return view('historiales_clinicos.create', compact(
             'antecedentesPersonalesOculares',
             'antecedentesPersonalesGenerales',
@@ -109,7 +117,9 @@ class HistorialClinicoController extends Controller
             'cedulas',
             'celulares',
             'nombresCompletos',
-            'empresas'
+            'empresas',
+            'userEmpresaId',
+            'isUserAdmin'
         ));
     }
 
@@ -255,7 +265,15 @@ class HistorialClinicoController extends Controller
         // Obtener todas las empresas para el select
         $empresas = Empresa::orderBy('nombre')->get();
         
-        return view('historiales_clinicos.edit', compact('historialClinico', 'empresas'));
+        // Verificar si el usuario está asociado a una empresa y no es admin
+        $userEmpresaId = null;
+        $isUserAdmin = auth()->user()->is_admin;
+        
+        if (!$isUserAdmin && auth()->user()->empresa_id) {
+            $userEmpresaId = auth()->user()->empresa_id;
+        }
+        
+        return view('historiales_clinicos.edit', compact('historialClinico', 'empresas', 'userEmpresaId', 'isUserAdmin'));
     }
 
     public function update(Request $request, $id)
