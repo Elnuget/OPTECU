@@ -45,6 +45,11 @@ class InventarioController extends Controller
             // Aplicar el filtro de fecha
             $query->where('fecha', 'like', $request->fecha . '%');
             
+            // Aplicar filtro de empresa si está seleccionado
+            if ($request->filled('empresa_id')) {
+                $query->where('empresa_id', $request->empresa_id);
+            }
+            
             // Incluir relación con empresa
             $query->with('empresa');
             
@@ -57,7 +62,10 @@ class InventarioController extends Controller
             // Calcular el total de cantidad
             $totalCantidad = $inventario->sum('cantidad');
 
-            return view('inventario.index', compact('inventario', 'totalCantidad'));
+            // Obtener las empresas para el filtro
+            $empresas = \App\Models\Empresa::orderBy('nombre')->get();
+
+            return view('inventario.index', compact('inventario', 'totalCantidad', 'empresas'));
             
         } catch (\Exception $e) {
             \Log::error('Error en InventarioController@index: ' . $e->getMessage());

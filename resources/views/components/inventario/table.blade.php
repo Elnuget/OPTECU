@@ -5,14 +5,15 @@
         $inventarioPorLugar = $inventario->groupBy('lugar');
     @endphp
 
-    @foreach($inventarioPorLugar as $lugar => $itemsPorLugar)
-        <div class="col-12 mb-4">
-            <div class="card">
-                <div class="card-header bg-primary cursor-pointer" data-toggle="collapse" 
-                     data-target="#collapse{{ Str::slug($lugar) }}" aria-expanded="false">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h3 class="card-title text-white mb-0">
-                            <i class="fas fa-warehouse"></i> {{ $lugar }}
+    @if($inventarioPorLugar->count() > 0)
+        @foreach($inventarioPorLugar as $lugar => $itemsPorLugar)
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary cursor-pointer" data-toggle="collapse" 
+                         data-target="#collapse{{ Str::slug($lugar) }}" aria-expanded="false">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h3 class="card-title text-white mb-0">
+                                <i class="fas fa-warehouse"></i> {{ $lugar }}
                         </h3>
                         <div class="d-flex align-items-center">
                             @php
@@ -45,4 +46,11 @@
             </div>
         </div>
     @endforeach
+@else
+    <div class="col-12">
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i> No se encontraron artículos para los filtros seleccionados.
+        </div>
+    </div>
+@endif
 </div> 

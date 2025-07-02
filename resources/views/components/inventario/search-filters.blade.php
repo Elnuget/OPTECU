@@ -1,11 +1,22 @@
-@props(['fecha' => null])
+@props(['fecha' => null, 'empresas' => []])
 
 <form method="GET" class="mb-3">
     <div class="row mb-3">
-        <div class="col-md-10">
+        <div class="col-md-5">
             <label for="filtroFecha">SELECCIONAR FECHA:</label>
-            <input type="month" name="fecha" class="form-control"
+            <input type="month" name="fecha" id="filtroFecha" class="form-control"
                    value="{{ $fecha ?? now()->format('Y-m') }}" />
+        </div>
+        <div class="col-md-5">
+            <label for="empresa_id">EMPRESA:</label>
+            <select name="empresa_id" id="empresa_id" class="form-control">
+                <option value="">TODAS LAS EMPRESAS</option>
+                @foreach($empresas as $empresa)
+                    <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                        {{ $empresa->nombre }}
+                    </option>
+                @endforeach
+            </select>
         </div>
         <div class="col-md-2">
             <label>&nbsp;</label>
