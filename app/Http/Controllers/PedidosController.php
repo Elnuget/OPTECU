@@ -52,6 +52,20 @@ class PedidosController extends Controller
             if ($request->filled('empresa_id')) {
                 $query->where('empresa_id', $request->get('empresa_id'));
             }
+            
+            // Verificar si el usuario está asociado a una empresa y no es admin
+            $userEmpresaId = null;
+            $isUserAdmin = auth()->user()->is_admin;
+            
+            if (!$isUserAdmin && auth()->user()->empresa_id) {
+                $userEmpresaId = auth()->user()->empresa_id;
+                
+                // Si el usuario tiene empresa asignada y no es admin, filtramos por su empresa
+                // si no hay filtro de empresa específico en la solicitud
+                if (!$request->filled('empresa_id')) {
+                    $query->where('empresa_id', $userEmpresaId);
+                }
+            }
 
             $pedidos = $query->select([
                 'id',
@@ -93,7 +107,7 @@ class PedidosController extends Controller
             // Obtener todas las empresas para el filtro
             $empresas = Empresa::orderBy('nombre')->get();
 
-            return view('pedidos.index', compact('pedidos', 'totales', 'empresas'));
+            return view('pedidos.index', compact('pedidos', 'totales', 'empresas', 'userEmpresaId', 'isUserAdmin'));
         } catch (\Exception $e) {
             \Log::error('Error en PedidosController@index: ' . $e->getMessage());
             return back()->with('error', 'Error al cargar los pedidos: ' . $e->getMessage());

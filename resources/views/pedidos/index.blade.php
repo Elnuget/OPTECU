@@ -84,14 +84,17 @@
             </div>
             <div class="col-md-3">
                 <label for="empresa_id">EMPRESA:</label>
-                <select name="empresa_id" class="form-control" id="empresa_id">
+                <select name="empresa_id" class="form-control" id="empresa_id" {{ !$isUserAdmin && $userEmpresaId ? 'disabled' : '' }}>
                     <option value="">TODAS LAS EMPRESAS</option>
                     @foreach($empresas ?? [] as $empresa)
-                        <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                        <option value="{{ $empresa->id }}" {{ ($userEmpresaId == $empresa->id) || request('empresa_id') == $empresa->id ? 'selected' : '' }}>
                             {{ strtoupper($empresa->nombre) }}
                         </option>
                     @endforeach
                 </select>
+                @if(!$isUserAdmin && $userEmpresaId)
+                    <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}">
+                @endif
             </div>
             <div class="col-md-5 align-self-end">
                 <button type="submit" class="btn btn-primary mr-2">FILTRAR</button>
@@ -536,7 +539,12 @@ input[type="checkbox"]:after {
         $('#mostrarTodosButton').click(function() {
             $('#filtroAno').val('');
             $('#filtroMes').val('');
-            $('#empresa_id').val('');
+            
+            // Solo limpiamos el filtro de empresa si el usuario es administrador o no tiene empresa asignada
+            @if($isUserAdmin || !$userEmpresaId)
+                $('#empresa_id').val('');
+            @endif
+            
             const form = $('#filterForm');
             form.append('<input type="hidden" name="todos" value="1">');
             form.submit();

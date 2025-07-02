@@ -34,6 +34,20 @@ class HistorialClinicoController extends Controller
         if ($request->filled('empresa_id')) {
             $query->where('empresa_id', $request->get('empresa_id'));
         }
+        
+        // Verificar si el usuario está asociado a una empresa y no es admin
+        $userEmpresaId = null;
+        $isUserAdmin = auth()->user()->is_admin;
+        
+        if (!$isUserAdmin && auth()->user()->empresa_id) {
+            $userEmpresaId = auth()->user()->empresa_id;
+            
+            // Si el usuario tiene empresa asignada y no es admin, filtramos por su empresa
+            // si no hay filtro de empresa específico en la solicitud
+            if (!$request->filled('empresa_id')) {
+                $query->where('empresa_id', $userEmpresaId);
+            }
+        }
 
         // Obtener los historiales
         $historiales = $query->get();
@@ -41,7 +55,7 @@ class HistorialClinicoController extends Controller
         // Obtener todas las empresas para el filtro
         $empresas = Empresa::orderBy('nombre')->get();
 
-        return view('historiales_clinicos.index', compact('historiales', 'empresas'));
+        return view('historiales_clinicos.index', compact('historiales', 'empresas', 'userEmpresaId', 'isUserAdmin'));
     }
 
     public function create()
