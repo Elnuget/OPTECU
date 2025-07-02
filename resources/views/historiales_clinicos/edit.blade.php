@@ -49,8 +49,8 @@
                 </div>
                 <div class="card-body">
                     <div class="form-group">
-                        <label for="fecha">FECHA <span class="text-danger">*</span></label>
-                        <input type="date" name="fecha" id="fecha" class="form-control" value="{{ \Carbon\Carbon::parse($historialClinico->fecha)->format('Y-m-d') }}" required>
+                        <label for="fecha">FECHA</label>
+                        <input type="date" name="fecha" id="fecha" class="form-control" value="{{ \Carbon\Carbon::parse($historialClinico->fecha)->format('Y-m-d') }}">
                     </div>
                 </div>
             </div>
@@ -64,14 +64,14 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="nombres">NOMBRES <span class="text-danger">*</span></label>
-                                <input type="text" name="nombres" id="nombres" class="form-control" value="{{ $historialClinico->nombres }}" required>
+                                <label for="nombres">NOMBRES</label>
+                                <input type="text" name="nombres" id="nombres" class="form-control" value="{{ $historialClinico->nombres }}">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="apellidos">APELLIDOS <span class="text-danger">*</span></label>
-                                <input type="text" name="apellidos" id="apellidos" class="form-control" value="{{ $historialClinico->apellidos }}" required>
+                                <label for="apellidos">APELLIDOS</label>
+                                <input type="text" name="apellidos" id="apellidos" class="form-control" value="{{ $historialClinico->apellidos }}">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -84,8 +84,8 @@
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="edad">EDAD <span class="text-danger">*</span></label>
-                                <input type="number" name="edad" id="edad" class="form-control" value="{{ $historialClinico->edad }}" required>
+                                <label for="edad">EDAD</label>
+                                <input type="number" name="edad" id="edad" class="form-control" value="{{ $historialClinico->edad }}">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -96,16 +96,16 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="celular">CELULAR <span class="text-danger">*</span></label>
-                                <input type="text" name="celular" id="celular" class="form-control" value="{{ $historialClinico->celular }}" required>
+                                <label for="celular">CELULAR</label>
+                                <input type="text" name="celular" id="celular" class="form-control" value="{{ $historialClinico->celular }}">
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label for="ocupacion">OCUPACIÓN <span class="text-danger">*</span></label>
-                                <input type="text" name="ocupacion" id="ocupacion" class="form-control" value="{{ $historialClinico->ocupacion }}" required>
+                                <label for="ocupacion">OCUPACIÓN</label>
+                                <input type="text" name="ocupacion" id="ocupacion" class="form-control" value="{{ $historialClinico->ocupacion }}">
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -132,12 +132,12 @@
                 </div>
                 <div class="card-body">
                     <div class="form-group">
-                        <label for="motivo_consulta">MOTIVO DE CONSULTA <span class="text-danger">*</span></label>
-                        <input type="text" name="motivo_consulta" id="motivo_consulta" class="form-control" value="{{ $historialClinico->motivo_consulta }}" required>
+                        <label for="motivo_consulta">MOTIVO DE CONSULTA</label>
+                        <input type="text" name="motivo_consulta" id="motivo_consulta" class="form-control" value="{{ $historialClinico->motivo_consulta }}">
                     </div>
                     <div class="form-group">
-                        <label for="enfermedad_actual">ENFERMEDAD ACTUAL <span class="text-danger">*</span></label>
-                        <textarea name="enfermedad_actual" id="enfermedad_actual" class="form-control" rows="3" required>{{ $historialClinico->enfermedad_actual }}</textarea>
+                        <label for="enfermedad_actual">ENFERMEDAD ACTUAL</label>
+                        <textarea name="enfermedad_actual" id="enfermedad_actual" class="form-control" rows="3">{{ $historialClinico->enfermedad_actual }}</textarea>
                     </div>
                 </div>
             </div>
@@ -153,20 +153,20 @@
                     <div class="card-body">
                         <div class="form-row">
                             <div class="form-group col-md-6">
-                                <label>Antecedentes Personales Oculares <span class="text-danger">*</span></label>
-                                <textarea name="antecedentes_personales_oculares" class="form-control" rows="3" required>{{ old('antecedentes_personales_oculares', $historialClinico->antecedentes_personales_oculares) }}</textarea>
+                                <label>Antecedentes Personales Oculares</label>
+                                <textarea name="antecedentes_personales_oculares" class="form-control" rows="3">{{ old('antecedentes_personales_oculares', $historialClinico->antecedentes_personales_oculares) }}</textarea>
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Antecedentes Personales Generales <span class="text-danger">*</span></label>
-                                <textarea name="antecedentes_personales_generales" class="form-control" rows="3" required>{{ old('antecedentes_personales_generales', $historialClinico->antecedentes_personales_generales) }}</textarea>
+                                <label>Antecedentes Personales Generales</label>
+                                <textarea name="antecedentes_personales_generales" class="form-control" rows="3">{{ old('antecedentes_personales_generales', $historialClinico->antecedentes_personales_generales) }}</textarea>
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Antecedentes Familiares Oculares <span class="text-danger">*</span></label>
-                                <textarea name="antecedentes_familiares_oculares" class="form-control" rows="3" required>{{ old('antecedentes_familiares_oculares', $historialClinico->antecedentes_familiares_oculares) }}</textarea>
+                                <label>Antecedentes Familiares Oculares</label>
+                                <textarea name="antecedentes_familiares_oculares" class="form-control" rows="3">{{ old('antecedentes_familiares_oculares', $historialClinico->antecedentes_familiares_oculares) }}</textarea>
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Antecedentes Familiares Generales <span class="text-danger">*</span></label>
-                                <textarea name="antecedentes_familiares_generales" class="form-control" rows="3" required>{{ old('antecedentes_familiares_generales', $historialClinico->antecedentes_familiares_generales) }}</textarea>
+                                <label>Antecedentes Familiares Generales</label>
+                                <textarea name="antecedentes_familiares_generales" class="form-control" rows="3">{{ old('antecedentes_familiares_generales', $historialClinico->antecedentes_familiares_generales) }}</textarea>
                             </div>
                         </div>
                     </div>
@@ -184,41 +184,41 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
-                                <h6>Agudeza Visual VL sin Corrección <span class="text-danger">*</span></h6>
+                                <h6>Agudeza Visual VL sin Corrección</h6>
                                 <div class="form-row">
                                     <div class="form-group col-md-4">
                                         <label>OD</label>
-                                        <input type="text" name="agudeza_visual_vl_sin_correccion_od" class="form-control" required
+                                        <input type="text" name="agudeza_visual_vl_sin_correccion_od" class="form-control"
                                             value="{{ old('agudeza_visual_vl_sin_correccion_od', $historialClinico->agudeza_visual_vl_sin_correccion_od) }}">
                                     </div>
                                     <div class="form-group col-md-4">
                                         <label>OI</label>
-                                        <input type="text" name="agudeza_visual_vl_sin_correccion_oi" class="form-control" required
+                                        <input type="text" name="agudeza_visual_vl_sin_correccion_oi" class="form-control"
                                             value="{{ old('agudeza_visual_vl_sin_correccion_oi', $historialClinico->agudeza_visual_vl_sin_correccion_oi) }}">
                                     </div>
                                     <div class="form-group col-md-4">
                                         <label>AO</label>
-                                        <input type="text" name="agudeza_visual_vl_sin_correccion_ao" class="form-control" required
+                                        <input type="text" name="agudeza_visual_vl_sin_correccion_ao" class="form-control"
                                             value="{{ old('agudeza_visual_vl_sin_correccion_ao', $historialClinico->agudeza_visual_vl_sin_correccion_ao) }}">
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <h6>Agudeza Visual VP sin Corrección <span class="text-danger">*</span></h6>
+                                <h6>Agudeza Visual VP sin Corrección</h6>
                                 <div class="form-row">
                                     <div class="form-group col-md-4">
                                         <label>OD</label>
-                                        <input type="text" name="agudeza_visual_vp_sin_correccion_od" class="form-control" required
+                                        <input type="text" name="agudeza_visual_vp_sin_correccion_od" class="form-control"
                                             value="{{ old('agudeza_visual_vp_sin_correccion_od', $historialClinico->agudeza_visual_vp_sin_correccion_od) }}">
                                     </div>
                                     <div class="form-group col-md-4">
                                         <label>OI</label>
-                                        <input type="text" name="agudeza_visual_vp_sin_correccion_oi" class="form-control" required
+                                        <input type="text" name="agudeza_visual_vp_sin_correccion_oi" class="form-control"
                                             value="{{ old('agudeza_visual_vp_sin_correccion_oi', $historialClinico->agudeza_visual_vp_sin_correccion_oi) }}">
                                     </div>
                                     <div class="form-group col-md-4">
                                         <label>AO</label>
-                                        <input type="text" name="agudeza_visual_vp_sin_correccion_ao" class="form-control" required
+                                        <input type="text" name="agudeza_visual_vp_sin_correccion_ao" class="form-control"
                                             value="{{ old('agudeza_visual_vp_sin_correccion_ao', $historialClinico->agudeza_visual_vp_sin_correccion_ao) }}">
                                     </div>
                                 </div>
@@ -226,16 +226,16 @@
                         </div>
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <h6>Pin Hole (PH) <span class="text-danger">*</span></h6>
+                                <h6>Pin Hole (PH)</h6>
                                 <div class="form-row">
                                     <div class="form-group col-md-6">
                                         <label>PH OD</label>
-                                        <input type="text" name="ph_od" class="form-control" required
+                                        <input type="text" name="ph_od" class="form-control"
                                             value="{{ old('ph_od', $historialClinico->ph_od) }}">
                                         </div>
                                         <div class="form-group col-md-6">
                                             <label>PH OI</label>
-                                            <input type="text" name="ph_oi" class="form-control" required
+                                            <input type="text" name="ph_oi" class="form-control"
                                                 value="{{ old('ph_oi', $historialClinico->ph_oi) }}">
                                         </div>
                                     </div>
@@ -322,47 +322,47 @@
                     <div class="card-body">
                         <div class="form-row mb-3">
                             <div class="form-group col-md-6">
-                                <label>Refracción OD <span class="text-danger">*</span></label>
-                                <input type="text" name="refraccion_od" class="form-control" required
+                                <label>Refracción OD</label>
+                                <input type="text" name="refraccion_od" class="form-control"
                                     value="{{ old('refraccion_od', $historialClinico->refraccion_od) }}">
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Refracción OI <span class="text-danger">*</span></label>
-                                <input type="text" name="refraccion_oi" class="form-control" required
+                                <label>Refracción OI</label>
+                                <input type="text" name="refraccion_oi" class="form-control"
                                     value="{{ old('refraccion_oi', $historialClinico->refraccion_oi) }}">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group col-md-3">
-                                <label>DP OD <span class="text-danger">*</span></label>
-                                <input type="text" name="rx_final_dp_od" class="form-control" required
+                                <label>DP OD</label>
+                                <input type="text" name="rx_final_dp_od" class="form-control"
                                     value="{{ old('rx_final_dp_od', $historialClinico->rx_final_dp_od) }}">
                             </div>
                             <div class="form-group col-md-3">
-                                <label>DP OI <span class="text-danger">*</span></label>
-                                <input type="text" name="rx_final_dp_oi" class="form-control" required
+                                <label>DP OI</label>
+                                <input type="text" name="rx_final_dp_oi" class="form-control"
                                     value="{{ old('rx_final_dp_oi', $historialClinico->rx_final_dp_oi) }}">
                             </div>
                             <div class="form-group col-md-3">
-                                <label>AV VL OD <span class="text-danger">*</span></label>
-                                <input type="text" name="rx_final_av_vl_od" class="form-control" required
+                                <label>AV VL OD</label>
+                                <input type="text" name="rx_final_av_vl_od" class="form-control"
                                     value="{{ old('rx_final_av_vl_od', $historialClinico->rx_final_av_vl_od) }}">
                             </div>
                             <div class="form-group col-md-3">
-                                <label>AV VL OI <span class="text-danger">*</span></label>
-                                <input type="text" name="rx_final_av_vl_oi" class="form-control" required
+                                <label>AV VL OI</label>
+                                <input type="text" name="rx_final_av_vl_oi" class="form-control"
                                     value="{{ old('rx_final_av_vl_oi', $historialClinico->rx_final_av_vl_oi) }}">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group col-md-3">
-                                <label>AV VP OD <span class="text-danger">*</span></label>
-                                <input type="text" name="rx_final_av_vp_od" class="form-control" required
+                                <label>AV VP OD</label>
+                                <input type="text" name="rx_final_av_vp_od" class="form-control"
                                     value="{{ old('rx_final_av_vp_od', $historialClinico->rx_final_av_vp_od) }}">
                             </div>
                             <div class="form-group col-md-3">
-                                <label>AV VP OI <span class="text-danger">*</span></label>
-                                <input type="text" name="rx_final_av_vp_oi" class="form-control" required
+                                <label>AV VP OI</label>
+                                <input type="text" name="rx_final_av_vp_oi" class="form-control"
                                     value="{{ old('rx_final_av_vp_oi', $historialClinico->rx_final_av_vp_oi) }}">
                             </div>
                             <div class="form-group col-md-3">
@@ -386,12 +386,12 @@
                     <div class="card-body">
                         <div class="form-row">
                             <div class="form-group col-12">
-                                <label>Diagnóstico <span class="text-danger">*</span></label>
-                                <textarea name="diagnostico" class="form-control" rows="3" required>{{ old('diagnostico', $historialClinico->diagnostico) }}</textarea>
+                                <label>Diagnóstico</label>
+                                <textarea name="diagnostico" class="form-control" rows="3">{{ old('diagnostico', $historialClinico->diagnostico) }}</textarea>
                             </div>
                             <div class="form-group col-12">
-                                <label>Tratamiento <span class="text-danger">*</span></label>
-                                <textarea name="tratamiento" class="form-control" rows="3" required>{{ old('tratamiento', $historialClinico->tratamiento) }}</textarea>
+                                <label>Tratamiento</label>
+                                <textarea name="tratamiento" class="form-control" rows="3">{{ old('tratamiento', $historialClinico->tratamiento) }}</textarea>
                             </div>
                             <div class="form-group col-md-6">
                                 <label>Cotización</label>

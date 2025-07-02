@@ -34,8 +34,8 @@
                     <div class="card-body">
                         <div class="form-row">
                             <div class="form-group col-md-4">
-                                <label for="fecha">Fecha <span class="text-danger">*</span></label>
-                                <input type="date" name="fecha" id="fecha" class="form-control" value="{{ date('Y-m-d') }}" required>
+                                <label for="fecha">Fecha</label>
+                                <input type="date" name="fecha" id="fecha" class="form-control" value="{{ date('Y-m-d') }}">
                             </div>
                         </div>
                     </div>
@@ -64,12 +64,12 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group col-md-4">
-                                <label for="nombres">Nombres <span class="text-danger">*</span></label>
-                                <input type="text" name="nombres" id="nombres" class="form-control" required>
+                                <label for="nombres">Nombres</label>
+                                <input type="text" name="nombres" id="nombres" class="form-control">
                             </div>
                             <div class="form-group col-md-4">
-                                <label for="apellidos">Apellidos <span class="text-danger">*</span></label>
-                                <input type="text" name="apellidos" id="apellidos" class="form-control" required>
+                                <label for="apellidos">Apellidos</label>
+                                <input type="text" name="apellidos" id="apellidos" class="form-control">
                             </div>                            <div class="form-group col-md-4">
                                 <label for="cedula">Cédula</label>
                                 <input type="text" name="cedula" id="cedula" class="form-control" list="cedulas_existentes" placeholder="Seleccione o escriba una cédula" autocomplete="off">
@@ -80,15 +80,15 @@
                                 </datalist>
                             </div>
                             <div class="form-group col-md-4">
-                                <label for="edad">Edad <span class="text-danger">*</span></label>
-                                <input type="number" name="edad" id="edad" class="form-control" required>
+                                <label for="edad">Edad</label>
+                                <input type="number" name="edad" id="edad" class="form-control">
                             </div>
                             <div class="form-group col-md-4">
                                 <label for="fecha_nacimiento">Fecha de Nacimiento</label>
                                 <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" class="form-control">
                             </div>                            <div class="form-group col-md-4">
-                                <label for="celular">Celular <span class="text-danger">*</span></label>
-                                <input type="text" name="celular" id="celular" class="form-control" required list="celulares_existentes" placeholder="Seleccione o escriba un número de celular" autocomplete="off">
+                                <label for="celular">Celular</label>
+                                <input type="text" name="celular" id="celular" class="form-control" list="celulares_existentes" placeholder="Seleccione o escriba un número de celular" autocomplete="off">
                                 <datalist id="celulares_existentes">
                                     @foreach($celulares as $celular)
                                         <option value="{{ $celular }}">
@@ -96,8 +96,8 @@
                                 </datalist>
                             </div>
                             <div class="form-group col-md-4">
-                                <label for="ocupacion">Ocupación <span class="text-danger">*</span></label>
-                                <input type="text" name="ocupacion" id="ocupacion" class="form-control" required>
+                                <label for="ocupacion">Ocupación</label>
+                                <input type="text" name="ocupacion" id="ocupacion" class="form-control">
                             </div>
                             <div class="form-group col-md-4">
                                 <label for="empresa_id">Empresa</label>
@@ -124,12 +124,12 @@
                     <div class="card-body">
                         <div class="form-row">
                             <div class="form-group col-md-6">
-                                <label>Motivo de Consulta <span class="text-danger">*</span></label>
-                                <input type="text" name="motivo_consulta" class="form-control" required>
+                                <label>Motivo de Consulta</label>
+                                <input type="text" name="motivo_consulta" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Enfermedad Actual <span class="text-danger">*</span></label>
-                                <input type="text" name="enfermedad_actual" class="form-control" required>
+                                <label>Enfermedad Actual</label>
+                                <input type="text" name="enfermedad_actual" class="form-control">
                             </div>
                         </div>
                     </div>
@@ -147,8 +147,8 @@
                     <div class="card-body">
                         <div class="form-row">
                             <div class="form-group col-md-6">
-                                <label>Antecedentes Personales Oculares <span class="text-danger">*</span></label>
-                                <input list="antecedentesPersonalesOcularesList" name="antecedentes_personales_oculares" class="form-control" required>
+                                <label>Antecedentes Personales Oculares</label>
+                                <input list="antecedentesPersonalesOcularesList" name="antecedentes_personales_oculares" class="form-control">
                                 <datalist id="antecedentesPersonalesOcularesList">
                                     @foreach($antecedentesPersonalesOculares as $antecedente)
                                         <option value="{{ $antecedente }}">
@@ -156,8 +156,8 @@
                                 </datalist>
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Antecedentes Personales Generales <span class="text-danger">*</span></label>
-                                <input list="antecedentesPersonalesGeneralesList" name="antecedentes_personales_generales" class="form-control" required>
+                                <label>Antecedentes Personales Generales</label>
+                                <input list="antecedentesPersonalesGeneralesList" name="antecedentes_personales_generales" class="form-control">
                                 <datalist id="antecedentesPersonalesGeneralesList">
                                     @foreach($antecedentesPersonalesGenerales as $antecedente)
                                         <option value="{{ $antecedente }}">
@@ -165,8 +165,8 @@
                                 </datalist>
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Antecedentes Familiares Oculares <span class="text-danger">*</span></label>
-                                <input list="antecedentesFamiliaresOcularesList" name="antecedentes_familiares_oculares" class="form-control" required>
+                                <label>Antecedentes Familiares Oculares</label>
+                                <input list="antecedentesFamiliaresOcularesList" name="antecedentes_familiares_oculares" class="form-control">
                                 <datalist id="antecedentesFamiliaresOcularesList">
                                     @foreach($antecedentesFamiliaresOculares as $antecedente)
                                         <option value="{{ $antecedente }}">
@@ -174,8 +174,8 @@
                                 </datalist>
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Antecedentes Familiares Generales <span class="text-danger">*</span></label>
-                                <input list="antecedentesFamiliaresGeneralesList" name="antecedentes_familiares_generales" class="form-control" required>
+                                <label>Antecedentes Familiares Generales</label>
+                                <input list="antecedentesFamiliaresGeneralesList" name="antecedentes_familiares_generales" class="form-control">
                                 <datalist id="antecedentesFamiliaresGeneralesList">
                                     @foreach($antecedentesFamiliaresGenerales as $antecedente)
                                         <option value="{{ $antecedente }}">
@@ -198,51 +198,51 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
-                                <h6>Agudeza Visual VL sin Corrección <span class="text-danger">*</span></h6>
+                                <h6>Agudeza Visual VL sin Corrección</h6>
                                 <div class="form-row">
                                     <div class="form-group col-md-4">
-                                        <label>OD <span class="text-danger">*</span></label>
-                                        <input type="text" name="agudeza_visual_vl_sin_correccion_od" class="form-control" required>
+                                        <label>OD</label>
+                                        <input type="text" name="agudeza_visual_vl_sin_correccion_od" class="form-control">
                                     </div>
                                     <div class="form-group col-md-4">
-                                        <label>OI <span class="text-danger">*</span></label>
-                                        <input type="text" name="agudeza_visual_vl_sin_correccion_oi" class="form-control" required>
+                                        <label>OI</label>
+                                        <input type="text" name="agudeza_visual_vl_sin_correccion_oi" class="form-control">
                                     </div>
                                     <div class="form-group col-md-4">
-                                        <label>AO <span class="text-danger">*</span></label>
-                                        <input type="text" name="agudeza_visual_vl_sin_correccion_ao" class="form-control" required>
+                                        <label>AO</label>
+                                        <input type="text" name="agudeza_visual_vl_sin_correccion_ao" class="form-control">
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <h6>Agudeza Visual VP sin Corrección <span class="text-danger">*</span></h6>
+                                <h6>Agudeza Visual VP sin Corrección</h6>
                                 <div class="form-row">
                                     <div class="form-group col-md-4">
-                                        <label>OD <span class="text-danger">*</span></label>
-                                        <input type="text" name="agudeza_visual_vp_sin_correccion_od" class="form-control" required>
+                                        <label>OD</label>
+                                        <input type="text" name="agudeza_visual_vp_sin_correccion_od" class="form-control">
                                     </div>
                                     <div class="form-group col-md-4">
-                                        <label>OI <span class="text-danger">*</span></label>
-                                        <input type="text" name="agudeza_visual_vp_sin_correccion_oi" class="form-control" required>
+                                        <label>OI</label>
+                                        <input type="text" name="agudeza_visual_vp_sin_correccion_oi" class="form-control">
                                     </div>
                                     <div class="form-group col-md-4">
-                                        <label>AO <span class="text-danger">*</span></label>
-                                        <input type="text" name="agudeza_visual_vp_sin_correccion_ao" class="form-control" required>
+                                        <label>AO</label>
+                                        <input type="text" name="agudeza_visual_vp_sin_correccion_ao" class="form-control">
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="row mt-3">
                             <div class="col-md-6">
-                                <h6>Pin Hole (PH) <span class="text-danger">*</span></h6>
+                                <h6>Pin Hole (PH)</h6>
                                 <div class="form-row">
                                     <div class="form-group col-md-6">
-                                        <label>PH OD <span class="text-danger">*</span></label>
-                                        <input type="text" name="ph_od" class="form-control" required>
+                                        <label>PH OD</label>
+                                        <input type="text" name="ph_od" class="form-control">
                                     </div>
                                     <div class="form-group col-md-6">
-                                        <label>PH OI <span class="text-danger">*</span></label>
-                                        <input type="text" name="ph_oi" class="form-control" required>
+                                        <label>PH OI</label>
+                                        <input type="text" name="ph_oi" class="form-control">
                                     </div>
                                 </div>
                             </div>
@@ -320,40 +320,40 @@
                     <div class="card-body">
                         <div class="form-row mb-3">
                             <div class="form-group col-md-6">
-                                <label>Refracción OD <span class="text-danger">*</span></label>
-                                <input type="text" name="refraccion_od" class="form-control" required>
+                                <label>Refracción OD</label>
+                                <input type="text" name="refraccion_od" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
-                                <label>Refracción OI <span class="text-danger">*</span></label>
-                                <input type="text" name="refraccion_oi" class="form-control" required>
+                                <label>Refracción OI</label>
+                                <input type="text" name="refraccion_oi" class="form-control">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group col-md-3">
-                                <label>DP OD <span class="text-danger">*</span></label>
-                                <input type="text" name="rx_final_dp_od" class="form-control" required>
+                                <label>DP OD</label>
+                                <input type="text" name="rx_final_dp_od" class="form-control">
                             </div>
                             <div class="form-group col-md-3">
-                                <label>DP OI <span class="text-danger">*</span></label>
-                                <input type="text" name="rx_final_dp_oi" class="form-control" required>
+                                <label>DP OI</label>
+                                <input type="text" name="rx_final_dp_oi" class="form-control">
                             </div>
                             <div class="form-group col-md-3">
-                                <label>AV VL OD <span class="text-danger">*</span></label>
-                                <input type="text" name="rx_final_av_vl_od" class="form-control" required>
+                                <label>AV VL OD</label>
+                                <input type="text" name="rx_final_av_vl_od" class="form-control">
                             </div>
                             <div class="form-group col-md-3">
-                                <label>AV VL OI <span class="text-danger">*</span></label>
-                                <input type="text" name="rx_final_av_vl_oi" class="form-control" required>
+                                <label>AV VL OI</label>
+                                <input type="text" name="rx_final_av_vl_oi" class="form-control">
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group col-md-3">
-                                <label>AV VP OD <span class="text-danger">*</span></label>
-                                <input type="text" name="rx_final_av_vp_od" class="form-control" required>
+                                <label>AV VP OD</label>
+                                <input type="text" name="rx_final_av_vp_od" class="form-control">
                             </div>
                             <div class="form-group col-md-3">
-                                <label>AV VP OI <span class="text-danger">*</span></label>
-                                <input type="text" name="rx_final_av_vp_oi" class="form-control" required>
+                                <label>AV VP OI</label>
+                                <input type="text" name="rx_final_av_vp_oi" class="form-control">
                             </div>
                             <div class="form-group col-md-6">
                                 <label>ADD</label> <!-- Removido text-danger -->
@@ -375,12 +375,12 @@
                     <div class="card-body">
                         <div class="form-row">
                             <div class="form-group col-12">
-                                <label>Diagnóstico <span class="text-danger">*</span></label>
-                                <textarea name="diagnostico" class="form-control" rows="3" required></textarea>
+                                <label>Diagnóstico</label>
+                                <textarea name="diagnostico" class="form-control" rows="3"></textarea>
                             </div>
                             <div class="form-group col-12">
-                                <label>Tratamiento <span class="text-danger">*</span></label>
-                                <textarea name="tratamiento" class="form-control" rows="3" required></textarea>
+                                <label>Tratamiento</label>
+                                <textarea name="tratamiento" class="form-control" rows="3"></textarea>
                             </div>
                             <div class="form-group col-md-6">
                                 <label>Cotización</label>
