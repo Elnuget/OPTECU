@@ -87,14 +87,26 @@
                             </div>
                             <div class="form-group col-md-4">
                                 <label for="empresa_id">Empresa</label>
-                                <select name="empresa_id" id="empresa_id" class="form-control">
-                                    <option value="">Seleccione una empresa...</option>
-                                    @foreach($empresas as $empresa)
-                                        <option value="{{ $empresa->id }}" {{ old('empresa_id', $historialClinico->empresa_id) == $empresa->id ? 'selected' : '' }}>
-                                            {{ $empresa->nombre }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                                @if (!$isUserAdmin && $userEmpresaId)
+                                    <select name="empresa_id" id="empresa_id" class="form-control" readonly disabled>
+                                        @foreach($empresas as $empresa)
+                                            <option value="{{ $empresa->id }}" {{ $userEmpresaId == $empresa->id ? 'selected' : '' }}>
+                                                {{ $empresa->nombre }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}">
+                                    <small class="text-muted">Tu usuario está asociado a esta empresa y no puede ser cambiada.</small>
+                                @else
+                                    <select name="empresa_id" id="empresa_id" class="form-control">
+                                        <option value="">Seleccione una empresa...</option>
+                                        @foreach($empresas as $empresa)
+                                            <option value="{{ $empresa->id }}" {{ old('empresa_id', $historialClinico->empresa_id) == $empresa->id ? 'selected' : '' }}>
+                                                {{ $empresa->nombre }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                @endif
                             </div>
                         </div>
                     </div>
