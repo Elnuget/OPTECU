@@ -9,27 +9,6 @@
 @section('content')
 <div class="card">
     <div class="card-body">
-        {{-- FECHA DE REGISTRO --}}
-        <div class="card mb-4">
-            <div class="card-header" data-toggle="collapse" data-target="#fechaRegistro" style="cursor: pointer">
-                <h5 class="mb-0">
-                    <i class="fas fa-calendar-alt mr-2"></i> Fecha de Registro
-                </h5>
-            </div>
-            <div id="fechaRegistro" class="collapse show">
-                <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-3">FECHA CONSULTA:</dt>
-                        <dd class="col-sm-9">{{ \Carbon\Carbon::parse($historialClinico->fecha)->format('d/m/Y') }}</dd>
-                        <dt class="col-sm-3">PRÓXIMA CONSULTA:</dt>
-                        <dd class="col-sm-9">{{ $historialClinico->proxima_consulta ? \Carbon\Carbon::parse($historialClinico->proxima_consulta)->format('d/m/Y') : 'NO PROGRAMADA' }}</dd>
-                        <dt class="col-sm-3">USUARIO REGISTRO:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->usuario->name ?? 'N/A') }}</dd>
-                    </dl>
-                </div>
-            </div>
-        </div>
-
         {{-- DATOS DEL PACIENTE --}}
         <div class="card mb-4">
             <div class="card-header" data-toggle="collapse" data-target="#datosPaciente" style="cursor: pointer">
@@ -40,6 +19,8 @@
             <div id="datosPaciente" class="collapse show">
                 <div class="card-body">
                     <dl class="row">
+                        <dt class="col-sm-3">FECHA CONSULTA:</dt>
+                        <dd class="col-sm-9">{{ \Carbon\Carbon::parse($historialClinico->fecha)->format('d/m/Y') }}</dd>
                         <dt class="col-sm-3">NOMBRES:</dt>
                         <dd class="col-sm-9">{{ strtoupper($historialClinico->nombres) }}</dd>
                         <dt class="col-sm-3">APELLIDOS:</dt>
@@ -56,6 +37,10 @@
                         <dd class="col-sm-9">{{ strtoupper($historialClinico->ocupacion) }}</dd>
                         <dt class="col-sm-3">EMPRESA:</dt>
                         <dd class="col-sm-9">{{ $historialClinico->empresa ? strtoupper($historialClinico->empresa->nombre) : 'N/A' }}</dd>
+                        <dt class="col-sm-3">PRÓXIMA CONSULTA:</dt>
+                        <dd class="col-sm-9">{{ $historialClinico->proxima_consulta ? \Carbon\Carbon::parse($historialClinico->proxima_consulta)->format('d/m/Y') : 'NO PROGRAMADA' }}</dd>
+                        <dt class="col-sm-3">USUARIO REGISTRO:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->usuario->name ?? 'N/A') }}</dd>
                     </dl>
                 </div>
             </div>
@@ -225,6 +210,43 @@
                 </div>
             </div>
         </div>
+
+        {{-- RECETA --}}
+        @if($historialClinico->receta)
+        <div class="card mb-4">
+            <div class="card-header" data-toggle="collapse" data-target="#recetaCard" style="cursor: pointer">
+                <h5 class="mb-0">
+                    <i class="fas fa-prescription-bottle-alt mr-2"></i> Receta
+                </h5>
+            </div>
+            <div id="recetaCard" class="collapse show">
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">ESFERA OD:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->esfera_od ?? 'N/A') }}</dd>
+                        <dt class="col-sm-3">ESFERA OI:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->esfera_oi ?? 'N/A') }}</dd>
+                        <dt class="col-sm-3">CILINDRO OD:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->cilindro_od ?? 'N/A') }}</dd>
+                        <dt class="col-sm-3">CILINDRO OI:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->cilindro_oi ?? 'N/A') }}</dd>
+                        <dt class="col-sm-3">EJE OD:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->eje_od ?? 'N/A') }}</dd>
+                        <dt class="col-sm-3">EJE OI:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->eje_oi ?? 'N/A') }}</dd>
+                        <dt class="col-sm-3">ADD OD:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->add_od ?? 'N/A') }}</dd>
+                        <dt class="col-sm-3">ADD OI:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->add_oi ?? 'N/A') }}</dd>
+                        <dt class="col-sm-3">TIPO DE LENTE:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->tipo_lente ?? 'N/A') }}</dd>
+                        <dt class="col-sm-3">OBSERVACIONES:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->receta->observaciones ?? 'N/A') }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        @endif
 
         {{-- BOTONES DE ACCIÓN --}}
         <div class="d-flex justify-content-end">
