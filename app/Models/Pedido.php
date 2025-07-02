@@ -14,6 +14,7 @@ class Pedido extends Model
 
     // Especifica los campos que pueden ser asignados masivamente
     protected $fillable = [
+        'empresa_id',
         'fecha',
         'numero_orden',
         'fact',
@@ -50,6 +51,12 @@ class Pedido extends Model
 
     // Define si tu modelo debe usar timestamps (created_at y updated_at)
     public $timestamps = true;
+
+    // Relación con el modelo Empresa
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class, 'empresa_id');
+    }
 
     // Relación con el modelo Inventario para 'a_inventario'
     public function aInventario()

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\HistorialClinico;
 use App\Models\MensajesEnviados;
+use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -11,8 +12,8 @@ class HistorialClinicoController extends Controller
 {
     public function index(Request $request)
     {
-        // Iniciar la consulta con la relación usuario
-        $query = HistorialClinico::with('usuario');
+        // Iniciar la consulta con las relaciones usuario y empresa
+        $query = HistorialClinico::with(['usuario', 'empresa']);
 
         // Si no se solicitan todos los registros y no hay parámetros de fecha, redirigir al mes actual
         if (!$request->has('todos') && (!$request->filled('ano') || !$request->filled('mes'))) {
@@ -29,10 +30,18 @@ class HistorialClinicoController extends Controller
                   ->whereMonth('fecha', $request->get('mes'));
         }
 
+        // Aplicar filtro de empresa si se especifica
+        if ($request->filled('empresa_id')) {
+            $query->where('empresa_id', $request->get('empresa_id'));
+        }
+
         // Obtener los historiales
         $historiales = $query->get();
 
-        return view('historiales_clinicos.index', compact('historiales'));
+        // Obtener todas las empresas para el filtro
+        $empresas = Empresa::orderBy('nombre')->get();
+
+        return view('historiales_clinicos.index', compact('historiales', 'empresas'));
     }
 
     public function create()
@@ -73,6 +82,9 @@ class HistorialClinicoController extends Controller
             ->pluck('celular')
             ->toArray();
 
+        // Obtener todas las empresas para el select
+        $empresas = Empresa::orderBy('nombre')->get();
+
         return view('historiales_clinicos.create', compact(
             'antecedentesPersonalesOculares',
             'antecedentesPersonalesGenerales',
@@ -82,13 +94,15 @@ class HistorialClinicoController extends Controller
             'apellidos',
             'cedulas',
             'celulares',
-            'nombresCompletos'
+            'nombresCompletos',
+            'empresas'
         ));
     }
 
     protected function validationRules()
     {
         return [
+            'empresa_id' => 'nullable|exists:empresas,id',
             'nombres' => 'required|string|max:255',
             'apellidos' => 'required|string|max:255',
             'edad' => 'required|numeric|min:0|max:150',
@@ -216,14 +230,18 @@ class HistorialClinicoController extends Controller
 
     public function show($id)
     {
-        $historialClinico = HistorialClinico::findOrFail($id);
+        $historialClinico = HistorialClinico::with('empresa')->findOrFail($id);
         return view('historiales_clinicos.show', compact('historialClinico'));
     }
 
     public function edit($id)
     {
         $historialClinico = HistorialClinico::findOrFail($id);
-        return view('historiales_clinicos.edit', compact('historialClinico'));
+        
+        // Obtener todas las empresas para el select
+        $empresas = Empresa::orderBy('nombre')->get();
+        
+        return view('historiales_clinicos.edit', compact('historialClinico', 'empresas'));
     }
 
     public function update(Request $request, $id)

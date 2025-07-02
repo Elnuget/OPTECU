@@ -204,9 +204,18 @@
                                 </div>                                <div class="col-md-3">
                                     <label for="celular" class="form-label">Celular</label>
                                     <input type="text" class="form-control" id="celular" name="celular" placeholder="Escriba el número de celular" autocomplete="off">
-                                </div>                                <div class="col-md-6">
+                                </div>                                <div class="col-md-3">
                                     <label for="correo_electronico" class="form-label">Correo Electrónico</label>
                                     <input type="email" class="form-control" id="correo_electronico" name="correo_electronico" placeholder="Escriba el correo electrónico" autocomplete="off">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="empresa_id" class="form-label">Empresa</label>
+                                    <select name="empresa_id" id="empresa_id" class="form-control">
+                                        <option value="">Seleccione una empresa...</option>
+                                        @foreach($empresas as $empresa)
+                                            <option value="{{ $empresa->id }}">{{ $empresa->nombre }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                             </div>
                         </div>

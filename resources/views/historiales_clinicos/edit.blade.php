@@ -101,9 +101,26 @@
                             </div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label for="ocupacion">OCUPACIÓN <span class="text-danger">*</span></label>
-                        <input type="text" name="ocupacion" id="ocupacion" class="form-control" value="{{ $historialClinico->ocupacion }}" required>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="ocupacion">OCUPACIÓN <span class="text-danger">*</span></label>
+                                <input type="text" name="ocupacion" id="ocupacion" class="form-control" value="{{ $historialClinico->ocupacion }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="empresa_id">EMPRESA</label>
+                                <select name="empresa_id" id="empresa_id" class="form-control">
+                                    <option value="">Seleccione una empresa...</option>
+                                    @foreach($empresas as $empresa)
+                                        <option value="{{ $empresa->id }}" {{ $historialClinico->empresa_id == $empresa->id ? 'selected' : '' }}>
+                                            {{ $empresa->nombre }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

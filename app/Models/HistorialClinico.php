@@ -19,6 +19,7 @@ class HistorialClinico extends Model
     ];
 
     protected $fillable = [
+        'empresa_id',
         'fecha',
         'nombres',
         'apellidos',
@@ -63,6 +64,12 @@ class HistorialClinico extends Model
         'cotizacion',
         'usuario_id'
     ];
+
+    // Definir la relación con el modelo Empresa
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class, 'empresa_id');
+    }
 
     // Definir la relación con el modelo User
     public function usuario()

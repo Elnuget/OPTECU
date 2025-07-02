@@ -1,4 +1,4 @@
-@props(['pedido'])
+@props(['pedido', 'empresas' => []])
 
 <div class="card">
     <div class="card-header">
@@ -47,10 +47,21 @@
                 <input type="text" class="form-control" id="celular" name="celular"
                        value="{{ $pedido->celular }}">
             </div>
-            <div class="col-md-6">
+            <div class="col-md-3">
                 <label for="correo_electronico" class="form-label">Correo Electrónico</label>
                 <input type="email" class="form-control" id="correo_electronico" name="correo_electronico"
                        value="{{ $pedido->correo_electronico }}">
+            </div>
+            <div class="col-md-3">
+                <label for="empresa_id" class="form-label">Empresa</label>
+                <select name="empresa_id" id="empresa_id" class="form-control">
+                    <option value="">Seleccione una empresa...</option>
+                    @foreach($empresas as $empresa)
+                        <option value="{{ $empresa->id }}" {{ $pedido->empresa_id == $empresa->id ? 'selected' : '' }}>
+                            {{ $empresa->nombre }}
+                        </option>
+                    @endforeach
+                </select>
             </div>
         </div>
     </div>

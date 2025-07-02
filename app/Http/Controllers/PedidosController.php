@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Pedido;
 use App\Models\Inventario;
 use App\Models\PedidoLuna; // Add this line
+use App\Models\Empresa;
 
 class PedidosController extends Controller
 {    public function __construct()
@@ -147,6 +148,9 @@ class PedidosController extends Controller
             ->pluck('correo_electronico')
             ->toArray();
 
+        // Obtener todas las empresas para el select
+        $empresas = Empresa::orderBy('nombre')->get();
+
         $currentDate = date('Y-m-d');
         $lastOrder = Pedido::orderBy('numero_orden', 'desc')->first();
         $nextOrderNumber = $lastOrder ? $lastOrder->numero_orden + 1 : 1;
@@ -162,7 +166,8 @@ class PedidosController extends Controller
             'cedulas',
             'pacientes',
             'celulares',
-            'correos'
+            'correos',
+            'empresas'
         ));
     }
 
@@ -358,7 +363,8 @@ class PedidosController extends Controller
             'aInventario',
             'dInventario',
             'inventarios',
-            'lunas'  // Add this line to eager load lunas
+            'lunas',  // Add this line to eager load lunas
+            'empresa'
         ])->findOrFail($id);
 
         return view('pedidos.show', compact('pedido'));
@@ -434,11 +440,14 @@ class PedidosController extends Controller
             $totalPagado = $pedido->pagos->sum('pago'); // Suma todos los pagos realizados
             $usuarios = \App\Models\User::all(); // Obtener todos los usuarios
             
+            // Obtener todas las empresas para el select
+            $empresas = Empresa::orderBy('nombre')->get();
+            
             // Pasar el mes y año de filtro a la vista
             $filtroMes = $currentMonth;
             $filtroAno = $currentYear;
 
-            return view('pedidos.edit', compact('pedido', 'inventarioItems', 'totalPagado', 'usuarios', 'filtroMes', 'filtroAno'));
+            return view('pedidos.edit', compact('pedido', 'inventarioItems', 'totalPagado', 'usuarios', 'filtroMes', 'filtroAno', 'empresas'));
             
         } catch (\Exception $e) {
             \Log::error('Error en PedidosController@edit: ' . $e->getMessage());

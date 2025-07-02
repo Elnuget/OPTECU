@@ -54,6 +54,8 @@
                         <dd class="col-sm-9">{{ $historialClinico->celular }}</dd>
                         <dt class="col-sm-3">OCUPACIÓN:</dt>
                         <dd class="col-sm-9">{{ strtoupper($historialClinico->ocupacion) }}</dd>
+                        <dt class="col-sm-3">EMPRESA:</dt>
+                        <dd class="col-sm-9">{{ $historialClinico->empresa ? strtoupper($historialClinico->empresa->nombre) : 'N/A' }}</dd>
                     </dl>
                 </div>
             </div>

@@ -99,6 +99,15 @@
                                 <label for="ocupacion">Ocupación <span class="text-danger">*</span></label>
                                 <input type="text" name="ocupacion" id="ocupacion" class="form-control" required>
                             </div>
+                            <div class="form-group col-md-4">
+                                <label for="empresa_id">Empresa</label>
+                                <select name="empresa_id" id="empresa_id" class="form-control">
+                                    <option value="">Seleccione una empresa...</option>
+                                    @foreach($empresas as $empresa)
+                                        <option value="{{ $empresa->id }}">{{ $empresa->nombre }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>

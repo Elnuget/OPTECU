@@ -21,7 +21,7 @@
     <div class="card-body">
         {{-- Filtros de Mes y Año --}}
         <div class="row mb-3">
-            <div class="col-md-6">
+            <div class="col-md-12">
                 <form action="{{ route('historiales_clinicos.index') }}" method="GET" class="form-inline">
                     <div class="form-group mr-2">
                         <label for="mes" class="mr-2">MES:</label>
@@ -41,6 +41,17 @@
                                     {{ $i }}
                                 </option>
                             @endfor
+                        </select>
+                    </div>
+                    <div class="form-group mr-2">
+                        <label for="empresa_id" class="mr-2">EMPRESA:</label>
+                        <select name="empresa_id" id="empresa_id" class="form-control">
+                            <option value="">TODAS LAS EMPRESAS</option>
+                            @foreach($empresas ?? [] as $empresa)
+                                <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                                    {{ strtoupper($empresa->nombre) }}
+                                </option>
+                            @endforeach
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary mr-2">FILTRAR</button>
@@ -66,6 +77,7 @@
                         <th>FECHA</th>
                         <th>MOTIVO CONSULTA</th>
                         <th>PRÓXIMA CONSULTA</th>
+                        <th>EMPRESA</th>
                         <th>USUARIO</th>
                         <th>ACCIONES</th>
                     </tr>
@@ -87,6 +99,7 @@
                                 <span class="badge badge-secondary">NO PROGRAMADA</span>
                             @endif
                         </td>
+                        <td>{{ $historial->empresa ? strtoupper($historial->empresa->nombre) : 'SIN EMPRESA' }}</td>
                         <td>{{ strtoupper($historial->usuario->name ?? 'N/A') }}</td>
                         <td>
                             <a href="{{ route('historiales_clinicos.show', $historial->id) }}"
