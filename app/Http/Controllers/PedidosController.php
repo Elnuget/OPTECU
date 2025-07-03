@@ -148,6 +148,14 @@ class PedidosController extends Controller
             ->distinct()
             ->pluck('cedula')
             ->toArray();
+        
+        // Obtener pacientes del historial clínico
+        $pacientesHistorial = \App\Models\HistorialClinico::select(\DB::raw("CONCAT(nombres, ' ', apellidos) as nombre_completo"))
+            ->whereNotNull('nombres')
+            ->whereNotNull('apellidos')
+            ->distinct()
+            ->pluck('nombre_completo')
+            ->toArray();
             
         // Obtener lista de pacientes únicos existentes
         $pacientes = Pedido::select('paciente')
@@ -155,6 +163,10 @@ class PedidosController extends Controller
             ->distinct()
             ->pluck('paciente')
             ->toArray();
+        
+        // Combinar pacientes del historial con pacientes de pedidos
+        $pacientes = array_merge($pacientes, $pacientesHistorial);
+        $pacientes = array_unique($pacientes);
             
         // Obtener lista de celulares únicos existentes
         $celulares = Pedido::select('celular')

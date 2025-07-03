@@ -168,6 +168,7 @@
                                             <option value="{{ $paciente }}" data-tipo="paciente">
                                         @endforeach
                                     </datalist>
+                                    <small class="form-text text-muted">Escriba para buscar clientes, pacientes o pacientes del historial clínico</small>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="fact" class="form-label">Factura</label>
@@ -541,6 +542,9 @@
                         $('#paciente').val(valor);
                         cargarDatosPersonales('paciente', valor);
                     }
+                    
+                    // Además de cargar datos del pedido, intentamos cargar datos del historial clínico
+                    buscarHistorialClinico(valor);
                 }
             });
 
@@ -554,6 +558,8 @@
                         const valorActual = $('#cedula').val();
                         if (valorActual === valor) {
                             cargarDatosPersonales('cedula', valor);
+                            // También buscar en historial clínico por cédula
+                            buscarHistorialClinicoPorCedula(valor);
                         }
                     }, 100);
                 }
@@ -613,6 +619,134 @@
                         if (loadingIndicator) {
                             loadingIndicator.remove();
                         }
+                    });
+            }
+            
+            // Función para buscar en el historial clínico por nombre completo
+            function buscarHistorialClinico(nombreCompleto) {
+                if (!nombreCompleto) return;
+                
+                // Primero intentamos buscar en nombres
+                buscarHistorialClinicoPorCampo('nombres', nombreCompleto);
+                
+                // También intentamos buscar en apellidos (por si el formato está invertido)
+                buscarHistorialClinicoPorCampo('apellidos', nombreCompleto);
+            }
+            
+            // Función para buscar en el historial clínico por cédula
+            function buscarHistorialClinicoPorCedula(cedula) {
+                if (!cedula) return;
+                
+                buscarHistorialClinicoPorCampo('cedula', cedula);
+            }
+            
+            // Función genérica para buscar en el historial clínico por cualquier campo
+            function buscarHistorialClinicoPorCampo(campo, valor) {
+                if (!valor) return;
+                
+                // Mostrar indicador de carga
+                const loadingIndicator = document.createElement('small');
+                loadingIndicator.classList.add('loading-indicator-historial', 'text-muted', 'ml-2');
+                loadingIndicator.textContent = 'Buscando en historial clínico...';
+                document.getElementById('buscar_cliente_paciente').parentNode.appendChild(loadingIndicator);
+                
+                // Hacer petición AJAX para buscar en el historial clínico
+                fetch(`/api/historiales-clinicos/buscar-por/${campo}/${encodeURIComponent(valor)}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(err => {
+                                throw new Error(err.message || 'Error al obtener datos del historial');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Remover indicador de carga
+                        const loadingIndicators = document.querySelectorAll('.loading-indicator-historial');
+                        loadingIndicators.forEach(indicator => indicator.remove());
+                        
+                        if (data.success && data.historial) {
+                            // Mostrar notificación de éxito
+                            const successMsg = document.createElement('div');
+                            successMsg.classList.add('alert', 'alert-success', 'mt-2');
+                            successMsg.textContent = 'Datos del historial clínico encontrados';
+                            document.getElementById('buscar_cliente_paciente').parentNode.appendChild(successMsg);
+                            
+                            // Auto ocultar el mensaje después de 3 segundos
+                            setTimeout(() => {
+                                successMsg.remove();
+                            }, 3000);
+                            
+                            // Autocompletar los campos de datos personales
+                            const nombreCompleto = data.historial.nombres + ' ' + data.historial.apellidos;
+                            $('#cliente').val(nombreCompleto);
+                            $('#cedula').val(data.historial.cedula || '');
+                            $('#paciente').val(nombreCompleto);
+                            $('#celular').val(data.historial.celular || '');
+                            $('#correo_electronico').val(data.historial.correo || '');
+                            
+                            // Si tiene empresa, seleccionarla en el dropdown
+                            if (data.historial.empresa_id) {
+                                $('#empresa_id').val(data.historial.empresa_id);
+                                console.log('Empresa seleccionada del historial clínico:', data.historial.empresa_id);
+                            }
+                            
+                            // Si hay recetas disponibles, cargar los datos en los campos de lunas
+                            if (data.historial.od_esfera !== undefined) {
+                                // Abrir la sección de lunas si está cerrada
+                                const lunasHeader = document.querySelector('#lunas-container .card-header');
+                                const lunasCollapsed = document.querySelector('#lunas-container').classList.contains('collapsed-card');
+                                if (lunasCollapsed && lunasHeader) {
+                                    lunasHeader.querySelector('.btn-tool').click();
+                                }
+                                
+                                // Formatear los valores de la receta
+                                const formatearValor = (valor) => {
+                                    if (valor === null || valor === undefined || valor === '') return '';
+                                    // Si es un número, añadir + al inicio si es positivo
+                                    if (!isNaN(parseFloat(valor))) {
+                                        const num = parseFloat(valor);
+                                        return num > 0 ? `+${num}` : `${num}`;
+                                    }
+                                    return valor;
+                                };
+                                
+                                // Construir la medida de la luna basada en los datos de la receta
+                                const odEsfera = formatearValor(data.historial.od_esfera);
+                                const odCilindro = formatearValor(data.historial.od_cilindro);
+                                const odEje = data.historial.od_eje ? `X${data.historial.od_eje}°` : '';
+                                
+                                const oiEsfera = formatearValor(data.historial.oi_esfera);
+                                const oiCilindro = formatearValor(data.historial.oi_cilindro);
+                                const oiEje = data.historial.oi_eje ? `X${data.historial.oi_eje}°` : '';
+                                
+                                const odMedida = `OD: ${odEsfera} ${odCilindro} ${odEje}`.trim();
+                                const oiMedida = `OI: ${oiEsfera} ${oiCilindro} ${oiEje}`.trim();
+                                const addInfo = data.historial.add ? `ADD: ${formatearValor(data.historial.add)}` : '';
+                                const dpInfo = data.historial.dp ? `DP: ${data.historial.dp}` : '';
+                                
+                                // Establecer los valores en los campos de lunas
+                                $('#l_medida').val(`${odMedida} / ${oiMedida}`);
+                                $('#l_detalle').val(`${addInfo} ${dpInfo} ${data.historial.observaciones || ''}`);
+                                
+                                // Si el historial tiene los campos de tipo_lente, material y filtro, también los establecemos
+                                if (data.historial.tipo_lente) {
+                                    $('#tipo_lente').val(data.historial.tipo_lente);
+                                }
+                                if (data.historial.material) {
+                                    $('#material').val(data.historial.material);
+                                }
+                                if (data.historial.filtro) {
+                                    $('#filtro').val(data.historial.filtro);
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error al buscar en historial clínico:', error);
+                        // Remover indicador de carga en caso de error
+                        const loadingIndicators = document.querySelectorAll('.loading-indicator-historial');
+                        loadingIndicators.forEach(indicator => indicator.remove());
                     });
             }
         });

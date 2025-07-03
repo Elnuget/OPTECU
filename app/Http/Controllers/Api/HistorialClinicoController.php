@@ -33,7 +33,7 @@ class HistorialClinicoController extends Controller
             // Buscar el último historial que coincida con el campo y valor
             $historial = HistorialClinico::with(['recetas' => function($query) {
                 $query->orderBy('created_at', 'desc');
-            }])
+            }, 'empresa']) // Incluir la relación con empresa
             ->where($campo, $valorDecodificado)
             ->orderBy('created_at', 'desc')
             ->first();
@@ -53,9 +53,11 @@ class HistorialClinicoController extends Controller
                 $historial->od_esfera = $ultimaReceta->od_esfera;
                 $historial->od_cilindro = $ultimaReceta->od_cilindro;
                 $historial->od_eje = $ultimaReceta->od_eje;
+                $historial->od_adicion = $ultimaReceta->od_adicion;
                 $historial->oi_esfera = $ultimaReceta->oi_esfera;
                 $historial->oi_cilindro = $ultimaReceta->oi_cilindro;
                 $historial->oi_eje = $ultimaReceta->oi_eje;
+                $historial->oi_adicion = $ultimaReceta->oi_adicion;
                 
                 // Asegurarse de que ADD solo se asigna una vez
                 if (!$historial->add && $ultimaReceta->od_adicion) {
