@@ -62,7 +62,11 @@
                         <td class="editable" data-field="codigo">
                             <span class="display-value">-</span>
                             <input type="text" class="form-control edit-input" style="display: none;">
-                        </td>                        <td class="editable text-center" data-field="cantidad">
+                        </td>
+                        <td class="text-center">
+                            <span class="display-value">N/A</span>
+                        </td>
+                        <td class="editable text-center" data-field="cantidad">
                             <span class="display-value">-</span>
                             <input type="number" class="form-control edit-input" style="display: none;" value="1">
                         </td>

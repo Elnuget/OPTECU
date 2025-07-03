@@ -38,43 +38,77 @@
             // Restaurar estado después de cargar
             restoreState();
 
-            // Destruir instancias existentes de DataTables antes de reinicializar
-            $('.table').each(function() {
-                if ($.fn.DataTable.isDataTable(this)) {
-                    $(this).DataTable().destroy();
-                }
-            });
+            // Función para inicializar DataTables de forma segura
+            function initializeDataTables() {
+                // Destruir instancias existentes de DataTables antes de reinicializar
+                $('.table').each(function() {
+                    if ($.fn.DataTable.isDataTable(this)) {
+                        $(this).DataTable().destroy();
+                    }
+                });
 
-            // Inicializar DataTables con configuración responsiva
-            const tables = $('.table').DataTable({
-                dom: '<"row"<"col-12"f>>' +
-                     '<"row"<"col-12"t>>',
-                ordering: true,
-                searching: true,
-                paging: false,
-                info: false,
-                responsive: {
-                    details: {
-                        type: 'column',
-                        target: 'tr'
-                    }
-                },
-                autoWidth: false,
-                language: {
-                    search: "Buscar:",
-                    zeroRecords: "No se encontraron registros coincidentes",
-                    searchPlaceholder: "Buscar en esta columna..."
-                },
-                columnDefs: [
-                    {
-                        targets: 0, // Primera columna (NÚMERO)
-                        type: 'num',
-                    }
-                ],
-                // Guardar estado cuando se dibuja la tabla
-                drawCallback: function() {
-                    saveState();
-                }
+                // Esperar un momento para que el DOM se estabilice
+                setTimeout(function() {
+                    $('.table').each(function() {
+                        const $table = $(this);
+                        
+                        // Verificar que la tabla tenga la estructura correcta
+                        if ($table.find('thead tr th').length > 0 && $table.find('tbody tr').length > 0) {
+                            try {
+                                // Asegurar que todas las filas tengan el mismo número de celdas
+                                const expectedCols = $table.find('thead tr th').length;
+                                $table.find('tbody tr').each(function() {
+                                    const actualCols = $(this).find('td').length;
+                                    if (actualCols !== expectedCols) {
+                                        // Agregar celdas vacías si faltan
+                                        for (let i = actualCols; i < expectedCols; i++) {
+                                            $(this).append('<td></td>');
+                                        }
+                                    }
+                                });
+
+                                // Inicializar DataTable solo si la estructura es válida
+                                $table.DataTable({
+                                    dom: '<"row"<"col-12"f>>' +
+                                         '<"row"<"col-12"t>>',
+                                    ordering: true,
+                                    searching: true,
+                                    paging: false,
+                                    info: false,
+                                    responsive: false, // Desactivar responsive para evitar conflictos
+                                    autoWidth: false,
+                                    language: {
+                                        search: "Buscar:",
+                                        zeroRecords: "No se encontraron registros coincidentes",
+                                        searchPlaceholder: "Buscar en esta columna..."
+                                    },
+                                    columnDefs: [
+                                        {
+                                            targets: 0, // Primera columna (NÚMERO)
+                                            type: 'num',
+                                        }
+                                    ],
+                                    // Guardar estado cuando se dibuja la tabla
+                                    drawCallback: function() {
+                                        saveState();
+                                    }
+                                });
+                            } catch (error) {
+                                console.warn('Error inicializando DataTable:', error);
+                            }
+                        }
+                    });
+                }, 100);
+            }
+
+            // Inicializar DataTables
+            initializeDataTables();
+
+            // Reinicializar DataTables cuando se muestran los collapse
+            $('.collapse').on('shown.bs.collapse', function () {
+                setTimeout(function() {
+                    initializeDataTables();
+                }, 150);
             });
 
             // Variable para controlar el estado de expansión
@@ -86,6 +120,10 @@
                 if (allExpanded) {
                     $('.collapse').collapse('show');
                     $('.transition-icon').addClass('fa-rotate-180');
+                    // Reinicializar DataTables después de expandir
+                    setTimeout(function() {
+                        initializeDataTables();
+                    }, 500);
                 } else {
                     $('.collapse').collapse('hide');
                     $('.transition-icon').removeClass('fa-rotate-180');
@@ -100,11 +138,19 @@
                 $('.transition-icon').addClass('fa-rotate-180');
                 allExpanded = true;
                 
-                // Realizar la búsqueda
-                let searchTerm = $('#busquedaGlobal').val().toLowerCase();
-                $('.table').each(function() {
-                    $(this).DataTable().search(searchTerm).draw();
-                });
+                // Reinicializar DataTables después de expandir
+                setTimeout(function() {
+                    initializeDataTables();
+                    
+                    // Realizar la búsqueda después de reinicializar
+                    let searchTerm = $('#busquedaGlobal').val().toLowerCase();
+                    $('.table').each(function() {
+                        if ($.fn.DataTable.isDataTable(this)) {
+                            $(this).DataTable().search(searchTerm).draw();
+                        }
+                    });
+                }, 500);
+                
                 saveState();
             });
 
@@ -112,7 +158,9 @@
             $('#busquedaGlobal').on('keyup', function() {
                 let searchTerm = $(this).val().toLowerCase();
                 $('.table').each(function() {
-                    $(this).DataTable().search(searchTerm).draw();
+                    if ($.fn.DataTable.isDataTable(this)) {
+                        $(this).DataTable().search(searchTerm).draw();
+                    }
                 });
             });
 
