@@ -11,6 +11,7 @@ use App\Models\Empresa;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\PagoNotification;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class PagoController extends Controller
 {
@@ -79,53 +80,99 @@ class PagoController extends Controller
      */
     public function store(Request $request)
     {
-        // Validate data
-        $validatedData = $request->validate([
-            'pedido_id' => 'required|exists:pedidos,id', // Hacer pedido_id requerido
-            'mediodepago_id' => 'required|exists:mediosdepagos,id',
-            'pago' => 'required|regex:/^\d+(\.\d{1,2})?$/',
-            'created_at' => 'sometimes|nullable|date',
-            'TC' => 'sometimes|nullable|boolean',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
-
         try {
-            // Verificar que el pedido existe y es del mes actual
+            // Validate data
+            $validatedData = $request->validate([
+                'pedido_id' => 'required|exists:pedidos,id', // Hacer pedido_id requerido
+                'mediodepago_id' => 'required|exists:mediosdepagos,id',
+                'pago' => 'required|regex:/^\d+(\.\d{1,2})?$/',
+                'created_at' => 'sometimes|nullable|date',
+                'TC' => 'sometimes|nullable|boolean',
+                'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            ]);
+
+            // Verificar que el pedido existe
             $pedido = Pedido::findOrFail($validatedData['pedido_id']);
             
             if (!$pedido) {
-                throw new \Exception('El pedido no existe');
+                throw new \Exception('El pedido seleccionado no existe');
+            }
+
+            // Verificar que el pago no sea mayor al saldo
+            $pagoAmount = (float)$validatedData['pago'];
+            if ($pagoAmount > $pedido->saldo) {
+                throw new \Exception('El monto del pago no puede ser mayor al saldo pendiente del pedido');
+            }
+
+            if ($pagoAmount <= 0) {
+                throw new \Exception('El monto del pago debe ser mayor a cero');
             }
 
             // Format pago to ensure exact decimal
-            $validatedData['pago'] = number_format((float)$validatedData['pago'], 2, '.', '');
+            $validatedData['pago'] = number_format($pagoAmount, 2, '.', '');
 
-            // Handle photo upload
+            // Create uploads directory if it doesn't exist
+            $uploadsPath = public_path('uploads/pagos');
+            if (!file_exists($uploadsPath)) {
+                mkdir($uploadsPath, 0755, true);
+            }
+
+            // Handle photo upload with better error handling
             if ($request->hasFile('foto')) {
                 $foto = $request->file('foto');
-                $nombreFoto = time() . '_' . $foto->getClientOriginalName();
-                $foto->move(public_path('uploads/pagos'), $nombreFoto);
+                
+                // Verificar que el archivo sea válido
+                if (!$foto->isValid()) {
+                    throw new \Exception('El archivo de foto no es válido');
+                }
+                
+                // Generar nombre único para evitar conflictos
+                $extension = $foto->getClientOriginalExtension();
+                $nombreFoto = 'pago_' . time() . '_' . uniqid() . '.' . $extension;
+                
+                // Mover archivo con verificación
+                if (!$foto->move($uploadsPath, $nombreFoto)) {
+                    throw new \Exception('Error al guardar la foto del pago');
+                }
+                
                 $validatedData['foto'] = $nombreFoto;
             }
 
+            // Comenzar transacción de base de datos
+            \DB::beginTransaction();
+
             // Create a new pago
             $nuevoPago = Pago::create($validatedData);
+            
+            if (!$nuevoPago) {
+                throw new \Exception('Error al crear el registro de pago en la base de datos');
+            }
 
             // Update the pedido's saldo
             $pedido->saldo -= $validatedData['pago'];
-            $pedido->save();
+            
+            if (!$pedido->save()) {
+                throw new \Exception('Error al actualizar el saldo del pedido');
+            }
 
             // Si el método de pago es Efectivo (asumiendo que el ID es 1)
             if ($validatedData['mediodepago_id'] == 1) {
                 // Crear entrada en caja
-                Caja::create([
+                $cajaEntry = Caja::create([
                     'valor' => $validatedData['pago'],
                     'motivo' => 'Abono ' . $pedido->cliente,
                     'user_id' => auth()->id()
                 ]);
+                
+                if (!$cajaEntry) {
+                    throw new \Exception('Error al registrar el movimiento en caja');
+                }
             }
 
-            // Send email notification
+            // Confirmar transacción
+            \DB::commit();
+
+            // Send email notification (después de confirmar la transacción)
             try {
                 $empresas = Empresa::all();
                 if($empresas->isNotEmpty()) {
@@ -138,27 +185,47 @@ class PagoController extends Controller
                 }
             } catch (\Exception $e) {
                 Log::error('Failed to send email for payment ID: ' . $nuevoPago->id . '. Error: ' . $e->getMessage());
+                // No fallar la creación del pago por error de email
             }
 
-            // Obtener el año y mes actual
-            $currentYear = date('Y');
-            $currentMonth = date('m');
-
-            return redirect("/Pagos?ano={$currentYear}&mes={$currentMonth}")->with([
+            // Redirigir al index de pedidos en lugar de pagos
+            return redirect()->route('pedidos.index')->with([
                 'error' => 'Exito',
-                'mensaje' => 'Pago creado exitosamente',
+                'mensaje' => 'Pago creado exitosamente. El saldo del pedido ha sido actualizado.',
                 'tipo' => 'alert-success'
             ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Rollback en caso de error de validación
+            \DB::rollback();
+            
+            return redirect()->back()
+                ->withErrors($e->validator)
+                ->withInput()
+                ->with([
+                    'error' => 'Error de Validación',
+                    'mensaje' => 'Por favor, revise los datos ingresados.',
+                    'tipo' => 'alert-danger'
+                ]);
+
         } catch (\Exception $e) {
-            if (isset($nuevoPago)) {
-                $nuevoPago->delete();
+            // Rollback en caso de cualquier error
+            \DB::rollback();
+            
+            // Eliminar foto si se subió pero falló la creación
+            if (isset($validatedData['foto']) && file_exists($uploadsPath . '/' . $validatedData['foto'])) {
+                unlink($uploadsPath . '/' . $validatedData['foto']);
             }
 
-            return redirect()->route('pagos.index')->with([
-                'error' => 'Error',
-                'mensaje' => 'El pago no se ha creado. Error: ' . $e->getMessage(),
-                'tipo' => 'alert-danger'
-            ]);
+            Log::error('Error creating payment: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withInput()
+                ->with([
+                    'error' => 'Error',
+                    'mensaje' => 'El pago no se ha creado. ' . $e->getMessage(),
+                    'tipo' => 'alert-danger'
+                ]);
         }
     }
 
@@ -197,32 +264,53 @@ class PagoController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $validatedData = $request->validate([
-            'pedido_id' => 'nullable|exists:pedidos,id',
-            'mediodepago_id' => 'nullable|exists:mediosdepagos,id',
-            'pago' => 'nullable|regex:/^\d+(\.\d{1,2})?$/',
-            'created_at' => 'sometimes|nullable|date',
-            'TC' => 'sometimes|nullable|boolean',
-            'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
-
-        // Format pago to ensure exact decimal
-        $validatedData['pago'] = number_format((float)$validatedData['pago'], 2, '.', '');
-
         try {
+            $validatedData = $request->validate([
+                'pedido_id' => 'nullable|exists:pedidos,id',
+                'mediodepago_id' => 'nullable|exists:mediosdepagos,id',
+                'pago' => 'nullable|regex:/^\d+(\.\d{1,2})?$/',
+                'created_at' => 'sometimes|nullable|date',
+                'TC' => 'sometimes|nullable|boolean',
+                'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            ]);
+
+            // Format pago to ensure exact decimal
+            if (isset($validatedData['pago'])) {
+                $validatedData['pago'] = number_format((float)$validatedData['pago'], 2, '.', '');
+            }
+
             $pago = Pago::findOrFail($id);
             $oldPagoAmount = $pago->pago;
 
-            // Handle photo upload
+            // Create uploads directory if it doesn't exist
+            $uploadsPath = public_path('uploads/pagos');
+            if (!file_exists($uploadsPath)) {
+                mkdir($uploadsPath, 0755, true);
+            }
+
+            // Handle photo upload with better error handling
             if ($request->hasFile('foto')) {
-                // Delete old photo if exists
-                if ($pago->foto && file_exists(public_path('uploads/pagos/' . $pago->foto))) {
-                    unlink(public_path('uploads/pagos/' . $pago->foto));
+                $foto = $request->file('foto');
+                
+                // Verificar que el archivo sea válido
+                if (!$foto->isValid()) {
+                    throw new \Exception('El archivo de foto no es válido');
                 }
                 
-                $foto = $request->file('foto');
-                $nombreFoto = time() . '_' . $foto->getClientOriginalName();
-                $foto->move(public_path('uploads/pagos'), $nombreFoto);
+                // Delete old photo if exists
+                if ($pago->foto && file_exists($uploadsPath . '/' . $pago->foto)) {
+                    unlink($uploadsPath . '/' . $pago->foto);
+                }
+                
+                // Generar nombre único para evitar conflictos
+                $extension = $foto->getClientOriginalExtension();
+                $nombreFoto = 'pago_' . time() . '_' . uniqid() . '.' . $extension;
+                
+                // Mover archivo con verificación
+                if (!$foto->move($uploadsPath, $nombreFoto)) {
+                    throw new \Exception('Error al guardar la nueva foto del pago');
+                }
+                
                 $validatedData['foto'] = $nombreFoto;
             }
 
@@ -230,6 +318,9 @@ class PagoController extends Controller
             if (isset($validatedData['created_at'])) {
                 $pago->created_at = $validatedData['created_at'];
             }
+
+            // Comenzar transacción
+            DB::beginTransaction();
 
             $pago->update($validatedData);
             
@@ -239,7 +330,10 @@ class PagoController extends Controller
                 if ($pedido) {
                     $pedido->saldo += $oldPagoAmount; // Revert the old payment amount
                     $pedido->saldo -= $validatedData['pago']; // Apply the new payment amount
-                    $pedido->save();
+                    
+                    if (!$pedido->save()) {
+                        throw new \Exception('Error al actualizar el saldo del pedido');
+                    }
                 }
             } else {
                 // If pedido_id is not provided, update the saldo of the existing pedido
@@ -247,21 +341,46 @@ class PagoController extends Controller
                 if ($pedido) {
                     $pedido->saldo += $oldPagoAmount; // Revert the old payment amount
                     $pedido->saldo -= $validatedData['pago']; // Apply the new payment amount
-                    $pedido->save();
+                    
+                    if (!$pedido->save()) {
+                        throw new \Exception('Error al actualizar el saldo del pedido');
+                    }
                 }
             }
+
+            // Confirmar transacción
+            DB::commit();
 
             return redirect()->route('pagos.index')->with([
                 'error' => 'Exito',
                 'mensaje' => 'Pago actualizado exitosamente',
                 'tipo' => 'alert-success'
             ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollback();
+            
+            return redirect()->back()
+                ->withErrors($e->validator)
+                ->withInput()
+                ->with([
+                    'error' => 'Error de Validación',
+                    'mensaje' => 'Por favor, revise los datos ingresados.',
+                    'tipo' => 'alert-danger'
+                ]);
+
         } catch (\Exception $e) {
-            return redirect()->route('pagos.index')->with([
-                'error' => 'Error',
-                'mensaje' => 'Pago no se ha actualizado',
-                'tipo' => 'alert-danger'
-            ]);
+            DB::rollback();
+            
+            Log::error('Error updating payment: ' . $e->getMessage());
+
+            return redirect()->back()
+                ->withInput()
+                ->with([
+                    'error' => 'Error',
+                    'mensaje' => 'El pago no se ha actualizado. ' . $e->getMessage(),
+                    'tipo' => 'alert-danger'
+                ]);
         }
     }
 
@@ -274,12 +393,21 @@ class PagoController extends Controller
     public function destroy($id)
     {
         try {
+            // Comenzar transacción
+            DB::beginTransaction();
+            
             $pago = Pago::findOrFail($id);
             $pedido = $pago->pedido;
 
-            if ($pedido) {
-                $pedido->saldo += $pago->pago; // Add the payment amount back to the order's balance
-                $pedido->save();
+            if (!$pedido) {
+                throw new \Exception('No se encontró el pedido asociado al pago');
+            }
+
+            // Add the payment amount back to the order's balance
+            $pedido->saldo += $pago->pago;
+            
+            if (!$pedido->save()) {
+                throw new \Exception('Error al actualizar el saldo del pedido');
             }
 
             // Si el pago es en efectivo (ID 1), eliminar la entrada correspondiente en caja
@@ -290,7 +418,9 @@ class PagoController extends Controller
                 ])->first();
 
                 if ($cajaEntry) {
-                    $cajaEntry->delete();
+                    if (!$cajaEntry->delete()) {
+                        throw new \Exception('Error al eliminar el movimiento de caja');
+                    }
                 }
             }
 
@@ -299,17 +429,29 @@ class PagoController extends Controller
                 unlink(public_path('uploads/pagos/' . $pago->foto));
             }
 
-            $pago->delete(); // Deletes from the 'pagos' table
+            // Delete the payment record
+            if (!$pago->delete()) {
+                throw new \Exception('Error al eliminar el registro de pago');
+            }
+
+            // Confirmar transacción
+            DB::commit();
 
             return redirect()->route('pagos.index')->with([
                 'error' => 'Exito',
                 'mensaje' => 'Pago eliminado exitosamente',
                 'tipo' => 'alert-success'
             ]);
+            
         } catch (\Exception $e) {
+            // Rollback en caso de error
+            DB::rollback();
+            
+            Log::error('Error eliminating payment: ' . $e->getMessage());
+            
             return redirect()->route('pagos.index')->with([
                 'error' => 'Error',
-                'mensaje' => 'Pago no se ha eliminado',
+                'mensaje' => 'El pago no se ha eliminado. ' . $e->getMessage(),
                 'tipo' => 'alert-danger'
             ]);
         }
@@ -324,18 +466,33 @@ class PagoController extends Controller
     public function updateTC($id)
     {
         try {
+            // Comenzar transacción
+            DB::beginTransaction();
+            
             $pago = Pago::findOrFail($id);
             $pago->TC = true;
-            $pago->save();
+            
+            if (!$pago->save()) {
+                throw new \Exception('Error al actualizar el estado TC');
+            }
+            
+            // Confirmar transacción
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Estado TC actualizado correctamente'
             ]);
+            
         } catch (\Exception $e) {
+            // Rollback en caso de error
+            DB::rollback();
+            
+            Log::error('Error updating TC status: ' . $e->getMessage());
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Error al actualizar estado TC'
+                'message' => 'Error al actualizar estado TC: ' . $e->getMessage()
             ], 500);
         }
     }

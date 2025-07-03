@@ -10,6 +10,20 @@
         <span aria-hidden="true">&times;</span></button>
 </div>
 @endif
+
+@if($errors->any())
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong>ERRORES DE VALIDACIÓN:</strong>
+    <ul class="mb-0">
+        @foreach($errors->all() as $error)
+            <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+@endif
 @stop
 
 @section('content')
@@ -75,63 +89,105 @@
                 @csrf
                 
                 <div class="form-group">
-                    <label>SELECCIONE UN MEDIO DE PAGO</label>
-                    <select name="mediodepago_id" required class="form-control">
+                    <label>SELECCIONE UN MEDIO DE PAGO <span class="text-danger">*</span></label>
+                    <select name="mediodepago_id" required class="form-control {{ $errors->has('mediodepago_id') ? 'is-invalid' : '' }}">
                         <option value="">SELECCIONAR EL MÉTODO DE PAGO</option>
                         @foreach($mediosdepago as $medioDePago)
-                            <option value="{{ $medioDePago->id }}">{{ strtoupper($medioDePago->medio_de_pago) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>SELECCIONE UN PEDIDO</label>
-                    <select name="pedido_id" id="pedido_id" required class="form-control">
-                        <option value="">SELECCIONAR EL PEDIDO</option>
-                        @foreach($pedidos as $pedido)
-                            <option value="{{ $pedido->id }}" data-saldo="{{ $pedido->saldo }}" {{ isset($selectedPedidoId) && $selectedPedidoId == $pedido->id ? 'selected' : '' }}>
-                                ORDEN: {{ $pedido->numero_orden }} - CLIENTE: {{ $pedido->cliente }}
+                            <option value="{{ $medioDePago->id }}" {{ old('mediodepago_id') == $medioDePago->id ? 'selected' : '' }}>
+                                {{ strtoupper($medioDePago->medio_de_pago) }}
                             </option>
                         @endforeach
                     </select>
+                    @if($errors->has('mediodepago_id'))
+                        <div class="invalid-feedback">
+                            {{ $errors->first('mediodepago_id') }}
+                        </div>
+                    @endif
                 </div>
                 
                 <div class="form-group">
-                    <label>SALDO</label>
+                    <label>SELECCIONE UN PEDIDO <span class="text-danger">*</span></label>
+                    <select name="pedido_id" id="pedido_id" required class="form-control {{ $errors->has('pedido_id') ? 'is-invalid' : '' }}">
+                        <option value="">SELECCIONAR EL PEDIDO</option>
+                        @foreach($pedidos as $pedido)
+                            <option value="{{ $pedido->id }}" 
+                                   data-saldo="{{ $pedido->saldo }}" 
+                                   {{ (isset($selectedPedidoId) && $selectedPedidoId == $pedido->id) || old('pedido_id') == $pedido->id ? 'selected' : '' }}>
+                                ORDEN: {{ $pedido->numero_orden }} - CLIENTE: {{ $pedido->cliente }} - SALDO: ${{ number_format($pedido->saldo, 2) }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @if($errors->has('pedido_id'))
+                        <div class="invalid-feedback">
+                            {{ $errors->first('pedido_id') }}
+                        </div>
+                    @endif
+                </div>
+                
+                <div class="form-group">
+                    <label>SALDO <span class="text-danger">*</span></label>
                     <input name="saldo" id="saldo" required type="text" class="form-control" value="{{ old('saldo') }}" readonly>
+                    <small class="form-text text-muted">SALDO PENDIENTE DEL PEDIDO SELECCIONADO</small>
                 </div>
                 
                 <div class="form-group">
-                    <label>PAGO</label>
+                    <label>PAGO <span class="text-danger">*</span></label>
                     <input name="pago" 
+                           id="pago"
                            required 
                            type="text" 
                            pattern="^\d*\.?\d{0,2}$"
-                           class="form-control" 
+                           class="form-control {{ $errors->has('pago') ? 'is-invalid' : '' }}" 
                            placeholder="0.00"
-                           onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode == 46">
+                           value="{{ old('pago') }}"
+                           onkeypress="return validarDecimal(event, this)"
+                           onblur="validarMonto(this)">
+                    @if($errors->has('pago'))
+                        <div class="invalid-feedback">
+                            {{ $errors->first('pago') }}
+                        </div>
+                    @endif
+                    <small class="form-text text-muted">INGRESE EL MONTO DEL PAGO (MÁXIMO 2 DECIMALES)</small>
                 </div>
                 
                 <div class="form-group">
-                    <label>FECHA DE CREACIÓN</label>
-                    <input name="created_at" type="datetime-local" class="form-control" 
+                    <label>FECHA DE CREACIÓN <span class="text-danger">*</span></label>
+                    <input name="created_at" 
+                           type="datetime-local" 
+                           class="form-control {{ $errors->has('created_at') ? 'is-invalid' : '' }}" 
                            value="{{ old('created_at', now()->format('Y-m-d\TH:i')) }}">
+                    @if($errors->has('created_at'))
+                        <div class="invalid-feedback">
+                            {{ $errors->first('created_at') }}
+                        </div>
+                    @endif
+                    <small class="form-text text-muted">FECHA Y HORA DEL PAGO</small>
                 </div>
 
                 <div class="form-group">
                     <label>FOTO (OPCIONAL)</label>
-                    <input name="foto" type="file" class="form-control-file" accept="image/*">
+                    <input name="foto" 
+                           type="file" 
+                           class="form-control-file {{ $errors->has('foto') ? 'is-invalid' : '' }}" 
+                           accept="image/*">
+                    @if($errors->has('foto'))
+                        <div class="invalid-feedback">
+                            {{ $errors->first('foto') }}
+                        </div>
+                    @endif
                     <small class="form-text text-muted">FORMATOS PERMITIDOS: JPEG, PNG, JPG, GIF. TAMAÑO MÁXIMO: 2MB</small>
                 </div>
 
                 <br>
 
-                <button type="button" class="btn btn-primary pull-left" data-toggle="modal" data-target="#modal">
-                    AÑADIR PAGO
-                </button>
-                <a href="{{ route('pagos.index') }}" class="btn btn-secondary">
-                    CANCELAR
-                </a>
+                <div class="form-group">
+                    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modal">
+                        <i class="fas fa-save"></i> AÑADIR PAGO
+                    </button>
+                    <a href="{{ route('pedidos.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> VOLVER A PEDIDOS
+                    </a>
+                </div>
 
                 <div class="modal fade" id="modal">
                     <div class="modal-dialog">
@@ -144,10 +200,15 @@
                             </div>
                             <div class="modal-body">
                                 <p>¿ESTÁ SEGURO QUE DESEA GUARDAR ESTE NUEVO PAGO?</p>
+                                <p><small>EL SALDO DEL PEDIDO SE ACTUALIZARÁ AUTOMÁTICAMENTE</small></p>
                             </div>
                             <div class="modal-footer">
-                                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">CANCELAR</button>
-                                <button type="submit" class="btn btn-primary">GUARDAR</button>
+                                <button type="button" class="btn btn-default pull-left" data-dismiss="modal">
+                                    <i class="fas fa-times"></i> CANCELAR
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-check"></i> GUARDAR PAGO
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -166,6 +227,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const pedidoSelect = document.getElementById('pedido_id');
         const saldoInput = document.getElementById('saldo');
+        const pagoInput = document.getElementById('pago');
 
         // Function to update saldo based on selected pedido
         function updateSaldo() {
@@ -180,6 +242,58 @@
         // Initialize saldo if a pedido is pre-selected
         updateSaldo();
     });
+
+    // Validar entrada de números decimales
+    function validarDecimal(event, element) {
+        // Permitir solo números y un punto decimal
+        const charCode = event.charCode;
+        const inputValue = element.value;
+        
+        // Permitir números (0-9)
+        if (charCode >= 48 && charCode <= 57) {
+            return true;
+        }
+        
+        // Permitir punto decimal (solo uno)
+        if (charCode === 46 && !inputValue.includes('.')) {
+            return true;
+        }
+        
+        // Rechazar cualquier otro carácter
+        return false;
+    }
+
+    // Validar el monto del pago contra el saldo
+    function validarMonto(element) {
+        const saldoInput = document.getElementById('saldo');
+        const montoInput = element;
+        
+        // Limpiar y convertir a números
+        const saldo = parseFloat(saldoInput.value) || 0;
+        const monto = parseFloat(montoInput.value) || 0;
+        
+        // Formatear a 2 decimales
+        if (montoInput.value) {
+            montoInput.value = monto.toFixed(2);
+        }
+        
+        // Validar que el monto no sea mayor al saldo
+        if (monto > saldo) {
+            alert('ADVERTENCIA: EL MONTO DEL PAGO NO PUEDE SER MAYOR AL SALDO PENDIENTE');
+            montoInput.value = saldo.toFixed(2); // Asignar el máximo (saldo)
+            return false;
+        }
+        
+        // Validar que el monto sea mayor a cero
+        if (monto <= 0 && montoInput.value) {
+            alert('ADVERTENCIA: EL MONTO DEL PAGO DEBE SER MAYOR A CERO');
+            montoInput.value = ''; // Limpiar el campo
+            montoInput.focus();
+            return false;
+        }
+        
+        return true;
+    }
 </script>
 @stop
 
