@@ -156,24 +156,36 @@
                             {{-- Fila 2 --}}
                             <div class="row mb-3">
                                 <div class="col-md-12 mb-3">
-                                    <label for="buscar_cliente_paciente" class="form-label">Buscar Cliente/Paciente</label>
-                                    <input type="text" class="form-control" id="buscar_cliente_paciente" 
-                                           placeholder="Escriba para buscar un cliente, paciente o historial clínico" 
-                                           list="clientes_pacientes_list">
-                                    <datalist id="clientes_pacientes_list">
-                                        @foreach($clientes as $cliente)
-                                            <option value="{{ $cliente }}" data-tipo="cliente">
-                                        @endforeach
-                                        @foreach($pacientes as $paciente)
-                                            <option value="{{ $paciente }}" data-tipo="paciente">
-                                        @endforeach
+                                    <label for="buscar_historial_clinico" class="form-label">Buscar Historial Clínico</label>
+                                    <input type="text" class="form-control" id="buscar_historial_clinico" 
+                                           placeholder="Escriba para buscar en el historial clínico" 
+                                           list="historiales_list">
+                                    <datalist id="historiales_list">
+                                        {{-- Solo Historial Clínico - Últimos registros únicos --}}
                                         @if(isset($historiales))
-                                            @foreach($historiales as $historial)
-                                                <option value="{{ $historial->nombres }} {{ $historial->apellidos }}" data-tipo="historial" data-cedula="{{ $historial->cedula }}">
+                                            @php
+                                                $historialesUnicos = collect($historiales)->groupBy(function($historial) {
+                                                    return strtolower(trim($historial->nombres . ' ' . $historial->apellidos));
+                                                })->map(function($group) {
+                                                    return $group->sortByDesc('created_at')->first(); // Último registro por fecha
+                                                });
+                                            @endphp
+                                            
+                                            @foreach($historialesUnicos as $historial)
+                                                <option value="{{ $historial->nombres }} {{ $historial->apellidos }}" 
+                                                        data-cedula="{{ $historial->cedula }}"
+                                                        data-sucursal="{{ $historial->sucursal ?? 'Sin sucursal' }}"
+                                                        data-fecha="{{ $historial->created_at ? $historial->created_at->format('d/m/Y') : 'Sin fecha' }}">
+                                                    {{ $historial->nombres }} {{ $historial->apellidos }} 
+                                                    ({{ $historial->sucursal ?? 'Sin sucursal' }} - {{ $historial->created_at ? $historial->created_at->format('d/m/Y') : 'Sin fecha' }})
+                                                </option>
                                             @endforeach
                                         @endif
                                     </datalist>
-                                    <small class="form-text text-muted">Escriba para buscar clientes, pacientes o pacientes del historial clínico. Los datos se autocompletarán automáticamente.</small>
+                                    <small class="form-text text-muted">
+                                        Busque en el historial clínico. Se muestran solo los últimos registros únicos.
+                                        <br><strong>Formato:</strong> Nombre (Sucursal - Fecha)
+                                    </small>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="fact" class="form-label">Factura</label>
@@ -522,7 +534,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Debug: Mostrar historiales disponibles en la consola
             console.log('Historiales disponibles:');
-            $('#clientes_pacientes_list option[data-tipo="historial"]').each(function() {
+            $('#historiales_list option').each(function() {
                 console.log('- ' + $(this).val() + ' (cédula: ' + $(this).data('cedula') + ')');
             });
             
@@ -538,133 +550,146 @@
                 });
             });
 
-            // Aplicar el método exitoso del historial clínico usando jQuery
-            // Manejar la búsqueda unificada de cliente/paciente con jQuery (más estable)
-            $('#buscar_cliente_paciente').on('input change', function() {
+            // Búsqueda simplificada solo para historial clínico
+            $('#buscar_historial_clinico').on('input change', function() {
                 const valor = this.value.trim();
-                console.log('Valor ingresado:', valor); // Debug
+                console.log('Búsqueda en historial clínico:', valor); // Debug
                 
-                if (!valor) return;
+                if (!valor) {
+                    limpiarCamposAutocompletado();
+                    return;
+                }
                 
-                const selectedOption = $('#clientes_pacientes_list option[value="' + valor + '"]');
-                console.log('Opción encontrada:', selectedOption.length > 0); // Debug
+                // Buscar la opción exacta en el datalist
+                const selectedOption = $('#historiales_list option').filter(function() {
+                    return $(this).val() === valor;
+                }).first();
                 
                 if (selectedOption.length) {
-                    const tipo = selectedOption.data('tipo');
-                    console.log('Tipo de selección:', tipo); // Debug
+                    const cedula = selectedOption.data('cedula');
+                    const sucursal = selectedOption.data('sucursal');
+                    const fecha = selectedOption.data('fecha');
                     
-                    if (tipo === 'cliente') {
-                        $('#cliente').val(valor);
-                        // Solo buscar en historial clínico por nombre
-                        buscarHistorialClinico(valor);
-                    } else if (tipo === 'paciente') {
-                        $('#paciente').val(valor);
-                        // Solo buscar en historial clínico por nombre
-                        buscarHistorialClinico(valor);
-                    } else if (tipo === 'historial') {
-                        // Si es del historial clínico, obtenemos la cédula del data attribute
-                        const cedula = selectedOption.data('cedula');
-                        console.log('Cédula encontrada:', cedula); // Debug
-                        
-                        // SOLO autocompletar los campos desde historial clínico
-                        if (cedula) {
-                            buscarHistorialClinicoPorCedula(cedula);
-                        } else {
-                            // Fallback: buscar por nombre
-                            buscarHistorialClinico(valor);
-                        }
+                    console.log('Historial seleccionado - Cédula:', cedula); // Debug
+                    
+                    // Mostrar información del registro seleccionado
+                    mostrarInformacionHistorial(sucursal, fecha);
+                    
+                    // Llenar campos básicos
+                    $('#cliente').val(extraerNombreLimpio(valor));
+                    $('#paciente').val(extraerNombreLimpio(valor));
+                    
+                    // Buscar datos completos del historial clínico
+                    if (cedula) {
+                        buscarHistorialClinicoPorCedula(cedula);
+                    } else {
+                        buscarHistorialClinicoPorNombreCompleto(extraerNombreLimpio(valor));
                     }
                 } else if (valor.length > 2) {
-                    // Si no encuentra coincidencia exacta pero hay texto, buscar SOLO en historial clínico
+                    // Búsqueda libre en historial clínico
                     console.log('Búsqueda libre en historial clínico'); // Debug
-                    buscarHistorialClinico(valor);
+                    buscarHistorialClinicoPorNombreCompleto(valor);
                 }
             });
 
-            // También manejar cuando se selecciona una opción del datalist
-            $('#buscar_cliente_paciente').on('focus', function() {
-                // Pequeño delay para capturar la selección del datalist
-                setTimeout(() => {
-                    const valor = this.value.trim();
-                    if (valor) {
-                        $(this).trigger('input');
-                    }
-                }, 100);
-            });
-
-            // Manejar cédula con jQuery - SOLO buscar en historial clínico
+            // Manejar cédula - buscar en historial clínico
             $('#cedula').on('input', function() {
                 const valor = this.value.trim();
                 if (valor.length >= 3) {
                     setTimeout(() => {
                         const valorActual = $('#cedula').val();
                         if (valorActual === valor) {
-                            // Solo buscar en historial clínico por cédula
                             buscarHistorialClinicoPorCedula(valor);
                         }
-                    }, 100);
+                    }, 300);
                 }
             });
 
-            // Agregar evento para mostrar opciones cuando se hace clic en el campo de búsqueda
-            $('#buscar_cliente_paciente').on('click focus', function() {
+            // Mostrar opciones al hacer clic en el campo de búsqueda
+            $('#buscar_historial_clinico').on('click focus', function() {
                 if (this.value === '') {
-                    // Trigger para mostrar todas las opciones del datalist
                     this.value = ' ';
                     this.value = '';
                 }
             });
 
-            // Limpiar mensajes de estado anteriores cuando se empiece a escribir
-            $('#buscar_cliente_paciente').on('keydown', function() {
-                // Remover mensajes de estado previos
-                const mensajesPrevios = this.parentNode.querySelectorAll('.loading-indicator-historial, .info-historial, .error-historial, .alert-success');
-                mensajesPrevios.forEach(msg => msg.remove());
+            // Limpiar mensajes al escribir
+            $('#buscar_historial_clinico').on('keydown', function() {
+                limpiarCamposAutocompletado();
             });
 
         });
 
-        // Función para buscar en el historial clínico por nombre completo
+        // Funciones simplificadas para historial clínico únicamente
+        
+        // Función para extraer solo el nombre limpio sin información adicional
+        window.extraerNombreLimpio = function(valorCompleto) {
+            return valorCompleto.replace(/\s*\([^)]*\)\s*/g, '').trim();
+        };
+        
+        // Función para limpiar campos de autocompletado
+        window.limpiarCamposAutocompletado = function() {
+            const mensajesPrevios = document.querySelectorAll(
+                '.loading-indicator-historial, .info-historial, .error-historial, .alert-success, .info-historial-registro'
+            );
+            mensajesPrevios.forEach(msg => msg.remove());
+        };
+        
+        // Función para mostrar información del historial seleccionado
+        window.mostrarInformacionHistorial = function(sucursal, fecha) {
+            limpiarCamposAutocompletado();
+            
+            const infoMsg = document.createElement('div');
+            infoMsg.classList.add('alert', 'alert-info', 'mt-2', 'alert-sm', 'info-historial-registro');
+            infoMsg.style.fontSize = '0.875rem';
+            infoMsg.style.padding = '0.5rem';
+            
+            let textoInfo = 'Registro del <strong>HISTORIAL CLÍNICO</strong>';
+            if (sucursal && sucursal !== 'Sin sucursal') {
+                textoInfo += ` - Sucursal: <strong>${sucursal}</strong>`;
+            }
+            if (fecha && fecha !== 'Sin fecha') {
+                textoInfo += ` - Fecha: <strong>${fecha}</strong>`;
+            }
+            
+            infoMsg.innerHTML = textoInfo;
+            document.getElementById('buscar_historial_clinico').parentNode.appendChild(infoMsg);
+            
+            setTimeout(() => {
+                infoMsg.remove();
+            }, 4000);
+        };
+
+        // Funciones de búsqueda en historial clínico - SIMPLIFICADAS
         window.buscarHistorialClinico = function(nombreCompleto) {
             if (!nombreCompleto) return;
-            
-            console.log('Búsqueda por nombre completo:', nombreCompleto); // Debug
-            
-            // Usar el nuevo endpoint para nombre completo
             buscarHistorialClinicoPorNombreCompleto(nombreCompleto);
         };
         
-        // Función para buscar en el historial clínico por cédula
         window.buscarHistorialClinicoPorCedula = function(cedula) {
             if (!cedula) return;
-            
-            console.log('Búsqueda por cédula:', cedula); // Debug
             buscarHistorialClinicoPorCampo('cedula', cedula);
         };
 
-        // Nueva función para buscar por nombre completo usando el endpoint específico
         window.buscarHistorialClinicoPorNombreCompleto = function(nombreCompleto) {
             if (!nombreCompleto) return;
             
-            console.log(`Buscando en historial clínico por nombre completo: ${nombreCompleto}`); // Debug
+            console.log(`Buscando en historial clínico: ${nombreCompleto}`);
             
             // Remover indicadores de carga previos
-            const loadingIndicatorsExistentes = document.querySelectorAll('.loading-indicator-historial');
-            loadingIndicatorsExistentes.forEach(indicator => indicator.remove());
+            limpiarCamposAutocompletado();
             
             // Mostrar indicador de carga
             const loadingIndicator = document.createElement('small');
             loadingIndicator.classList.add('loading-indicator-historial', 'text-muted', 'ml-2');
             loadingIndicator.textContent = 'Buscando en historial clínico...';
-            document.getElementById('buscar_cliente_paciente').parentNode.appendChild(loadingIndicator);
+            document.getElementById('buscar_historial_clinico').parentNode.appendChild(loadingIndicator);
             
-            // Hacer petición AJAX para buscar en el historial clínico por nombre completo
+            // Petición AJAX
             const url = `/api/historiales-clinicos/buscar-nombre-completo/${encodeURIComponent(nombreCompleto)}`;
-            console.log('URL de búsqueda por nombre completo:', url); // Debug
             
             fetch(url)
                 .then(response => {
-                    console.log('Respuesta del servidor:', response.status); // Debug
                     if (!response.ok) {
                         return response.json().then(err => {
                             throw new Error(err.message || 'Error al obtener datos del historial');
@@ -673,38 +698,32 @@
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Datos recibidos por nombre completo:', data); // Debug
                     procesarRespuestaHistorialClinico(data);
                 })
                 .catch(error => {
-                    console.error('Error al buscar por nombre completo:', error);
                     procesarErrorHistorialClinico(error);
                 });
         };
         
-        // Función genérica para buscar en el historial clínico por cualquier campo
         window.buscarHistorialClinicoPorCampo = function(campo, valor) {
             if (!valor) return;
             
-            console.log(`Buscando en historial clínico por ${campo}: ${valor}`); // Debug
+            console.log(`Buscando en historial clínico por ${campo}: ${valor}`);
             
             // Remover indicadores de carga previos
-            const loadingIndicatorsExistentes = document.querySelectorAll('.loading-indicator-historial');
-            loadingIndicatorsExistentes.forEach(indicator => indicator.remove());
+            limpiarCamposAutocompletado();
             
             // Mostrar indicador de carga
             const loadingIndicator = document.createElement('small');
             loadingIndicator.classList.add('loading-indicator-historial', 'text-muted', 'ml-2');
             loadingIndicator.textContent = 'Buscando en historial clínico...';
-            document.getElementById('buscar_cliente_paciente').parentNode.appendChild(loadingIndicator);
+            document.getElementById('buscar_historial_clinico').parentNode.appendChild(loadingIndicator);
             
-            // Hacer petición AJAX para buscar en el historial clínico
+            // Petición AJAX
             const url = `/api/historiales-clinicos/buscar-por/${campo}/${encodeURIComponent(valor)}`;
-            console.log('URL de búsqueda:', url); // Debug
             
             fetch(url)
                 .then(response => {
-                    console.log('Respuesta del servidor:', response.status); // Debug
                     if (!response.ok) {
                         return response.json().then(err => {
                             throw new Error(err.message || 'Error al obtener datos del historial');
@@ -713,65 +732,66 @@
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Datos recibidos:', data); // Debug
                     procesarRespuestaHistorialClinico(data);
                 })
                 .catch(error => {
-                    console.error('Error al buscar en historial clínico:', error);
                     procesarErrorHistorialClinico(error);
                 });
         };
 
-        // Función para procesar respuestas exitosas del historial clínico
+        // Función para procesar respuestas del historial clínico - SIMPLIFICADA
         window.procesarRespuestaHistorialClinico = function(data) {
             // Remover indicador de carga
-            const loadingIndicators = document.querySelectorAll('.loading-indicator-historial');
-            loadingIndicators.forEach(indicator => indicator.remove());
+            limpiarCamposAutocompletado();
             
             if (data.success && data.historial) {
-                console.log('Autocompletando campos con:', data.historial); // Debug
+                console.log('Datos del historial clínico encontrados:', data.historial);
                 
                 // Mostrar notificación de éxito
                 const successMsg = document.createElement('div');
                 successMsg.classList.add('alert', 'alert-success', 'mt-2', 'alert-sm');
-                successMsg.textContent = 'Datos del historial clínico cargados correctamente';
-                successMsg.style.fontSize = '0.875rem';
-                successMsg.style.padding = '0.5rem';
-                document.getElementById('buscar_cliente_paciente').parentNode.appendChild(successMsg);
                 
-                // Auto ocultar el mensaje después de 3 segundos
-                setTimeout(() => {
-                    successMsg.remove();
-                }, 3000);
-                
-                // Autocompletar SOLO los campos especificados por el usuario
-                // En datos personales solo: cédula, celular y empresa
-                $('#cedula').val(data.historial.cedula || '');
-                $('#celular').val(data.historial.celular || '');
-                
-                console.log('Campos autocompletados: cédula y celular'); // Debug
-                
-                // Si tiene empresa, seleccionarla en el dropdown
-                if (data.historial.empresa_id) {
-                    $('#empresa_id').val(data.historial.empresa_id);
-                    console.log('Empresa seleccionada del historial clínico:', data.historial.empresa_id);
+                let textoExito = 'Historial clínico cargado correctamente';
+                if (data.historial.sucursal) {
+                    textoExito += ` - Sucursal: ${data.historial.sucursal}`;
+                }
+                if (data.historial.created_at) {
+                    textoExito += ` - Fecha: ${new Date(data.historial.created_at).toLocaleDateString('es-ES')}`;
                 }
                 
-                // Si hay recetas disponibles, cargar SOLO en el campo medida
+                successMsg.textContent = textoExito;
+                successMsg.style.fontSize = '0.875rem';
+                successMsg.style.padding = '0.5rem';
+                document.getElementById('buscar_historial_clinico').parentNode.appendChild(successMsg);
+                
+                setTimeout(() => successMsg.remove(), 4000);
+                
+                // Autocompletar campos (solo si están vacíos)
+                if (!$('#cedula').val() && data.historial.cedula) {
+                    $('#cedula').val(data.historial.cedula);
+                }
+                if (!$('#celular').val() && data.historial.celular) {
+                    $('#celular').val(data.historial.celular);
+                }
+                if (!$('#correo_electronico').val() && data.historial.correo) {
+                    $('#correo_electronico').val(data.historial.correo);
+                }
+                if (!$('#empresa_id').val() && data.historial.empresa_id) {
+                    $('#empresa_id').val(data.historial.empresa_id);
+                }
+                
+                // Cargar datos de receta en el campo medida
                 if (data.historial.od_esfera !== undefined) {
-                    console.log('Cargando datos de receta en campo medida'); // Debug
-                    
-                    // Abrir la sección de lunas si está cerrada
+                    // Abrir sección de lunas
                     const lunasHeader = document.querySelector('#lunas-container .card-header');
                     const lunasCollapsed = document.querySelector('#lunas-container').classList.contains('collapsed-card');
                     if (lunasCollapsed && lunasHeader) {
                         lunasHeader.querySelector('.btn-tool').click();
                     }
                     
-                    // Formatear los valores de la receta
+                    // Formatear receta
                     const formatearValor = (valor) => {
                         if (valor === null || valor === undefined || valor === '') return '';
-                        // Si es un número, añadir + al inicio si es positivo
                         if (!isNaN(parseFloat(valor))) {
                             const num = parseFloat(valor);
                             return num > 0 ? `+${num}` : `${num}`;
@@ -779,7 +799,6 @@
                         return valor;
                     };
                     
-                    // Construir la medida de la luna basada en los datos de la receta
                     const odEsfera = formatearValor(data.historial.od_esfera);
                     const odCilindro = formatearValor(data.historial.od_cilindro);
                     const odEje = data.historial.od_eje ? `X${data.historial.od_eje}°` : '';
@@ -793,44 +812,32 @@
                     const addInfo = data.historial.add ? `ADD: ${formatearValor(data.historial.add)}` : '';
                     const dpInfo = data.historial.dp ? `DP: ${data.historial.dp}` : '';
                     
-                    // Establecer SOLO en el campo medida toda la información compactada
-                    const medidaCompleta = `${odMedida} / ${oiMedida} ${addInfo} ${dpInfo}`.trim();
-                    $('#l_medida').val(medidaCompleta);
-                    
-                    console.log('Medida cargada:', medidaCompleta); // Debug
+                    if (!$('#l_medida').val()) {
+                        const medidaCompleta = `${odMedida} / ${oiMedida} ${addInfo} ${dpInfo}`.trim();
+                        $('#l_medida').val(medidaCompleta);
+                    }
                 }
             } else {
-                console.log('No se encontraron datos en el historial clínico'); // Debug
-                
-                // Si no se encontraron datos, mostrar mensaje informativo
+                // No se encontraron datos
                 const infoMsg = document.createElement('small');
                 infoMsg.classList.add('text-muted', 'ml-2', 'info-historial');
                 infoMsg.textContent = 'No se encontraron datos en el historial clínico';
-                document.getElementById('buscar_cliente_paciente').parentNode.appendChild(infoMsg);
+                document.getElementById('buscar_historial_clinico').parentNode.appendChild(infoMsg);
                 
-                // Auto ocultar el mensaje después de 2 segundos
-                setTimeout(() => {
-                    infoMsg.remove();
-                }, 2000);
+                setTimeout(() => infoMsg.remove(), 2000);
             }
         };
 
-        // Función para procesar errores del historial clínico
+        // Función para procesar errores del historial clínico - SIMPLIFICADA
         window.procesarErrorHistorialClinico = function(error) {
-            // Remover indicador de carga en caso de error
-            const loadingIndicators = document.querySelectorAll('.loading-indicator-historial');
-            loadingIndicators.forEach(indicator => indicator.remove());
+            limpiarCamposAutocompletado();
             
-            // Mostrar mensaje de error discreto
             const errorMsg = document.createElement('small');
             errorMsg.classList.add('text-warning', 'ml-2', 'error-historial');
             errorMsg.textContent = 'No se encontraron datos del historial clínico';
-            document.getElementById('buscar_cliente_paciente').parentNode.appendChild(errorMsg);
+            document.getElementById('buscar_historial_clinico').parentNode.appendChild(errorMsg);
             
-            // Auto ocultar el mensaje después de 3 segundos
-            setTimeout(() => {
-                errorMsg.remove();
-            }, 3000);
+            setTimeout(() => errorMsg.remove(), 3000);
         };
 
         function calculateTotal() {
