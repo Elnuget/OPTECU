@@ -429,6 +429,13 @@ input[type="checkbox"]:after {
                 'value': selectedIds.join(',')
             }));
             
+            // Establecer formato de tabla por defecto
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'format',
+                'value': 'table'
+            }));
+            
             // Agregar al body y enviar
             $('body').append(form);
             form.submit();

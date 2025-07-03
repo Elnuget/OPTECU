@@ -963,8 +963,11 @@ class PedidosController extends Controller
             $ids = explode(',', $ids);
         }
         
+        // Formato de impresión (tabla única o individual)
+        $format = $request->input('format', 'table');
+        
         // Obtener los pedidos con sus relaciones
-        $pedidos = Pedido::with(['inventarios', 'lunas'])
+        $pedidos = Pedido::with(['inventarios', 'lunas', 'empresa'])
             ->whereIn('id', $ids)
             ->orderBy('numero_orden', 'desc')
             ->get();
@@ -976,7 +979,12 @@ class PedidosController extends Controller
             ]);
         }
 
-        return view('pedidos.print', compact('pedidos'));
+        // Decidir qué vista utilizar basado en el formato solicitado
+        if ($format === 'table') {
+            return view('pedidos.print_table', compact('pedidos'));
+        } else {
+            return view('pedidos.print', compact('pedidos'));
+        }
     }
 
     /**
