@@ -226,12 +226,15 @@
                                 </div>
                                 <div class="col-md-3">
                                     <label for="empresa_id" class="form-label">Empresa</label>
-                                    <select name="empresa_id" id="empresa_id" class="form-control">
+                                    <select name="empresa_id" id="empresa_id" class="form-control" {{ !$isUserAdmin && $userEmpresaId ? 'disabled' : '' }}>
                                         <option value="">Seleccione una empresa...</option>
                                         @foreach($empresas as $empresa)
-                                            <option value="{{ $empresa->id }}">{{ $empresa->nombre }}</option>
+                                            <option value="{{ $empresa->id }}" {{ ($userEmpresaId == $empresa->id) ? 'selected' : '' }}>{{ $empresa->nombre }}</option>
                                         @endforeach
                                     </select>
+                                    @if(!$isUserAdmin && $userEmpresaId)
+                                        <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}">
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -255,7 +258,7 @@
                                         <option value="">Seleccione un armazón</option>
                                         @foreach($armazones as $armazon)
                                             <option value="{{ $armazon->id }}">
-                                                {{ $armazon->codigo }} - {{ $armazon->lugar }} - {{ $armazon->fecha ? \Carbon\Carbon::parse($armazon->fecha)->format('d/m/Y') : 'Sin fecha' }}
+                                                {{ $armazon->codigo }} - {{ $armazon->lugar }} - {{ $armazon->fecha ? \Carbon\Carbon::parse($armazon->fecha)->format('d/m/Y') : 'Sin fecha' }} - {{ $armazon->empresa ? $armazon->empresa->nombre : 'Sin empresa' }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -395,7 +398,7 @@
                                         <option value="">Seleccione un Item del Inventario</option>
                                         @foreach ($accesorios as $item)
                                             <option value="{{ $item->id }}">
-                                                {{ $item->codigo }} - {{ $item->lugar }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}
+                                                {{ $item->codigo }} - {{ $item->lugar }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }} - {{ $item->empresa ? $item->empresa->nombre : 'Sin empresa' }}
                                             </option>
                                         @endforeach
                                     </select>

@@ -125,11 +125,25 @@ class PedidosController extends Controller
         $currentYear = date('Y');
         $currentMonth = date('m');
         
+        // Verificar si el usuario está asociado a una empresa y no es admin
+        $userEmpresaId = null;
+        $isUserAdmin = auth()->user()->is_admin;
+        
+        if (!$isUserAdmin && auth()->user()->empresa_id) {
+            $userEmpresaId = auth()->user()->empresa_id;
+        }
+
         // Obtener armazones y accesorios del mes actual (solo con cantidad > 0)
-        $inventario = Inventario::where('cantidad', '>', 0)
+        $inventarioQuery = Inventario::where('cantidad', '>', 0)
             ->whereYear('fecha', $currentYear)
-            ->whereMonth('fecha', $currentMonth)
-            ->get();
+            ->whereMonth('fecha', $currentMonth);
+            
+        // Si el usuario no es admin y tiene empresa, filtrar por empresa
+        if (!$isUserAdmin && $userEmpresaId) {
+            $inventarioQuery->where('empresa_id', $userEmpresaId);
+        }
+        
+        $inventario = $inventarioQuery->with('empresa')->get();
 
         // Separar el inventario en armazones y accesorios
         $armazones = $inventario;
@@ -186,21 +200,18 @@ class PedidosController extends Controller
         $empresas = Empresa::orderBy('nombre')->get();
         
         // Obtener historiales clínicos para autocompletado
-        $historiales = \App\Models\HistorialClinico::select('nombres', 'apellidos', 'cedula', 'celular', 'empresa_id', 'fecha')
+        $historialesQuery = \App\Models\HistorialClinico::select('nombres', 'apellidos', 'cedula', 'celular', 'empresa_id', 'fecha')
             ->with('empresa')
             ->whereNotNull('nombres')
-            ->whereNotNull('apellidos')
-            ->orderBy('fecha', 'desc')
-            ->get();
-        
-        // Verificar si el usuario está asociado a una empresa y no es admin
-        $userEmpresaId = null;
-        $isUserAdmin = auth()->user()->is_admin;
-        
-        if (!$isUserAdmin && auth()->user()->empresa_id) {
-            $userEmpresaId = auth()->user()->empresa_id;
+            ->whereNotNull('apellidos');
+            
+        // Si el usuario no es admin y tiene empresa, filtrar por empresa
+        if (!$isUserAdmin && $userEmpresaId) {
+            $historialesQuery->where('empresa_id', $userEmpresaId);
         }
-
+        
+        $historiales = $historialesQuery->orderBy('fecha', 'desc')->get();
+        
         $currentDate = date('Y-m-d');
         $lastOrder = Pedido::orderBy('numero_orden', 'desc')->first();
         $nextOrderNumber = $lastOrder ? $lastOrder->numero_orden + 1 : 1;
