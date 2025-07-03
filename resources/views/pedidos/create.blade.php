@@ -157,10 +157,8 @@
                             <div class="row mb-3">
                                 <div class="col-md-12 mb-3">
                                     <label for="buscar_historial_clinico" class="form-label">Buscar Historial Clínico</label>
-                                    <input type="text" class="form-control" id="buscar_historial_clinico" 
-                                           placeholder="Escriba para buscar en el historial clínico" 
-                                           list="historiales_list">
-                                    <datalist id="historiales_list">
+                                    <select class="form-control selectpicker" data-live-search="true" id="buscar_historial_clinico" data-size="10">
+                                        <option value="">Seleccione un paciente del historial clínico</option>
                                         {{-- Solo Historial Clínico - Últimos registros únicos --}}
                                         @if(isset($historiales))
                                             @php
@@ -181,7 +179,7 @@
                                                 </option>
                                             @endforeach
                                         @endif
-                                    </datalist>
+                                    </select>
                                     <small class="form-text text-muted">
                                         Busque en el historial clínico. Se muestran solo los últimos registros únicos.
                                         <br><strong>Formato:</strong> Nombre (Sucursal - Fecha)
@@ -532,12 +530,6 @@
     <script>
         // Hacer que todo el header sea clickeable
         document.addEventListener('DOMContentLoaded', function() {
-            // Debug: Mostrar historiales disponibles en la consola
-            console.log('Historiales disponibles:');
-            $('#historiales_list option').each(function() {
-                console.log('- ' + $(this).val() + ' (cédula: ' + $(this).data('cedula') + ')');
-            });
-            
             document.querySelectorAll('.card-header').forEach(header => {
                 header.addEventListener('click', function(e) {
                     // Si el clic no fue en un botón dentro del header
@@ -550,45 +542,33 @@
                 });
             });
 
-            // Búsqueda simplificada solo para historial clínico
-            $('#buscar_historial_clinico').on('input change', function() {
-                const valor = this.value.trim();
-                console.log('Búsqueda en historial clínico:', valor); // Debug
+            // Búsqueda simplificada solo para historial clínico con selectpicker
+            $('#buscar_historial_clinico').on('changed.bs.select', function() {
+                const valor = $(this).val();
                 
                 if (!valor) {
                     limpiarCamposAutocompletado();
                     return;
                 }
                 
-                // Buscar la opción exacta en el datalist
-                const selectedOption = $('#historiales_list option').filter(function() {
-                    return $(this).val() === valor;
-                }).first();
+                // Obtener datos del option seleccionado
+                const selectedOption = $(this).find('option:selected');
+                const cedula = selectedOption.data('cedula');
+                const sucursal = selectedOption.data('sucursal');
+                const fecha = selectedOption.data('fecha');
                 
-                if (selectedOption.length) {
-                    const cedula = selectedOption.data('cedula');
-                    const sucursal = selectedOption.data('sucursal');
-                    const fecha = selectedOption.data('fecha');
-                    
-                    console.log('Historial seleccionado - Cédula:', cedula); // Debug
-                    
-                    // Mostrar información del registro seleccionado
-                    mostrarInformacionHistorial(sucursal, fecha);
-                    
-                    // Llenar campos básicos
-                    $('#cliente').val(extraerNombreLimpio(valor));
-                    $('#paciente').val(extraerNombreLimpio(valor));
-                    
-                    // Buscar datos completos del historial clínico
-                    if (cedula) {
-                        buscarHistorialClinicoPorCedula(cedula);
-                    } else {
-                        buscarHistorialClinicoPorNombreCompleto(extraerNombreLimpio(valor));
-                    }
-                } else if (valor.length > 2) {
-                    // Búsqueda libre en historial clínico
-                    console.log('Búsqueda libre en historial clínico'); // Debug
-                    buscarHistorialClinicoPorNombreCompleto(valor);
+                // Mostrar información del registro seleccionado
+                mostrarInformacionHistorial(sucursal, fecha);
+                
+                // Llenar campos básicos
+                $('#cliente').val(extraerNombreLimpio(valor));
+                $('#paciente').val(extraerNombreLimpio(valor));
+                
+                // Buscar datos completos del historial clínico
+                if (cedula) {
+                    buscarHistorialClinicoPorCedula(cedula);
+                } else {
+                    buscarHistorialClinicoPorNombreCompleto(extraerNombreLimpio(valor));
                 }
             });
 
@@ -603,19 +583,6 @@
                         }
                     }, 300);
                 }
-            });
-
-            // Mostrar opciones al hacer clic en el campo de búsqueda
-            $('#buscar_historial_clinico').on('click focus', function() {
-                if (this.value === '') {
-                    this.value = ' ';
-                    this.value = '';
-                }
-            });
-
-            // Limpiar mensajes al escribir
-            $('#buscar_historial_clinico').on('keydown', function() {
-                limpiarCamposAutocompletado();
             });
 
         });
@@ -674,8 +641,6 @@
         window.buscarHistorialClinicoPorNombreCompleto = function(nombreCompleto) {
             if (!nombreCompleto) return;
             
-            console.log(`Buscando en historial clínico: ${nombreCompleto}`);
-            
             // Remover indicadores de carga previos
             limpiarCamposAutocompletado();
             
@@ -707,8 +672,6 @@
         
         window.buscarHistorialClinicoPorCampo = function(campo, valor) {
             if (!valor) return;
-            
-            console.log(`Buscando en historial clínico por ${campo}: ${valor}`);
             
             // Remover indicadores de carga previos
             limpiarCamposAutocompletado();
@@ -745,8 +708,6 @@
             limpiarCamposAutocompletado();
             
             if (data.success && data.historial) {
-                console.log('Datos del historial clínico encontrados:', data.historial);
-                
                 // Mostrar notificación de éxito
                 const successMsg = document.createElement('div');
                 successMsg.classList.add('alert', 'alert-success', 'mt-2', 'alert-sm');
