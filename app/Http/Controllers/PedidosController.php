@@ -185,6 +185,13 @@ class PedidosController extends Controller
         // Obtener todas las empresas para el select
         $empresas = Empresa::orderBy('nombre')->get();
         
+        // Obtener historiales clínicos para autocompletado
+        $historiales = \App\Models\HistorialClinico::select('nombres', 'apellidos', 'cedula', 'celular', 'empresa_id')
+            ->whereNotNull('nombres')
+            ->whereNotNull('apellidos')
+            ->orderBy('nombres')
+            ->get();
+        
         // Verificar si el usuario está asociado a una empresa y no es admin
         $userEmpresaId = null;
         $isUserAdmin = auth()->user()->is_admin;
@@ -210,6 +217,7 @@ class PedidosController extends Controller
             'celulares',
             'correos',
             'empresas',
+            'historiales',
             'userEmpresaId',
             'isUserAdmin'
         ));

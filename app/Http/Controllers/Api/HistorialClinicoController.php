@@ -79,4 +79,78 @@ class HistorialClinicoController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Busca historiales clínicos por nombre completo (nombres + apellidos)
+     * 
+     * @param string $nombreCompleto Nombre completo a buscar
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function buscarPorNombreCompleto($nombreCompleto)
+    {
+        try {
+            // Decodificar el valor (ya que viene de una URL)
+            $valorDecodificado = urldecode($nombreCompleto);
+            
+            // Buscar por concatenación de nombres y apellidos (en ambos órdenes posibles)
+            $historial = HistorialClinico::with(['recetas' => function($query) {
+                $query->orderBy('created_at', 'desc');
+            }, 'empresa'])
+            ->whereRaw("CONCAT(nombres, ' ', apellidos) = ?", [$valorDecodificado])
+            ->orWhereRaw("CONCAT(apellidos, ' ', nombres) = ?", [$valorDecodificado])
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+            // Si no se encuentra con concatenación exacta, buscar con LIKE para coincidencias parciales
+            if (!$historial) {
+                $historial = HistorialClinico::with(['recetas' => function($query) {
+                    $query->orderBy('created_at', 'desc');
+                }, 'empresa'])
+                ->whereRaw("CONCAT(nombres, ' ', apellidos) LIKE ?", ["%$valorDecodificado%"])
+                ->orWhereRaw("CONCAT(apellidos, ' ', nombres) LIKE ?", ["%$valorDecodificado%"])
+                ->orderBy('created_at', 'desc')
+                ->first();
+            }
+                
+            if (!$historial) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "No se encontraron historiales con el nombre completo: $valorDecodificado"
+                ], 404);
+            }
+
+            // Si tiene recetas, agregar los datos de la última receta al objeto historial
+            if ($historial->recetas && $historial->recetas->count() > 0) {
+                $ultimaReceta = $historial->recetas->first();
+                
+                // Agregar los campos de la receta directamente al historial para el frontend
+                $historial->od_esfera = $ultimaReceta->od_esfera;
+                $historial->od_cilindro = $ultimaReceta->od_cilindro;
+                $historial->od_eje = $ultimaReceta->od_eje;
+                $historial->od_adicion = $ultimaReceta->od_adicion;
+                $historial->oi_esfera = $ultimaReceta->oi_esfera;
+                $historial->oi_cilindro = $ultimaReceta->oi_cilindro;
+                $historial->oi_eje = $ultimaReceta->oi_eje;
+                $historial->oi_adicion = $ultimaReceta->oi_adicion;
+                
+                // Asegurarse de que ADD solo se asigna una vez
+                if (!$historial->add && $ultimaReceta->od_adicion) {
+                    $historial->add = $ultimaReceta->od_adicion;
+                }
+                
+                $historial->dp = $ultimaReceta->dp;
+                $historial->observaciones = $ultimaReceta->observaciones;
+            }
+            
+            return response()->json([
+                'success' => true,
+                'historial' => $historial
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al buscar historial por nombre completo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

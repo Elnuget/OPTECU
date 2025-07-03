@@ -35,6 +35,9 @@ Route::get('/pedidos/buscar-por/{campo}/{valor}', [PedidoController::class, 'bus
 // Ruta para buscar historiales clínicos por cualquier campo de datos personales
 Route::get('/historiales-clinicos/buscar-por/{campo}/{valor}', [HistorialClinicoController::class, 'buscarPorCampo']);
 
+// Ruta para buscar historiales clínicos por nombre completo
+Route::get('/historiales-clinicos/buscar-nombre-completo/{nombreCompleto}', [HistorialClinicoController::class, 'buscarPorNombreCompleto']);
+
 Route::get('/sueldos/registros-cobro', [SueldoController::class, 'getRegistrosCobro']);
 Route::get('/sueldos/total-registros-cobro', [SueldoController::class, 'getTotalRegistrosCobro']);
 
