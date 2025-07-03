@@ -35,3 +35,5 @@ composer dump-autoload
 
 sudo php artisan optimize:clear
 sudo composer dump-autoload
+
+sudo chmod -R 777 /var/www/OPTCH/public/img/armazones
