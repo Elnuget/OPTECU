@@ -165,24 +165,24 @@
                                                 $historialesUnicos = collect($historiales)->groupBy(function($historial) {
                                                     return strtolower(trim($historial->nombres . ' ' . $historial->apellidos));
                                                 })->map(function($group) {
-                                                    return $group->sortByDesc('created_at')->first(); // Último registro por fecha
+                                                    return $group->sortByDesc('fecha')->first(); // Último registro por fecha
                                                 });
                                             @endphp
                                             
                                             @foreach($historialesUnicos as $historial)
                                                 <option value="{{ $historial->nombres }} {{ $historial->apellidos }}" 
                                                         data-cedula="{{ $historial->cedula }}"
-                                                        data-sucursal="{{ $historial->sucursal ?? 'Sin sucursal' }}"
-                                                        data-fecha="{{ $historial->created_at ? $historial->created_at->format('d/m/Y') : 'Sin fecha' }}">
+                                                        data-sucursal="{{ $historial->empresa ? strtoupper($historial->empresa->nombre) : 'SIN EMPRESA' }}"
+                                                        data-fecha="{{ $historial->fecha ? $historial->fecha->format('d/m/Y') : 'Sin fecha' }}">
                                                     {{ $historial->nombres }} {{ $historial->apellidos }} 
-                                                    ({{ $historial->sucursal ?? 'Sin sucursal' }} - {{ $historial->created_at ? $historial->created_at->format('d/m/Y') : 'Sin fecha' }})
+                                                    ({{ $historial->empresa ? strtoupper($historial->empresa->nombre) : 'SIN EMPRESA' }} - {{ $historial->fecha ? $historial->fecha->format('d/m/Y') : 'Sin fecha' }})
                                                 </option>
                                             @endforeach
                                         @endif
                                     </select>
                                     <small class="form-text text-muted">
                                         Busque en el historial clínico. Se muestran solo los últimos registros únicos.
-                                        <br><strong>Formato:</strong> Nombre (Sucursal - Fecha)
+                                        <br><strong>Formato:</strong> Nombre (Empresa - Fecha del historial)
                                     </small>
                                 </div>
                                 <div class="col-md-6">
@@ -190,7 +190,7 @@
                                     <input type="text" class="form-control" id="fact" name="fact"
                                            value="Pendiente">
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-<md-6">
                                     <label for="cliente" class="form-label">Cliente</label>
                                     <input type="text" class="form-control" id="cliente" name="cliente" required>
                                 </div>
@@ -554,11 +554,11 @@
                 // Obtener datos del option seleccionado
                 const selectedOption = $(this).find('option:selected');
                 const cedula = selectedOption.data('cedula');
-                const sucursal = selectedOption.data('sucursal');
+                const empresa = selectedOption.data('sucursal');
                 const fecha = selectedOption.data('fecha');
                 
                 // Mostrar información del registro seleccionado
-                mostrarInformacionHistorial(sucursal, fecha);
+                mostrarInformacionHistorial(empresa, fecha);
                 
                 // Llenar campos básicos
                 $('#cliente').val(extraerNombreLimpio(valor));
@@ -603,7 +603,7 @@
         };
         
         // Función para mostrar información del historial seleccionado
-        window.mostrarInformacionHistorial = function(sucursal, fecha) {
+        window.mostrarInformacionHistorial = function(empresa, fecha) {
             limpiarCamposAutocompletado();
             
             const infoMsg = document.createElement('div');
@@ -612,8 +612,8 @@
             infoMsg.style.padding = '0.5rem';
             
             let textoInfo = 'Registro del <strong>HISTORIAL CLÍNICO</strong>';
-            if (sucursal && sucursal !== 'Sin sucursal') {
-                textoInfo += ` - Sucursal: <strong>${sucursal}</strong>`;
+            if (empresa && empresa !== 'SIN EMPRESA') {
+                textoInfo += ` - Empresa: <strong>${empresa}</strong>`;
             }
             if (fecha && fecha !== 'Sin fecha') {
                 textoInfo += ` - Fecha: <strong>${fecha}</strong>`;
@@ -713,11 +713,11 @@
                 successMsg.classList.add('alert', 'alert-success', 'mt-2', 'alert-sm');
                 
                 let textoExito = 'Historial clínico cargado correctamente';
-                if (data.historial.sucursal) {
-                    textoExito += ` - Sucursal: ${data.historial.sucursal}`;
+                if (data.historial.empresa && data.historial.empresa.nombre) {
+                    textoExito += ` - Empresa: ${data.historial.empresa.nombre.toUpperCase()}`;
                 }
                 if (data.historial.created_at) {
-                    textoExito += ` - Fecha: ${new Date(data.historial.created_at).toLocaleDateString('es-ES')}`;
+                    textoExito += ` - Fecha: ${data.historial.created_at}`;
                 }
                 
                 successMsg.textContent = textoExito;

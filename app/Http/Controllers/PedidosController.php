@@ -186,10 +186,11 @@ class PedidosController extends Controller
         $empresas = Empresa::orderBy('nombre')->get();
         
         // Obtener historiales clínicos para autocompletado
-        $historiales = \App\Models\HistorialClinico::select('nombres', 'apellidos', 'cedula', 'celular', 'empresa_id')
+        $historiales = \App\Models\HistorialClinico::select('nombres', 'apellidos', 'cedula', 'celular', 'empresa_id', 'fecha')
+            ->with('empresa')
             ->whereNotNull('nombres')
             ->whereNotNull('apellidos')
-            ->orderBy('nombres')
+            ->orderBy('fecha', 'desc')
             ->get();
         
         // Verificar si el usuario está asociado a una empresa y no es admin
