@@ -737,6 +737,43 @@ class PedidosController extends Controller
         }
     }
 
+    public function updateState($id, $state)
+    {
+        $pedido = Pedido::findOrFail($id);
+        $estadoAnterior = $pedido->fact;
+        
+        // Actualizar el estado según el parámetro recibido
+        switch ($state) {
+            case 'taller':
+                $pedido->fact = 'LISTO EN TALLER';
+                $mensaje = 'Pedido actualizado a Listo en Taller';
+                break;
+            case 'entrega':
+                $pedido->fact = 'LISTO PARA ENTREGA';
+                $mensaje = 'Pedido actualizado a Listo para Entrega';
+                break;
+            case 'entregado':
+                $pedido->fact = 'ENTREGADO';
+                $mensaje = 'Pedido marcado como Entregado';
+                break;
+            default:
+                return redirect()->route('pedidos.index')->with([
+                    'error' => 'Error',
+                    'mensaje' => 'Estado no válido',
+                    'tipo' => 'alert-danger'
+                ]);
+        }
+        
+        $pedido->save();
+        
+        return redirect()->route('pedidos.index')->with([
+            'error' => 'Exito',
+            'mensaje' => $mensaje,
+            'tipo' => 'alert-success'
+        ]);
+    }
+
+    // Método original de aprobación - se mantiene para compatibilidad
     public function approve($id)
     {
         $pedido = Pedido::findOrFail($id);

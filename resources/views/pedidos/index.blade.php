@@ -159,7 +159,11 @@
                         <td>{{ $pedido->fecha ? $pedido->fecha->format('Y-m-d') : 'Sin fecha' }}</td>
                         <td>{{ $pedido->numero_orden }}</td>
                         <td>
-                            <span style="color: {{ $pedido->fact == 'Pendiente' ? 'orange' : ($pedido->fact == 'Aprobado' ? 'green' : 'black') }}">
+                            <span style="color: 
+                                {{ $pedido->fact == 'Pendiente' ? 'orange' : 
+                                  ($pedido->fact == 'LISTO EN TALLER' ? 'blue' : 
+                                   ($pedido->fact == 'LISTO PARA ENTREGA' ? 'purple' : 
+                                    ($pedido->fact == 'ENTREGADO' ? 'green' : 'black'))) }}">
                                 {{ $pedido->fact }}
                             </span>
                         </td>
@@ -209,15 +213,34 @@
                                     class="btn btn-success btn-sm" title="Añadir Pago">
                                     <i class="fas fa-money-bill-wave"></i>
                                 </a>
-                                <!-- Botón de Aprobar -->
+                                
+                                <!-- Botones de cambio de estado -->
                                 @can('admin')
                                     @if(strtoupper($pedido->fact) == 'PENDIENTE')
-                                        <form action="{{ route('pedidos.approve', $pedido->id) }}" method="POST"
+                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'taller']) }}" method="POST"
                                             style="display:inline;">
                                             @csrf
                                             @method('PATCH')
-                                            <button type="submit" class="btn btn-warning btn-sm" title="Aprobar">
-                                                <i class="fas fa-check"></i>
+                                            <button type="submit" class="btn btn-primary btn-sm" title="Marcar como Listo en Taller">
+                                                <i class="fas fa-tools"></i>
+                                            </button>
+                                        </form>
+                                    @elseif(strtoupper($pedido->fact) == 'LISTO EN TALLER')
+                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'entrega']) }}" method="POST"
+                                            style="display:inline;">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="btn btn-info btn-sm" title="Marcar como Listo para Entrega">
+                                                <i class="fas fa-box"></i>
+                                            </button>
+                                        </form>
+                                    @elseif(strtoupper($pedido->fact) == 'LISTO PARA ENTREGA')
+                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'entregado']) }}" method="POST"
+                                            style="display:inline;">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="btn btn-warning btn-sm" title="Marcar como Entregado">
+                                                <i class="fas fa-check-double"></i>
                                             </button>
                                         </form>
                                     @endif
