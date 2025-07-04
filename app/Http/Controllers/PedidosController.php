@@ -265,6 +265,7 @@ class PedidosController extends Controller
             $pedido->examen_visual = $pedidoData['examen_visual'] ?? 0;
             $pedido->valor_compra = $pedidoData['valor_compra'] ?? 0;
             $pedido->cedula = $pedidoData['cedula'] ?? null;
+            $pedido->direccion = $pedidoData['direccion'] ?? null;
             
             $pedido->save();
 

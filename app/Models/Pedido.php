@@ -24,6 +24,7 @@ class Pedido extends Model
         'paciente', // New field
         'celular',
         'correo_electronico',
+        'direccion',
         // Remover estos campos ya que ahora van en la tabla pedido_lunas
         // 'l_detalle',
         // 'l_medida',

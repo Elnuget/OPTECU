@@ -237,6 +237,13 @@
                                     @endif
                                 </div>
                             </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label for="direccion" class="form-label">Dirección</label>
+                                    <input type="text" class="form-control" id="direccion" name="direccion" placeholder="Escriba la dirección" autocomplete="off">
+                                </div>
+                            </div>
                         </div>
                     </div>
 

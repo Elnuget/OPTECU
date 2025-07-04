@@ -64,5 +64,12 @@
                 </select>
             </div>
         </div>
+
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <label for="direccion" class="form-label">Dirección</label>
+                <input type="text" class="form-control" id="direccion" name="direccion"
+                       value="{{ $pedido->direccion }}">
+            </div>
     </div>
 </div> 
