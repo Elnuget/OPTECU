@@ -53,10 +53,20 @@ class PagoController extends Controller
         // Obtener los pagos
         $pagos = $query->orderBy('created_at', 'desc')->get();
         
+        // Aplicar filtro por empresa si está seleccionado
+        if ($request->has('empresa') && $request->empresa != '') {
+            $pagos = $pagos->filter(function($pago) use ($request) {
+                return $pago->pedido->empresa_id == $request->empresa;
+            });
+        }
+        
         // Calcular el total de pagos
         $totalPagos = $pagos->sum('pago');
 
-        return view('pagos.index', compact('pagos', 'mediosdepago', 'totalPagos'));
+        // Obtener todas las empresas para el filtro
+        $empresas = Empresa::orderBy('nombre')->get();
+
+        return view('pagos.index', compact('pagos', 'mediosdepago', 'totalPagos', 'empresas'));
     }
 
     /**

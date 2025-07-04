@@ -129,6 +129,17 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="col-md-2">
+                    <label for="empresa">EMPRESA:</label>
+                    <select name="empresa" class="form-control custom-select" id="filtroEmpresa">
+                        <option value="">TODAS LAS EMPRESAS</option>
+                        @foreach($empresas ?? [] as $empresa)
+                            <option value="{{ $empresa->id }}" {{ request('empresa') == $empresa->id ? 'selected' : '' }}>
+                                {{ strtoupper($empresa->nombre) }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="col-md-4 align-self-end">
                     <button type="button" class="btn btn-primary mr-2" id="actualButton">ACTUAL</button>
                     <button type="button" class="btn btn-success" id="mostrarTodosButton">MOSTRAR TODOS</button>
@@ -153,6 +164,7 @@
                             <td>FECHA DE PAGO</td> <!-- Nueva columna -->
                             <td>ORDEN ASOCIADA</td> <!-- Nueva columna -->
                             <td>CLIENTE ASOCIADO</td> <!-- Nueva columna -->
+                            <td>EMPRESA</td> <!-- Nueva columna para Empresa -->
                             <!-- Removed Paciente column -->
                             <td>MÉTODO DE PAGO</td>
                             <td>SALDO</td>
@@ -168,6 +180,7 @@
                                 <td>{{ $pago->created_at->format('Y-m-d') }}</td> <!-- Fecha de Pago -->
                                 <td>{{ $pago->pedido->numero_orden }}</td> <!-- Orden Asociada -->
                                 <td>{{ $pago->pedido->cliente }}</td> <!-- Cliente Asociado -->
+                                <td>{{ $pago->pedido->empresa ? $pago->pedido->empresa->nombre : 'N/A' }}</td> <!-- Empresa Asociada -->
                                 <!-- Removed Paciente data -->
                                 <td>{{ $pago->mediodepago->medio_de_pago }}</td>
                                 <td>{{ $pago->pedido->saldo }}</td> <!-- Updated to access saldo from pedido -->
@@ -287,6 +300,7 @@
                 $('#filtroAno').val('');
                 $('#filtroMes').val('');
                 $('#metodo_pago').val('');
+                $('#filtroEmpresa').val('');
                 const form = $('#filterForm');
                 form.append('<input type="hidden" name="todos" value="1">');
                 form.submit();
@@ -298,11 +312,12 @@
                 $('#filtroAno').val(currentDate.getFullYear());
                 $('#filtroMes').val(String(currentDate.getMonth() + 1).padStart(2, '0'));
                 $('#metodo_pago').val('');
+                $('#filtroEmpresa').val('');
                 $('#filterForm').submit();
             });
 
             // Manejar cambios en los filtros
-            $('#filtroAno, #filtroMes, #metodo_pago').change(function() {
+            $('#filtroAno, #filtroMes, #metodo_pago, #filtroEmpresa').change(function() {
                 $('#filterForm').submit();
             });
 
@@ -339,7 +354,7 @@
                         "text": 'IMPRIMIR',
                         "autoPrint": true,
                         "exportOptions": {
-                            "columns": [0, 1, 2, 3, 4, 5, 6]
+                            "columns": [0, 1, 2, 3, 4, 5, 6, 7]
                         },
                         "customize": function(win) {
                             $(win.document.body).css('font-size', '16pt');
@@ -354,7 +369,7 @@
                         "filename": 'Pagos.pdf',
                         "pageSize": 'LETTER',
                         "exportOptions": {
-                            "columns": [0, 1, 2, 3, 4, 5, 6]
+                            "columns": [0, 1, 2, 3, 4, 5, 6, 7]
                         }
                     }
                 ],
