@@ -394,18 +394,10 @@ class PedidosController extends Controller
 
             \DB::commit();
 
-            // Eliminar el envío de correo electrónico
-            // if ($pedido->correo_electronico) {
-            //     \Mail::to($pedido->correo_electronico)->send(new \App\Mail\CalificacionPedido($pedido));
-            // }
-
-            // Obtener el año y mes actual
-            $currentYear = date('Y');
-            $currentMonth = date('m');
-
-            return redirect("/Pedidos?ano={$currentYear}&mes={$currentMonth}")->with([
+            // Redirigir a la vista de creación de pagos con el ID del pedido creado
+            return redirect()->route('pagos.create', ['pedido_id' => $pedido->id])->with([
                 'error' => 'Exito',
-                'mensaje' => 'Pedido creado exitosamente',
+                'mensaje' => 'Pedido creado exitosamente. Ahora puede registrar un pago.',
                 'tipo' => 'alert-success'
             ]);
 
