@@ -79,6 +79,7 @@
                     <li class="list-group-item"><strong>Paciente:</strong> {{ $pedido->paciente }}</li>
                     <li class="list-group-item"><strong>Celular:</strong> {{ $pedido->celular }}</li>
                     <li class="list-group-item"><strong>Correo Electrónico:</strong> {{ $pedido->correo_electronico }}</li>
+                    <li class="list-group-item"><strong>Dirección:</strong> {{ $pedido->direccion }}</li>
                     <li class="list-group-item"><strong>Empresa:</strong> {{ $pedido->empresa ? $pedido->empresa->nombre : 'No asignada' }}</li>
                     <li class="list-group-item"><strong>Examen Visual:</strong> ${{ number_format($pedido->examen_visual, 2, ',', '.') }}</li>
                 </ul>
