@@ -200,7 +200,7 @@ class PedidosController extends Controller
         $empresas = Empresa::orderBy('nombre')->get();
         
         // Obtener historiales clínicos para autocompletado
-        $historialesQuery = \App\Models\HistorialClinico::select('nombres', 'apellidos', 'cedula', 'celular', 'empresa_id', 'fecha')
+        $historialesQuery = \App\Models\HistorialClinico::select('nombres', 'apellidos', 'cedula', 'celular', 'correo', 'direccion', 'empresa_id', 'fecha')
             ->with('empresa')
             ->whereNotNull('nombres')
             ->whereNotNull('apellidos');

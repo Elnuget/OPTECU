@@ -172,6 +172,9 @@
                                             @foreach($historialesUnicos as $historial)
                                                 <option value="{{ $historial->nombres }} {{ $historial->apellidos }}" 
                                                         data-cedula="{{ $historial->cedula }}"
+                                                        data-celular="{{ $historial->celular }}"
+                                                        data-correo="{{ $historial->correo }}"
+                                                        data-direccion="{{ $historial->direccion }}"
                                                         data-sucursal="{{ $historial->empresa ? strtoupper($historial->empresa->nombre) : 'SIN EMPRESA' }}"
                                                         data-fecha="{{ $historial->fecha ? $historial->fecha->format('d/m/Y') : 'Sin fecha' }}">
                                                     {{ $historial->nombres }} {{ $historial->apellidos }} 
@@ -564,6 +567,9 @@
                 // Obtener datos del option seleccionado
                 const selectedOption = $(this).find('option:selected');
                 const cedula = selectedOption.data('cedula');
+                const celular = selectedOption.data('celular');
+                const correo = selectedOption.data('correo');
+                const direccion = selectedOption.data('direccion');
                 const empresa = selectedOption.data('sucursal');
                 const fecha = selectedOption.data('fecha');
                 
@@ -573,6 +579,11 @@
                 // Llenar campos básicos
                 $('#cliente').val(extraerNombreLimpio(valor));
                 $('#paciente').val(extraerNombreLimpio(valor));
+                
+                // Llenar campos adicionales si existen
+                if (celular) $('#celular').val(celular);
+                if (correo) $('#correo_electronico').val(correo);
+                if (direccion) $('#direccion').val(direccion);
                 
                 // Buscar datos completos del historial clínico
                 if (cedula) {
@@ -746,6 +757,9 @@
                 }
                 if (!$('#correo_electronico').val() && data.historial.correo) {
                     $('#correo_electronico').val(data.historial.correo);
+                }
+                if (!$('#direccion').val() && data.historial.direccion) {
+                    $('#direccion').val(data.historial.direccion);
                 }
                 if (!$('#empresa_id').val() && data.historial.empresa_id) {
                     $('#empresa_id').val(data.historial.empresa_id);
