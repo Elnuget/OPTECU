@@ -33,6 +33,10 @@
                         <dd class="col-sm-9">{{ $historialClinico->cedula ?? 'N/A' }}</dd>
                         <dt class="col-sm-3">CELULAR:</dt>
                         <dd class="col-sm-9">{{ $historialClinico->celular }}</dd>
+                        <dt class="col-sm-3">CORREO:</dt>
+                        <dd class="col-sm-9">{{ $historialClinico->correo ?? 'N/A' }}</dd>
+                        <dt class="col-sm-3">DIRECCIÓN:</dt>
+                        <dd class="col-sm-9">{{ strtoupper($historialClinico->direccion ?? 'N/A') }}</dd>
                         <dt class="col-sm-3">OCUPACIÓN:</dt>
                         <dd class="col-sm-9">{{ strtoupper($historialClinico->ocupacion) }}</dd>
                         <dt class="col-sm-3">EMPRESA:</dt>

@@ -78,6 +78,14 @@
                                 <input type="text" name="celular" id="celular" class="form-control" value="{{ old('celular', $historialClinico->celular) }}">
                             </div>
                             <div class="form-group col-md-4">
+                                <label for="correo">Correo Electrónico</label>
+                                <input type="email" name="correo" id="correo" class="form-control" value="{{ old('correo', $historialClinico->correo) }}" placeholder="ejemplo@correo.com">
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label for="direccion">Dirección</label>
+                                <input type="text" name="direccion" id="direccion" class="form-control" value="{{ old('direccion', $historialClinico->direccion) }}" placeholder="Ingrese la dirección">
+                            </div>
+                            <div class="form-group col-md-4">
                                 <label for="ocupacion">Ocupación</label>
                                 <input type="text" name="ocupacion" id="ocupacion" class="form-control" value="{{ old('ocupacion', $historialClinico->ocupacion) }}">
                             </div>

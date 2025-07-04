@@ -27,6 +27,8 @@ class HistorialClinico extends Model
         'edad',
         'fecha_nacimiento',
         'celular',
+        'correo',
+        'direccion',
         'ocupacion',
         'motivo_consulta',
         'enfermedad_actual',
