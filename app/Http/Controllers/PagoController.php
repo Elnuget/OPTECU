@@ -29,14 +29,24 @@ class PagoController extends Controller
     {
         $mediosdepago = mediosdepago::all();
         $query = Pago::with(['pedido', 'mediodepago']);
+        $user = auth()->user();
+        $userEmpresaId = $user->empresa_id;
+        $isAdmin = $user->is_admin;
 
         // Si no se solicitan todos los registros y no hay parámetros de fecha, redirigir al mes actual
         if (!$request->has('todos') && (!$request->filled('ano') || !$request->filled('mes'))) {
             $currentDate = now()->setTimezone('America/Guayaquil');
-            return redirect()->route('pagos.index', [
+            $redirectParams = [
                 'ano' => $currentDate->format('Y'),
                 'mes' => $currentDate->format('m')
-            ]);
+            ];
+            
+            // Si el usuario no es admin y tiene empresa asociada, añadir el parámetro de empresa
+            if (!$isAdmin && $userEmpresaId) {
+                $redirectParams['empresa'] = $userEmpresaId;
+            }
+            
+            return redirect()->route('pagos.index', $redirectParams);
         }
 
         // Aplicar filtros de fecha solo si no se solicitan todos los registros
@@ -53,8 +63,17 @@ class PagoController extends Controller
         // Obtener los pagos
         $pagos = $query->orderBy('created_at', 'desc')->get();
         
-        // Aplicar filtro por empresa si está seleccionado
-        if ($request->has('empresa') && $request->empresa != '') {
+        // Para usuarios no admin con empresa asociada, forzar el filtro por su empresa
+        // Para usuarios admin o peticiones explícitas, usar el filtro de empresa proporcionado
+        if (!$isAdmin && $userEmpresaId) {
+            // Forzar filtro por la empresa del usuario
+            $pagos = $pagos->filter(function($pago) use ($userEmpresaId) {
+                return $pago->pedido->empresa_id == $userEmpresaId;
+            });
+            // Forzar el valor de empresa en la solicitud para el formulario
+            $request->merge(['empresa' => $userEmpresaId]);
+        } else if ($request->has('empresa') && $request->empresa != '') {
+            // Para admins, aplicar el filtro normalmente
             $pagos = $pagos->filter(function($pago) use ($request) {
                 return $pago->pedido->empresa_id == $request->empresa;
             });
@@ -66,7 +85,7 @@ class PagoController extends Controller
         // Obtener todas las empresas para el filtro
         $empresas = Empresa::orderBy('nombre')->get();
 
-        return view('pagos.index', compact('pagos', 'mediosdepago', 'totalPagos', 'empresas'));
+        return view('pagos.index', compact('pagos', 'mediosdepago', 'totalPagos', 'empresas', 'isAdmin', 'userEmpresaId'));
     }
 
     /**

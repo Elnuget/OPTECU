@@ -131,14 +131,40 @@
                 </div>
                 <div class="col-md-2">
                     <label for="empresa">EMPRESA:</label>
-                    <select name="empresa" class="form-control custom-select" id="filtroEmpresa">
-                        <option value="">TODAS LAS EMPRESAS</option>
-                        @foreach($empresas ?? [] as $empresa)
-                            <option value="{{ $empresa->id }}" {{ request('empresa') == $empresa->id ? 'selected' : '' }}>
-                                {{ strtoupper($empresa->nombre) }}
-                            </option>
-                        @endforeach
-                    </select>
+                    @if(isset($isAdmin) && $isAdmin)
+                        {{-- Si es admin, puede seleccionar cualquier empresa --}}
+                        <select name="empresa" class="form-control custom-select" id="filtroEmpresa">
+                            <option value="">TODAS LAS EMPRESAS</option>
+                            @foreach($empresas ?? [] as $empresa)
+                                <option value="{{ $empresa->id }}" {{ request('empresa') == $empresa->id ? 'selected' : '' }}>
+                                    {{ strtoupper($empresa->nombre) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @elseif(isset($userEmpresaId) && $userEmpresaId)
+                        {{-- Si no es admin y tiene empresa asociada, mostrar su empresa como texto y campo oculto --}}
+                        @php
+                            $empresaNombre = '';
+                            foreach($empresas ?? [] as $empresa) {
+                                if($empresa->id == $userEmpresaId) {
+                                    $empresaNombre = $empresa->nombre;
+                                    break;
+                                }
+                            }
+                        @endphp
+                        <input type="text" class="form-control" value="{{ strtoupper($empresaNombre) }}" readonly>
+                        <input type="hidden" name="empresa" value="{{ $userEmpresaId }}">
+                    @else
+                        {{-- Si no es admin y no tiene empresa, mostrar selector pero deshabilitado --}}
+                        <select name="empresa" class="form-control custom-select" id="filtroEmpresa" disabled>
+                            <option value="">TODAS LAS EMPRESAS</option>
+                            @foreach($empresas ?? [] as $empresa)
+                                <option value="{{ $empresa->id }}" {{ request('empresa') == $empresa->id ? 'selected' : '' }}>
+                                    {{ strtoupper($empresa->nombre) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @endif
                 </div>
                 <div class="col-md-4 align-self-end">
                     <button type="button" class="btn btn-primary mr-2" id="actualButton">ACTUAL</button>
@@ -300,7 +326,12 @@
                 $('#filtroAno').val('');
                 $('#filtroMes').val('');
                 $('#metodo_pago').val('');
-                $('#filtroEmpresa').val('');
+                
+                // Solo permitir cambiar la empresa si es admin
+                @if(isset($isAdmin) && $isAdmin)
+                    $('#filtroEmpresa').val('');
+                @endif
+                
                 const form = $('#filterForm');
                 form.append('<input type="hidden" name="todos" value="1">');
                 form.submit();
@@ -312,7 +343,12 @@
                 $('#filtroAno').val(currentDate.getFullYear());
                 $('#filtroMes').val(String(currentDate.getMonth() + 1).padStart(2, '0'));
                 $('#metodo_pago').val('');
-                $('#filtroEmpresa').val('');
+                
+                // Solo permitir cambiar la empresa si es admin
+                @if(isset($isAdmin) && $isAdmin)
+                    $('#filtroEmpresa').val('');
+                @endif
+                
                 $('#filterForm').submit();
             });
 
