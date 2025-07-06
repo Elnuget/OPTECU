@@ -97,6 +97,38 @@
             font-weight: bold;
             color: #004085;
             font-size: 11px;
+            padding: 5px !important;
+        }
+        
+        .medida-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8px;
+            margin: 0;
+        }
+        
+        .medida-table th, .medida-table td {
+            border: 1px solid #666;
+            padding: 2px 4px;
+            text-align: center;
+        }
+        
+        .medida-table th {
+            background-color: #004085;
+            color: white;
+            font-size: 7px;
+            font-weight: bold;
+        }
+        
+        .medida-table td {
+            font-size: 8px;
+            background-color: white;
+        }
+        
+        .ojo-label {
+            background-color: #e3f2fd;
+            font-weight: bold;
+            font-size: 8px;
         }
         
         .detalle-cell {
@@ -196,8 +228,7 @@
             <tr>
                 <th>ORDEN</th>
                 <th>FECHA</th>
-                <th>CLIENTE</th>
-                <th>PACIENTE</th>
+                <th>SUCURSAL</th>
                 <th>CELULAR</th>
                 <th>MEDIDA</th>
                 <th>DETALLE</th>
@@ -226,16 +257,68 @@
                                     {{ date('d/m/Y', strtotime($pedido->fecha)) }}
                                 </td>
                                 <td class="cliente-info" rowspan="{{ $pedido->lunas->count() }}">
-                                    {{ $pedido->cliente }}
-                                </td>
-                                <td class="cliente-info" rowspan="{{ $pedido->lunas->count() }}">
-                                    {{ $pedido->paciente }}
+                                    {{ $pedido->empresa->nombre ?? 'N/A' }}
                                 </td>
                                 <td class="cliente-info" rowspan="{{ $pedido->lunas->count() }}">
                                     {{ $pedido->celular }}
                                 </td>
                             @endif
-                            <td class="medida-cell">{{ $luna->l_medida }}</td>
+                            <td class="medida-cell">
+                                @php
+                                    // Parsear el campo l_medida para extraer los datos
+                                    $medidaText = $luna->l_medida ?? '';
+                                    
+                                    // Extraer datos de OD
+                                    preg_match('/OD:\s*([+-]?\d+(?:\.\d+)?)\s*([+-]?\d+(?:\.\d+)?)\s*X(\d+)°?/i', $medidaText, $odMatches);
+                                    $od_esfera = $odMatches[1] ?? 'N/A';
+                                    $od_cilindro = $odMatches[2] ?? 'N/A';
+                                    $od_eje = $odMatches[3] ?? 'N/A';
+                                    
+                                    // Extraer datos de OI
+                                    preg_match('/OI:\s*([+-]?\d+(?:\.\d+)?)\s*([+-]?\d+(?:\.\d+)?)\s*X(\d+)°?/i', $medidaText, $oiMatches);
+                                    $oi_esfera = $oiMatches[1] ?? 'N/A';
+                                    $oi_cilindro = $oiMatches[2] ?? 'N/A';
+                                    $oi_eje = $oiMatches[3] ?? 'N/A';
+                                    
+                                    // Extraer ADD
+                                    preg_match('/ADD:\s*([+-]?\d+(?:\.\d+)?)/i', $medidaText, $addMatch);
+                                    $add = $addMatch[1] ?? 'N/A';
+                                    
+                                    // Extraer DP
+                                    preg_match('/DP:\s*(\d+(?:\.\d+)?)/i', $medidaText, $dpMatch);
+                                    $dp = $dpMatch[1] ?? 'N/A';
+                                @endphp
+                                
+                                <table class="medida-table">
+                                    <tr>
+                                        <th style="width: 15%;">OJO</th>
+                                        <th style="width: 25%;">ESFÉRICO</th>
+                                        <th style="width: 25%;">CILINDRO</th>
+                                        <th style="width: 25%;">EJE</th>
+                                        <th style="width: 10%;">ADD</th>
+                                    </tr>
+                                    <tr>
+                                        <td class="ojo-label">OD</td>
+                                        <td>{{ $od_esfera }}</td>
+                                        <td>{{ $od_cilindro }}</td>
+                                        <td>{{ $od_eje }}°</td>
+                                        <td rowspan="2" style="vertical-align: middle; font-weight: bold;">{{ $add }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ojo-label">OI</td>
+                                        <td>{{ $oi_esfera }}</td>
+                                        <td>{{ $oi_cilindro }}</td>
+                                        <td>{{ $oi_eje }}°</td>
+                                    </tr>
+                                    @if($dp !== 'N/A')
+                                    <tr>
+                                        <td colspan="5" style="text-align: center; font-weight: bold; background-color: #f0f8ff;">
+                                            DP: {{ $dp }}
+                                        </td>
+                                    </tr>
+                                    @endif
+                                </table>
+                            </td>
                             <td class="detalle-cell">{{ $luna->l_detalle }}</td>
                             <td class="tipo-lente-cell">{{ $luna->tipo_lente }}</td>
                             <td class="material-cell">{{ $luna->material }}</td>
@@ -247,7 +330,7 @@
         </tbody>
         <tfoot>
             <tr style="background-color: #28a745; color: white; font-weight: bold;">
-                <td colspan="9" style="text-align: right; padding: 15px; font-size: 14px;">
+                <td colspan="8" style="text-align: right; padding: 15px; font-size: 14px;">
                     TOTAL LUNAS PARA PROCESAR:
                 </td>
                 <td style="font-size: 16px; padding: 15px; text-align: center;">
