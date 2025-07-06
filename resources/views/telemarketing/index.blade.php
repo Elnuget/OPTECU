@@ -772,8 +772,8 @@ $(document).ready(function() {
     // Inicializar DataTable
     $('#clientesTable').DataTable({
         "order": [[0, "asc"]],
-        "paging": true,
-        "lengthChange": true,
+        "paging": false,
+        "lengthChange": false,
         "searching": true,
         "ordering": true,
         "info": true,
