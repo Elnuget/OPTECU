@@ -184,11 +184,12 @@ class PagoController extends Controller
 
             // Si el método de pago es Efectivo (asumiendo que el ID es 1)
             if ($validatedData['mediodepago_id'] == 1) {
-                // Crear entrada en caja
+                // Crear entrada en caja con la empresa del pedido
                 $cajaEntry = Caja::create([
                     'valor' => $validatedData['pago'],
                     'motivo' => 'Abono ' . $pedido->cliente,
-                    'user_id' => auth()->id()
+                    'user_id' => auth()->id(),
+                    'empresa_id' => $pedido->empresa_id
                 ]);
                 
                 if (!$cajaEntry) {
@@ -425,7 +426,8 @@ class PagoController extends Controller
             if ($pago->mediodepago_id == 1) {
                 $cajaEntry = Caja::where([
                     ['valor', '=', $pago->pago],
-                    ['motivo', '=', 'Abono ' . $pedido->cliente]
+                    ['motivo', '=', 'Abono ' . $pedido->cliente],
+                    ['empresa_id', '=', $pedido->empresa_id]
                 ])->first();
 
                 if ($cajaEntry) {
