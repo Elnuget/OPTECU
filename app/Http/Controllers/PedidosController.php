@@ -1194,6 +1194,8 @@ class PedidosController extends Controller
             $infoPedido = "CLIENTE: " . strtoupper($pedido->cliente) . "\n";
             $infoPedido .= "CÉDULA: " . ($pedido->cedula ? $pedido->cedula : 'NO REGISTRADA') . "\n";
             $infoPedido .= "TELÉFONO: " . $pedido->celular . "\n";
+            $infoPedido .= "DIRECCIÓN: " . ($pedido->direccion ? $pedido->direccion : 'NO REGISTRADA') . "\n";
+            $infoPedido .= "CORREO: " . ($pedido->correo_electronico ? $pedido->correo_electronico : 'NO REGISTRADO') . "\n";
             $infoPedido .= "ESTADO: " . strtoupper($pedido->fact) . "\n";
             $infoPedido .= "TOTAL: $" . $pedido->total . "\n";
             $infoPedido .= "SALDO: $" . $pedido->saldo . "\n";
