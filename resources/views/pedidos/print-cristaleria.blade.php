@@ -268,23 +268,23 @@
                                     // Parsear el campo l_medida para extraer los datos
                                     $medidaText = $luna->l_medida ?? '';
                                     
-                                    // Extraer datos de OD
-                                    preg_match('/OD:\s*([+-]?\d+(?:\.\d+)?)\s*([+-]?\d+(?:\.\d+)?)\s*X(\d+)°?/i', $medidaText, $odMatches);
+                                    // Extraer datos de OD - Mejorada para capturar decimales en todos los campos
+                                    preg_match('/OD:\s*([+-]?\d+(?:\.\d+)?)\s*([+-]?\d+(?:\.\d+)?)\s*X\s*(\d+(?:\.\d+)?)°?/i', $medidaText, $odMatches);
                                     $od_esfera = $odMatches[1] ?? 'N/A';
                                     $od_cilindro = $odMatches[2] ?? 'N/A';
                                     $od_eje = $odMatches[3] ?? 'N/A';
                                     
-                                    // Extraer datos de OI
-                                    preg_match('/OI:\s*([+-]?\d+(?:\.\d+)?)\s*([+-]?\d+(?:\.\d+)?)\s*X(\d+)°?/i', $medidaText, $oiMatches);
+                                    // Extraer datos de OI - Mejorada para capturar decimales en todos los campos
+                                    preg_match('/OI:\s*([+-]?\d+(?:\.\d+)?)\s*([+-]?\d+(?:\.\d+)?)\s*X\s*(\d+(?:\.\d+)?)°?/i', $medidaText, $oiMatches);
                                     $oi_esfera = $oiMatches[1] ?? 'N/A';
                                     $oi_cilindro = $oiMatches[2] ?? 'N/A';
                                     $oi_eje = $oiMatches[3] ?? 'N/A';
                                     
-                                    // Extraer ADD
+                                    // Extraer ADD - Mejorada para mayor flexibilidad
                                     preg_match('/ADD:\s*([+-]?\d+(?:\.\d+)?)/i', $medidaText, $addMatch);
                                     $add = $addMatch[1] ?? 'N/A';
                                     
-                                    // Extraer DP
+                                    // Extraer DP - Mejorada para mayor flexibilidad
                                     preg_match('/DP:\s*(\d+(?:\.\d+)?)/i', $medidaText, $dpMatch);
                                     $dp = $dpMatch[1] ?? 'N/A';
                                 @endphp

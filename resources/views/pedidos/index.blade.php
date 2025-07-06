@@ -108,9 +108,6 @@
             <div class="col-md-8">
                 <div class="btn-group">
                     <a href="{{ route('pedidos.create') }}" class="btn btn-primary">Crear Pedido</a>
-                    <button type="button" class="btn btn-success" id="imprimirSeleccionados" disabled>
-                        <i class="fas fa-print"></i> Imprimir Seleccionados
-                    </button>
                     <button type="button" class="btn btn-warning" id="generarExcel" disabled>
                         <i class="fas fa-file-excel"></i> Generar Excel
                     </button>
@@ -380,7 +377,6 @@ input[type="checkbox"]:after {
         // Función para habilitar/deshabilitar el botón de imprimir
         function toggleImprimirButton() {
             var checkedCheckboxes = $('.pedido-checkbox:checked').length;
-            $('#imprimirSeleccionados').prop('disabled', checkedCheckboxes === 0);
             $('#generarExcel').prop('disabled', checkedCheckboxes === 0);
             $('#imprimirCristaleria').prop('disabled', checkedCheckboxes === 0);
         }
@@ -421,52 +417,6 @@ input[type="checkbox"]:after {
             } else {
                 alert('No se encontraron pedidos para la fecha ' + fechaSeleccionada);
             }
-        });
-
-        // Manejar clic en el botón de imprimir
-        $('#imprimirSeleccionados').click(function() {
-            var selectedIds = [];
-            $('.pedido-checkbox:checked').each(function() {
-                selectedIds.push($(this).val());
-            });
-            
-            if (selectedIds.length === 0) {
-                alert('Por favor seleccione al menos un pedido para imprimir');
-                return;
-            }
-            
-            // Crear formulario para envío POST
-            var form = $('<form>', {
-                'method': 'POST',
-                'action': '{{ route("pedidos.print.post") }}',
-                'target': '_blank'
-            });
-            
-            // Agregar token CSRF
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': '_token',
-                'value': $('meta[name="csrf-token"]').attr('content')
-            }));
-            
-            // Agregar IDs seleccionados
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': 'ids',
-                'value': selectedIds.join(',')
-            }));
-            
-            // Establecer formato de tabla por defecto
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': 'format',
-                'value': 'table'
-            }));
-            
-            // Agregar al body y enviar
-            $('body').append(form);
-            form.submit();
-            form.remove();
         });
 
         // Manejar clic en el botón de imprimir cristalería
