@@ -863,9 +863,9 @@
             const valorCompra = parseFloat(document.getElementById('valor_compra').value) || 0;
             total += valorCompra;
 
-            // Actualizar campos
-            document.getElementById('total').value = total.toFixed(2);
-            document.getElementById('saldo').value = total.toFixed(2);
+            // Actualizar campos - sin decimales para Chile
+            document.getElementById('total').value = Math.round(total);
+            document.getElementById('saldo').value = Math.round(total);
         }
 
         // Event listeners para precios

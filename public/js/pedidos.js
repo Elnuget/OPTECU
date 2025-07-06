@@ -61,8 +61,8 @@ function calculateTotal() {
         const totalElement = document.getElementById('total');
         const saldoElement = document.getElementById('saldo');
         
-        if (totalElement) totalElement.value = newTotal.toFixed(2);
-        if (saldoElement) saldoElement.value = newSaldo.toFixed(2);
+        if (totalElement) totalElement.value = Math.round(newTotal);
+        if (saldoElement) saldoElement.value = Math.round(newSaldo);
     } catch (error) {
         console.error('Error al calcular el total:', error);
     }
@@ -294,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const total = parseFloat(this.value) || 0;
                     const totalPagado = parseFloat(document.getElementById('total_pagado').value) || 0;
                     const newSaldo = Math.max(0, total - totalPagado);
-                    document.getElementById('saldo').value = newSaldo.toFixed(2);
+                    document.getElementById('saldo').value = Math.round(newSaldo);
                 } else {
                     // Para otros campos, calcular todo
                     calculateTotal();

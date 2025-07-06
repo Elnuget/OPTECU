@@ -39,7 +39,7 @@
                 <div class="info-box bg-info">
                     <div class="info-box-content">
                         <span class="info-box-text">Total Ventas</span>
-                        <span class="info-box-number">${{ number_format($totales['ventas'], 2, ',', '.') }}</span>
+                        <span class="info-box-number">${{ number_format($totales['ventas'], 0, ',', '.') }}</span>
                     </div>
                 </div>
             </div>
@@ -47,7 +47,7 @@
                 <div class="info-box bg-warning">
                     <div class="info-box-content">
                         <span class="info-box-text">Total Saldos</span>
-                        <span class="info-box-number">${{ number_format($totales['saldos'], 2, ',', '.') }}</span>
+                        <span class="info-box-number">${{ number_format($totales['saldos'], 0, ',', '.') }}</span>
                     </div>
                 </div>
             </div>
@@ -55,7 +55,7 @@
                 <div class="info-box bg-success">
                     <div class="info-box-content">
                         <span class="info-box-text">Total Cobrado</span>
-                        <span class="info-box-number">${{ number_format($totales['cobrado'], 2, ',', '.') }}</span>
+                        <span class="info-box-number">${{ number_format($totales['cobrado'], 0, ',', '.') }}</span>
                     </div>
                 </div>
             </div>
@@ -189,10 +189,10 @@
                             @endif
                         </td>
                         <td>{{ $pedido->paciente }}</td>
-                        <td>{{ $pedido->total }}</td>
+                        <td>${{ number_format($pedido->total, 0, ',', '.') }}</td>
                         <td>
                             <span style="color: {{ $pedido->saldo == 0 ? 'green' : 'red' }}">
-                                {{ $pedido->saldo }}
+                                ${{ number_format($pedido->saldo, 0, ',', '.') }}
                             </span>
                         </td>                        <td>
                             <div class="btn-group">

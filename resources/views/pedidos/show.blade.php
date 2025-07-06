@@ -13,7 +13,8 @@
     .list-group-item,
     .table th,
     .table td,
-    .text-muted,
+                      <li class="list-group-item"><strong>Total:</strong> ${{ number_format($pedido->total, 0, ',', '.') }}</li>
+                    <li class="list-group-item"><strong>Saldo:</strong> ${{ number_format($pedido->saldo, 0, ',', '.') }}</li>.text-muted,
     h2,
     h3,
     strong {
@@ -81,7 +82,7 @@
                     <li class="list-group-item"><strong>Correo Electrónico:</strong> {{ $pedido->correo_electronico }}</li>
                     <li class="list-group-item"><strong>Dirección:</strong> {{ $pedido->direccion }}</li>
                     <li class="list-group-item"><strong>Empresa:</strong> {{ $pedido->empresa ? $pedido->empresa->nombre : 'No asignada' }}</li>
-                    <li class="list-group-item"><strong>Examen Visual:</strong> ${{ number_format($pedido->examen_visual, 2, ',', '.') }}</li>
+                    <li class="list-group-item"><strong>Examen Visual:</strong> ${{ number_format($pedido->examen_visual, 0, ',', '.') }}</li>
                 </ul>
             </div>
         </div>
@@ -115,16 +116,16 @@
                                 @foreach ($pedido->inventarios as $inventario)
                                     @php
                                         $precioConDescuento = $inventario->pivot->precio * (1 - ($inventario->pivot->descuento / 100));
-                                        $base = round($precioConDescuento / 1.15, 2);
-                                        $iva = round($precioConDescuento - $base, 2);
+                                        $base = round($precioConDescuento / 1.19, 0);
+                                        $iva = round($precioConDescuento - $base, 0);
                                     @endphp
                                     <tr>
                                         <td>{{ $inventario->codigo }}</td>
-                                        <td>${{ number_format($inventario->pivot->precio, 2, ',', '.') }}</td>
+                                        <td>${{ number_format($inventario->pivot->precio, 0, ',', '.') }}</td>
                                         <td>{{ $inventario->pivot->descuento }}%</td>
-                                        <td>${{ number_format($precioConDescuento, 2, ',', '.') }}</td>
-                                        <td>${{ number_format($base, 2, ',', '.') }}</td>
-                                        <td>${{ number_format($iva, 2, ',', '.') }}</td>
+                                        <td>${{ number_format($precioConDescuento, 0, ',', '.') }}</td>
+                                        <td>${{ number_format($base, 0, ',', '.') }}</td>
+                                        <td>${{ number_format($iva, 0, ',', '.') }}</td>
                                         <td class="text-center">
                                             @if(isset($inventario->pivot->foto) && $inventario->pivot->foto)
                                                 <img src="{{ asset($inventario->pivot->foto) }}" 
@@ -195,19 +196,18 @@
                                 @foreach ($pedido->lunas as $luna)
                                     @php
                                         $precioConDescuento = $luna->l_precio * (1 - ($luna->l_precio_descuento / 100));
-                                        $base = round($precioConDescuento / 1.15, 2);
-                                        $iva = round($precioConDescuento - $base, 2);
+                                        $base = round($precioConDescuento / 1.19, 0);
+                                        $iva = round($precioConDescuento - $base, 0);
                                     @endphp
                                     <tr>
                                         <td>{{ $luna->l_medida }}</td>
                                         <td>{{ $luna->l_detalle }}</td>
                                         <td>{{ $luna->tipo_lente }}</td>
                                         <td>{{ $luna->material }}</td>
-                                        <td>{{ $luna->filtro }}</td>
-                                        <td>${{ number_format($luna->l_precio, 2, ',', '.') }}</td>
-                                        <td>{{ $luna->l_precio_descuento }}%</td>
-                                        <td>${{ number_format($base, 2, ',', '.') }}</td>
-                                        <td>${{ number_format($iva, 2, ',', '.') }}</td>
+                                        <td>{{ $luna->filtro }}</td>                        <td>${{ number_format($luna->l_precio, 0, ',', '.') }}</td>
+                        <td>{{ $luna->l_precio_descuento }}%</td>
+                        <td>${{ number_format($base, 0, ',', '.') }}</td>
+                        <td>${{ number_format($iva, 0, ',', '.') }}</td>
                                         <td class="text-center">
                                             @if(isset($luna->foto) && $luna->foto)
                                                 <img src="{{ asset($luna->foto) }}" 
@@ -263,7 +263,7 @@
             </div>
             <div class="card-body">
                 <ul class="list-group list-group-flush">
-                    <li class="list-group-item"><strong>Valor de Compra:</strong> ${{ number_format($pedido->valor_compra, 2, ',', '.') }}</li>
+                    <li class="list-group-item"><strong>Valor de Compra:</strong> ${{ number_format($pedido->valor_compra, 0, ',', '.') }}</li>
                     <li class="list-group-item"><strong>Motivo de Compra:</strong> {{ $pedido->motivo_compra }}</li>
                 </ul>
             </div>
@@ -273,8 +273,8 @@
         <div class="card">
             <div class="card-body">
                 <ul class="list-group list-group-flush">
-                    <li class="list-group-item"><strong>Total:</strong> ${{ number_format($pedido->total, 2, ',', '.') }}</li>
-                    <li class="list-group-item"><strong>Saldo:</strong> ${{ number_format($pedido->saldo, 2, ',', '.') }}</li>
+                    <li class="list-group-item"><strong>Total:</strong> ${{ number_format($pedido->total, 0, ',', '.') }}</li>
+                    <li class="list-group-item"><strong>Saldo:</strong> ${{ number_format($pedido->saldo, 0, ',', '.') }}</li>
                 </ul>
             </div>
         </div>
