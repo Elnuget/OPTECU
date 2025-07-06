@@ -17,6 +17,7 @@ use App\Http\Controllers\SueldoController;
 use App\Http\Controllers\DetalleSueldoController;
 use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\HorarioController;
+use App\Http\Controllers\TelemarketingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -260,6 +261,21 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Rutas para recetas
     Route::resource('recetas', \App\Http\Controllers\RecetaController::class);
     Route::get('/recetas/create/{historialId}', [\App\Http\Controllers\RecetaController::class, 'create'])->name('recetas.create.from.historial');
+
+    // Rutas para Telemarketing
+    Route::prefix('telemarketing')->group(function () {
+        Route::get('/', [TelemarketingController::class, 'index'])
+            ->name('telemarketing.index');
+        
+        Route::post('/{clienteId}/enviar-mensaje', [TelemarketingController::class, 'enviarMensaje'])
+            ->name('telemarketing.enviar-mensaje');
+        
+        Route::get('/{clienteId}/historial', [TelemarketingController::class, 'obtenerHistorial'])
+            ->name('telemarketing.historial');
+    });
+    
+    // Ruta para obtener mensaje predeterminado de telemarketing
+    Route::get('/configuraciones/mensajes-predeterminados/telemarketing', [App\Http\Controllers\ConfiguracionController::class, 'obtenerMensajePredeterminado'])->name('configuraciones.mensajes-predeterminados.telemarketing');
 });
 
 // Rutas públicas para calificación

@@ -274,6 +274,11 @@ return [
             'icon' => 'fab fa-whatsapp',
             'submenu' => [
                 [
+                    'text' => 'TELEMARKETING',
+                    'url'  => 'telemarketing',
+                    'icon' => 'fas fa-phone',
+                ],
+                [
                     'text' => 'MENSAJES CUMPLEAÑOS',
                     'url'  => 'mensajes/cumpleanos',
                     'icon' => 'fas fa-birthday-cake',

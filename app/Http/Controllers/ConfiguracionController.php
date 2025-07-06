@@ -21,10 +21,17 @@ class ConfiguracionController extends Controller
         ]);
 
         try {
-            $mensajePredeterminado = MensajePredeterminado::create([
-                'tipo' => $request->tipo,
-                'mensaje' => $request->mensaje
-            ]);
+            // Buscar si ya existe un mensaje del mismo tipo y actualizarlo, o crear uno nuevo
+            $mensajePredeterminado = MensajePredeterminado::where('tipo', $request->tipo)->first();
+            
+            if ($mensajePredeterminado) {
+                $mensajePredeterminado->update(['mensaje' => $request->mensaje]);
+            } else {
+                $mensajePredeterminado = MensajePredeterminado::create([
+                    'tipo' => $request->tipo,
+                    'mensaje' => $request->mensaje
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -37,4 +44,36 @@ class ConfiguracionController extends Controller
             ], 500);
         }
     }
-} 
+
+    /**
+     * Obtiene un mensaje predeterminado por tipo
+     *
+     * @param  string  $tipo
+     * @return \Illuminate\Http\Response
+     */
+    public function obtenerMensajePredeterminado($tipo)
+    {
+        try {
+            $mensaje = MensajePredeterminado::where('tipo', $tipo)
+                ->latest()
+                ->first();
+
+            if ($mensaje) {
+                return response()->json([
+                    'success' => true,
+                    'mensaje' => $mensaje->mensaje
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'mensaje' => null
+                ]);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Error al obtener el mensaje: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+}
