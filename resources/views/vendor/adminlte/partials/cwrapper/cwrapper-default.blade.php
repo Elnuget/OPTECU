@@ -64,8 +64,8 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text">$</span>
                             </div>
-                            <input type="number" class="form-control form-control-lg" 
-                                   name="monto" id="monto" value="{{ $sumCaja }}" readonly>
+                            <input type="number" step="1" min="0" class="form-control form-control-lg" 
+                                   name="monto" id="monto" value="{{ intval($sumCaja) }}" readonly>
                         </div>
                     </div>
                     <input type="hidden" name="estado" value="Apertura">
@@ -114,8 +114,8 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text">$</span>
                             </div>
-                            <input type="number" step="0.01" class="form-control form-control-lg" 
-                                   id="monto_cierre" name="monto" value="{{ $sumCaja }}" readonly>
+                            <input type="number" step="1" min="0" class="form-control form-control-lg" 
+                                   id="monto_cierre" name="monto" value="{{ intval($sumCaja) }}" readonly>
                         </div>
                     </div>
                     <input type="hidden" name="estado" value="Cierre">
