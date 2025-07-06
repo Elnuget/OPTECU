@@ -111,9 +111,9 @@
                         <option value="">SELECCIONAR EL PEDIDO</option>
                         @foreach($pedidos as $pedido)
                             <option value="{{ $pedido->id }}" 
-                                   data-saldo="{{ $pedido->saldo }}" 
+                                   data-saldo="{{ number_format($pedido->saldo, 0, '.', '') }}" 
                                    {{ (isset($selectedPedidoId) && $selectedPedidoId == $pedido->id) || old('pedido_id') == $pedido->id ? 'selected' : '' }}>
-                                ORDEN: {{ $pedido->numero_orden }} - CLIENTE: {{ $pedido->cliente }} - SALDO: ${{ number_format($pedido->saldo, 2) }}
+                                ORDEN: {{ $pedido->numero_orden }} - CLIENTE: {{ $pedido->cliente }} - SALDO: ${{ number_format($pedido->saldo, 0, ',', '.') }}
                             </option>
                         @endforeach
                     </select>
