@@ -136,6 +136,31 @@ class TelemarketingController extends Controller
                 $empresa = (object) ['nombre' => $item->empresa_nombre];
             }
 
+            // Buscar el último mensaje enviado para este cliente/paciente
+            $ultimoMensaje = null;
+            if ($item->tipo === 'cliente') {
+                // Para clientes, buscar por nombre del cliente en la tabla pedidos
+                $ultimoMensaje = DB::table('mensajes_enviados')
+                    ->join('pedidos', 'mensajes_enviados.pedido_id', '=', 'pedidos.id')
+                    ->where('pedidos.cliente', $item->nombre)
+                    ->where('pedidos.celular', $item->celular)
+                    ->where('mensajes_enviados.tipo', 'cliente')
+                    ->select('mensajes_enviados.*')
+                    ->orderBy('mensajes_enviados.fecha_envio', 'desc')
+                    ->first();
+            } else {
+                // Para pacientes, buscar por nombre del paciente en la tabla historiales_clinicos
+                $ultimoMensaje = DB::table('mensajes_enviados')
+                    ->join('historiales_clinicos', 'mensajes_enviados.historial_id', '=', 'historiales_clinicos.id')
+                    ->where('historiales_clinicos.nombres', $item->nombre)
+                    ->where('historiales_clinicos.apellidos', $item->apellidos)
+                    ->where('historiales_clinicos.celular', $item->celular)
+                    ->where('mensajes_enviados.tipo', 'paciente')
+                    ->select('mensajes_enviados.*')
+                    ->orderBy('mensajes_enviados.fecha_envio', 'desc')
+                    ->first();
+            }
+
             return (object) [
                 'id' => $item->tipo . '_' . $item->id, // Crear ID único combinando tipo e id
                 'nombre' => $item->nombre,
@@ -143,7 +168,11 @@ class TelemarketingController extends Controller
                 'celular' => $item->celular,
                 'tipo' => $item->tipo,
                 'empresa' => $empresa,
-                'ultimo_pedido' => $item->ultimo_pedido ? Carbon::parse($item->ultimo_pedido) : null
+                'ultimo_pedido' => $item->ultimo_pedido ? Carbon::parse($item->ultimo_pedido) : null,
+                'ultimo_mensaje' => $ultimoMensaje ? (object) [
+                    'fecha_envio' => Carbon::parse($ultimoMensaje->fecha_envio),
+                    'mensaje' => $ultimoMensaje->mensaje
+                ] : null
             ];
         })->sortBy('nombre');
 
@@ -211,9 +240,9 @@ class TelemarketingController extends Controller
 
             // Registrar el mensaje enviado
             $mensajeData = [
-                'tipo' => $tipo, // Asignamos el tipo al campo requerido
+                'tipo' => $tipo, // cliente o paciente
                 'mensaje' => $request->mensaje,
-                'tipo_mensaje' => $tipo, // Usamos el mismo valor para tipo_mensaje
+                'tipo_mensaje' => 'telemarketing', // Cambiamos esto a telemarketing para diferenciarlo
                 'fecha_envio' => now(),
                 'usuario_id' => auth()->id(),
                 'empresa_id' => $cliente->empresa_id ?? null

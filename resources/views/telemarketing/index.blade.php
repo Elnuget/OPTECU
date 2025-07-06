@@ -109,6 +109,29 @@ use App\Models\MensajePredeterminado;
                             </td>
                             <td>
                             @if($cliente->celular)
+                                @if($cliente->ultimo_mensaje)
+                                    {{-- Si ya se envió un mensaje antes --}}
+                                    <div class="btn-group-vertical" style="width: 100%;">
+                                        <button type="button" 
+                                                class="btn btn-info btn-sm mb-1"
+                                                data-toggle="tooltip" 
+                                                title="Último mensaje: {{ $cliente->ultimo_mensaje->mensaje }}"
+                                                style="font-size: 0.75rem;">
+                                            <i class="fas fa-clock"></i> ÚLTIMO MENSAJE: {{ $cliente->ultimo_mensaje->fecha_envio->format('d/m/Y H:i') }}
+                                        </button>
+                                        <button type="button" 
+                                                class="btn btn-warning btn-sm btn-enviar-mensaje"
+                                                data-cliente-id="{{ $cliente->id }}"
+                                                data-nombre="{{ $cliente->nombre }}"
+                                                data-apellidos="{{ $cliente->apellidos ?? '' }}"
+                                                data-celular="{{ $cliente->celular }}"
+                                                data-tipo="{{ $cliente->tipo }}"
+                                                onclick="mostrarModalMensaje('{{ $cliente->id }}', '{{ $cliente->nombre }}', '{{ $cliente->apellidos ?? '' }}', '{{ $cliente->tipo }}')">
+                                            <i class="fab fa-whatsapp"></i> VOLVER A ENVIAR
+                                        </button>
+                                    </div>
+                                @else
+                                    {{-- Si no se ha enviado ningún mensaje --}}
                                     <button type="button" 
                                             class="btn btn-success btn-sm btn-enviar-mensaje mr-1"
                                             data-cliente-id="{{ $cliente->id }}"
@@ -120,6 +143,7 @@ use App\Models\MensajePredeterminado;
                                         <i class="fab fa-whatsapp"></i> ENVIAR MENSAJE
                                     </button>
                                 @endif
+                            @endif
                                 <button type="button" 
                                         class="btn btn-info btn-sm"
                                         onclick="mostrarHistorial('{{ $cliente->id }}', '{{ $cliente->nombre }}', '{{ $cliente->apellidos ?? '' }}', '{{ $cliente->tipo }}')">
@@ -335,6 +359,19 @@ El equipo de [EMPRESA]</textarea>
         background-color: #007bff;
         color: white !important;
         border-color: #007bff;
+    }
+    .btn-group-vertical .btn {
+        border-radius: 4px !important;
+        margin-bottom: 2px;
+    }
+    .btn-group-vertical .btn:last-child {
+        margin-bottom: 0;
+    }
+    .ultimo-mensaje-info {
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 </style>
 @stop
@@ -598,10 +635,46 @@ function enviarMensaje() {
                 tipo: 'telemarketing' // Siempre enviamos un tipo
             },
             success: function(response) {
-                // Actualizar el botón inmediatamente
-                boton.removeClass('btn-success')
-                    .addClass('btn-warning')
-                    .html('<i class="fab fa-whatsapp"></i> VOLVER A ENVIAR');
+                // Buscar el contenedor de botones del cliente
+                const filaCliente = $(`.btn-enviar-mensaje[data-cliente-id="${clienteId}"]`).closest('td');
+                
+                // Actualizar los botones para mostrar que ya se envió un mensaje
+                const now = new Date();
+                const fechaFormateada = now.toLocaleDateString('es-CL') + ' ' + now.toLocaleTimeString('es-CL', {hour: '2-digit', minute: '2-digit'});
+                
+                // Crear nuevo HTML para los botones
+                const nuevosBotones = `
+                    <div class="btn-group-vertical" style="width: 100%;">
+                        <button type="button" 
+                                class="btn btn-info btn-sm mb-1"
+                                data-toggle="tooltip" 
+                                title="Último mensaje: ${mensaje.substring(0, 100)}..."
+                                style="font-size: 0.75rem;">
+                            <i class="fas fa-clock"></i> ÚLTIMO MENSAJE: ${fechaFormateada}
+                        </button>
+                        <button type="button" 
+                                class="btn btn-warning btn-sm btn-enviar-mensaje"
+                                data-cliente-id="${clienteId}"
+                                data-nombre="${boton.data('nombre')}"
+                                data-apellidos="${boton.data('apellidos')}"
+                                data-celular="${boton.data('celular')}"
+                                data-tipo="${boton.data('tipo')}"
+                                onclick="mostrarModalMensaje('${clienteId}', '${boton.data('nombre')}', '${boton.data('apellidos')}', '${boton.data('tipo')}')">
+                            <i class="fab fa-whatsapp"></i> VOLVER A ENVIAR
+                        </button>
+                    </div>
+                    <button type="button" 
+                            class="btn btn-info btn-sm"
+                            onclick="mostrarHistorial('${clienteId}', '${boton.data('nombre')}', '${boton.data('apellidos')}', '${boton.data('tipo')}')">
+                        <i class="fas fa-history"></i> VER HISTORIAL
+                    </button>
+                `;
+                
+                // Reemplazar el contenido de la celda
+                filaCliente.html(nuevosBotones);
+                
+                // Inicializar tooltips para los nuevos elementos
+                $('[data-toggle="tooltip"]').tooltip();
                 
                 // Generar URL de WhatsApp optimizada
                 const whatsappURL = generateWhatsAppURL(celular, mensaje);
@@ -815,6 +888,9 @@ $(document).ready(function() {
     } catch (e) {
         console.error('Error al intentar cargar mensaje predeterminado:', e);
     }
+    
+    // Inicializar tooltips
+    $('[data-toggle="tooltip"]').tooltip();
 });
 </script>
 @stop
