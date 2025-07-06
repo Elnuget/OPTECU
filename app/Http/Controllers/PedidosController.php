@@ -1197,15 +1197,15 @@ class PedidosController extends Controller
             $infoPedido .= "DIRECCIÓN: " . ($pedido->direccion ? $pedido->direccion : 'NO REGISTRADA') . "\n";
             $infoPedido .= "CORREO: " . ($pedido->correo_electronico ? $pedido->correo_electronico : 'NO REGISTRADO') . "\n";
             $infoPedido .= "ESTADO: " . strtoupper($pedido->fact) . "\n";
-            $infoPedido .= "TOTAL: $" . $pedido->total . "\n";
-            $infoPedido .= "SALDO: $" . $pedido->saldo . "\n";
+            $infoPedido .= "TOTAL: $" . number_format($pedido->total, 0, ',', '.') . "\n";
+            $infoPedido .= "SALDO: $" . number_format($pedido->saldo, 0, ',', '.') . "\n";
             
             // Agregar información de armazones/accesorios
             if ($pedido->inventarios->count() > 0) {
                 $infoPedido .= "ARMAZONES/ACCESORIOS:\n";
                 foreach ($pedido->inventarios as $inventario) {
                     $precio = $inventario->pivot->precio * (1 - ($inventario->pivot->descuento / 100));
-                    $infoPedido .= "- " . $inventario->codigo . " ($" . number_format($precio, 2, ',', '.') . ")\n";
+                    $infoPedido .= "- " . $inventario->codigo . " ($" . number_format($precio, 0, ',', '.') . ")\n";
                 }
             }
             
@@ -1231,7 +1231,7 @@ class PedidosController extends Controller
                 $infoPedido .= "PAGOS:\n";
                 foreach ($pedido->pagos as $pago) {
                     $medioPago = $pago->mediodepago ? $pago->mediodepago->medio_de_pago : 'No especificado';
-                    $infoPedido .= "- $" . $pago->pago . " (" . $medioPago . ")\n";
+                    $infoPedido .= "- $" . number_format($pago->pago, 0, ',', '.') . " (" . $medioPago . ")\n";
                     if ($pago->created_at) {
                         $infoPedido .= "  Fecha: " . $pago->created_at->format('d-m-Y H:i') . "\n";
                     }
