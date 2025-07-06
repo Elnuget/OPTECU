@@ -190,8 +190,13 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label for="fact" class="form-label">Factura</label>
-                                    <input type="text" class="form-control" id="fact" name="fact"
-                                           value="Pendiente">
+                                    <select class="form-control" id="fact" name="fact">
+                                        <option value="Pendiente" selected>Pendiente</option>
+                                        <option value="Separado">Separado</option>
+                                        <option value="LISTO EN TALLER">Listo en Taller</option>
+                                        <option value="Enviado">Enviado</option>
+                                        <option value="ENTREGADO">Entregado</option>
+                                    </select>
                                 </div>
                                 <div class="col-<md-6">
                                     <label for="cliente" class="form-label">Cliente</label>

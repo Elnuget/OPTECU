@@ -13,8 +13,13 @@
         <div class="row mb-3">
             <div class="col-md-6">
                 <label for="fact" class="form-label">Factura</label>
-                <input type="text" class="form-control" id="fact" name="fact"
-                       value="{{ $pedido->fact }}">
+                <select class="form-control" id="fact" name="fact">
+                    <option value="Pendiente" {{ $pedido->fact == 'Pendiente' ? 'selected' : '' }}>Pendiente</option>
+                    <option value="Separado" {{ $pedido->fact == 'Separado' ? 'selected' : '' }}>Separado</option>
+                    <option value="LISTO EN TALLER" {{ $pedido->fact == 'LISTO EN TALLER' ? 'selected' : '' }}>Listo en Taller</option>
+                    <option value="Enviado" {{ $pedido->fact == 'Enviado' ? 'selected' : '' }}>Enviado</option>
+                    <option value="ENTREGADO" {{ $pedido->fact == 'ENTREGADO' ? 'selected' : '' }}>Entregado</option>
+                </select>
             </div>
             <div class="col-md-6">
                 <label for="cliente" class="form-label">Cliente</label>

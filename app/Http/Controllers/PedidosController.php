@@ -769,16 +769,20 @@ class PedidosController extends Controller
         
         // Actualizar el estado según el parámetro recibido
         switch ($state) {
+            case 'separado':
+                $pedido->fact = 'Separado';
+                $mensaje = 'Pedido actualizado a Separado';
+                break;
             case 'taller':
-                $pedido->fact = 'LISTO EN TALLER';
+                $pedido->fact = 'Listo en Taller';
                 $mensaje = 'Pedido actualizado a Listo en Taller';
                 break;
-            case 'entrega':
-                $pedido->fact = 'LISTO PARA ENTREGA';
-                $mensaje = 'Pedido actualizado a Listo para Entrega';
+            case 'enviado':
+                $pedido->fact = 'Enviado';
+                $mensaje = 'Pedido actualizado a Enviado';
                 break;
             case 'entregado':
-                $pedido->fact = 'ENTREGADO';
+                $pedido->fact = 'Entregado';
                 $mensaje = 'Pedido marcado como Entregado';
                 break;
             default:

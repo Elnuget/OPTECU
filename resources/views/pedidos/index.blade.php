@@ -161,9 +161,10 @@
                         <td>
                             <span style="color: 
                                 {{ $pedido->fact == 'Pendiente' ? 'orange' : 
-                                  ($pedido->fact == 'LISTO EN TALLER' ? 'blue' : 
-                                   ($pedido->fact == 'LISTO PARA ENTREGA' ? 'purple' : 
-                                    ($pedido->fact == 'ENTREGADO' ? 'green' : 'black'))) }}">
+                                  ($pedido->fact == 'Separado' ? 'brown' : 
+                                   ($pedido->fact == 'Listo en Taller' ? 'blue' : 
+                                    ($pedido->fact == 'Enviado' ? 'purple' : 
+                                     ($pedido->fact == 'Entregado' ? 'green' : 'black')))) }}">
                                 {{ $pedido->fact }}
                             </span>
                         </td>
@@ -216,7 +217,16 @@
                                 
                                 <!-- Botones de cambio de estado -->
                                 @can('admin')
-                                    @if(strtoupper($pedido->fact) == 'PENDIENTE')
+                                    @if($pedido->fact == 'Pendiente')
+                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'separado']) }}" method="POST"
+                                            style="display:inline;">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="btn btn-secondary btn-sm" title="Marcar como Separado">
+                                                <i class="fas fa-hand-paper"></i>
+                                            </button>
+                                        </form>
+                                    @elseif($pedido->fact == 'Separado')
                                         <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'taller']) }}" method="POST"
                                             style="display:inline;">
                                             @csrf
@@ -225,21 +235,21 @@
                                                 <i class="fas fa-tools"></i>
                                             </button>
                                         </form>
-                                    @elseif(strtoupper($pedido->fact) == 'LISTO EN TALLER')
-                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'entrega']) }}" method="POST"
+                                    @elseif($pedido->fact == 'Listo en Taller')
+                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'enviado']) }}" method="POST"
                                             style="display:inline;">
                                             @csrf
                                             @method('PATCH')
-                                            <button type="submit" class="btn btn-info btn-sm" title="Marcar como Listo para Entrega">
-                                                <i class="fas fa-box"></i>
+                                            <button type="submit" class="btn btn-info btn-sm" title="Marcar como Enviado">
+                                                <i class="fas fa-shipping-fast"></i>
                                             </button>
                                         </form>
-                                    @elseif(strtoupper($pedido->fact) == 'LISTO PARA ENTREGA')
+                                    @elseif($pedido->fact == 'Enviado')
                                         <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'entregado']) }}" method="POST"
                                             style="display:inline;">
                                             @csrf
                                             @method('PATCH')
-                                            <button type="submit" class="btn btn-warning btn-sm" title="Marcar como Entregado">
+                                            <button type="submit" class="btn btn-success btn-sm" title="Marcar como Entregado">
                                                 <i class="fas fa-check-double"></i>
                                             </button>
                                         </form>
@@ -289,6 +299,7 @@
 </div>
 
 @push('css')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
 <style>
 .rating {
     display: flex;
@@ -353,6 +364,7 @@ input[type="checkbox"]:after {
 @section('js')
 @include('atajos')
 @parent
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
 <script>
     $(document).ready(function () {
         // Manejar el checkbox "Seleccionar todos"
@@ -537,10 +549,6 @@ input[type="checkbox"]:after {
             "language": {
                 "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json",
                 "search": "Buscar:"
-            },
-            "initComplete": function(settings, json) {
-                // Ocultar el indicador de "processing" después de la carga inicial
-                $(this).DataTable().processing(false);
             }
         });
 
@@ -597,6 +605,55 @@ input[type="checkbox"]:after {
                 },
                 error: function(xhr) {
                     alert('Error al eliminar el pedido');
+                }
+            });
+        });
+
+        // Manejar el cambio de estado de pedidos
+        $(document).on('submit', 'form[action*="update-state"]', function(e) {
+            e.preventDefault();
+            var form = $(this);
+            var button = form.find('button[type="submit"]');
+            var originalText = button.html();
+            
+            // Deshabilitar el botón temporalmente
+            button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Actualizando...');
+            
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: form.serialize(),
+                success: function(response) {
+                    // Mostrar mensaje de éxito
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Estado Actualizado!',
+                        text: 'El estado del pedido se ha actualizado correctamente.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        // Recargar la página para mostrar los cambios
+                        window.location.reload();
+                    });
+                },
+                error: function(xhr) {
+                    console.error('Error:', xhr);
+                    let errorMessage = 'Error al actualizar el estado del pedido';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.status === 419) {
+                        errorMessage = 'Sesión expirada. Por favor, recarga la página e intenta nuevamente.';
+                    }
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: errorMessage
+                    });
+                    
+                    // Restaurar el botón
+                    button.prop('disabled', false).html(originalText);
                 }
             });
         });
