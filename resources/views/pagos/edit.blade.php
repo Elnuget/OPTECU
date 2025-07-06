@@ -97,7 +97,7 @@
                 
                 <div class="form-group">
                     <label>SALDO</label>
-                    <input name="saldo" id="saldo" type="text" class="form-control" value="{{ $pago->pedido->saldo + $pago->pago }}" readonly>
+                    <input name="saldo" id="saldo" type="text" class="form-control" value="${{ number_format($pago->pedido->saldo + $pago->pago, 0, ',', '.') }}" readonly>
                 </div>
                 
                 <div class="form-group">
@@ -105,10 +105,10 @@
                     <input name="pago" 
                            required 
                            type="text" 
-                           pattern="^\d*\.?\d{0,2}$"
+                           pattern="^\d+$"
                            class="form-control" 
-                           value="{{ number_format($pago->pago, 2, '.', '') }}"
-                           onkeypress="return (event.charCode >= 48 && event.charCode <= 57) || event.charCode == 46">
+                           value="{{ number_format($pago->pago, 0, '.', '') }}"
+                           onkeypress="return (event.charCode >= 48 && event.charCode <= 57)">
                 </div>
 
                 <div class="form-group">

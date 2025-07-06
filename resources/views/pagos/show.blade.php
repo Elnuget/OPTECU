@@ -68,8 +68,8 @@
                 <li><strong>FECHA DE PAGO:</strong> {{ $pago->created_at->format('d-m-Y') }}</li>
                 <li><strong>MÉTODO DE PAGO:</strong> {{ strtoupper($pago->mediodepago->medio_de_pago) }}</li>
                 <li><strong>PEDIDO ID:</strong> {{ $pago->pedido->id }}</li>
-                <li><strong>SALDO DEL PEDIDO:</strong> {{ $pago->pedido->saldo }}</li>
-                <li><strong>PAGO:</strong> {{ $pago->pago }}</li>
+                <li><strong>SALDO DEL PEDIDO:</strong> ${{ number_format($pago->pedido->saldo, 0, ',', '.') }}</li>
+                <li><strong>PAGO:</strong> ${{ number_format($pago->pago, 0, ',', '.') }}</li>
                 @if($pago->foto)
                     <li><strong>FOTO:</strong></li>
                     <div class="mt-2 mb-2">

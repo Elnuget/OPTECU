@@ -136,9 +136,9 @@
                            id="pago"
                            required 
                            type="text" 
-                           pattern="^\d*\.?\d{0,2}$"
+                           pattern="^\d+$"
                            class="form-control {{ $errors->has('pago') ? 'is-invalid' : '' }}" 
-                           placeholder="0.00"
+                           placeholder="0"
                            value="{{ old('pago') }}"
                            onkeypress="return validarDecimal(event, this)"
                            onblur="validarMonto(this)">
@@ -147,7 +147,7 @@
                             {{ $errors->first('pago') }}
                         </div>
                     @endif
-                    <small class="form-text text-muted">INGRESE EL MONTO DEL PAGO (MÁXIMO 2 DECIMALES)</small>
+                    <small class="form-text text-muted">INGRESE EL MONTO DEL PAGO (SOLO NÚMEROS ENTEROS)</small>
                 </div>
                 
                 <div class="form-group">
@@ -243,23 +243,17 @@
         updateSaldo();
     });
 
-    // Validar entrada de números decimales
+    // Validar entrada de números enteros (sin decimales para Chile)
     function validarDecimal(event, element) {
-        // Permitir solo números y un punto decimal
+        // Permitir solo números enteros
         const charCode = event.charCode;
-        const inputValue = element.value;
         
-        // Permitir números (0-9)
+        // Permitir solo números (0-9)
         if (charCode >= 48 && charCode <= 57) {
             return true;
         }
         
-        // Permitir punto decimal (solo uno)
-        if (charCode === 46 && !inputValue.includes('.')) {
-            return true;
-        }
-        
-        // Rechazar cualquier otro carácter
+        // Rechazar cualquier otro carácter (incluyendo punto decimal)
         return false;
     }
 
@@ -272,15 +266,15 @@
         const saldo = parseFloat(saldoInput.value) || 0;
         const monto = parseFloat(montoInput.value) || 0;
         
-        // Formatear a 2 decimales
+        // Formatear sin decimales (Chile)
         if (montoInput.value) {
-            montoInput.value = monto.toFixed(2);
+            montoInput.value = Math.round(monto);
         }
         
         // Validar que el monto no sea mayor al saldo
         if (monto > saldo) {
             alert('ADVERTENCIA: EL MONTO DEL PAGO NO PUEDE SER MAYOR AL SALDO PENDIENTE');
-            montoInput.value = saldo.toFixed(2); // Asignar el máximo (saldo)
+            montoInput.value = Math.round(saldo); // Asignar el máximo (saldo)
             return false;
         }
         
