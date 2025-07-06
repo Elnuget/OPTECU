@@ -65,9 +65,10 @@
                        name="monto" 
                        id="monto"
                        class="form-control" 
-                       step="0.01" 
+                       step="1" 
                        value="{{ old('monto', $cashHistory->monto) }}" 
                        required>
+                <small class="form-text text-muted">SOLO NÚMEROS ENTEROS (SIN CENTAVOS)</small>
                 @error('monto')
                     <span class="text-danger">{{ $message }}</span>
                 @enderror
