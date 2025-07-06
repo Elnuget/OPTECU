@@ -155,53 +155,100 @@ class TelemarketingController extends Controller
         try {
             $request->validate([
                 'mensaje' => 'required|string|max:1000',
-                'tipo' => 'required|string'
+                'tipo' => 'nullable|string'
             ]);
 
+            // Verificar si tenemos un tipo o asignar uno predeterminado
+            $tipo = $request->tipo ?? 'telemarketing';
+            
+            // Log detallado para depuración
+            Log::info('Datos recibidos para enviar mensaje:', [
+                'request_all' => $request->all(),
+                'tipo_from_request' => $request->tipo,
+                'tipo_assigned' => $tipo,
+                'cliente_id' => $clienteId
+            ]);
+
+            // Log para depuración
+            Log::info('Enviando mensaje a clienteId: ' . $clienteId);
+            Log::info('Datos recibidos: ', $request->all());
+
             // Extraer tipo e ID real del clienteId compuesto
-            $parts = explode('_', $clienteId);
-            $tipo = $parts[0];
-            $realId = $parts[1];
+            if (strpos($clienteId, '_') !== false) {
+                $parts = explode('_', $clienteId);
+                $tipo = $parts[0];
+                $realId = $parts[1];
+                Log::info("ID separado: tipo=$tipo, realId=$realId");
+            } else {
+                // Si no tiene formato tipo_id, asumimos que es un cliente por defecto
+                $tipo = 'cliente';
+                $realId = $clienteId;
+                Log::info("ID sin formato compuesto, usando cliente como tipo por defecto. realId=$realId");
+            }
 
             // Obtener información del cliente/paciente
+            $cliente = null;
             if ($tipo === 'cliente') {
                 $cliente = DB::table('pedidos')
                     ->where('id', $realId)
                     ->select('cliente as nombre', DB::raw('NULL as apellidos'), 'celular', 'empresa_id')
                     ->first();
+                
+                Log::info("Buscando cliente en pedidos: ", ['id' => $realId, 'encontrado' => !is_null($cliente)]);
             } else {
                 $cliente = DB::table('historiales_clinicos')
                     ->where('id', $realId)
                     ->select('nombres as nombre', 'apellidos', 'celular', 'empresa_id')
                     ->first();
+                
+                Log::info("Buscando paciente en historiales: ", ['id' => $realId, 'encontrado' => !is_null($cliente)]);
             }
 
             if (!$cliente) {
-                return response()->json(['error' => 'Cliente no encontrado'], 404);
+                Log::warning("Cliente/paciente no encontrado: tipo=$tipo, id=$realId");
+                return response()->json(['error' => 'Cliente no encontrado. Por favor refresque la página e intente nuevamente.'], 404);
             }
 
             // Registrar el mensaje enviado
-            MensajesEnviados::create([
-                'cliente_id' => $realId,
-                'tipo_cliente' => $tipo,
-                'nombres' => $cliente->nombre,
-                'apellidos' => $cliente->apellidos ?? '',
-                'celular' => $cliente->celular,
+            $mensajeData = [
+                'tipo' => $tipo, // Asignamos el tipo al campo requerido
                 'mensaje' => $request->mensaje,
-                'tipo_mensaje' => $request->tipo,
+                'tipo_mensaje' => $tipo, // Usamos el mismo valor para tipo_mensaje
                 'fecha_envio' => now(),
                 'usuario_id' => auth()->id(),
-                'empresa_id' => $cliente->empresa_id
-            ]);
+                'empresa_id' => $cliente->empresa_id ?? null
+            ];
+
+            // Asignar la relación correspondiente según el tipo
+            if ($tipo === 'cliente') {
+                $mensajeData['pedido_id'] = $realId;
+                $mensajeData['historial_id'] = null;
+            } else {
+                $mensajeData['historial_id'] = $realId;
+                $mensajeData['pedido_id'] = null;
+            }
+
+            // Comprobar que la tabla y modelo existen
+            if (!class_exists(MensajesEnviados::class)) {
+                Log::error("La clase MensajesEnviados no existe");
+                return response()->json(['error' => 'Error de configuración del sistema.'], 500);
+            }
+
+            $mensaje = MensajesEnviados::create($mensajeData);
+            Log::info("Mensaje creado: ", ['id' => $mensaje->id]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Mensaje registrado correctamente'
             ]);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Error de validación al enviar mensaje: ' . json_encode($e->errors()));
+            return response()->json(['error' => 'Datos inválidos: ' . implode(', ', $e->errors())], 422);
         } catch (\Exception $e) {
             Log::error('Error al enviar mensaje de telemarketing: ' . $e->getMessage());
-            return response()->json(['error' => 'Error interno del servidor'], 500);
+            Log::error($e->getTraceAsString());
+            return response()->json(['error' => 'Error interno del servidor: ' . $e->getMessage()], 500);
         }
     }
 
@@ -337,6 +384,33 @@ class TelemarketingController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Error al obtener historial de telemarketing: ' . $e->getMessage());
+            return response()->json(['error' => 'Error interno del servidor'], 500);
+        }
+    }
+
+    public function obtenerMensajePredeterminado()
+    {
+        try {
+            // Buscar mensaje predeterminado para telemarketing
+            $mensajePredeterminado = MensajePredeterminado::where('tipo', 'telemarketing')
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if ($mensajePredeterminado) {
+                return response()->json([
+                    'success' => true,
+                    'mensaje' => $mensajePredeterminado->mensaje
+                ]);
+            }
+
+            // Si no hay mensaje predeterminado, devolver respuesta vacía
+            return response()->json([
+                'success' => true,
+                'mensaje' => null
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener mensaje predeterminado: ' . $e->getMessage());
             return response()->json(['error' => 'Error interno del servidor'], 500);
         }
     }

@@ -248,8 +248,9 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
             ->name('mensajes.recordatorios');
     });
     
-    // Ruta para mensajes predeterminados
+    // Rutas para mensajes predeterminados
     Route::post('/configuraciones/mensajes-predeterminados', [App\Http\Controllers\ConfiguracionController::class, 'guardarMensajePredeterminado'])->name('configuraciones.mensajes-predeterminados');
+    Route::get('/configuraciones/mensajes-predeterminados/{tipo}', [TelemarketingController::class, 'obtenerMensajePredeterminado'])->name('configuraciones.mensajes-predeterminados.tipo');
 
     Route::resource('prestamos', PrestamoController::class);
 
@@ -272,10 +273,12 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         
         Route::get('/{clienteId}/historial', [TelemarketingController::class, 'obtenerHistorial'])
             ->name('telemarketing.historial');
+            
+        // Ruta para obtener mensaje predeterminado de telemarketing
+        Route::get('/configuraciones/mensaje-predeterminado', [TelemarketingController::class, 'obtenerMensajePredeterminado'])
+            ->name('telemarketing.mensaje-predeterminado');
     });
     
-    // Ruta para obtener mensaje predeterminado de telemarketing
-    Route::get('/configuraciones/mensajes-predeterminados/telemarketing', [App\Http\Controllers\ConfiguracionController::class, 'obtenerMensajePredeterminado'])->name('configuraciones.mensajes-predeterminados.telemarketing');
 });
 
 // Rutas públicas para calificación

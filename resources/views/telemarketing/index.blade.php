@@ -108,7 +108,7 @@ use App\Models\MensajePredeterminado;
                                 @endif
                             </td>
                             <td>
-                                @if($cliente->celular)
+                            @if($cliente->celular)
                                     <button type="button" 
                                             class="btn btn-success btn-sm btn-enviar-mensaje mr-1"
                                             data-cliente-id="{{ $cliente->id }}"
@@ -297,6 +297,7 @@ El equipo de [EMPRESA]</textarea>
 @stop
 
 @section('css')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
 <style>
     .table th, .table td {
         text-transform: uppercase !important;
@@ -339,6 +340,7 @@ El equipo de [EMPRESA]</textarea>
 @stop
 
 @section('js')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
 <script>
 // Función para detectar si es dispositivo móvil
 function isMobileDevice() {
@@ -387,10 +389,8 @@ function mostrarModalMensaje(clienteId, nombre, apellidos, tipo) {
     $('#clienteId').val(clienteId);
     $('#nombreCliente').text((nombre + ' ' + apellidos).toUpperCase());
     
-    // Obtener mensaje predeterminado
-    let mensajePredeterminado = $('#mensajePredeterminado').val();
-    if (!mensajePredeterminado || mensajePredeterminado.trim() === '') {
-        mensajePredeterminado = `¡Hola ${nombre}! 👋
+    // Preparar mensaje predeterminado por defecto (en caso de error)
+    let mensajePredeterminadoPorDefecto = `¡Hola ${nombre}! 👋
 
 Esperamos que se encuentre muy bien.
 
@@ -410,59 +410,155 @@ Desde nuestra óptica queremos mantener el contacto con nuestros estimados clien
 
 Saludos cordiales,
 El equipo de Óptica`;
-    } else {
+    
+    // Obtener el mensaje del textarea como respaldo
+    let mensajeDelTextarea = $('#mensajePredeterminado').val();
+    
+    // Intentar cargar el mensaje predeterminado desde la BD con manejo de errores mejorado
+    try {
+        $.ajax({
+            url: '/telemarketing/configuraciones/mensaje-predeterminado',
+            method: 'GET',
+            timeout: 5000, // Tiempo máximo de espera de 5 segundos
+            success: function(response) {
+                let mensajePredeterminado;
+                
+                if (response && response.mensaje && response.mensaje.trim() !== '') {
+                    mensajePredeterminado = response.mensaje;
+                } else if (mensajeDelTextarea && mensajeDelTextarea.trim() !== '') {
+                    mensajePredeterminado = mensajeDelTextarea;
+                } else {
+                    mensajePredeterminado = mensajePredeterminadoPorDefecto;
+                }
+                
+                // Reemplazar variables en el mensaje
+                mensajePredeterminado = mensajePredeterminado
+                    .replace(/\[NOMBRE\]/g, nombre)
+                    .replace(/\[APELLIDOS\]/g, apellidos)
+                    .replace(/\[EMPRESA\]/g, 'Óptica');
+                
+                $('#mensajePersonalizado').val(mensajePredeterminado);
+            },
+            error: function(xhr, status, error) {
+                console.log('Error al cargar mensaje predeterminado:', status, error);
+                
+                // En caso de error, usar el valor del campo o el mensaje por defecto
+                let mensajePredeterminado;
+                
+                if (mensajeDelTextarea && mensajeDelTextarea.trim() !== '') {
+                    mensajePredeterminado = mensajeDelTextarea;
+                } else {
+                    mensajePredeterminado = mensajePredeterminadoPorDefecto;
+                }
+                
+                // Reemplazar variables en el mensaje
+                mensajePredeterminado = mensajePredeterminado
+                    .replace(/\[NOMBRE\]/g, nombre)
+                    .replace(/\[APELLIDOS\]/g, apellidos)
+                    .replace(/\[EMPRESA\]/g, 'Óptica');
+                
+                $('#mensajePersonalizado').val(mensajePredeterminado);
+            },
+            complete: function() {
+                // Mostrar el modal después de cargar el mensaje
+                $('#enviarMensajeModal').modal('show');
+            }
+        });
+    } catch (e) {
+        console.error('Error al realizar la petición AJAX:', e);
+        
+        // Si hay un error en la ejecución de AJAX, usar mensaje por defecto
+        let mensajePredeterminado = mensajeDelTextarea || mensajePredeterminadoPorDefecto;
+        
         // Reemplazar variables en el mensaje
         mensajePredeterminado = mensajePredeterminado
             .replace(/\[NOMBRE\]/g, nombre)
             .replace(/\[APELLIDOS\]/g, apellidos)
             .replace(/\[EMPRESA\]/g, 'Óptica');
+        
+        $('#mensajePersonalizado').val(mensajePredeterminado);
+        $('#enviarMensajeModal').modal('show');
     }
-    
-    $('#mensajePersonalizado').val(mensajePredeterminado);
-    $('#enviarMensajeModal').modal('show');
 }
 
 function guardarMensajePredeterminado() {
     const mensaje = $('#mensajePredeterminado').val();
     
+    // Validar que el mensaje no esté vacío
+    if (!mensaje || mensaje.trim() === '') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'El mensaje no puede estar vacío'
+        });
+        return;
+    }
+    
+    // Deshabilitar el botón mientras se procesa
+    const botonGuardar = $('#editarMensajeModal .btn-primary');
+    botonGuardar.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+    
     // Guardar mensaje en la base de datos
-    $.ajax({
-        url: '/configuraciones/mensajes-predeterminados',
-        method: 'POST',
-        data: {
-            _token: $('meta[name="csrf-token"]').attr('content'),
-            tipo: 'telemarketing',
-            mensaje: mensaje
-        },
-        success: function(response) {
-            $('#editarMensajeModal').modal('hide');
-            Swal.fire({
-                icon: 'success',
-                title: '¡Guardado!',
-                text: 'El mensaje predeterminado ha sido actualizado.',
-                timer: 2000,
-                timerProgressBar: true
-            });
-        },
-        error: function(xhr) {
-            let mensaje = 'Error al guardar el mensaje';
-            if (xhr.responseJSON && xhr.responseJSON.error) {
-                mensaje = xhr.responseJSON.error;
+    try {
+        $.ajax({
+            url: '/configuraciones/mensajes-predeterminados',
+            method: 'POST',
+            timeout: 10000, // 10 segundos de timeout
+            data: {
+                _token: $('meta[name="csrf-token"]').attr('content'),
+                tipo: 'telemarketing',
+                mensaje: mensaje
+            },
+            success: function(response) {
+                $('#editarMensajeModal').modal('hide');
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Guardado!',
+                    text: 'El mensaje predeterminado ha sido actualizado.',
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+            },
+            error: function(xhr, status, errorThrown) {
+                console.error('Error al guardar mensaje:', status, errorThrown);
+                
+                let mensaje = 'Error al guardar el mensaje';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    mensaje = xhr.responseJSON.error;
+                } else if (status === 'timeout') {
+                    mensaje = 'El servidor tardó demasiado en responder. Intente nuevamente.';
+                } else if (status === 'error') {
+                    mensaje = 'Error en la conexión. Verifique su conexión a internet.';
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: mensaje
+                });
+            },
+            complete: function() {
+                // Restaurar el botón
+                botonGuardar.prop('disabled', false).html('GUARDAR MENSAJE');
             }
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: mensaje
-            });
-        }
-    });
+        });
+    } catch (e) {
+        console.error('Error en la ejecución de AJAX:', e);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error Inesperado',
+            text: 'Ocurrió un error al intentar guardar el mensaje.'
+        });
+        botonGuardar.prop('disabled', false).html('GUARDAR MENSAJE');
+    }
 }
 
 function enviarMensaje() {
     const clienteId = $('#clienteId').val();
     const mensaje = $('#mensajePersonalizado').val();
     const boton = $(`.btn-enviar-mensaje[data-cliente-id="${clienteId}"]`);
+    
+    console.log('Enviando mensaje a cliente ID:', clienteId);
     
     // Validar mensaje
     if (!mensaje || mensaje.trim() === '') {
@@ -488,67 +584,108 @@ function enviarMensaje() {
     
     // Deshabilitar botón temporalmente
     const botonEnviar = $('#enviarMensajeModal .btn-success');
-    botonEnviar.prop('disabled', true);
+    botonEnviar.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Enviando...');
 
-    // Registrar el mensaje en la base de datos y enviar
-    $.ajax({
-        url: `/telemarketing/${clienteId}/enviar-mensaje`,
-        method: 'POST',
-        data: {
-            _token: $('meta[name="csrf-token"]').attr('content'),
-            mensaje: mensaje,
-            tipo: 'telemarketing'
-        },
-        success: function(response) {
-            // Actualizar el botón inmediatamente
-            boton.removeClass('btn-success')
-                 .addClass('btn-warning')
-                 .html('<i class="fab fa-whatsapp"></i> VOLVER A ENVIAR');
-            
-            // Generar URL de WhatsApp optimizada
-            const whatsappURL = generateWhatsAppURL(celular, mensaje);
-            
-            // Abrir WhatsApp
-            const whatsappWindow = window.open(whatsappURL, '_blank');
-            
-            // Verificar si se abrió correctamente y ofrecer alternativa
-            setTimeout(() => {
-                if (!whatsappWindow || whatsappWindow.closed) {
-                    // Si no se abrió, intentar con URL alternativa
-                    const alternativeURL = `https://web.whatsapp.com/send?phone=${formatChileanPhone(celular)}&text=${encodeURIComponent(mensaje)}`;
-                    window.open(alternativeURL, '_blank');
+    try {
+        // Registrar el mensaje en la base de datos y enviar
+        $.ajax({
+            url: `/telemarketing/${clienteId}/enviar-mensaje`,
+            method: 'POST',
+            timeout: 10000, // 10 segundos de timeout
+            data: {
+                _token: $('meta[name="csrf-token"]').attr('content'),
+                mensaje: mensaje,
+                tipo: 'telemarketing' // Siempre enviamos un tipo
+            },
+            success: function(response) {
+                // Actualizar el botón inmediatamente
+                boton.removeClass('btn-success')
+                    .addClass('btn-warning')
+                    .html('<i class="fab fa-whatsapp"></i> VOLVER A ENVIAR');
+                
+                // Generar URL de WhatsApp optimizada
+                const whatsappURL = generateWhatsAppURL(celular, mensaje);
+                
+                // Abrir WhatsApp
+                const whatsappWindow = window.open(whatsappURL, '_blank');
+                
+                // Verificar si se abrió correctamente y ofrecer alternativa
+                setTimeout(() => {
+                    if (!whatsappWindow || whatsappWindow.closed) {
+                        // Si no se abrió, intentar con URL alternativa
+                        const alternativeURL = `https://web.whatsapp.com/send?phone=${formatChileanPhone(celular)}&text=${encodeURIComponent(mensaje)}`;
+                        window.open(alternativeURL, '_blank');
+                    }
+                }, 1000);
+                
+                // Cerrar el modal primero para evitar problemas
+                $('#enviarMensajeModal').modal('hide');
+                
+                // Mostrar mensaje de éxito
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡WhatsApp Abierto!',
+                    text: 'Se ha abierto WhatsApp con el mensaje de telemarketing.',
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            },
+            error: function(xhr, status, error) {
+                console.error('Error al enviar mensaje:', status, error);
+                let errorMessage = 'Error al enviar el mensaje';
+                
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMessage = xhr.responseJSON.error;
+                } else if (status === 'timeout') {
+                    errorMessage = 'El servidor tardó demasiado en responder. Intente nuevamente.';
+                } else if (status === 'error') {
+                    errorMessage = 'Error en la conexión. Verifique su conexión a internet.';
                 }
-            }, 1000);
-            
-            // Cerrar el modal
-            $('#enviarMensajeModal').modal('hide');
-            
-            // Mostrar mensaje de éxito
-            Swal.fire({
-                icon: 'success',
-                title: '¡WhatsApp Abierto!',
-                text: 'Se ha abierto WhatsApp con el mensaje de telemarketing.',
-                timer: 3000,
-                timerProgressBar: true
-            });
-        },
-        error: function(xhr) {
-            let errorMessage = 'Error al enviar el mensaje';
-            if (xhr.responseJSON && xhr.responseJSON.error) {
-                errorMessage = xhr.responseJSON.error;
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: errorMessage
+                });
+                
+                // Restaurar el botón
+                botonEnviar.html('<i class="fab fa-whatsapp"></i> ENVIAR POR WHATSAPP');
+            },
+            complete: function() {
+                // Rehabilitar botón
+                botonEnviar.prop('disabled', false);
+                
+                // Intentar actualizar el mensaje predeterminado para el próximo uso
+                // (Lo hacemos después de haber completado la acción principal para evitar bloqueos)
+                try {
+                    $.ajax({
+                        url: '/telemarketing/configuraciones/mensaje-predeterminado',
+                        method: 'GET',
+                        timeout: 5000,
+                        success: function(response) {
+                            if (response && response.mensaje) {
+                                // Lo guardamos para futuras referencias pero no hacemos nada más
+                                console.log('Mensaje predeterminado actualizado para próximo uso');
+                            }
+                        },
+                        error: function(xhr, status, err) {
+                            console.log('No se pudo actualizar el mensaje predeterminado:', status);
+                        }
+                    });
+                } catch (e) {
+                    console.error('Error al intentar actualizar mensaje predeterminado:', e);
+                }
             }
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: errorMessage
-            });
-        },
-        complete: function() {
-            // Rehabilitar botón
-            botonEnviar.prop('disabled', false);
-        }
-    });
+        });
+    } catch (e) {
+        console.error('Error en la ejecución de AJAX:', e);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error Inesperado',
+            text: 'Ocurrió un error al intentar enviar el mensaje.'
+        });
+        botonEnviar.prop('disabled', false).html('<i class="fab fa-whatsapp"></i> ENVIAR POR WHATSAPP');
+    }
 }
 
 function mostrarHistorial(clienteId, nombre, apellidos, tipo) {
@@ -660,19 +797,24 @@ $(document).ready(function() {
     });
     
     // Cargar mensaje predeterminado desde el servidor
-    $.ajax({
-        url: '/configuraciones/mensajes-predeterminados/telemarketing',
-        method: 'GET',
-        success: function(response) {
-            if (response.mensaje) {
-                $('#mensajePredeterminado').val(response.mensaje);
+    try {
+        $.ajax({
+            url: '/telemarketing/configuraciones/mensaje-predeterminado',
+            method: 'GET',
+            timeout: 5000,
+            success: function(response) {
+                if (response && response.mensaje) {
+                    $('#mensajePredeterminado').val(response.mensaje);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.warn('No se pudo cargar el mensaje predeterminado:', status, error);
+                // No hacemos nada más, usaremos el valor por defecto del textarea
             }
-        },
-        error: function() {
-            // Si no hay mensaje predeterminado, usar el valor por defecto del textarea
-            console.log('No se pudo cargar el mensaje predeterminado');
-        }
-    });
+        });
+    } catch (e) {
+        console.error('Error al intentar cargar mensaje predeterminado:', e);
+    }
 });
 </script>
 @stop
