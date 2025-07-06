@@ -120,7 +120,7 @@
     @foreach($pedidos as $pedido)
     <div class="pedido-container">
         <div class="header">
-            <h1>ESCLERÓPTICA - VENTA {{ $pedido->id }}</h1>
+            <h1>L BARBOSA - VENTA {{ $pedido->id }}</h1>
             <p>Orden: {{ $pedido->numero_orden }} | Fecha: {{ date('d-m-Y', strtotime($pedido->fecha)) }}</p>
         </div>
 

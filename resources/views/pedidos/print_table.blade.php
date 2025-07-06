@@ -90,7 +90,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>ESCLERÓPTICA - RESUMEN DE PEDIDOS</h1>
+        <h1>L BARBOSA - RESUMEN DE PEDIDOS</h1>
         <p>Fecha de impresión: {{ date('d-m-Y') }}</p>
         <p>Cantidad de pedidos: {{ $pedidos->count() }}</p>
     </div>

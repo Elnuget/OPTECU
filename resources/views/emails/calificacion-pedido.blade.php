@@ -1,7 +1,7 @@
 @component('mail::message')
 # Hola {{ $pedido->cliente }}
 
-Gracias por tu compra en ESCLERÓPTICA. Nos gustaría conocer tu opinión sobre nuestro servicio.
+Gracias por tu compra en L BARBOSA. Nos gustaría conocer tu opinión sobre nuestro servicio.
 
 Por favor, toma un momento para calificar tu experiencia haciendo clic en el siguiente botón:
 

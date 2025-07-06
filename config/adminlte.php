@@ -16,7 +16,7 @@ return [
 
     'title' => 'Login',
     'title_prefix' => '',
-    'title_postfix' => '| ESCLEROPTICA',
+    'title_postfix' => '| L BARBOSA',
 
     /*
     |--------------------------------------------------------------------------
@@ -45,7 +45,7 @@ return [
     |
     */
 
-    'logo' => '<b>Escleróptica</b>',
+    'logo' => '<b>L BARBOSA</b>',
     'logo_img' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
     
 
