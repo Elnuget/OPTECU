@@ -1160,12 +1160,13 @@ class PedidosController extends Controller
         $sheet->getRowDimension('1')->setRowHeight(200); // Altura suficiente para el texto vertical
         
         // Configurar las columnas para los pedidos con sus respectivos dropdowns
-        // Pedido 1: B (empresa), C (info), D (dropdown)
-        // Pedido 2: F (empresa), G (info), H (dropdown)  
-        // Pedido 3: J (empresa), K (info), L (dropdown)
-        $columnas = ['B', 'F', 'J']; // 3 pedidos por fila
-        $columnasInfo = ['C', 'G', 'K']; // Información del pedido
-        $columnasDropdown = ['D', 'H', 'L']; // Dropdowns
+        // Pedido 1: B (empresa), C (info), D (vacía), E (dropdown)
+        // Pedido 2: H (empresa), I (info), J (vacía), K (dropdown)  
+        // Pedido 3: N (empresa), O (info), P (vacía), Q (dropdown)
+        $columnas = ['B', 'H', 'N']; // 3 pedidos por fila
+        $columnasInfo = ['C', 'I', 'O']; // Información del pedido
+        $columnasVacias = ['D', 'J', 'P']; // Columnas vacías
+        $columnasDropdown = ['E', 'K', 'Q']; // Dropdowns
         $filaActual = 1;
         $pedidoEnFila = 0;
         
@@ -1271,6 +1272,7 @@ class PedidosController extends Controller
             // Aplicar estilo al combobox
             $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
             $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setTextRotation(90); // Hacer el texto vertical
             $sheet->getStyle($columnaCombo . $fila)->getFont()->setBold(true);
             
             // Ajustar ancho de columnas automáticamente basado en el contenido
