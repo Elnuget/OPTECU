@@ -1144,7 +1144,7 @@ class PedidosController extends Controller
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         
-        // Configurar la columna A con texto vertical
+        // Configurar la columna A con texto vertical para la primera fila
         $sheet->setCellValue('A1', 'DE: L BARBOSA SPA 77.219.776-4');
         $sheet->getStyle('A1')->getAlignment()->setTextRotation(90);
         $sheet->getStyle('A1')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
@@ -1159,15 +1159,31 @@ class PedidosController extends Controller
         }
         $sheet->getRowDimension('1')->setRowHeight(200); // Altura suficiente para el texto vertical
         
-        // Configurar las columnas para los pedidos
-        $columnas = ['B', 'H', 'N']; // 3 pedidos por fila
+        // Configurar las columnas para los pedidos con sus respectivos dropdowns
+        // Pedido 1: B (empresa), C (info), D (dropdown)
+        // Pedido 2: F (empresa), G (info), H (dropdown)  
+        // Pedido 3: J (empresa), K (info), L (dropdown)
+        $columnas = ['B', 'F', 'J']; // 3 pedidos por fila
+        $columnasInfo = ['C', 'G', 'K']; // Información del pedido
+        $columnasDropdown = ['D', 'H', 'L']; // Dropdowns
         $filaActual = 1;
         $pedidoEnFila = 0;
         
         foreach ($pedidos as $index => $pedido) {
             // Determinar posición
             $columnaBase = $columnas[$pedidoEnFila];
+            $siguienteColumna = $columnasInfo[$pedidoEnFila];
+            $columnaCombo = $columnasDropdown[$pedidoEnFila];
             $fila = $filaActual;
+            
+            // Colocar el texto "DE: L BARBOSA SPA 77.219.776-4" en la columna A para cada fila de pedidos
+            if ($pedidoEnFila == 0) { // Solo en la primera posición de cada fila
+                $sheet->setCellValue('A' . $fila, 'DE: L BARBOSA SPA 77.219.776-4');
+                $sheet->getStyle('A' . $fila)->getAlignment()->setTextRotation(90);
+                $sheet->getStyle('A' . $fila)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+                $sheet->getStyle('A' . $fila)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('A' . $fila)->getFont()->setBold(true);
+            }
             
             // Información del pedido
             $empresaNombre = $pedido->empresa ? $pedido->empresa->nombre : 'Sin empresa';
@@ -1229,16 +1245,38 @@ class PedidosController extends Controller
             $sheet->getStyle($columnaBase . $fila)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             
             // Colocar información del pedido en la siguiente columna
-            $siguienteColumna = chr(ord($columnaBase) + 1);
             $sheet->setCellValue($siguienteColumna . $fila, $infoPedido);
             $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setWrapText(true);
             $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setTextRotation(90);
-            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP);
+            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
             $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            
+            // Crear combobox en la columna designada
+            $sheet->setCellValue($columnaCombo . $fila, 'TIENDA'); // Valor por defecto
+            
+            // Crear el dropdown/combobox
+            $validation = $sheet->getCell($columnaCombo . $fila)->getDataValidation();
+            $validation->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+            $validation->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
+            $validation->setAllowBlank(false);
+            $validation->setShowInputMessage(true);
+            $validation->setShowErrorMessage(true);
+            $validation->setShowDropDown(true);
+            $validation->setErrorTitle('Error de entrada');
+            $validation->setError('Valor no está en la lista');
+            $validation->setPromptTitle('Seleccionar opción de envío');
+            $validation->setPrompt('Seleccione una opción de envío');
+            $validation->setFormula1('"TIENDA,CORREOS DE CHILE,CHILEXPRESS,STARKEN"');
+            
+            // Aplicar estilo al combobox
+            $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+            $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle($columnaCombo . $fila)->getFont()->setBold(true);
             
             // Ajustar ancho de columnas automáticamente basado en el contenido
             $sheet->getColumnDimension($columnaBase)->setAutoSize(true);
             $sheet->getColumnDimension($siguienteColumna)->setAutoSize(true);
+            $sheet->getColumnDimension($columnaCombo)->setAutoSize(true);
             
             // Establecer un ancho mínimo para las columnas
             if ($sheet->getColumnDimension($columnaBase)->getWidth() < 8) {
@@ -1247,10 +1285,13 @@ class PedidosController extends Controller
             if ($sheet->getColumnDimension($siguienteColumna)->getWidth() < 12) {
                 $sheet->getColumnDimension($siguienteColumna)->setWidth(12);
             }
+            if ($sheet->getColumnDimension($columnaCombo)->getWidth() < 15) {
+                $sheet->getColumnDimension($columnaCombo)->setWidth(15);
+            }
             
             // Ajustar altura de la fila automáticamente basado en el contenido
             $numeroLineas = substr_count($infoPedido, "\n") + 1;
-            $alturaCalculada = max(60, $numeroLineas * 12); // Mínimo 60, máximo basado en líneas
+            $alturaCalculada = max(200, $numeroLineas * 12); // Mínimo 200 para acomodar el texto vertical
             $sheet->getRowDimension($fila)->setRowHeight($alturaCalculada);
             
             // Incrementar contador de pedidos en fila
@@ -1262,6 +1303,24 @@ class PedidosController extends Controller
                 $filaActual += 1; // Solo aumentar una fila ya que cada fila se ajusta automáticamente
             }
         }
+        
+        // Aplicar bordes a todo el rango de datos generado
+        $ultimaColumna = 'Q'; // Hasta la columna Q
+        $ultimaFila = $filaActual;
+        $rangoCompleto = 'A1:' . $ultimaColumna . $ultimaFila;
+        
+        // Configurar el estilo de borde
+        $styleBorder = [
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['argb' => 'FF000000'], // Negro
+                ],
+            ],
+        ];
+        
+        // Aplicar bordes al rango completo
+        $sheet->getStyle($rangoCompleto)->applyFromArray($styleBorder);
         
         // No necesitamos ajustar altura manualmente ya que se hace automáticamente arriba
         
