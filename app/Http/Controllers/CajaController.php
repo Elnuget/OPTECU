@@ -8,7 +8,6 @@ use App\Models\Pago;
 use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 
 class CajaController extends Controller
@@ -102,21 +101,6 @@ class CajaController extends Controller
             'user_id' => Auth::id(),
             'empresa_id' => $request->empresa_id
         ]);
-
-        // Send email notification
-        $mensaje = "Se ha registrado un nuevo movimiento en caja.\nMotivo: {$caja->motivo}\nValor: {$caja->valor}";
-        $empresas = Empresa::all();
-        
-        if($empresas->isNotEmpty()) {
-            foreach($empresas as $empresa) {
-                Mail::raw($mensaje, function ($message) use ($empresa) {
-                    $message->to($empresa->correo)
-                            ->subject('Nuevo Movimiento en Caja');
-                });
-            }
-        } else {
-            Log::info('No registered companies found to send email notifications for cash movement');
-        }
 
         return redirect()->back()->with('success', 'Movimiento registrado exitosamente');
     }

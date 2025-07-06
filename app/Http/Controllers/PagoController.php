@@ -8,8 +8,6 @@ use Illuminate\Http\Request;
 use App\Models\Pago; // Ensure the Pago model is correctly referenced
 use App\Models\Caja;
 use App\Models\Empresa;
-use Illuminate\Support\Facades\Mail;
-use App\Mail\PagoNotification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -200,22 +198,6 @@ class PagoController extends Controller
 
             // Confirmar transacción
             \DB::commit();
-
-            // Send email notification (después de confirmar la transacción)
-            try {
-                $empresas = Empresa::all();
-                if($empresas->isNotEmpty()) {
-                    foreach($empresas as $empresa) {
-                        Mail::to($empresa->correo)->send(new PagoNotification($nuevoPago));
-                        Log::info('Email sent successfully to ' . $empresa->correo . ' for payment ID: ' . $nuevoPago->id);
-                    }
-                } else {
-                    Log::info('No registered companies found to send email notifications');
-                }
-            } catch (\Exception $e) {
-                Log::error('Failed to send email for payment ID: ' . $nuevoPago->id . '. Error: ' . $e->getMessage());
-                // No fallar la creación del pago por error de email
-            }
 
             // Redirigir al index de pedidos en lugar de pagos
             return redirect()->route('pedidos.index')->with([
