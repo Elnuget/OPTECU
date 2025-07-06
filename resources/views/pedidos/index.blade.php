@@ -111,6 +111,9 @@
                     <button type="button" class="btn btn-success" id="imprimirSeleccionados" disabled>
                         <i class="fas fa-print"></i> Imprimir Seleccionados
                     </button>
+                    <button type="button" class="btn btn-warning" id="generarExcel" disabled>
+                        <i class="fas fa-file-excel"></i> Generar Excel
+                    </button>
                     <button type="button" class="btn btn-info" id="imprimirCristaleria" disabled>
                         <i class="fas fa-eye"></i> Imprimir Cristalería
                     </button>
@@ -378,6 +381,7 @@ input[type="checkbox"]:after {
         function toggleImprimirButton() {
             var checkedCheckboxes = $('.pedido-checkbox:checked').length;
             $('#imprimirSeleccionados').prop('disabled', checkedCheckboxes === 0);
+            $('#generarExcel').prop('disabled', checkedCheckboxes === 0);
             $('#imprimirCristaleria').prop('disabled', checkedCheckboxes === 0);
         }
 
@@ -481,6 +485,45 @@ input[type="checkbox"]:after {
             var form = $('<form>', {
                 'method': 'POST',
                 'action': '{{ route("pedidos.print.cristaleria") }}',
+                'target': '_blank'
+            });
+            
+            // Agregar token CSRF
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': '_token',
+                'value': $('meta[name="csrf-token"]').attr('content')
+            }));
+            
+            // Agregar IDs seleccionados
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'ids',
+                'value': selectedIds.join(',')
+            }));
+            
+            // Agregar al body y enviar
+            $('body').append(form);
+            form.submit();
+            form.remove();
+        });
+
+        // Manejar clic en el botón de generar Excel
+        $('#generarExcel').click(function() {
+            var selectedIds = [];
+            $('.pedido-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            if (selectedIds.length === 0) {
+                alert('Por favor seleccione al menos un pedido para generar Excel');
+                return;
+            }
+            
+            // Crear formulario para envío POST
+            var form = $('<form>', {
+                'method': 'POST',
+                'action': '{{ route("pedidos.print.excel") }}',
                 'target': '_blank'
             });
             

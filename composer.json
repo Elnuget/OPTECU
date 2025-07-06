@@ -20,6 +20,7 @@
         "laravel/sanctum": "^2.6",
         "laravel/tinker": "^2.5",
         "livewire/livewire": "^2.0",
+        "phpoffice/phpspreadsheet": "^4.4",
         "pragmarx/version": "^1.3"
     },
     "require-dev": {

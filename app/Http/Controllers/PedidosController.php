@@ -1098,4 +1098,154 @@ class PedidosController extends Controller
         return view('pedidos.print-cristaleria', ['pedidos' => $pedidosConLunas]);
     }
 
+    /**
+     * Generar archivo Excel de pedidos seleccionados
+     */
+    public function printExcel(Request $request)
+    {
+        // Obtener IDs desde GET o POST
+        $ids = $request->input('ids');
+        
+        // Validar que se reciban IDs
+        if (empty($ids)) {
+            return redirect()->back()->with([
+                'tipo' => 'alert-danger',
+                'mensaje' => 'No se seleccionaron pedidos para generar Excel'
+            ]);
+        }
+
+        // Convertir IDs de string a array si es necesario
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+        
+        // Obtener los pedidos con sus relaciones
+        $pedidos = Pedido::with(['inventarios', 'lunas', 'empresa', 'pagos.mediodepago'])
+            ->whereIn('id', $ids)
+            ->orderBy('numero_orden', 'desc')
+            ->get();
+
+        if ($pedidos->isEmpty()) {
+            return redirect()->back()->with([
+                'tipo' => 'alert-danger',
+                'mensaje' => 'No se encontraron pedidos para generar Excel'
+            ]);
+        }
+
+        // Generar el archivo Excel
+        return $this->generateExcelFile($pedidos);
+    }
+
+    /**
+     * Generar el archivo Excel con el formato específico
+     */
+    private function generateExcelFile($pedidos)
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        
+        // Configurar la columna A con texto vertical
+        $sheet->setCellValue('A1', 'DE: L BARBOSA SPA 77.219.776-4');
+        $sheet->getStyle('A1')->getAlignment()->setTextRotation(90);
+        $sheet->getStyle('A1')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A1')->getFont()->setBold(true);
+        
+        // Ajustar ancho de columna A
+        $sheet->getColumnDimension('A')->setWidth(5);
+        
+        // Configurar las columnas para los pedidos
+        $columnas = ['B', 'H', 'N']; // 3 pedidos por fila
+        $filaActual = 1;
+        $pedidoEnFila = 0;
+        
+        foreach ($pedidos as $index => $pedido) {
+            // Determinar posición
+            $columnaBase = $columnas[$pedidoEnFila];
+            $fila = $filaActual;
+            
+            // Información del pedido
+            $empresaNombre = $pedido->empresa ? $pedido->empresa->nombre : 'Sin empresa';
+            $numeroOrden = $pedido->numero_orden;
+            
+            // Información del pedido completa
+            $infoPedido = "CLIENTE: " . strtoupper($pedido->cliente) . "\n";
+            $infoPedido .= "PACIENTE: " . strtoupper($pedido->paciente) . "\n";
+            $infoPedido .= "TELÉFONO: " . $pedido->celular . "\n";
+            $infoPedido .= "ESTADO: " . strtoupper($pedido->fact) . "\n";
+            $infoPedido .= "TOTAL: $" . $pedido->total . "\n";
+            $infoPedido .= "SALDO: $" . $pedido->saldo . "\n";
+            
+            // Agregar información de armazones/accesorios
+            if ($pedido->inventarios->count() > 0) {
+                $infoPedido .= "ARMAZONES/ACCESORIOS:\n";
+                foreach ($pedido->inventarios as $inventario) {
+                    $precio = $inventario->pivot->precio * (1 - ($inventario->pivot->descuento / 100));
+                    $infoPedido .= "- " . $inventario->codigo . " ($" . number_format($precio, 2, ',', '.') . ")\n";
+                }
+            }
+            
+            // Agregar información de lunas
+            if ($pedido->lunas->count() > 0) {
+                $infoPedido .= "LUNAS:\n";
+                foreach ($pedido->lunas as $luna) {
+                    $infoPedido .= "- " . $luna->l_detalle . ": " . $luna->l_medida . "\n";
+                }
+            }
+            
+            // Información de pagos
+            if ($pedido->pagos->count() > 0) {
+                $infoPedido .= "PAGOS:\n";
+                foreach ($pedido->pagos as $pago) {
+                    $medioPago = $pago->mediodepago ? $pago->mediodepago->medio_de_pago : 'No especificado';
+                    $infoPedido .= "- $" . $pago->pago . " (" . $medioPago . ")\n";
+                    if ($pago->created_at) {
+                        $infoPedido .= "  Fecha: " . $pago->created_at->format('d-m-Y H:i') . "\n";
+                    }
+                }
+            } else {
+                $infoPedido .= "PAGOS: No existe información de pago\n";
+            }
+            
+            // Colocar empresa + número de orden en la primera columna del pedido
+            $sheet->setCellValue($columnaBase . $fila, strtoupper($empresaNombre) . " - " . $numeroOrden);
+            $sheet->getStyle($columnaBase . $fila)->getFont()->setBold(true);
+            
+            // Colocar información del pedido en la siguiente columna
+            $siguienteColumna = chr(ord($columnaBase) + 1);
+            $sheet->setCellValue($siguienteColumna . $fila, $infoPedido);
+            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setWrapText(true);
+            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP);
+            
+            // Ajustar ancho de columnas
+            $sheet->getColumnDimension($columnaBase)->setWidth(25);
+            $sheet->getColumnDimension($siguienteColumna)->setWidth(40);
+            
+            // Incrementar contador de pedidos en fila
+            $pedidoEnFila++;
+            
+            // Si ya tenemos 3 pedidos en la fila, pasar a la siguiente fila
+            if ($pedidoEnFila >= 3) {
+                $pedidoEnFila = 0;
+                $filaActual += 15; // Dejar espacio suficiente para la información
+            }
+        }
+        
+        // Ajustar altura de filas para mejor visualización
+        for ($i = 1; $i <= $filaActual + 15; $i++) {
+            $sheet->getRowDimension($i)->setRowHeight(20);
+        }
+        
+        // Configurar encabezados para descarga
+        $filename = 'Pedidos_' . date('Y-m-d_H-i-s') . '.xlsx';
+        
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
 }
