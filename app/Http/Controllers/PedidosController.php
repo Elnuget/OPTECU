@@ -1151,8 +1151,13 @@ class PedidosController extends Controller
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A1')->getFont()->setBold(true);
         
-        // Ajustar ancho de columna A
-        $sheet->getColumnDimension('A')->setWidth(5);
+        // Ajustar ancho de columna A automáticamente y altura para el texto vertical
+        $sheet->getColumnDimension('A')->setAutoSize(true);
+        // Establecer un ancho mínimo para la columna A
+        if ($sheet->getColumnDimension('A')->getWidth() < 8) {
+            $sheet->getColumnDimension('A')->setWidth(8);
+        }
+        $sheet->getRowDimension('1')->setRowHeight(200); // Altura suficiente para el texto vertical
         
         // Configurar las columnas para los pedidos
         $columnas = ['B', 'H', 'N']; // 3 pedidos por fila
@@ -1170,7 +1175,7 @@ class PedidosController extends Controller
             
             // Información del pedido completa
             $infoPedido = "CLIENTE: " . strtoupper($pedido->cliente) . "\n";
-            $infoPedido .= "PACIENTE: " . strtoupper($pedido->paciente) . "\n";
+            $infoPedido .= "CÉDULA: " . ($pedido->cedula ? $pedido->cedula : 'NO REGISTRADA') . "\n";
             $infoPedido .= "TELÉFONO: " . $pedido->celular . "\n";
             $infoPedido .= "ESTADO: " . strtoupper($pedido->fact) . "\n";
             $infoPedido .= "TOTAL: $" . $pedido->total . "\n";
@@ -1189,7 +1194,16 @@ class PedidosController extends Controller
             if ($pedido->lunas->count() > 0) {
                 $infoPedido .= "LUNAS:\n";
                 foreach ($pedido->lunas as $luna) {
-                    $infoPedido .= "- " . $luna->l_detalle . ": " . $luna->l_medida . "\n";
+                    $infoPedido .= "- " . $luna->l_detalle . "\n";
+                    if ($luna->tipo_lente) {
+                        $infoPedido .= "  Tipo de Lente: " . $luna->tipo_lente . "\n";
+                    }
+                    if ($luna->material) {
+                        $infoPedido .= "  Material: " . $luna->material . "\n";
+                    }
+                    if ($luna->filtro) {
+                        $infoPedido .= "  Filtro: " . $luna->filtro . "\n";
+                    }
                 }
             }
             
@@ -1210,16 +1224,34 @@ class PedidosController extends Controller
             // Colocar empresa + número de orden en la primera columna del pedido
             $sheet->setCellValue($columnaBase . $fila, strtoupper($empresaNombre) . " - " . $numeroOrden);
             $sheet->getStyle($columnaBase . $fila)->getFont()->setBold(true);
+            $sheet->getStyle($columnaBase . $fila)->getAlignment()->setTextRotation(90);
+            $sheet->getStyle($columnaBase . $fila)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+            $sheet->getStyle($columnaBase . $fila)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             
             // Colocar información del pedido en la siguiente columna
             $siguienteColumna = chr(ord($columnaBase) + 1);
             $sheet->setCellValue($siguienteColumna . $fila, $infoPedido);
             $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setWrapText(true);
+            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setTextRotation(90);
             $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP);
+            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
             
-            // Ajustar ancho de columnas
-            $sheet->getColumnDimension($columnaBase)->setWidth(25);
-            $sheet->getColumnDimension($siguienteColumna)->setWidth(40);
+            // Ajustar ancho de columnas automáticamente basado en el contenido
+            $sheet->getColumnDimension($columnaBase)->setAutoSize(true);
+            $sheet->getColumnDimension($siguienteColumna)->setAutoSize(true);
+            
+            // Establecer un ancho mínimo para las columnas
+            if ($sheet->getColumnDimension($columnaBase)->getWidth() < 8) {
+                $sheet->getColumnDimension($columnaBase)->setWidth(8);
+            }
+            if ($sheet->getColumnDimension($siguienteColumna)->getWidth() < 12) {
+                $sheet->getColumnDimension($siguienteColumna)->setWidth(12);
+            }
+            
+            // Ajustar altura de la fila automáticamente basado en el contenido
+            $numeroLineas = substr_count($infoPedido, "\n") + 1;
+            $alturaCalculada = max(60, $numeroLineas * 12); // Mínimo 60, máximo basado en líneas
+            $sheet->getRowDimension($fila)->setRowHeight($alturaCalculada);
             
             // Incrementar contador de pedidos en fila
             $pedidoEnFila++;
@@ -1227,14 +1259,11 @@ class PedidosController extends Controller
             // Si ya tenemos 3 pedidos en la fila, pasar a la siguiente fila
             if ($pedidoEnFila >= 3) {
                 $pedidoEnFila = 0;
-                $filaActual += 15; // Dejar espacio suficiente para la información
+                $filaActual += 1; // Solo aumentar una fila ya que cada fila se ajusta automáticamente
             }
         }
         
-        // Ajustar altura de filas para mejor visualización
-        for ($i = 1; $i <= $filaActual + 15; $i++) {
-            $sheet->getRowDimension($i)->setRowHeight(20);
-        }
+        // No necesitamos ajustar altura manualmente ya que se hace automáticamente arriba
         
         // Configurar encabezados para descarga
         $filename = 'Pedidos_' . date('Y-m-d_H-i-s') . '.xlsx';
