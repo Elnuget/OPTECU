@@ -288,7 +288,6 @@
                                     <th>Fecha</th>
                                     <th>Método de Pago</th>
                                     <th>Monto</th>
-                                    <th>Transferencia</th>
                                     <th>Foto</th>
                                 </tr>
                             </thead>
@@ -298,15 +297,9 @@
                                     @php $totalPagado += $pago->pago; @endphp
                                     <tr>
                                         <td>{{ $pago->created_at ? $pago->created_at->format('d-m-Y H:i') : 'Sin fecha' }}</td>
-                                        <td>{{ $pago->mediodepago ? $pago->mediodepago->descripcion : 'No especificado' }}</td>
+                                        <td>{{ $pago->mediodepago ? $pago->mediodepago->medio_de_pago : 'No especificado' }}</td>
                                         <td>${{ number_format($pago->pago, 0, ',', '.') }}</td>
-                                        <td>
-                                            @if($pago->TC)
-                                                <span class="badge badge-success">Sí</span>
-                                            @else
-                                                <span class="badge badge-secondary">No</span>
-                                            @endif
-                                        </td>                        <td class="text-center">
+                                        <td class="text-center">
                             @if(isset($pago->foto) && $pago->foto)
                                 <img src="{{ asset('uploads/pagos/' . $pago->foto) }}" 
                                      alt="Comprobante de Pago" 
@@ -345,7 +338,7 @@
                                 <tr class="table-info">
                                     <th colspan="2">Total Pagado:</th>
                                     <th>${{ number_format($totalPagado, 0, ',', '.') }}</th>
-                                    <th colspan="2"></th>
+                                    <th></th>
                                 </tr>
                             </tfoot>
                         </table>
