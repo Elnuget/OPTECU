@@ -162,9 +162,9 @@
                             <span style="color: 
                                 {{ $pedido->fact == 'Pendiente' ? 'orange' : 
                                   ($pedido->fact == 'Separado' ? 'brown' : 
-                                   ($pedido->fact == 'Listo en Taller' ? 'blue' : 
+                                   ($pedido->fact == 'LISTO EN TALLER' ? 'blue' : 
                                     ($pedido->fact == 'Enviado' ? 'purple' : 
-                                     ($pedido->fact == 'Entregado' ? 'green' : 'black')))) }}">
+                                     ($pedido->fact == 'ENTREGADO' ? 'green' : 'black')))) }}">
                                 {{ $pedido->fact }}
                             </span>
                         </td>
@@ -235,7 +235,7 @@
                                                 <i class="fas fa-tools"></i>
                                             </button>
                                         </form>
-                                    @elseif($pedido->fact == 'Listo en Taller')
+                                    @elseif($pedido->fact == 'LISTO EN TALLER')
                                         <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'enviado']) }}" method="POST"
                                             style="display:inline;">
                                             @csrf

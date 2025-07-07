@@ -774,16 +774,16 @@ class PedidosController extends Controller
                 $mensaje = 'Pedido actualizado a Separado';
                 break;
             case 'taller':
-                $pedido->fact = 'Listo en Taller';
-                $mensaje = 'Pedido actualizado a Listo en Taller';
+                $pedido->fact = 'LISTO EN TALLER';
+                $mensaje = 'Pedido actualizado a LISTO EN TALLER';
                 break;
             case 'enviado':
                 $pedido->fact = 'Enviado';
                 $mensaje = 'Pedido actualizado a Enviado';
                 break;
             case 'entregado':
-                $pedido->fact = 'Entregado';
-                $mensaje = 'Pedido marcado como Entregado';
+                $pedido->fact = 'ENTREGADO';
+                $mensaje = 'Pedido marcado como ENTREGADO';
                 break;
             default:
                 return redirect()->route('pedidos.index')->with([
