@@ -1124,7 +1124,7 @@ class PedidosController extends Controller
         }
         
         // Obtener los pedidos con sus relaciones
-        $pedidos = Pedido::with(['inventarios', 'lunas', 'empresa', 'pagos.mediodepago'])
+        $pedidos = Pedido::with(['inventarios', 'lunas', 'empresa'])
             ->whereIn('id', $ids)
             ->orderBy('numero_orden', 'desc')
             ->get();
@@ -1200,9 +1200,6 @@ class PedidosController extends Controller
             $infoPedido .= "TELÉFONO: " . $pedido->celular . "\n";
             $infoPedido .= "DIRECCIÓN: " . ($pedido->direccion ? $pedido->direccion : 'NO REGISTRADA') . "\n";
             $infoPedido .= "CORREO: " . ($pedido->correo_electronico ? $pedido->correo_electronico : 'NO REGISTRADO') . "\n";
-            $infoPedido .= "ESTADO: " . strtoupper($pedido->fact) . "\n";
-            $infoPedido .= "TOTAL: $" . number_format($pedido->total, 0, ',', '.') . "\n";
-            $infoPedido .= "SALDO: $" . number_format($pedido->saldo, 0, ',', '.') . "\n";
             
             // Agregar información de armazones/accesorios
             if ($pedido->inventarios->count() > 0) {
@@ -1228,20 +1225,6 @@ class PedidosController extends Controller
                         $infoPedido .= "  Filtro: " . $luna->filtro . "\n";
                     }
                 }
-            }
-            
-            // Información de pagos
-            if ($pedido->pagos->count() > 0) {
-                $infoPedido .= "PAGOS:\n";
-                foreach ($pedido->pagos as $pago) {
-                    $medioPago = $pago->mediodepago ? $pago->mediodepago->medio_de_pago : 'No especificado';
-                    $infoPedido .= "- $" . number_format($pago->pago, 0, ',', '.') . " (" . $medioPago . ")\n";
-                    if ($pago->created_at) {
-                        $infoPedido .= "  Fecha: " . $pago->created_at->format('d-m-Y H:i') . "\n";
-                    }
-                }
-            } else {
-                $infoPedido .= "PAGOS: No existe información de pago\n";
             }
             
             // Colocar empresa + número de orden en la primera columna del pedido

@@ -114,6 +114,9 @@
                     <button type="button" class="btn btn-info" id="imprimirCristaleria" disabled>
                         <i class="fas fa-eye"></i> Imprimir Cristalería
                     </button>
+                    <button type="button" class="btn btn-success" id="imprimirInforme" disabled>
+                        <i class="fas fa-print"></i> Imprimir Informe
+                    </button>
                 </div>
             </div>
             <div class="col-md-4">
@@ -391,6 +394,7 @@ input[type="checkbox"]:after {
             var checkedCheckboxes = $('.pedido-checkbox:checked').length;
             $('#generarExcel').prop('disabled', checkedCheckboxes === 0);
             $('#imprimirCristaleria').prop('disabled', checkedCheckboxes === 0);
+            $('#imprimirInforme').prop('disabled', checkedCheckboxes === 0);
         }
 
         // Manejar clic en el botón de seleccionar diarios
@@ -470,6 +474,38 @@ input[type="checkbox"]:after {
             form.remove();
         });
 
+        // Manejar clic en el botón de imprimir informe
+        $('#imprimirInforme').click(function() {
+            var selectedIds = [];
+            $('.pedido-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            if (selectedIds.length === 0) {
+                alert('Por favor seleccione al menos un pedido para imprimir el informe');
+                return;
+            }
+            
+            // Crear formulario para envío GET (usar la ruta existente)
+            var form = $('<form>', {
+                'method': 'GET',
+                'action': '{{ route("pedidos.print") }}',
+                'target': '_blank'
+            });
+            
+            // Agregar IDs seleccionados
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'ids',
+                'value': selectedIds.join(',')
+            }));
+            
+            // Agregar al body y enviar
+            $('body').append(form);
+            form.submit();
+            form.remove();
+        });
+
         // Manejar clic en el botón de generar Excel
         $('#generarExcel').click(function() {
             var selectedIds = [];
@@ -525,27 +561,7 @@ input[type="checkbox"]:after {
             "paging": false, // Deshabilitar paginación
             "lengthChange": false,
             "info": false,
-            "dom": 'Bfrt', // Quitar 'p' del dom para eliminar controles de paginación
-            "buttons": [
-                {
-                    extend: 'excel',
-                    text: 'Excel',
-                    exportOptions: {
-                        columns: [1,2,3,4,5,6,7,8,10] // Excluir la columna de checkbox (0) y acciones (9)
-                    },
-                    filename: 'Pedidos_' + new Date().toISOString().split('T')[0]
-                },
-                {
-                    extend: 'pdf',
-                    text: 'PDF',
-                    exportOptions: {
-                        columns: [1,2,3,4,5,6,7,8,10] // Excluir la columna de checkbox (0) y acciones (9)
-                    },
-                    filename: 'Pedidos_' + new Date().toISOString().split('T')[0],
-                    orientation: 'landscape',
-                    pageSize: 'LEGAL'
-                }
-            ],
+            "dom": 'frt', // Quitar 'p' del dom para eliminar controles de paginación y 'B' para quitar botones
             "language": {
                 "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json",
                 "search": "Buscar:"
