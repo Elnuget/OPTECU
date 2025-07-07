@@ -226,9 +226,9 @@
     <table class="tabla-cristaleria">
         <thead>
             <tr>
+                <th>SUCURSAL</th>
                 <th>ORDEN</th>
                 <th>FECHA</th>
-                <th>SUCURSAL</th>
                 <th>CELULAR</th>
                 <th>MEDIDA</th>
                 <th>DETALLE</th>
@@ -250,14 +250,14 @@
                         @endphp
                         <tr>
                             @if($index == 0)
+                                <td class="cliente-info" rowspan="{{ $pedido->lunas->count() }}">
+                                    {{ $pedido->empresa->nombre ?? 'N/A' }}
+                                </td>
                                 <td class="orden-info" rowspan="{{ $pedido->lunas->count() }}">
                                     {{ $pedido->numero_orden }}
                                 </td>
                                 <td class="orden-info" rowspan="{{ $pedido->lunas->count() }}">
                                     {{ date('d/m/Y', strtotime($pedido->fecha)) }}
-                                </td>
-                                <td class="cliente-info" rowspan="{{ $pedido->lunas->count() }}">
-                                    {{ $pedido->empresa->nombre ?? 'N/A' }}
                                 </td>
                                 <td class="cliente-info" rowspan="{{ $pedido->lunas->count() }}">
                                     {{ $pedido->celular }}
