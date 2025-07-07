@@ -37,8 +37,7 @@ class EmpresaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nombre' => 'required',
-            'correo' => 'required|email|unique:empresas'
+            'nombre' => 'required'
         ]);
 
         Empresa::create($request->all());
@@ -78,8 +77,7 @@ class EmpresaController extends Controller
     public function update(Request $request, Empresa $empresa)
     {
         $request->validate([
-            'nombre' => 'required',
-            'correo' => 'required|email|unique:empresas,correo,' . $empresa->id
+            'nombre' => 'required'
         ]);
 
         $empresa->update($request->all());

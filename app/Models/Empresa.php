@@ -10,8 +10,7 @@ class Empresa extends Model
     use HasFactory;
 
     protected $fillable = [
-        'nombre',
-        'correo'
+        'nombre'
     ];
 
     public function getTipoSucursal()

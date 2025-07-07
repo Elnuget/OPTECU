@@ -28,7 +28,6 @@
                     <tr>
                         <th>ID</th>
                         <th>Nombre</th>
-                        <th>Correo</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -37,14 +36,12 @@
                         <tr>
                             <td>{{ $empresa->id }}</td>
                             <td>{{ $empresa->nombre }}</td>
-                            <td>{{ $empresa->correo }}</td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-warning" 
                                         data-toggle="modal" 
                                         data-target="#editEmpresaModal" 
                                         data-id="{{ $empresa->id }}"
-                                        data-nombre="{{ $empresa->nombre }}"
-                                        data-correo="{{ $empresa->correo }}">
+                                        data-nombre="{{ $empresa->nombre }}">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <form action="{{ route('empresas.destroy', $empresa) }}" method="POST" class="d-inline">
@@ -80,10 +77,6 @@
                             <label for="nombre">Nombre</label>
                             <input type="text" class="form-control" id="nombre" name="nombre" required>
                         </div>
-                        <div class="form-group">
-                            <label for="correo">Correo</label>
-                            <input type="email" class="form-control" id="correo" name="correo" required>
-                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
@@ -112,10 +105,6 @@
                             <label for="edit_nombre">Nombre</label>
                             <input type="text" class="form-control" id="edit_nombre" name="nombre" required>
                         </div>
-                        <div class="form-group">
-                            <label for="edit_correo">Correo</label>
-                            <input type="email" class="form-control" id="edit_correo" name="correo" required>
-                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
@@ -134,11 +123,9 @@
                 var button = $(event.relatedTarget);
                 var id = button.data('id');
                 var nombre = button.data('nombre');
-                var correo = button.data('correo');
                 
                 var modal = $(this);
                 modal.find('#edit_nombre').val(nombre);
-                modal.find('#edit_correo').val(correo);
                 modal.find('#editForm').attr('action', '/empresas/' + id);
             });
         });
