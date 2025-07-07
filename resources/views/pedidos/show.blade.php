@@ -269,12 +269,107 @@
             </div>
         </div>
 
+        {{-- Historial de Pagos --}}
+        <div class="card collapsed-card">
+            <div class="card-header">
+                <h3 class="card-title">Historial de Pagos</h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                @if ($pedido->pagos->count() > 0)
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Método de Pago</th>
+                                    <th>Monto</th>
+                                    <th>Transferencia</th>
+                                    <th>Foto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @php $totalPagado = 0; @endphp
+                                @foreach ($pedido->pagos as $pago)
+                                    @php $totalPagado += $pago->pago; @endphp
+                                    <tr>
+                                        <td>{{ $pago->created_at ? $pago->created_at->format('d-m-Y H:i') : 'Sin fecha' }}</td>
+                                        <td>{{ $pago->mediodepago ? $pago->mediodepago->descripcion : 'No especificado' }}</td>
+                                        <td>${{ number_format($pago->pago, 0, ',', '.') }}</td>
+                                        <td>
+                                            @if($pago->TC)
+                                                <span class="badge badge-success">Sí</span>
+                                            @else
+                                                <span class="badge badge-secondary">No</span>
+                                            @endif
+                                        </td>                        <td class="text-center">
+                            @if(isset($pago->foto) && $pago->foto)
+                                <img src="{{ asset('uploads/pagos/' . $pago->foto) }}" 
+                                     alt="Comprobante de Pago" 
+                                     class="img-thumbnail" 
+                                     style="max-width: 60px; max-height: 60px; cursor: pointer;"
+                                     data-toggle="modal" 
+                                     data-target="#pagoModal{{ $loop->index }}"
+                                     title="Click para ampliar comprobante">
+                                
+                                <!-- Modal para ampliar imagen del comprobante -->
+                                <div class="modal fade" id="pagoModal{{ $loop->index }}" tabindex="-1" role="dialog">
+                                    <div class="modal-dialog modal-lg" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Comprobante de Pago - ${{ number_format($pago->pago, 0, ',', '.') }}</h5>
+                                                <button type="button" class="close" data-dismiss="modal">
+                                                    <span>&times;</span>
+                                                </button>
+                                            </div>
+                                            <div class="modal-body text-center">
+                                                <img src="{{ asset('uploads/pagos/' . $pago->foto) }}" 
+                                                     alt="Comprobante de Pago" 
+                                                     class="img-fluid">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @else
+                                <small class="text-muted">Sin comprobante</small>
+                            @endif
+                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-info">
+                                    <th colspan="2">Total Pagado:</th>
+                                    <th>${{ number_format($totalPagado, 0, ',', '.') }}</th>
+                                    <th colspan="2"></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @else
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        No se han registrado pagos para este pedido.
+                    </div>
+                @endif
+            </div>
+        </div>
+
         {{-- Totales --}}
         <div class="card">
             <div class="card-body">
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item"><strong>Total:</strong> ${{ number_format($pedido->total, 0, ',', '.') }}</li>
                     <li class="list-group-item"><strong>Saldo:</strong> ${{ number_format($pedido->saldo, 0, ',', '.') }}</li>
+                    @if ($pedido->pagos->count() > 0)
+                        <li class="list-group-item"><strong>Total Pagado:</strong> 
+                            <span class="text-success">${{ number_format($pedido->pagos->sum('pago'), 0, ',', '.') }}</span>
+                        </li>
+                    @endif
                 </ul>
             </div>
         </div>

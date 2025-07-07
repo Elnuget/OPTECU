@@ -367,7 +367,7 @@
 
             // Inicializar DataTable
             var pagosTable = $('#pagosTable').DataTable({
-                "order": [[0, "desc"]],
+                "order": [[0, "asc"]],
                 "paging": false,     // Disable pagination
                 "info": false,       // Remove "Showing X of Y entries" text
                 "searching": false,  // Remove search box
