@@ -98,9 +98,9 @@
     <table>
         <thead>
             <tr>
+                <th>EMPRESA</th>
                 <th>Nº ORDEN</th>
                 <th>FECHA</th>
-                <th>EMPRESA</th>
                 <th>CLIENTE</th>
                 <th>PACIENTE</th>
                 <th>TELÉFONO</th>
@@ -138,9 +138,9 @@
                     $medidasStr = implode(' | ', $medidas);
                 @endphp
                 <tr>
+                    <td>{{ $pedido->empresa ? $pedido->empresa->nombre : 'N/A' }}</td>
                     <td>{{ $pedido->numero_orden }}</td>
                     <td>{{ date('d-m-Y', strtotime($pedido->fecha)) }}</td>
-                    <td>{{ $pedido->empresa ? $pedido->empresa->nombre : 'N/A' }}</td>
                     <td>{{ $pedido->cliente }}</td>
                     <td>{{ $pedido->paciente }}</td>
                     <td>{{ $pedido->celular }}</td>
@@ -154,7 +154,7 @@
             @endforeach
             
             <tr class="summary-row">
-                <td colspan="9" class="text-right">TOTALES:</td>
+                <td colspan="10" class="text-right">TOTALES:</td>
                 <td class="text-right">${{ number_format($totalVentas, 2, ',', '.') }}</td>
                 <td class="text-right">${{ number_format($totalSaldos, 2, ',', '.') }}</td>
                 <td></td>
