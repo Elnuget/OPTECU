@@ -229,9 +229,7 @@
                 <th>SUCURSAL</th>
                 <th>ORDEN</th>
                 <th>FECHA</th>
-                <th>CELULAR</th>
                 <th>MEDIDA</th>
-                <th>DETALLE</th>
                 <th>TIPO LENTE</th>
                 <th>MATERIAL</th>
                 <th>FILTRO</th>
@@ -258,9 +256,6 @@
                                 </td>
                                 <td class="orden-info" rowspan="{{ $pedido->lunas->count() }}">
                                     {{ date('d/m/Y', strtotime($pedido->fecha)) }}
-                                </td>
-                                <td class="cliente-info" rowspan="{{ $pedido->lunas->count() }}">
-                                    {{ $pedido->celular }}
                                 </td>
                             @endif
                             <td class="medida-cell">
@@ -319,9 +314,34 @@
                                     @endif
                                 </table>
                             </td>
-                            <td class="detalle-cell">{{ $luna->l_detalle }}</td>
                             <td class="tipo-lente-cell">{{ $luna->tipo_lente }}</td>
-                            <td class="material-cell">{{ $luna->material }}</td>
+                            <td class="material-cell">
+                                @php
+                                    $materialText = $luna->material ?? '';
+                                    
+                                    // Verificar si el material tiene formato "OD: ... | OI: ..."
+                                    if (preg_match('/OD:\s*([^|]+)\|\s*OI:\s*(.+)/i', $materialText, $materialMatches)) {
+                                        $od_material = trim($materialMatches[1]);
+                                        $oi_material = trim($materialMatches[2]);
+                                    } else {
+                                        $od_material = null;
+                                        $oi_material = null;
+                                    }
+                                @endphp
+                                
+                                @if($od_material && $oi_material)
+                                    <div style="font-size: 8px; line-height: 1.2;">
+                                        <div style="background-color: #e3f2fd; padding: 2px; margin-bottom: 2px; border-radius: 2px;">
+                                            <strong>OD:</strong> {{ $od_material }}
+                                        </div>
+                                        <div style="background-color: #f3e5f5; padding: 2px; border-radius: 2px;">
+                                            <strong>OI:</strong> {{ $oi_material }}
+                                        </div>
+                                    </div>
+                                @else
+                                    {{ $luna->material }}
+                                @endif
+                            </td>
                             <td class="filtro-cell">{{ $luna->filtro }}</td>
                         </tr>
                     @endforeach
@@ -330,7 +350,7 @@
         </tbody>
         <tfoot>
             <tr style="background-color: #28a745; color: white; font-weight: bold;">
-                <td colspan="8" style="text-align: right; padding: 15px; font-size: 14px;">
+                <td colspan="6" style="text-align: right; padding: 15px; font-size: 14px;">
                     TOTAL LUNAS PARA PROCESAR:
                 </td>
                 <td style="font-size: 16px; padding: 15px; text-align: center;">
@@ -339,69 +359,6 @@
             </tr>
         </tfoot>
     </table>
-
-    {{-- Resumen por tipo de lente --}}
-    <div style="margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
-        @php
-            $tiposLente = $pedidos->flatMap->lunas->groupBy('tipo_lente');
-            $materiales = $pedidos->flatMap->lunas->groupBy('material');
-            $filtros = $pedidos->flatMap->lunas->groupBy('filtro');
-        @endphp
-        
-        <div style="border: 2px solid #007bff; padding: 15px;">
-            <h4 style="background-color: #007bff; color: white; margin: -15px -15px 10px -15px; padding: 10px; text-align: center;">TIPOS DE LENTE</h4>
-            @foreach($tiposLente as $tipo => $lunas)
-                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted #ccc;">
-                    <span>{{ $tipo }}:</span>
-                    <strong>{{ $lunas->count() }}</strong>
-                </div>
-            @endforeach
-        </div>
-        
-        <div style="border: 2px solid #28a745; padding: 15px;">
-            <h4 style="background-color: #28a745; color: white; margin: -15px -15px 10px -15px; padding: 10px; text-align: center;">MATERIALES</h4>
-            @foreach($materiales as $material => $lunas)
-                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted #ccc;">
-                    <span>{{ $material }}:</span>
-                    <strong>{{ $lunas->count() }}</strong>
-                </div>
-            @endforeach
-        </div>
-        
-        <div style="border: 2px solid #ffc107; padding: 15px;">
-            <h4 style="background-color: #ffc107; color: #000; margin: -15px -15px 10px -15px; padding: 10px; text-align: center;">FILTROS</h4>
-            @foreach($filtros as $filtro => $lunas)
-                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dotted #ccc;">
-                    <span>{{ $filtro }}:</span>
-                    <strong>{{ $lunas->count() }}</strong>
-                </div>
-            @endforeach
-        </div>
-    </div>
-
-    <div class="observaciones">
-        <h3>📝 OBSERVACIONES GENERALES</h3>
-        <div class="linea-observacion"></div>
-        <div class="linea-observacion"></div>
-        <div class="linea-observacion"></div>
-        <div class="linea-observacion"></div>
-        <div class="linea-observacion"></div>
-    </div>
-
-    <div class="firmas">
-        <div class="firma-box">
-            <strong>TÉCNICO CRISTALERÍA</strong><br>
-            <small>FECHA: _______________</small>
-        </div>
-        <div class="firma-box">
-            <strong>SUPERVISOR</strong><br>
-            <small>FECHA: _______________</small>
-        </div>
-        <div class="firma-box">
-            <strong>CONTROL CALIDAD</strong><br>
-            <small>FECHA: _______________</small>
-        </div>
-    </div>
 
     <script>
         // Auto-imprimir cuando se carga la página
