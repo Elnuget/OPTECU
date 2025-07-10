@@ -73,6 +73,24 @@
             outline-offset: 2px;
             border-color: #007bff !important;
         }
+
+        /* Estilos para múltiples filtros */
+        .filtros-container {
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .filtro-item {
+            margin-bottom: 0.5rem;
+        }
+        
+        .filtro-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .agregar-filtro, .eliminar-filtro {
+            min-width: 35px;
+        }
     </style>
 
     {{-- Mostrar mensajes de error --}}
@@ -401,8 +419,20 @@
                                     </datalist>
                                 </div>
                                 <div class="col-md-3">
-                                    <label for="filtro" class="form-label">Filtro</label>
-                                    <input type="text" class="form-control" id="filtro" name="filtro[]" list="filtro_options" placeholder="Seleccione o escriba un filtro">
+                                    <label class="form-label">Filtros</label>
+                                    <div id="filtros-container-0" class="filtros-container">
+                                        <div class="filtro-item mb-2">
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control filtro-input" list="filtro_options" placeholder="Filtro 1">
+                                                <div class="input-group-append">
+                                                    <button type="button" class="btn btn-success btn-sm agregar-filtro" onclick="agregarFiltro(0)">
+                                                        <i class="fas fa-plus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="filtro[]" class="filtros-hidden">
                                     <datalist id="filtro_options">
                                         <option value="Antireflejo">
                                         <option value="UV">
@@ -675,6 +705,17 @@
             if (materialOI) {
                 materialOI.addEventListener('input', formatearMaterial);
             }
+
+            // Agregar event listeners para campos de filtros de la primera sección
+            const filtroInputs = document.querySelectorAll('#filtros-container-0 .filtro-input');
+            filtroInputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    actualizarFiltrosHidden(this.closest('.col-md-3'));
+                });
+                input.addEventListener('blur', function() {
+                    actualizarFiltrosHidden(this.closest('.col-md-3'));
+                });
+            });
 
         });
 
@@ -1136,7 +1177,7 @@
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-3">
-                                <label class="form-label">Tipo de Lente</label>
+                                <label for="tipo_lente" class="form-label">Tipo de Lente</label>
                                 <input type="text" class="form-control" name="tipo_lente[]" list="tipo_lente_options" 
                                        placeholder="Seleccione o escriba un tipo de lente">
                             </div>
@@ -1155,9 +1196,20 @@
                                 <input type="hidden" name="material[]" class="material-hidden">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Filtro</label>
-                                <input type="text" class="form-control" name="filtro[]" list="filtro_options"
-                                       placeholder="Seleccione o escriba un filtro">
+                                <label class="form-label">Filtros</label>
+                                <div class="filtros-container" id="filtros-container-${index + 1}">
+                                    <div class="filtro-item mb-2">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control filtro-input" list="filtro_options" placeholder="Filtro 1">
+                                            <div class="input-group-append">
+                                                <button type="button" class="btn btn-success btn-sm agregar-filtro" onclick="agregarFiltroSeccion(this)">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="filtro[]" class="filtros-hidden">
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -1274,6 +1326,17 @@
                         formatearMaterialSeccion(newSection);
                     });
                 }
+
+                // Agregar event listeners para los campos de filtros
+                const filtroInputs = newSection.querySelectorAll('.filtro-input');
+                filtroInputs.forEach(input => {
+                    input.addEventListener('input', function() {
+                        actualizarFiltrosHidden(this.closest('.col-md-3'));
+                    });
+                    input.addEventListener('blur', function() {
+                        actualizarFiltrosHidden(this.closest('.col-md-3'));
+                    });
+                });
             }
             
             // Aplicar el comportamiento simple de datalist a los nuevos campos también
@@ -1446,7 +1509,117 @@
             });
         });
 
-        // ...existing code...
+        // Funciones para manejar múltiples filtros
+        window.agregarFiltro = function(seccionIndex) {
+            const container = document.getElementById(`filtros-container-${seccionIndex}`);
+            const filtroCount = container.querySelectorAll('.filtro-item').length + 1;
+            
+            const newFiltroItem = document.createElement('div');
+            newFiltroItem.className = 'filtro-item mb-2';
+            newFiltroItem.innerHTML = `
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control filtro-input" list="filtro_options" placeholder="Filtro ${filtroCount}">
+                    <div class="input-group-append">
+                        <button type="button" class="btn btn-danger btn-sm eliminar-filtro" onclick="eliminarFiltro(this)">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(newFiltroItem);
+            
+            // Actualizar campo oculto
+            actualizarFiltrosHidden(container.closest('.col-md-3'));
+            
+            // Agregar event listener al nuevo input
+            const newInput = newFiltroItem.querySelector('.filtro-input');
+            newInput.addEventListener('input', function() {
+                actualizarFiltrosHidden(this.closest('.col-md-3'));
+            });
+            newInput.addEventListener('blur', function() {
+                actualizarFiltrosHidden(this.closest('.col-md-3'));
+            });
+        };
+
+        window.agregarFiltroSeccion = function(button) {
+            const container = button.closest('.col-md-3').querySelector('.filtros-container');
+            const filtroCount = container.querySelectorAll('.filtro-item').length + 1;
+            
+            const newFiltroItem = document.createElement('div');
+            newFiltroItem.className = 'filtro-item mb-2';
+            newFiltroItem.innerHTML = `
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control filtro-input" list="filtro_options" placeholder="Filtro ${filtroCount}">
+                    <div class="input-group-append">
+                        <button type="button" class="btn btn-danger btn-sm eliminar-filtro" onclick="eliminarFiltro(this)">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(newFiltroItem);
+            
+            // Actualizar campo oculto
+            actualizarFiltrosHidden(container.closest('.col-md-3'));
+            
+            // Agregar event listener al nuevo input
+            const newInput = newFiltroItem.querySelector('.filtro-input');
+            newInput.addEventListener('input', function() {
+                actualizarFiltrosHidden(this.closest('.col-md-3'));
+            });
+            newInput.addEventListener('blur', function() {
+                actualizarFiltrosHidden(this.closest('.col-md-3'));
+            });
+        };
+
+        window.eliminarFiltro = function(button) {
+            const filtroItem = button.closest('.filtro-item');
+            const container = filtroItem.closest('.col-md-3');
+            
+            // No permitir eliminar si es el único filtro
+            const filtrosContainer = container.querySelector('.filtros-container');
+            if (filtrosContainer.querySelectorAll('.filtro-item').length <= 1) {
+                return;
+            }
+            
+            filtroItem.remove();
+            
+            // Actualizar numeración de placeholders
+            const filtroItems = filtrosContainer.querySelectorAll('.filtro-item');
+            filtroItems.forEach((item, index) => {
+                const input = item.querySelector('.filtro-input');
+                input.placeholder = `Filtro ${index + 1}`;
+            });
+            
+            // Actualizar campo oculto
+            actualizarFiltrosHidden(container);
+        };
+
+        window.actualizarFiltrosHidden = function(container) {
+            const filtroInputs = container.querySelectorAll('.filtro-input');
+            const hiddenInput = container.querySelector('.filtros-hidden');
+            
+            const filtros = [];
+            filtroInputs.forEach(input => {
+                const valor = input.value.trim();
+                if (valor) {
+                    filtros.push(valor);
+                }
+            });
+            
+            hiddenInput.value = filtros.join(' | ');
+        };
+
+        // Debug para múltiples filtros
+        window.debugFiltros = function() {
+            const hiddenInputs = document.querySelectorAll('.filtros-hidden');
+            hiddenInputs.forEach((input, index) => {
+                console.log(`Sección ${index + 1} - Filtros:`, input.value);
+            });
+        };
+
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/css/bootstrap-select.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/js/bootstrap-select.min.js"></script>
