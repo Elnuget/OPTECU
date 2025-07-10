@@ -176,77 +176,187 @@
             </div>
             <div class="card-body">
                 @if ($pedido->lunas->count() > 0)
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Medida</th>
-                                    <th>Detalle</th>
-                                    <th>Tipo de Lente</th>
-                                    <th>Material</th>
-                                    <th>Filtro</th>
-                                    <th>Precio</th>
-                                    <th>Desc. (%)</th>
-                                    <th>Base</th>
-                                    <th>IVA</th>
-                                    <th>Foto</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($pedido->lunas as $luna)
-                                    @php
-                                        $precioConDescuento = $luna->l_precio * (1 - ($luna->l_precio_descuento / 100));
-                                        $base = round($precioConDescuento / 1.19, 0);
-                                        $iva = round($precioConDescuento - $base, 0);
-                                    @endphp
-                                    <tr>
-                                        <td>{{ $luna->l_medida }}</td>
-                                        <td>{{ $luna->l_detalle }}</td>
-                                        <td>{{ $luna->tipo_lente }}</td>
-                                        <td>{{ $luna->material }}</td>
-                                        <td>{{ $luna->filtro }}</td>                        <td>${{ number_format($luna->l_precio, 0, ',', '.') }}</td>
-                        <td>{{ $luna->l_precio_descuento }}%</td>
-                        <td>${{ number_format($base, 0, ',', '.') }}</td>
-                        <td>${{ number_format($iva, 0, ',', '.') }}</td>
-                                        <td class="text-center">
-                                            @if(isset($luna->foto) && $luna->foto)
-                                                <img src="{{ asset($luna->foto) }}" 
-                                                     alt="Foto Luna" 
-                                                     class="img-thumbnail" 
-                                                     style="max-width: 80px; max-height: 80px; cursor: pointer;"
-                                                     data-toggle="modal" 
-                                                     data-target="#lunaModal{{ $loop->index }}"
-                                                     title="Click para ampliar">
-                                                
-                                                <!-- Modal para ampliar imagen -->
-                                                <div class="modal fade" id="lunaModal{{ $loop->index }}" tabindex="-1" role="dialog">
-                                                    <div class="modal-dialog modal-lg" role="document">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title">Foto Luna - {{ $luna->l_medida }}</h5>
-                                                                <button type="button" class="close" data-dismiss="modal">
-                                                                    <span>&times;</span>
-                                                                </button>
-                                                            </div>
-                                                            <div class="modal-body text-center">
-                                                                <img src="{{ asset($luna->foto) }}" 
-                                                                     alt="Foto Luna" 
-                                                                     class="img-fluid">
-                                                            </div>
+                    @foreach ($pedido->lunas as $luna)
+                        <div class="luna-info {{ $loop->index > 0 ? 'mt-4 pt-4 border-top' : '' }}">
+                            @if ($loop->index > 0)
+                                <h5 class="text-muted mb-3">Luna {{ $loop->index + 1 }}</h5>
+                            @endif
+                            
+                            {{-- Tabla de Prescripción/Medidas --}}
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <h6 class="mb-2">Prescripción/Medidas:</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-sm">
+                                            <thead class="thead-light">
+                                                <tr>
+                                                    <th width="15%">Ojo</th>
+                                                    <th width="20%">Esfera</th>
+                                                    <th width="20%">Cilindro</th>
+                                                    <th width="20%">Eje</th>
+                                                    <th width="25%">Observaciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @php
+                                                    // Parseamos los datos de l_medida si existen
+                                                    $medidaData = [];
+                                                    $addValue = '';
+                                                    $dpValue = '';
+                                                    
+                                                    if ($luna->l_medida) {
+                                                        // Intentar extraer los valores de la cadena existente
+                                                        preg_match('/OD:\s*([+\-]?\d*\.?\d*)\s*([+\-]?\d*\.?\d*)\s*X?(\d*)°?/', $luna->l_medida, $odMatches);
+                                                        preg_match('/OI:\s*([+\-]?\d*\.?\d*)\s*([+\-]?\d*\.?\d*)\s*X?(\d*)°?/', $luna->l_medida, $oiMatches);
+                                                        preg_match('/ADD:\s*([+\-]?\d*\.?\d*)/', $luna->l_medida, $addMatches);
+                                                        preg_match('/DP:\s*(\d+)/', $luna->l_medida, $dpMatches);
+                                                        
+                                                        $medidaData = [
+                                                            'od_esfera' => $odMatches[1] ?? '',
+                                                            'od_cilindro' => $odMatches[2] ?? '',
+                                                            'od_eje' => $odMatches[3] ?? '',
+                                                            'oi_esfera' => $oiMatches[1] ?? '',
+                                                            'oi_cilindro' => $oiMatches[2] ?? '',
+                                                            'oi_eje' => $oiMatches[3] ?? ''
+                                                        ];
+                                                        
+                                                        $addValue = $addMatches[1] ?? '';
+                                                        $dpValue = $dpMatches[1] ?? '';
+                                                    }
+                                                @endphp
+                                                <tr>
+                                                    <td class="align-middle text-center font-weight-bold">OD</td>
+                                                    <td class="text-center">{{ $medidaData['od_esfera'] ?: '-' }}</td>
+                                                    <td class="text-center">{{ $medidaData['od_cilindro'] ?: '-' }}</td>
+                                                    <td class="text-center">{{ $medidaData['od_eje'] ? $medidaData['od_eje'] . '°' : '-' }}</td>
+                                                    <td rowspan="3" class="align-middle">
+                                                        @if($luna->l_detalle)
+                                                            <strong>Detalles:</strong><br>
+                                                            {{ $luna->l_detalle }}
+                                                        @else
+                                                            <span class="text-muted">Sin observaciones</span>
+                                                        @endif
+                                                        
+                                                        @if($addValue || $dpValue)
+                                                            <hr class="my-2">
+                                                        @endif
+                                                        
+                                                        @if($addValue)
+                                                            <strong>ADD:</strong> {{ $addValue }}<br>
+                                                        @endif
+                                                        
+                                                        @if($dpValue)
+                                                            <strong>DP:</strong> {{ $dpValue }}
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="align-middle text-center font-weight-bold">OI</td>
+                                                    <td class="text-center">{{ $medidaData['oi_esfera'] ?: '-' }}</td>
+                                                    <td class="text-center">{{ $medidaData['oi_cilindro'] ?: '-' }}</td>
+                                                    <td class="text-center">{{ $medidaData['oi_eje'] ? $medidaData['oi_eje'] . '°' : '-' }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-muted">
+                                                        <small><strong>Medida original:</strong> {{ $luna->l_medida ?: 'No especificada' }}</small>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    {{-- Información adicional y foto --}}
+                                    <h6 class="mb-2">Información Adicional:</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-sm">
+                                            <tbody>
+                                                <tr>
+                                                    <td><strong>Tipo de Lente:</strong></td>
+                                                    <td>{{ $luna->tipo_lente ?: 'No especificado' }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Material:</strong></td>
+                                                    <td>{{ $luna->material ?: 'No especificado' }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Filtro:</strong></td>
+                                                    <td>{{ $luna->filtro ?: 'No especificado' }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Precio:</strong></td>
+                                                    <td>${{ number_format($luna->l_precio, 0, ',', '.') }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Descuento:</strong></td>
+                                                    <td>{{ $luna->l_precio_descuento }}%</td>
+                                                </tr>
+                                                @php
+                                                    $precioConDescuento = $luna->l_precio * (1 - ($luna->l_precio_descuento / 100));
+                                                    $base = round($precioConDescuento / 1.19, 0);
+                                                    $iva = round($precioConDescuento - $base, 0);
+                                                @endphp
+                                                <tr class="table-info">
+                                                    <td><strong>Precio Final:</strong></td>
+                                                    <td><strong>${{ number_format($precioConDescuento, 0, ',', '.') }}</strong></td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Base:</strong></td>
+                                                    <td>${{ number_format($base, 0, ',', '.') }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>IVA:</strong></td>
+                                                    <td>${{ number_format($iva, 0, ',', '.') }}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    {{-- Foto --}}
+                                    <div class="text-center mt-3">
+                                        @if(isset($luna->foto) && $luna->foto)
+                                            <h6 class="mb-2">Foto:</h6>
+                                            <img src="{{ asset($luna->foto) }}" 
+                                                 alt="Foto Luna" 
+                                                 class="img-thumbnail" 
+                                                 style="max-width: 150px; max-height: 150px; cursor: pointer;"
+                                                 data-toggle="modal" 
+                                                 data-target="#lunaModal{{ $loop->index }}"
+                                                 title="Click para ampliar">
+                                            
+                                            <!-- Modal para ampliar imagen -->
+                                            <div class="modal fade" id="lunaModal{{ $loop->index }}" tabindex="-1" role="dialog">
+                                                <div class="modal-dialog modal-lg" role="document">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">Foto Luna - {{ $luna->l_medida }}</h5>
+                                                            <button type="button" class="close" data-dismiss="modal">
+                                                                <span>&times;</span>
+                                                            </button>
+                                                        </div>
+                                                        <div class="modal-body text-center">
+                                                            <img src="{{ asset($luna->foto) }}" 
+                                                                 alt="Foto Luna" 
+                                                                 class="img-fluid">
                                                         </div>
                                                     </div>
                                                 </div>
-                                            @else
-                                                <small class="text-muted">Sin foto</small>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                                            </div>
+                                        @else
+                                            <div class="alert alert-light">
+                                                <small class="text-muted">Sin foto disponible</small>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
                 @else
-                    <p class="text-muted">No hay lunas asignadas</p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        No hay lunas asignadas a este pedido.
+                    </div>
                 @endif
             </div>
         </div>
