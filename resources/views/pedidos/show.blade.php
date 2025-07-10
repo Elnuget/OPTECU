@@ -28,6 +28,26 @@
     .card-header:hover {
         background-color: rgba(0,0,0,.03);
     }
+
+    /* Estilos para la presentación de material separado por ojos */
+    .material-separado {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .material-separado span {
+        padding: 3px 8px;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+    
+    .material-separado span strong {
+        color: #495057;
+    }
 </style>
 <br>
 <div class="card">
@@ -275,9 +295,42 @@
                                                     <td><strong>Tipo de Lente:</strong></td>
                                                     <td>{{ $luna->tipo_lente ?: 'No especificado' }}</td>
                                                 </tr>
-                                                <tr>
+                                <tr>
                                                     <td><strong>Material:</strong></td>
-                                                    <td>{{ $luna->material ?: 'No especificado' }}</td>
+                                                    <td>
+                                                        @php
+                                                            // Parsear los datos de material si están en formato "OD: valor | OI: valor"
+                                                            $materialDisplay = '';
+                                                            if ($luna->material && strpos($luna->material, 'OD:') !== false) {
+                                                                preg_match('/OD:\s*([^|]+)/', $luna->material, $odMatches);
+                                                                preg_match('/OI:\s*(.+)/', $luna->material, $oiMatches);
+                                                                
+                                                                $materialOD = trim($odMatches[1] ?? '');
+                                                                $materialOI = trim($oiMatches[1] ?? '');
+                                                                
+                                                                if ($materialOD || $materialOI) {
+                                                                    $materialDisplay = '<div class="material-separado">';
+                                                                    if ($materialOD) {
+                                                                        $materialDisplay .= '<span><strong>OD:</strong> ' . $materialOD . '</span>';
+                                                                    }
+                                                                    if ($materialOI) {
+                                                                        $materialDisplay .= '<span><strong>OI:</strong> ' . $materialOI . '</span>';
+                                                                    }
+                                                                    $materialDisplay .= '</div>';
+                                                                } else {
+                                                                    $materialDisplay = '<span class="text-muted">No especificado</span>';
+                                                                }
+                                                            } else {
+                                                                // Formato antiguo o valor único
+                                                                if ($luna->material) {
+                                                                    $materialDisplay = '<span class="badge badge-light">' . $luna->material . '</span>';
+                                                                } else {
+                                                                    $materialDisplay = '<span class="text-muted">No especificado</span>';
+                                                                }
+                                                            }
+                                                        @endphp
+                                                        {!! $materialDisplay !!}
+                                                    </td>
                                                 </tr>
                                                 <tr>
                                                     <td><strong>Filtro:</strong></td>
