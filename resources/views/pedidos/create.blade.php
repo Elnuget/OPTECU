@@ -333,21 +333,21 @@
                                             <tbody>
                                                 <tr>
                                                     <td class="align-middle text-center"><strong>OD</strong></td>
-                                                    <td><input type="text" class="form-control form-control-sm" name="od_esfera[]" placeholder="Ej: +2.00"></td>
-                                                    <td><input type="text" class="form-control form-control-sm" name="od_cilindro[]" placeholder="Ej: -1.50"></td>
-                                                    <td><input type="text" class="form-control form-control-sm" name="od_eje[]" placeholder="Ej: 90°"></td>
-                                                    <td rowspan="2" class="align-middle"><input type="text" class="form-control form-control-sm" name="add[]" placeholder="Ej: +2.00"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_esfera[]" placeholder="Ej: +2.00"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_cilindro[]" placeholder="Ej: -1.50"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_eje[]" placeholder="Ej: 90°"></td>
+                                                    <td rowspan="2" class="align-middle"><input type="text" class="form-control form-control-sm medida-input" name="add[]" placeholder="Ej: +2.00"></td>
                                                     <td rowspan="2" class="align-middle"><textarea class="form-control form-control-sm" name="l_detalle[]" rows="3" placeholder="Detalles adicionales"></textarea></td>
                                                 </tr>
                                                 <tr>
                                                     <td class="align-middle text-center"><strong>OI</strong></td>
-                                                    <td><input type="text" class="form-control form-control-sm" name="oi_esfera[]" placeholder="Ej: +1.75"></td>
-                                                    <td><input type="text" class="form-control form-control-sm" name="oi_cilindro[]" placeholder="Ej: -1.25"></td>
-                                                    <td><input type="text" class="form-control form-control-sm" name="oi_eje[]" placeholder="Ej: 85°"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_esfera[]" placeholder="Ej: +1.75"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_cilindro[]" placeholder="Ej: -1.25"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_eje[]" placeholder="Ej: 85°"></td>
                                                 </tr>
                                                 <tr>
                                                     <td class="text-center"><strong>DP</strong></td>
-                                                    <td><input type="text" class="form-control form-control-sm" name="dp[]" placeholder="Ej: 62"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="dp[]" placeholder="Ej: 62"></td>
                                                     <td colspan="4">
                                                         <input type="hidden" id="l_medida" name="l_medida[]">
                                                         <small class="text-muted">Distancia Pupilar</small>
@@ -380,11 +380,11 @@
                                     <div class="row">
                                         <div class="col-md-6">
                                             <label for="material_od" class="form-label text-sm">OD (Ojo Derecho)</label>
-                                            <input type="text" class="form-control form-control-sm" id="material_od" name="material_od[]" list="material_options" placeholder="Material OD">
+                                            <input type="text" class="form-control form-control-sm material-input" id="material_od" name="material_od[]" list="material_options" placeholder="Material OD">
                                         </div>
                                         <div class="col-md-6">
                                             <label for="material_oi" class="form-label text-sm">OI (Ojo Izquierdo)</label>
-                                            <input type="text" class="form-control form-control-sm" id="material_oi" name="material_oi[]" list="material_options" placeholder="Material OI">
+                                            <input type="text" class="form-control form-control-sm material-input" id="material_oi" name="material_oi[]" list="material_options" placeholder="Material OI">
                                         </div>
                                     </div>
                                     <input type="hidden" id="material" name="material[]">
@@ -657,6 +657,24 @@
                     }, 300);
                 }
             });
+
+            // Agregar event listeners para campos de medidas de la primera sección
+            const camposMedidas = document.querySelectorAll('.medida-input');
+            camposMedidas.forEach(campo => {
+                campo.addEventListener('input', formatearMedidasLunas);
+                campo.addEventListener('blur', formatearMedidasLunas);
+            });
+
+            // Agregar event listeners para campos de material de la primera sección
+            const materialOD = document.querySelector('#material_od');
+            const materialOI = document.querySelector('#material_oi');
+            
+            if (materialOD) {
+                materialOD.addEventListener('input', formatearMaterial);
+            }
+            if (materialOI) {
+                materialOI.addEventListener('input', formatearMaterial);
+            }
 
         });
 
@@ -1117,17 +1135,26 @@
                             </div>
                         </div>
                         <div class="row mb-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">Tipo de Lente</label>
                                 <input type="text" class="form-control" name="tipo_lente[]" list="tipo_lente_options" 
                                        placeholder="Seleccione o escriba un tipo de lente">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label">Material</label>
-                                <input type="text" class="form-control" name="material[]" list="material_options"
-                                       placeholder="Seleccione o escriba un material">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label text-sm">OD (Ojo Derecho)</label>
+                                        <input type="text" class="form-control form-control-sm material-input" name="material_od[]" list="material_options" placeholder="Material OD">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-sm">OI (Ojo Izquierdo)</label>
+                                        <input type="text" class="form-control form-control-sm material-input" name="material_oi[]" list="material_options" placeholder="Material OI">
+                                    </div>
+                                </div>
+                                <input type="hidden" name="material[]" class="material-hidden">
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">Filtro</label>
                                 <input type="text" class="form-control" name="filtro[]" list="filtro_options"
                                        placeholder="Seleccione o escriba un filtro">
@@ -1232,6 +1259,21 @@
                         });
                     }
                 });
+
+                // Agregar event listeners para los campos de material OD/OI
+                const materialOD = newSection.querySelector('[name="material_od[]"]');
+                const materialOI = newSection.querySelector('[name="material_oi[]"]');
+                
+                if (materialOD) {
+                    materialOD.addEventListener('input', function() {
+                        formatearMaterialSeccion(newSection);
+                    });
+                }
+                if (materialOI) {
+                    materialOI.addEventListener('input', function() {
+                        formatearMaterialSeccion(newSection);
+                    });
+                }
             }
             
             // Aplicar el comportamiento simple de datalist a los nuevos campos también
