@@ -204,17 +204,41 @@
 <script src="{{ asset('js/selectpicker-fix.js') }}"></script>
 
 <script>
+    // Pasar datos del inventario a JavaScript
+    window.inventarioItems = @json($inventarioItems);
+    window.filtroMes = @json($filtroMes ?? null);
+    window.filtroAno = @json($filtroAno ?? null);
+    
     $(document).ready(function() {
+        console.log('Script inline iniciado - editMode:', window.editMode);
+        console.log('Inventario items disponibles:', window.inventarioItems.length);
+        
         // No es necesario inicializar nada aquí, ya que todo se maneja en selectpicker-fix.js
         
-        // Cambiar el evento del botón add-armazon para usar la función en selectpicker-fix.js
-        $('#add-armazon').on('click', function(e) {
-            e.preventDefault();
-            console.log('Botón agregar armazón clickeado');
+        // Remover cualquier event listener anterior del botón add-armazon
+        const addButton = document.getElementById('add-armazon');
+        if (addButton) {
+            console.log('Botón add-armazon encontrado, configurando event listener');
             
-            // Usar la función global
-            window.addArmazon();
-        });
+            // Clonar el botón para remover todos los event listeners
+            const newButton = addButton.cloneNode(true);
+            addButton.parentNode.replaceChild(newButton, addButton);
+            
+            // Agregar el nuevo event listener
+            newButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Botón agregar armazón clickeado - llamando window.addArmazon()');
+                
+                // Verificar que la función existe
+                if (typeof window.addArmazon === 'function') {
+                    window.addArmazon();
+                } else {
+                    console.error('window.addArmazon no está definida');
+                }
+            });
+        } else {
+            console.error('No se encontró el botón add-armazon');
+        }
         
         // El resto de la lógica ahora se maneja en selectpicker-fix.js
         

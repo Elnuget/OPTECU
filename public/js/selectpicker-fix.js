@@ -83,11 +83,11 @@ $(document).ready(function() {
         }
     });
     
-    // Inicializar botón para agregar armazón
-    $('#add-armazon').on('click', function(e) {
-        e.preventDefault();
-        addArmazon();
-    });
+    // Inicializar botón para agregar armazón - COMENTADO para evitar conflictos con edit.blade.php
+    // $('#add-armazon').on('click', function(e) {
+    //     e.preventDefault();
+    //     addArmazon();
+    // });
     
     // Delegación de eventos para eliminar armazón
     $('#armazones-container').on('click', '.remove-armazon', function(e) {
@@ -145,35 +145,84 @@ function initializeCustomComboboxes() {
 
 // Función global para añadir un nuevo armazón
 window.addArmazon = function() {
+    console.log('window.addArmazon() iniciada');
+    
     const container = document.getElementById('armazones-container');
-    if (!container) return;
+    if (!container) {
+        console.error('No se encontró el contenedor armazones-container');
+        return;
+    }
+    console.log('Contenedor encontrado:', container);
     
-    // Obtener todas las opciones del primer selector para duplicarlas
+    let options = '';
+    
+    // Intentar obtener opciones del primer dropdown existente
     const firstDropdown = document.querySelector('.armazon-dropdown');
-    if (!firstDropdown) return;
-    
-    const options = Array.from(firstDropdown.querySelectorAll('.armazon-option')).map(opt => {
-        const id = opt.getAttribute('data-id');
-        const code = opt.getAttribute('data-code');
-        const place = opt.getAttribute('data-place');
-        const date = opt.getAttribute('data-date');
-        const text = opt.textContent.trim();
+    if (firstDropdown) {
+        console.log('Primer dropdown encontrado, copiando opciones');
+        options = Array.from(firstDropdown.querySelectorAll('.armazon-option')).map(opt => {
+            const id = opt.getAttribute('data-id');
+            const code = opt.getAttribute('data-code');
+            const place = opt.getAttribute('data-place');
+            const date = opt.getAttribute('data-date');
+            const text = opt.textContent.trim();
+            
+            return `<a class="dropdown-item armazon-option" href="#" 
+                      data-id="${id}" 
+                      data-code="${code}"
+                      data-place="${place}"
+                      data-date="${date}">
+                      ${text}
+                   </a>`;
+        }).join('');
+    } else {
+        console.log('No se encontró dropdown existente, usando datos de window.inventarioItems');
         
-        return `<a class="dropdown-item armazon-option" href="#" 
-                  data-id="${id}" 
-                  data-code="${code}"
-                  data-place="${place}"
-                  data-date="${date}">
-                  ${text}
-               </a>`;
-    }).join('');
+        // Si no hay dropdown existente, usar los datos pasados desde PHP
+        if (window.inventarioItems && window.inventarioItems.length > 0) {
+            options = window.inventarioItems.map(item => {
+                const fecha = item.fecha ? new Date(item.fecha).toLocaleDateString('es-ES') : 'Sin fecha';
+                const text = `${item.codigo} - ${item.lugar} - ${fecha}`;
+                
+                return `<a class="dropdown-item armazon-option" href="#" 
+                          data-id="${item.id}" 
+                          data-code="${item.codigo}"
+                          data-place="${item.lugar}"
+                          data-date="${fecha}">
+                          ${text}
+                       </a>`;
+            }).join('');
+        } else {
+            console.warn('No hay items de inventario disponibles');
+            options = '<a class="dropdown-item disabled" href="#">No hay artículos disponibles</a>';
+        }
+    }
     
+    // Obtener información del mes y año
+    const nombresMeses = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    let mesTexto, anoTexto;
+    if (window.filtroMes && window.filtroAno) {
+        mesTexto = nombresMeses[window.filtroMes - 1] || 'Mes actual';
+        anoTexto = window.filtroAno;
+    } else {
+        const currentDate = new Date();
+        mesTexto = nombresMeses[currentDate.getMonth()];
+        anoTexto = currentDate.getFullYear();
+    }
+    
+    const hasOptions = window.inventarioItems && window.inventarioItems.length > 0;
+    const optionsCount = hasOptions ? window.inventarioItems.length : 0;
+
     const template = `
         <div class="armazon-section mb-3">
             <hr>
             <div class="row">
                 <div class="col-md-12">
-                    <label>Armazón o Accesorio</label>
+                    <label>Armazón o Accesorio (${mesTexto} ${anoTexto})</label>
                     <div class="input-group">
                         <input type="text" 
                             class="form-control armazon-search" 
@@ -194,6 +243,12 @@ window.addArmazon = function() {
                             </div>
                         </div>
                     </div>
+                    ${hasOptions ? 
+                        `<small class="form-text text-muted">${optionsCount} artículo(s) disponible(s) de ${mesTexto} ${anoTexto} y asignados a este pedido</small>` : 
+                        `<div class="text-danger mt-1">
+                            <small><i class="fas fa-exclamation-triangle"></i> No hay artículos disponibles para este mes</small>
+                         </div>`
+                    }
                 </div>
             </div>
             <div class="row mt-2">
@@ -218,7 +273,7 @@ window.addArmazon = function() {
             <div class="row mt-2">
                 <div class="col-12 text-right">
                     <button type="button" class="btn btn-danger btn-sm remove-armazon">
-                        <i class="fas fa-times"></i> Eliminar
+                        <i class="fas fa-times"></i> Eliminar Armazón o Accesorio
                     </button>
                 </div>
             </div>

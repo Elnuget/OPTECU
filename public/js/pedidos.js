@@ -346,15 +346,17 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error al inicializar selectpicker en pedidos.js:', error);
     }
 
-    // Manejar el botón de agregar armazón
+    // Manejar el botón de agregar armazón (solo si no estamos en modo edición)
     const addButton = document.getElementById('add-armazon');
-    if (addButton) {
-        console.log('Botón de agregar encontrado');
+    if (addButton && !window.editMode) {
+        console.log('Botón de agregar encontrado - configurando event listener para crear');
         addButton.addEventListener('click', function(e) {
-            console.log('Botón de agregar clickeado');
+            console.log('Botón de agregar clickeado - modo crear');
             e.preventDefault();
             duplicateArmazon();
         });
+    } else if (addButton && window.editMode) {
+        console.log('Botón de agregar encontrado pero estamos en modo edición - saltando configuración');
     } else {
         console.error('No se encontró el botón de agregar armazón');
     }
