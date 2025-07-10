@@ -149,7 +149,7 @@
                 <span class="info-value">{{ $pedido->cliente }}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">CÉDULA:</span>
+                <span class="info-label">RUT:</span>
                 <span class="info-value">{{ $pedido->cedula ?? 'No registrada' }}</span>
             </div>
             <div class="info-row">

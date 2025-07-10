@@ -96,7 +96,7 @@
             <div class="card-body">
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item"><strong>Cliente:</strong> {{ $pedido->cliente }}</li>
-                    <li class="list-group-item"><strong>Cédula:</strong> {{ $pedido->cedula ?? 'No registrada' }}</li>
+                    <li class="list-group-item"><strong>RUT :</strong> {{ $pedido->cedula ?? 'No registrada' }}</li>
                     <li class="list-group-item"><strong>Paciente:</strong> {{ $pedido->paciente }}</li>
                     <li class="list-group-item"><strong>Celular:</strong> {{ $pedido->celular }}</li>
                     <li class="list-group-item"><strong>Correo Electrónico:</strong> {{ $pedido->correo_electronico }}</li>

@@ -224,8 +224,8 @@
 
                             {{-- Nueva fila para cédula --}}
                             <div class="row mb-3">                                <div class="col-md-6">
-                                    <label for="cedula" class="form-label">Cédula</label>
-                                    <input type="text" class="form-control" id="cedula" name="cedula" list="cedulas_existentes" placeholder="Seleccione o escriba una cédula" autocomplete="off">
+                                    <label for="cedula" class="form-label">RUT</label>
+                                    <input type="text" class="form-control" id="cedula" name="cedula" list="cedulas_existentes" placeholder="Seleccione o escriba un RUT" autocomplete="off">
                                     <datalist id="cedulas_existentes">
                                         @foreach($cedulas as $cedula)
                                             <option value="{{ $cedula }}">

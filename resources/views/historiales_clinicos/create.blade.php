@@ -71,8 +71,8 @@
                                 <label for="apellidos">Apellidos</label>
                                 <input type="text" name="apellidos" id="apellidos" class="form-control">
                             </div>                            <div class="form-group col-md-4">
-                                <label for="cedula">Cédula</label>
-                                <input type="text" name="cedula" id="cedula" class="form-control" list="cedulas_existentes" placeholder="Seleccione o escriba una cédula" autocomplete="off">
+                                <label for="cedula">RUT</label>
+                                <input type="text" name="cedula" id="cedula" class="form-control" list="cedulas_existentes" placeholder="Seleccione o escriba un RUT" autocomplete="off">
                                 <datalist id="cedulas_existentes">
                                     @foreach($cedulas as $cedula)
                                         <option value="{{ $cedula }}">

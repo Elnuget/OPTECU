@@ -30,7 +30,7 @@
 
         <div class="row mb-3">
             <div class="col-md-6">
-                <label for="cedula" class="form-label">Cédula</label>
+                <label for="cedula" class="form-label">RUT</label>
                 <input type="text" class="form-control" id="cedula" name="cedula"
                        value="{{ $pedido->cedula }}">
             </div>

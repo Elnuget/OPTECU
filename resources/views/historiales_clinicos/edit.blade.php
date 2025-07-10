@@ -62,7 +62,7 @@
                                 <input type="text" name="apellidos" id="apellidos" class="form-control" value="{{ old('apellidos', $historialClinico->apellidos) }}">
                             </div>
                             <div class="form-group col-md-4">
-                                <label for="cedula">Cédula</label>
+                                <label for="cedula">RUT</label>
                                 <input type="text" name="cedula" id="cedula" class="form-control" value="{{ old('cedula', $historialClinico->cedula) }}">
                             </div>
                             <div class="form-group col-md-4">

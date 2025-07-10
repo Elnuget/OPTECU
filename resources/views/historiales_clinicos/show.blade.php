@@ -29,7 +29,7 @@
                         <dd class="col-sm-9">{{ $historialClinico->edad }} AÑOS</dd>
                         <dt class="col-sm-3">FECHA NACIMIENTO:</dt>
                         <dd class="col-sm-9">{{ $historialClinico->fecha_nacimiento ? \Carbon\Carbon::parse($historialClinico->fecha_nacimiento)->format('d/m/Y') : 'N/A' }}</dd>
-                        <dt class="col-sm-3">CÉDULA:</dt>
+                        <dt class="col-sm-3">RUT :</dt>
                         <dd class="col-sm-9">{{ $historialClinico->cedula ?? 'N/A' }}</dd>
                         <dt class="col-sm-3">CELULAR:</dt>
                         <dd class="col-sm-9">{{ $historialClinico->celular }}</dd>
