@@ -105,19 +105,47 @@
                 </div>
 
                 <div class="row mb-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Tipo de Lente</label>
                         <input type="text" class="form-control" name="tipo_lente[]" 
                                list="tipo_lente_options" value="{{ $luna->tipo_lente }}"
                                placeholder="Seleccione o escriba un tipo de lente">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label class="form-label">Material</label>
-                        <input type="text" class="form-control" name="material[]" 
-                               list="material_options" value="{{ $luna->material }}"
-                               placeholder="Seleccione o escriba un material">
+                        @php
+                            // Parsear los datos existentes de material si están en formato "OD: valor | OI: valor"
+                            $materialData = [];
+                            if ($luna->material && strpos($luna->material, 'OD:') !== false) {
+                                preg_match('/OD:\s*([^|]+)/', $luna->material, $odMatches);
+                                preg_match('/OI:\s*(.+)/', $luna->material, $oiMatches);
+                                $materialData = [
+                                    'od' => trim($odMatches[1] ?? ''),
+                                    'oi' => trim($oiMatches[1] ?? '')
+                                ];
+                            } else {
+                                // Si no está en el nuevo formato, usar el valor existente para ambos ojos (retrocompatibilidad)
+                                $materialData = [
+                                    'od' => $luna->material ?? '',
+                                    'oi' => $luna->material ?? ''
+                                ];
+                            }
+                        @endphp
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label text-sm">OD (Ojo Derecho)</label>
+                                <input type="text" class="form-control form-control-sm material-input" name="material_od[]" 
+                                       list="material_options" value="{{ $materialData['od'] }}" placeholder="Material OD">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-sm">OI (Ojo Izquierdo)</label>
+                                <input type="text" class="form-control form-control-sm material-input" name="material_oi[]" 
+                                       list="material_options" value="{{ $materialData['oi'] }}" placeholder="Material OI">
+                            </div>
+                        </div>
+                        <input type="hidden" name="material[]" value="{{ $luna->material }}" class="material-hidden">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Filtro</label>
                         <input type="text" class="form-control" name="filtro[]" 
                                list="filtro_options" value="{{ $luna->filtro }}"

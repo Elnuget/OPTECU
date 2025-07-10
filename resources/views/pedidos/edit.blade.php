@@ -215,6 +215,13 @@
         
         // No es necesario inicializar nada aquí, ya que todo se maneja en selectpicker-fix.js
         
+        // Inicializar event listeners para material después de que se cargue la página
+        setTimeout(() => {
+            if (typeof window.agregarEventListenersMaterial === 'function') {
+                window.agregarEventListenersMaterial();
+            }
+        }, 500);
+        
         // Remover cualquier event listener anterior del botón add-armazon
         const addButton = document.getElementById('add-armazon');
         if (addButton) {
