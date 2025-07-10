@@ -1205,25 +1205,7 @@ class PedidosController extends Controller
             if ($pedido->inventarios->count() > 0) {
                 $infoPedido .= "ARMAZONES/ACCESORIOS:\n";
                 foreach ($pedido->inventarios as $inventario) {
-                    $precio = $inventario->pivot->precio * (1 - ($inventario->pivot->descuento / 100));
-                    $infoPedido .= "- " . $inventario->codigo . " ($" . number_format($precio, 0, ',', '.') . ")\n";
-                }
-            }
-            
-            // Agregar información de lunas
-            if ($pedido->lunas->count() > 0) {
-                $infoPedido .= "LUNAS:\n";
-                foreach ($pedido->lunas as $luna) {
-                    $infoPedido .= "- " . $luna->l_detalle . "\n";
-                    if ($luna->tipo_lente) {
-                        $infoPedido .= "  Tipo de Lente: " . $luna->tipo_lente . "\n";
-                    }
-                    if ($luna->material) {
-                        $infoPedido .= "  Material: " . $luna->material . "\n";
-                    }
-                    if ($luna->filtro) {
-                        $infoPedido .= "  Filtro: " . $luna->filtro . "\n";
-                    }
+                    $infoPedido .= "- " . $inventario->codigo . "\n";
                 }
             }
             
