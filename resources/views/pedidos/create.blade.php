@@ -314,15 +314,52 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            {{-- Fila 6 --}}
+                            {{-- Fila 6 - Prescripción/Medidas --}}
                             <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="l_medida" class="form-label">Lunas Medidas</label>
-                                    <input type="text" class="form-control" id="l_medida" name="l_medida[]">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="l_detalle" class="form-label">Lunas Detalle</label>
-                                    <input type="text" class="form-control" id="l_detalle" name="l_detalle[]">
+                                <div class="col-md-12">
+                                    <label class="form-label">Prescripción/Medidas de Lunas</label>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-sm">
+                                            <thead class="thead-light">
+                                                <tr>
+                                                    <th width="10%">Ojo</th>
+                                                    <th width="20%">Esfera</th>
+                                                    <th width="20%">Cilindro</th>
+                                                    <th width="15%">Eje</th>
+                                                    <th width="15%">ADD</th>
+                                                    <th width="20%">Observaciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td class="align-middle text-center"><strong>OD</strong></td>
+                                                    <td><input type="text" class="form-control form-control-sm" name="od_esfera[]" placeholder="Ej: +2.00"></td>
+                                                    <td><input type="text" class="form-control form-control-sm" name="od_cilindro[]" placeholder="Ej: -1.50"></td>
+                                                    <td><input type="text" class="form-control form-control-sm" name="od_eje[]" placeholder="Ej: 90°"></td>
+                                                    <td rowspan="2" class="align-middle"><input type="text" class="form-control form-control-sm" name="add[]" placeholder="Ej: +2.00"></td>
+                                                    <td rowspan="2" class="align-middle"><textarea class="form-control form-control-sm" name="l_detalle[]" rows="3" placeholder="Detalles adicionales"></textarea></td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="align-middle text-center"><strong>OI</strong></td>
+                                                    <td><input type="text" class="form-control form-control-sm" name="oi_esfera[]" placeholder="Ej: +1.75"></td>
+                                                    <td><input type="text" class="form-control form-control-sm" name="oi_cilindro[]" placeholder="Ej: -1.25"></td>
+                                                    <td><input type="text" class="form-control form-control-sm" name="oi_eje[]" placeholder="Ej: 85°"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-center"><strong>DP</strong></td>
+                                                    <td><input type="text" class="form-control form-control-sm" name="dp[]" placeholder="Ej: 62"></td>
+                                                    <td colspan="4">
+                                                        <input type="hidden" id="l_medida" name="l_medida[]">
+                                                        <small class="text-muted">Distancia Pupilar</small>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        <strong>Formato de ejemplo:</strong> OD: +2.00 -1.50 X90° / OI: +1.75 -1.25 X85° ADD: +2.00 DP: 62
+                                    </small>
                                 </div>
                             </div>
                             {{-- Fila nueva para tipo de lente, material y filtro --}}
@@ -770,7 +807,7 @@
                     $('#empresa_id').val(data.historial.empresa_id);
                 }
                 
-                // Cargar datos de receta en el campo medida
+                // Cargar datos de receta en los campos individuales y el campo unificado
                 if (data.historial.od_esfera !== undefined) {
                     // Abrir sección de lunas
                     const lunasHeader = document.querySelector('#lunas-container .card-header');
@@ -779,33 +816,38 @@
                         lunasHeader.querySelector('.btn-tool').click();
                     }
                     
-                    // Formatear receta
-                    const formatearValor = (valor) => {
+                    // Llenar campos individuales de la tabla de prescripción
+                    const setValueIfEmpty = (selector, value) => {
+                        const element = document.querySelector(selector);
+                        if (element && !element.value && value !== null && value !== undefined && value !== '') {
+                            element.value = value;
+                        }
+                    };
+                    
+                    // Formatear valores para mostrar
+                    const formatearValorParaCampo = (valor) => {
                         if (valor === null || valor === undefined || valor === '') return '';
                         if (!isNaN(parseFloat(valor))) {
                             const num = parseFloat(valor);
-                            return num > 0 ? `+${num}` : `${num}`;
+                            return num > 0 ? `+${num.toFixed(2)}` : `${num.toFixed(2)}`;
                         }
                         return valor;
                     };
                     
-                    const odEsfera = formatearValor(data.historial.od_esfera);
-                    const odCilindro = formatearValor(data.historial.od_cilindro);
-                    const odEje = data.historial.od_eje ? `X${data.historial.od_eje}°` : '';
+                    // Llenar campos individuales
+                    setValueIfEmpty('[name="od_esfera[]"]', formatearValorParaCampo(data.historial.od_esfera));
+                    setValueIfEmpty('[name="od_cilindro[]"]', formatearValorParaCampo(data.historial.od_cilindro));
+                    setValueIfEmpty('[name="od_eje[]"]', data.historial.od_eje ? `${data.historial.od_eje}°` : '');
+                    setValueIfEmpty('[name="oi_esfera[]"]', formatearValorParaCampo(data.historial.oi_esfera));
+                    setValueIfEmpty('[name="oi_cilindro[]"]', formatearValorParaCampo(data.historial.oi_cilindro));
+                    setValueIfEmpty('[name="oi_eje[]"]', data.historial.oi_eje ? `${data.historial.oi_eje}°` : '');
+                    setValueIfEmpty('[name="add[]"]', formatearValorParaCampo(data.historial.add));
+                    setValueIfEmpty('[name="dp[]"]', data.historial.dp || '');
                     
-                    const oiEsfera = formatearValor(data.historial.oi_esfera);
-                    const oiCilindro = formatearValor(data.historial.oi_cilindro);
-                    const oiEje = data.historial.oi_eje ? `X${data.historial.oi_eje}°` : '';
-                    
-                    const odMedida = `OD: ${odEsfera} ${odCilindro} ${odEje}`.trim();
-                    const oiMedida = `OI: ${oiEsfera} ${oiCilindro} ${oiEje}`.trim();
-                    const addInfo = data.historial.add ? `ADD: ${formatearValor(data.historial.add)}` : '';
-                    const dpInfo = data.historial.dp ? `DP: ${data.historial.dp}` : '';
-                    
-                    if (!$('#l_medida').val()) {
-                        const medidaCompleta = `${odMedida} / ${oiMedida} ${addInfo} ${dpInfo}`.trim();
-                        $('#l_medida').val(medidaCompleta);
-                    }
+                    // Actualizar automáticamente el campo l_medida después de un breve delay
+                    setTimeout(() => {
+                        formatearMedidasLunas();
+                    }, 100);
                 }
             } else {
                 // No se encontraron datos
@@ -957,30 +999,67 @@
                             </button>
                         </div>
                         <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Lunas Medidas</label>
-                                <input type="text" class="form-control" name="l_medida[]" oninput="calculateTotal()">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Lunas Detalle</label>
-                                <input type="text" class="form-control" name="l_detalle[]" oninput="calculateTotal()">
+                            <div class="col-md-12">
+                                <label class="form-label">Prescripción/Medidas de Lunas</label>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th width="10%">Ojo</th>
+                                                <th width="20%">Esfera</th>
+                                                <th width="20%">Cilindro</th>
+                                                <th width="15%">Eje</th>
+                                                <th width="15%">ADD</th>
+                                                <th width="20%">Observaciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="align-middle text-center"><strong>OD</strong></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="od_esfera[]" placeholder="Ej: +2.00"></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="od_cilindro[]" placeholder="Ej: -1.50"></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="od_eje[]" placeholder="Ej: 90°"></td>
+                                                <td rowspan="2" class="align-middle"><input type="text" class="form-control form-control-sm" name="add[]" placeholder="Ej: +2.00"></td>
+                                                <td rowspan="2" class="align-middle"><textarea class="form-control form-control-sm" name="l_detalle[]" rows="3" placeholder="Detalles adicionales"></textarea></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="align-middle text-center"><strong>OI</strong></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="oi_esfera[]" placeholder="Ej: +1.75"></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="oi_cilindro[]" placeholder="Ej: -1.25"></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="oi_eje[]" placeholder="Ej: 85°"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="text-center"><strong>DP</strong></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="dp[]" placeholder="Ej: 62"></td>
+                                                <td colspan="4">
+                                                    <input type="hidden" name="l_medida[]">
+                                                    <small class="text-muted">Distancia Pupilar</small>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    <strong>Formato de ejemplo:</strong> OD: +2.00 -1.50 X90° / OI: +1.75 -1.25 X85° ADD: +2.00 DP: 62
+                                </small>
                             </div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <label class="form-label">Tipo de Lente</label>
                                 <input type="text" class="form-control" name="tipo_lente[]" list="tipo_lente_options" 
-                                       placeholder="Seleccione o escriba un tipo de lente" oninput="calculateTotal()">
+                                       placeholder="Seleccione o escriba un tipo de lente">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Material</label>
                                 <input type="text" class="form-control" name="material[]" list="material_options"
-                                       placeholder="Seleccione o escriba un material" oninput="calculateTotal()">
+                                       placeholder="Seleccione o escriba un material">
                             </div>
-                            <div class="col-md.4">
+                            <div class="col-md-4">
                                 <label class="form-label">Filtro</label>
                                 <input type="text" class="form-control" name="filtro[]" list="filtro_options"
-                                       placeholder="Seleccione o escriba un filtro" oninput="calculateTotal()">
+                                       placeholder="Seleccione o escriba un filtro">
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -1056,6 +1135,34 @@
                 newDescuentoInput.addEventListener('input', calculateTotal);
             }
             
+            // Agregar event listeners para los campos de medidas en secciones duplicadas de lunas
+            if (type === 'lunas') {
+                const newSection = container.lastElementChild;
+                const camposMedidas = [
+                    '[name="od_esfera[]"]',
+                    '[name="od_cilindro[]"]', 
+                    '[name="od_eje[]"]',
+                    '[name="oi_esfera[]"]',
+                    '[name="oi_cilindro[]"]',
+                    '[name="oi_eje[]"]',
+                    '[name="add[]"]',
+                    '[name="dp[]"]'
+                ];
+                
+                camposMedidas.forEach(selector => {
+                    const campo = newSection.querySelector(selector);
+                    if (campo) {
+                        campo.addEventListener('input', function() {
+                            // Formatear medidas para esta sección específica
+                            formatearMedidasLunasSeccion(newSection);
+                        });
+                        campo.addEventListener('blur', function() {
+                            formatearMedidasLunasSeccion(newSection);
+                        });
+                    }
+                });
+            }
+            
             // Aplicar el comportamiento simple de datalist a los nuevos campos también
             $('input[list]').off('click').on('click', function() {
                 if (this.value === '') {
@@ -1080,6 +1187,153 @@
             createNewFields('accesorios');
             calculateTotal(); // recalcular total con el nuevo accesorio
         }
+
+        // Función para formatear las medidas de lunas automáticamente
+        function formatearMedidasLunas() {
+            // Obtener valores de los campos de la primera sección de lunas
+            const odEsfera = document.querySelector('[name="od_esfera[]"]')?.value?.trim() || '';
+            const odCilindro = document.querySelector('[name="od_cilindro[]"]')?.value?.trim() || '';
+            const odEje = document.querySelector('[name="od_eje[]"]')?.value?.trim() || '';
+            const oiEsfera = document.querySelector('[name="oi_esfera[]"]')?.value?.trim() || '';
+            const oiCilindro = document.querySelector('[name="oi_cilindro[]"]')?.value?.trim() || '';
+            const oiEje = document.querySelector('[name="oi_eje[]"]')?.value?.trim() || '';
+            const add = document.querySelector('[name="add[]"]')?.value?.trim() || '';
+            const dp = document.querySelector('[name="dp[]"]')?.value?.trim() || '';
+            
+            // Formatear valores con signos apropiados
+            const formatearValor = (valor) => {
+                if (!valor) return '';
+                const num = parseFloat(valor.replace(/[+\-]/g, ''));
+                if (isNaN(num)) return valor;
+                if (valor.includes('-') || num < 0) return `-${Math.abs(num).toFixed(2)}`;
+                return `+${num.toFixed(2)}`;
+            };
+            
+            // Construir la cadena de medidas
+            let medidaCompleta = '';
+            
+            // OD
+            if (odEsfera || odCilindro || odEje) {
+                medidaCompleta += 'OD: ';
+                if (odEsfera) medidaCompleta += formatearValor(odEsfera) + ' ';
+                if (odCilindro) medidaCompleta += formatearValor(odCilindro) + ' ';
+                if (odEje) medidaCompleta += (odEje.includes('X') ? odEje : `X${odEje}`) + (odEje.includes('°') ? '' : '°') + ' ';
+            }
+            
+            // OI
+            if (oiEsfera || oiCilindro || oiEje) {
+                if (medidaCompleta) medidaCompleta += '/ ';
+                medidaCompleta += 'OI: ';
+                if (oiEsfera) medidaCompleta += formatearValor(oiEsfera) + ' ';
+                if (oiCilindro) medidaCompleta += formatearValor(oiCilindro) + ' ';
+                if (oiEje) medidaCompleta += (oiEje.includes('X') ? oiEje : `X${oiEje}`) + (oiEje.includes('°') ? '' : '°') + ' ';
+            }
+            
+            // ADD
+            if (add) {
+                if (medidaCompleta) medidaCompleta += ' ';
+                medidaCompleta += `ADD: ${formatearValor(add)}`;
+            }
+            
+            // DP
+            if (dp) {
+                if (medidaCompleta) medidaCompleta += ' ';
+                medidaCompleta += `DP: ${dp}`;
+            }
+            
+            // Actualizar el campo oculto
+            const campoMedida = document.querySelector('#l_medida');
+            if (campoMedida) {
+                campoMedida.value = medidaCompleta.trim();
+            }
+        }
+
+        // Función para formatear las medidas de lunas en una sección específica
+        function formatearMedidasLunasSeccion(seccion) {
+            // Obtener valores de los campos de esta sección específica
+            const odEsfera = seccion.querySelector('[name="od_esfera[]"]')?.value?.trim() || '';
+            const odCilindro = seccion.querySelector('[name="od_cilindro[]"]')?.value?.trim() || '';
+            const odEje = seccion.querySelector('[name="od_eje[]"]')?.value?.trim() || '';
+            const oiEsfera = seccion.querySelector('[name="oi_esfera[]"]')?.value?.trim() || '';
+            const oiCilindro = seccion.querySelector('[name="oi_cilindro[]"]')?.value?.trim() || '';
+            const oiEje = seccion.querySelector('[name="oi_eje[]"]')?.value?.trim() || '';
+            const add = seccion.querySelector('[name="add[]"]')?.value?.trim() || '';
+            const dp = seccion.querySelector('[name="dp[]"]')?.value?.trim() || '';
+            
+            // Formatear valores con signos apropiados
+            const formatearValor = (valor) => {
+                if (!valor) return '';
+                const num = parseFloat(valor.replace(/[+\-]/g, ''));
+                if (isNaN(num)) return valor;
+                if (valor.includes('-') || num < 0) return `-${Math.abs(num).toFixed(2)}`;
+                return `+${num.toFixed(2)}`;
+            };
+            
+            // Construir la cadena de medidas
+            let medidaCompleta = '';
+            
+            // OD
+            if (odEsfera || odCilindro || odEje) {
+                medidaCompleta += 'OD: ';
+                if (odEsfera) medidaCompleta += formatearValor(odEsfera) + ' ';
+                if (odCilindro) medidaCompleta += formatearValor(odCilindro) + ' ';
+                if (odEje) medidaCompleta += (odEje.includes('X') ? odEje : `X${odEje}`) + (odEje.includes('°') ? '' : '°') + ' ';
+            }
+            
+            // OI
+            if (oiEsfera || oiCilindro || oiEje) {
+                if (medidaCompleta) medidaCompleta += '/ ';
+                medidaCompleta += 'OI: ';
+                if (oiEsfera) medidaCompleta += formatearValor(oiEsfera) + ' ';
+                if (oiCilindro) medidaCompleta += formatearValor(oiCilindro) + ' ';
+                if (oiEje) medidaCompleta += (oiEje.includes('X') ? oiEje : `X${oiEje}`) + (oiEje.includes('°') ? '' : '°') + ' ';
+            }
+            
+            // ADD
+            if (add) {
+                if (medidaCompleta) medidaCompleta += ' ';
+                medidaCompleta += `ADD: ${formatearValor(add)}`;
+            }
+            
+            // DP
+            if (dp) {
+                if (medidaCompleta) medidaCompleta += ' ';
+                medidaCompleta += `DP: ${dp}`;
+            }
+            
+            // Actualizar el campo oculto de esta sección
+            const campoMedida = seccion.querySelector('[name="l_medida[]"]');
+            if (campoMedida) {
+                campoMedida.value = medidaCompleta.trim();
+            }
+        }
+
+        // Event listeners para los campos de medidas de lunas
+        document.addEventListener('DOMContentLoaded', function() {
+            // ...existing code...
+            
+            // Agregar event listeners para formateo automático de medidas
+            const camposMedidas = [
+                '[name="od_esfera[]"]',
+                '[name="od_cilindro[]"]', 
+                '[name="od_eje[]"]',
+                '[name="oi_esfera[]"]',
+                '[name="oi_cilindro[]"]',
+                '[name="oi_eje[]"]',
+                '[name="add[]"]',
+                '[name="dp[]"]'
+            ];
+            
+            camposMedidas.forEach(selector => {
+                const campo = document.querySelector(selector);
+                if (campo) {
+                    campo.addEventListener('input', formatearMedidasLunas);
+                    campo.addEventListener('blur', formatearMedidasLunas);
+                }
+            });
+        });
+
+        // ...existing code...
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/css/bootstrap-select.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/js/bootstrap-select.min.js"></script>
