@@ -80,13 +80,54 @@ function duplicateLunas() {
             </div>
             
             <div class="row mb-3">
-                <div class="col-md-6">
-                    <label class="form-label">Lunas Medidas</label>
-                    <input type="text" class="form-control" name="l_medida[]" value="">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Lunas Detalle</label>
-                    <input type="text" class="form-control" name="l_detalle[]" value="">
+                <div class="col-md-12">
+                    <label class="form-label">Prescripción/Medidas de Lunas</label>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th width="10%">Ojo</th>
+                                    <th width="20%">Esfera</th>
+                                    <th width="20%">Cilindro</th>
+                                    <th width="15%">Eje</th>
+                                    <th width="15%">ADD</th>
+                                    <th width="20%">Observaciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="align-middle text-center"><strong>OD</strong></td>
+                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_esfera[]" placeholder="Ej: +2.00"></td>
+                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_cilindro[]" placeholder="Ej: -1.50"></td>
+                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_eje[]" placeholder="Ej: 90°"></td>
+                                    <td rowspan="2" class="align-middle">
+                                        <input type="text" class="form-control form-control-sm medida-input" name="add[]" placeholder="Ej: +2.00">
+                                    </td>
+                                    <td rowspan="2" class="align-middle">
+                                        <textarea class="form-control form-control-sm" name="l_detalle[]" rows="3" placeholder="Detalles adicionales"></textarea>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="align-middle text-center"><strong>OI</strong></td>
+                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_esfera[]" placeholder="Ej: +1.75"></td>
+                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_cilindro[]" placeholder="Ej: -1.25"></td>
+                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_eje[]" placeholder="Ej: 85°"></td>
+                                </tr>
+                                <tr>
+                                    <td class="text-center"><strong>DP</strong></td>
+                                    <td><input type="text" class="form-control form-control-sm medida-input" name="dp[]" placeholder="Ej: 62"></td>
+                                    <td colspan="4">
+                                        <input type="hidden" name="l_medida[]" class="l-medida-hidden">
+                                        <small class="text-muted">Distancia Pupilar</small>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="form-text text-muted">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        <strong>Formato de ejemplo:</strong> OD: +2.00 -1.50 X90° / OI: +1.75 -1.25 X85° ADD: +2.00 DP: 62
+                    </small>
                 </div>
             </div>
 
@@ -131,6 +172,13 @@ function duplicateLunas() {
         </div>
     `;
     container.insertAdjacentHTML('beforeend', template);
+    
+    // Agregar event listeners para los nuevos campos de medidas
+    setTimeout(() => {
+        if (typeof agregarEventListenersMedidas === 'function') {
+            agregarEventListenersMedidas();
+        }
+    }, 100);
 }
 
 function duplicateArmazon() {

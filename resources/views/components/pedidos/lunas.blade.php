@@ -22,13 +22,85 @@
                 @endif
                 
                 <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Lunas Medidas</label>
-                        <input type="text" class="form-control" name="l_medida[]" value="{{ $luna->l_medida }}">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Lunas Detalle</label>
-                        <input type="text" class="form-control" name="l_detalle[]" value="{{ $luna->l_detalle }}">
+                    <div class="col-md-12">
+                        <label class="form-label">Prescripción/Medidas de Lunas</label>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th width="10%">Ojo</th>
+                                        <th width="20%">Esfera</th>
+                                        <th width="20%">Cilindro</th>
+                                        <th width="15%">Eje</th>
+                                        <th width="15%">ADD</th>
+                                        <th width="20%">Observaciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php
+                                        // Parseamos los datos existentes de l_medida si existen
+                                        $medidaData = [];
+                                        if ($luna->l_medida) {
+                                            // Intentar extraer los valores de la cadena existente
+                                            preg_match('/OD:\s*([+\-]?\d*\.?\d*)\s*([+\-]?\d*\.?\d*)\s*X?(\d*)°?/', $luna->l_medida, $odMatches);
+                                            preg_match('/OI:\s*([+\-]?\d*\.?\d*)\s*([+\-]?\d*\.?\d*)\s*X?(\d*)°?/', $luna->l_medida, $oiMatches);
+                                            preg_match('/ADD:\s*([+\-]?\d*\.?\d*)/', $luna->l_medida, $addMatches);
+                                            preg_match('/DP:\s*(\d+)/', $luna->l_medida, $dpMatches);
+                                            
+                                            $medidaData = [
+                                                'od_esfera' => $odMatches[1] ?? '',
+                                                'od_cilindro' => $odMatches[2] ?? '',
+                                                'od_eje' => $odMatches[3] ?? '',
+                                                'oi_esfera' => $oiMatches[1] ?? '',
+                                                'oi_cilindro' => $oiMatches[2] ?? '',
+                                                'oi_eje' => $oiMatches[3] ?? '',
+                                                'add' => $addMatches[1] ?? '',
+                                                'dp' => $dpMatches[1] ?? ''
+                                            ];
+                                        }
+                                    @endphp
+                                    <tr>
+                                        <td class="align-middle text-center"><strong>OD</strong></td>
+                                        <td><input type="text" class="form-control form-control-sm medida-input" name="od_esfera[]" 
+                                                   placeholder="Ej: +2.00" value="{{ $medidaData['od_esfera'] ?? '' }}"></td>
+                                        <td><input type="text" class="form-control form-control-sm medida-input" name="od_cilindro[]" 
+                                                   placeholder="Ej: -1.50" value="{{ $medidaData['od_cilindro'] ?? '' }}"></td>
+                                        <td><input type="text" class="form-control form-control-sm medida-input" name="od_eje[]" 
+                                                   placeholder="Ej: 90°" value="{{ $medidaData['od_eje'] ? $medidaData['od_eje'] . '°' : '' }}"></td>
+                                        <td rowspan="2" class="align-middle">
+                                            <input type="text" class="form-control form-control-sm medida-input" name="add[]" 
+                                                   placeholder="Ej: +2.00" value="{{ $medidaData['add'] ?? '' }}">
+                                        </td>
+                                        <td rowspan="2" class="align-middle">
+                                            <textarea class="form-control form-control-sm" name="l_detalle[]" rows="3" 
+                                                      placeholder="Detalles adicionales">{{ $luna->l_detalle }}</textarea>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle text-center"><strong>OI</strong></td>
+                                        <td><input type="text" class="form-control form-control-sm medida-input" name="oi_esfera[]" 
+                                                   placeholder="Ej: +1.75" value="{{ $medidaData['oi_esfera'] ?? '' }}"></td>
+                                        <td><input type="text" class="form-control form-control-sm medida-input" name="oi_cilindro[]" 
+                                                   placeholder="Ej: -1.25" value="{{ $medidaData['oi_cilindro'] ?? '' }}"></td>
+                                        <td><input type="text" class="form-control form-control-sm medida-input" name="oi_eje[]" 
+                                                   placeholder="Ej: 85°" value="{{ $medidaData['oi_eje'] ? $medidaData['oi_eje'] . '°' : '' }}"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center"><strong>DP</strong></td>
+                                        <td><input type="text" class="form-control form-control-sm medida-input" name="dp[]" 
+                                                   placeholder="Ej: 62" value="{{ $medidaData['dp'] ?? '' }}"></td>
+                                        <td colspan="4">
+                                            <input type="hidden" name="l_medida[]" value="{{ $luna->l_medida }}" class="l-medida-hidden">
+                                            <small class="text-muted">Distancia Pupilar</small>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <strong>Formato de ejemplo:</strong> OD: +2.00 -1.50 X90° / OI: +1.75 -1.25 X85° ADD: +2.00 DP: 62
+                        </small>
                     </div>
                 </div>
 

@@ -8,6 +8,11 @@ window.editMode = true;
 $(document).ready(function() {
     initializeCustomComboboxes();
     
+    // Inicializar event listeners para medidas de lunas
+    setTimeout(() => {
+        agregarEventListenersMedidas();
+    }, 500);
+    
     // Delegación de eventos para los elementos de la lista desplegable
     $(document).on('click', '.armazon-option', function(e) {
         e.preventDefault();
@@ -371,4 +376,107 @@ function restarUnidadInventario(inventarioId) {
             });
         }
     });
-} 
+}
+
+/**
+ * Funciones para formatear medidas de lunas automáticamente
+ */
+
+// Función para formatear las medidas de lunas automáticamente (global)
+function formatearMedidasLunasEdit() {
+    // Buscar todas las secciones de lunas
+    document.querySelectorAll('.luna-section').forEach((seccion, index) => {
+        formatearMedidasLunasSeccionEdit(seccion);
+    });
+}
+
+// Función para formatear las medidas de lunas en una sección específica (global)
+function formatearMedidasLunasSeccionEdit(seccion) {
+    // Obtener valores de los campos de esta sección específica
+    const odEsfera = seccion.querySelector('[name="od_esfera[]"]')?.value?.trim() || '';
+    const odCilindro = seccion.querySelector('[name="od_cilindro[]"]')?.value?.trim() || '';
+    const odEje = seccion.querySelector('[name="od_eje[]"]')?.value?.trim() || '';
+    const oiEsfera = seccion.querySelector('[name="oi_esfera[]"]')?.value?.trim() || '';
+    const oiCilindro = seccion.querySelector('[name="oi_cilindro[]"]')?.value?.trim() || '';
+    const oiEje = seccion.querySelector('[name="oi_eje[]"]')?.value?.trim() || '';
+    const add = seccion.querySelector('[name="add[]"]')?.value?.trim() || '';
+    const dp = seccion.querySelector('[name="dp[]"]')?.value?.trim() || '';
+    
+    // Formatear valores con signos apropiados
+    const formatearValor = (valor) => {
+        if (!valor) return '';
+        const num = parseFloat(valor.replace(/[+\-]/g, ''));
+        if (isNaN(num)) return valor;
+        if (valor.includes('-') || num < 0) return `-${Math.abs(num).toFixed(2)}`;
+        return `+${num.toFixed(2)}`;
+    };
+    
+    // Construir la cadena de medidas
+    let medidaCompleta = '';
+    
+    // OD
+    if (odEsfera || odCilindro || odEje) {
+        medidaCompleta += 'OD: ';
+        if (odEsfera) medidaCompleta += formatearValor(odEsfera) + ' ';
+        if (odCilindro) medidaCompleta += formatearValor(odCilindro) + ' ';
+        if (odEje) medidaCompleta += (odEje.includes('X') ? odEje : `X${odEje.replace('°', '')}`) + '° ';
+    }
+    
+    // OI
+    if (oiEsfera || oiCilindro || oiEje) {
+        if (medidaCompleta) medidaCompleta += '/ ';
+        medidaCompleta += 'OI: ';
+        if (oiEsfera) medidaCompleta += formatearValor(oiEsfera) + ' ';
+        if (oiCilindro) medidaCompleta += formatearValor(oiCilindro) + ' ';
+        if (oiEje) medidaCompleta += (oiEje.includes('X') ? oiEje : `X${oiEje.replace('°', '')}`) + '° ';
+    }
+    
+    // ADD
+    if (add) {
+        if (medidaCompleta) medidaCompleta += ' ';
+        medidaCompleta += `ADD: ${formatearValor(add)}`;
+    }
+    
+    // DP
+    if (dp) {
+        if (medidaCompleta) medidaCompleta += ' ';
+        medidaCompleta += `DP: ${dp}`;
+    }
+    
+    // Actualizar el campo oculto de esta sección
+    const campoMedida = seccion.querySelector('.l-medida-hidden');
+    if (campoMedida) {
+        campoMedida.value = medidaCompleta.trim();
+    }
+}
+
+// Event listeners para los campos de medidas de lunas (global)
+function agregarEventListenersMedidas() {
+    const camposMedidas = [
+        '[name="od_esfera[]"]',
+        '[name="od_cilindro[]"]', 
+        '[name="od_eje[]"]',
+        '[name="oi_esfera[]"]',
+        '[name="oi_cilindro[]"]',
+        '[name="oi_eje[]"]',
+        '[name="add[]"]',
+        '[name="dp[]"]'
+    ];
+    
+    camposMedidas.forEach(selector => {
+        document.querySelectorAll(selector).forEach(campo => {
+            // Remover listeners existentes
+            campo.removeEventListener('input', formatearMedidasLunasEdit);
+            campo.removeEventListener('blur', formatearMedidasLunasEdit);
+            
+            // Agregar nuevos listeners
+            campo.addEventListener('input', formatearMedidasLunasEdit);
+            campo.addEventListener('blur', formatearMedidasLunasEdit);
+        });
+    });
+}
+
+// Hacer las funciones disponibles globalmente
+window.formatearMedidasLunasEdit = formatearMedidasLunasEdit;
+window.formatearMedidasLunasSeccionEdit = formatearMedidasLunasSeccionEdit;
+window.agregarEventListenersMedidas = agregarEventListenersMedidas;
