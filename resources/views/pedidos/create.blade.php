@@ -364,7 +364,7 @@
                             </div>
                             {{-- Fila nueva para tipo de lente, material y filtro --}}
                             <div class="row mb-3">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label for="tipo_lente" class="form-label">Tipo de Lente</label>
                                     <input type="text" class="form-control" id="tipo_lente" name="tipo_lente[]" list="tipo_lente_options" placeholder="Seleccione o escriba un tipo de lente">
                                     <datalist id="tipo_lente_options">
@@ -375,9 +375,19 @@
                                         <option value="Contacto">
                                     </datalist>
                                 </div>
-                                <div class="col-md-4">
-                                    <label for="material" class="form-label">Material</label>
-                                    <input type="text" class="form-control" id="material" name="material[]" list="material_options" placeholder="Seleccione o escriba un material">
+                                <div class="col-md-6">
+                                    <label class="form-label">Material</label>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label for="material_od" class="form-label text-sm">OD (Ojo Derecho)</label>
+                                            <input type="text" class="form-control form-control-sm" id="material_od" name="material_od[]" list="material_options" placeholder="Material OD">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="material_oi" class="form-label text-sm">OI (Ojo Izquierdo)</label>
+                                            <input type="text" class="form-control form-control-sm" id="material_oi" name="material_oi[]" list="material_options" placeholder="Material OI">
+                                        </div>
+                                    </div>
+                                    <input type="hidden" id="material" name="material[]">
                                     <datalist id="material_options">
                                         <option value="Policarbonato">
                                         <option value="CR-39">
@@ -390,7 +400,7 @@
                                         <option value="Crizal">
                                     </datalist>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label for="filtro" class="form-label">Filtro</label>
                                     <input type="text" class="form-control" id="filtro" name="filtro[]" list="filtro_options" placeholder="Seleccione o escriba un filtro">
                                     <datalist id="filtro_options">
@@ -847,6 +857,7 @@
                     // Actualizar automáticamente el campo l_medida después de un breve delay
                     setTimeout(() => {
                         formatearMedidasLunas();
+                        formatearMaterial();
                     }, 100);
                 }
             } else {
@@ -943,6 +954,66 @@
         // Aplicar el estilo de mayúsculas como en historial clínico
         $('input[type="text"], input[type="email"], textarea').on('input', function() {
             $(this).val($(this).val().toUpperCase());
+        });
+
+        // Función para formatear material OD/OI en campo unificado
+        window.formatearMaterial = function() {
+            // Buscar en todas las secciones de lunas
+            document.querySelectorAll('.luna-section, .card-body').forEach(seccion => {
+                const materialOD = seccion.querySelector('[name="material_od[]"]')?.value?.trim() || '';
+                const materialOI = seccion.querySelector('[name="material_oi[]"]')?.value?.trim() || '';
+                const materialUnificado = seccion.querySelector('[name="material[]"]');
+                
+                if (materialUnificado && (materialOD || materialOI)) {
+                    let materialTexto = '';
+                    const partes = [];
+                    if (materialOD) partes.push(`OD: ${materialOD}`);
+                    if (materialOI) partes.push(`OI: ${materialOI}`);
+                    materialTexto = partes.join(' | ');
+                    materialUnificado.value = materialTexto;
+                }
+            });
+        };
+
+        // Event listeners para formateo automático de material
+        document.addEventListener('DOMContentLoaded', function() {
+            // Agregar listeners para campos de material
+            const addMaterialListeners = (container) => {
+                const materialOD = container.querySelector('[name="material_od[]"]');
+                const materialOI = container.querySelector('[name="material_oi[]"]');
+                
+                if (materialOD) {
+                    materialOD.addEventListener('input', function() {
+                        formatearMaterialSeccion(container);
+                    });
+                }
+                if (materialOI) {
+                    materialOI.addEventListener('input', function() {
+                        formatearMaterialSeccion(container);
+                    });
+                }
+            };
+
+            // Función para formatear material en una sección específica
+            window.formatearMaterialSeccion = function(seccion) {
+                const materialOD = seccion.querySelector('[name="material_od[]"]')?.value?.trim() || '';
+                const materialOI = seccion.querySelector('[name="material_oi[]"]')?.value?.trim() || '';
+                const materialUnificado = seccion.querySelector('[name="material[]"]');
+                
+                if (materialUnificado) {
+                    let materialTexto = '';
+                    if (materialOD || materialOI) {
+                        const partes = [];
+                        if (materialOD) partes.push(`OD: ${materialOD}`);
+                        if (materialOI) partes.push(`OI: ${materialOI}`);
+                        materialTexto = partes.join(' | ');
+                    }
+                    materialUnificado.value = materialTexto;
+                }
+            };
+
+            // Agregar a la primera sección
+            addMaterialListeners(document);
         });
 
         function createNewFields(type) {

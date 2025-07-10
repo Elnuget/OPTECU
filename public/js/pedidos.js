@@ -132,19 +132,27 @@ function duplicateLunas() {
             </div>
 
             <div class="row mb-3">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label">Tipo de Lente</label>
                     <input type="text" class="form-control" name="tipo_lente[]" 
                            list="tipo_lente_options" value=""
                            placeholder="Seleccione o escriba un tipo de lente">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label">Material</label>
-                    <input type="text" class="form-control" name="material[]" 
-                           list="material_options" value=""
-                           placeholder="Seleccione o escriba un material">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label text-sm">OD (Ojo Derecho)</label>
+                            <input type="text" class="form-control form-control-sm material-input" name="material_od[]" list="material_options" placeholder="Material OD">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-sm">OI (Ojo Izquierdo)</label>
+                            <input type="text" class="form-control form-control-sm material-input" name="material_oi[]" list="material_options" placeholder="Material OI">
+                        </div>
+                    </div>
+                    <input type="hidden" name="material[]" class="material-hidden">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label">Filtro</label>
                     <input type="text" class="form-control" name="filtro[]" 
                            list="filtro_options" value=""
@@ -177,6 +185,9 @@ function duplicateLunas() {
     setTimeout(() => {
         if (typeof agregarEventListenersMedidas === 'function') {
             agregarEventListenersMedidas();
+        }
+        if (typeof agregarEventListenersMaterial === 'function') {
+            agregarEventListenersMaterial();
         }
     }, 100);
 }

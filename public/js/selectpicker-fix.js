@@ -11,6 +11,7 @@ $(document).ready(function() {
     // Inicializar event listeners para medidas de lunas
     setTimeout(() => {
         agregarEventListenersMedidas();
+        agregarEventListenersMaterial();
     }, 500);
     
     // Delegación de eventos para los elementos de la lista desplegable
@@ -476,7 +477,58 @@ function agregarEventListenersMedidas() {
     });
 }
 
+// Event listeners para los campos de material OD/OI (global)
+function agregarEventListenersMaterial() {
+    const camposMaterial = [
+        '[name="material_od[]"]',
+        '[name="material_oi[]"]'
+    ];
+    
+    camposMaterial.forEach(selector => {
+        document.querySelectorAll(selector).forEach(campo => {
+            // Remover listeners existentes
+            campo.removeEventListener('input', formatearMaterialEdit);
+            campo.removeEventListener('blur', formatearMaterialEdit);
+            
+            // Agregar nuevos listeners
+            campo.addEventListener('input', formatearMaterialEdit);
+            campo.addEventListener('blur', formatearMaterialEdit);
+        });
+    });
+}
+
+// Función para formatear material de una sección específica (edit mode)
+function formatearMaterialEdit(event) {
+    const campo = event.target;
+    const seccion = campo.closest('.luna-section') || campo.closest('.card-body');
+    
+    if (seccion) {
+        formatearMaterialSeccionEdit(seccion);
+    }
+}
+
+// Función para formatear material en una sección específica (edit mode)
+function formatearMaterialSeccionEdit(seccion) {
+    const materialOD = seccion.querySelector('[name="material_od[]"]')?.value?.trim() || '';
+    const materialOI = seccion.querySelector('[name="material_oi[]"]')?.value?.trim() || '';
+    const materialUnificado = seccion.querySelector('[name="material[]"]');
+    
+    if (materialUnificado) {
+        let materialTexto = '';
+        if (materialOD || materialOI) {
+            const partes = [];
+            if (materialOD) partes.push(`OD: ${materialOD}`);
+            if (materialOI) partes.push(`OI: ${materialOI}`);
+            materialTexto = partes.join(' | ');
+        }
+        materialUnificado.value = materialTexto;
+    }
+}
+
 // Hacer las funciones disponibles globalmente
 window.formatearMedidasLunasEdit = formatearMedidasLunasEdit;
 window.formatearMedidasLunasSeccionEdit = formatearMedidasLunasSeccionEdit;
 window.agregarEventListenersMedidas = agregarEventListenersMedidas;
+window.formatearMaterialEdit = formatearMaterialEdit;
+window.formatearMaterialSeccionEdit = formatearMaterialSeccionEdit;
+window.agregarEventListenersMaterial = agregarEventListenersMaterial;
