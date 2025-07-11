@@ -7,6 +7,10 @@ use App\Models\Pedido;
 use App\Models\Inventario;
 use App\Models\PedidoLuna; // Add this line
 use App\Models\Empresa;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class PedidosController extends Controller
 {    public function __construct()
@@ -78,7 +82,8 @@ class PedidosController extends Controller
                 'saldo',
                 'fact',
                 'usuario',
-                'encuesta' // Asegurarnos de que la columna encuesta se cargue explícitamente
+                'encuesta', // Asegurarnos de que la columna encuesta se cargue explícitamente
+                'metodo_envio'
             ])
             ->orderBy('numero_orden', 'desc')
             ->get();
@@ -1126,6 +1131,10 @@ class PedidosController extends Controller
         // Obtener los pedidos con sus relaciones
         $pedidos = Pedido::with(['inventarios', 'lunas', 'empresa'])
             ->whereIn('id', $ids)
+            ->select([
+                'id', 'numero_orden', 'cliente', 'cedula', 'celular', 'direccion', 
+                'correo_electronico', 'empresa_id', 'metodo_envio', 'fecha_entrega'
+            ])
             ->orderBy('numero_orden', 'desc')
             ->get();
 
@@ -1145,14 +1154,14 @@ class PedidosController extends Controller
      */
     private function generateExcelFile($pedidos)
     {
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         
         // Configurar la columna A con texto vertical para la primera fila
         $sheet->setCellValue('A1', 'DE: L BARBOSA SPA 77.219.776-4');
         $sheet->getStyle('A1')->getAlignment()->setTextRotation(90);
-        $sheet->getStyle('A1')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
-        $sheet->getStyle('A1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A1')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A1')->getFont()->setBold(true);
         
         // Ajustar ancho de columna A automáticamente y altura para el texto vertical
@@ -1185,8 +1194,8 @@ class PedidosController extends Controller
             if ($pedidoEnFila == 0) { // Solo en la primera posición de cada fila
                 $sheet->setCellValue('A' . $fila, 'DE: L BARBOSA SPA 77.219.776-4');
                 $sheet->getStyle('A' . $fila)->getAlignment()->setTextRotation(90);
-                $sheet->getStyle('A' . $fila)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
-                $sheet->getStyle('A' . $fila)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('A' . $fila)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+                $sheet->getStyle('A' . $fila)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle('A' . $fila)->getFont()->setBold(true);
             }
             
@@ -1200,6 +1209,7 @@ class PedidosController extends Controller
             $infoPedido .= "TELÉFONO: " . $pedido->celular . "\n";
             $infoPedido .= "DIRECCIÓN: " . ($pedido->direccion ? $pedido->direccion : 'NO REGISTRADA') . "\n";
             $infoPedido .= "CORREO: " . ($pedido->correo_electronico ? $pedido->correo_electronico : 'NO REGISTRADO') . "\n";
+            $infoPedido .= "FECHA ENTREGA: " . ($pedido->fecha_entrega ? $pedido->fecha_entrega->format('d/m/Y') : 'NO REGISTRADA') . "\n";
             
             // Agregar información de armazones/accesorios
             if ($pedido->inventarios->count() > 0) {
@@ -1213,36 +1223,23 @@ class PedidosController extends Controller
             $sheet->setCellValue($columnaBase . $fila, strtoupper($empresaNombre) . " - " . $numeroOrden);
             $sheet->getStyle($columnaBase . $fila)->getFont()->setBold(true);
             $sheet->getStyle($columnaBase . $fila)->getAlignment()->setTextRotation(90);
-            $sheet->getStyle($columnaBase . $fila)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
-            $sheet->getStyle($columnaBase . $fila)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle($columnaBase . $fila)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle($columnaBase . $fila)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             
             // Colocar información del pedido en la siguiente columna
             $sheet->setCellValue($siguienteColumna . $fila, $infoPedido);
             $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setWrapText(true);
             $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setTextRotation(90);
-            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
-            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             
-            // Crear combobox en la columna designada
-            $sheet->setCellValue($columnaCombo . $fila, 'TIENDA'); // Valor por defecto
+            // Colocar método de envío en lugar del dropdown
+            $metodoEnvio = $pedido->metodo_envio ? strtoupper($pedido->metodo_envio) : 'NO ESPECIFICADO';
+            $sheet->setCellValue($columnaCombo . $fila, $metodoEnvio);
             
-            // Crear el dropdown/combobox
-            $validation = $sheet->getCell($columnaCombo . $fila)->getDataValidation();
-            $validation->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
-            $validation->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_INFORMATION);
-            $validation->setAllowBlank(false);
-            $validation->setShowInputMessage(true);
-            $validation->setShowErrorMessage(true);
-            $validation->setShowDropDown(true);
-            $validation->setErrorTitle('Error de entrada');
-            $validation->setError('Valor no está en la lista');
-            $validation->setPromptTitle('Seleccionar opción de envío');
-            $validation->setPrompt('Seleccione una opción de envío');
-            $validation->setFormula1('"TIENDA,CORREOS DE CHILE,CHILEXPRESS,STARKEN"');
-            
-            // Aplicar estilo al combobox
-            $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
-            $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            // Aplicar estilo al método de envío
+            $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setTextRotation(90); // Hacer el texto vertical
             $sheet->getStyle($columnaCombo . $fila)->getFont()->setBold(true);
             
@@ -1286,7 +1283,7 @@ class PedidosController extends Controller
         $styleBorder = [
             'borders' => [
                 'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'borderStyle' => Border::BORDER_THIN,
                     'color' => ['argb' => 'FF000000'], // Negro
                 ],
             ],
@@ -1304,7 +1301,7 @@ class PedidosController extends Controller
         header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');
         
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer = new Xlsx($spreadsheet);
         $writer->save('php://output');
         exit;
     }

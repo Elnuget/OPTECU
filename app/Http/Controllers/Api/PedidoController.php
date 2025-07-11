@@ -36,7 +36,9 @@ class PedidoController extends Controller
                 'saldo',
                 'fact',
                 'usuario',
-                'encuesta'
+                'encuesta',
+                'metodo_envio',
+                'fecha_entrega'
             ])
             ->orderBy('numero_orden', 'desc')
             ->get();
