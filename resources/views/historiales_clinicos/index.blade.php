@@ -78,7 +78,6 @@
                         <th>NOMBRES</th>
                         <th>APELLIDOS</th>
                         <th>FECHA</th>
-                        <th>MOTIVO CONSULTA</th>
                         <th>PRÓXIMA CONSULTA</th>
                         <th>EMPRESA</th>
                         <th>USUARIO</th>
@@ -92,7 +91,6 @@
                         <td>{{ strtoupper($historial->nombres) }}</td>
                         <td>{{ strtoupper($historial->apellidos) }}</td>
                         <td>{{ \Carbon\Carbon::parse($historial->fecha)->format('d/m/Y') }}</td>
-                        <td>{{ strtoupper($historial->motivo_consulta) }}</td>
                         <td>
                             @if($historial->proxima_consulta)
                                 <span class="badge {{ strtotime($historial->proxima_consulta) < time() ? 'badge-danger' : 'badge-success' }}">

@@ -298,7 +298,6 @@ El equipo de [EMPRESA]</textarea>
                                     <thead>
                                         <tr>
                                             <th>FECHA</th>
-                                            <th>MOTIVO CONSULTA</th>
                                             <th>PRÓXIMA CONSULTA</th>
                                             <th>USUARIO</th>
                                         </tr>
@@ -813,14 +812,13 @@ function mostrarHistorial(clienteId, nombre, apellidos, tipo) {
                     historialesBody.append(`
                         <tr>
                             <td>${historial.fecha}</td>
-                            <td>${historial.motivo_consulta}</td>
                             <td>${proximaConsulta}</td>
                             <td>${historial.usuario}</td>
                         </tr>
                     `);
                 });
             } else {
-                historialesBody.append('<tr><td colspan="4" class="text-center text-muted">NO HAY HISTORIALES CLÍNICOS REGISTRADOS</td></tr>');
+                historialesBody.append('<tr><td colspan="3" class="text-center text-muted">NO HAY HISTORIALES CLÍNICOS REGISTRADOS</td></tr>');
             }
             
             $('#historialLoader').hide();
