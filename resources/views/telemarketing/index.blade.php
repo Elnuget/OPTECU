@@ -278,11 +278,13 @@ El equipo de [EMPRESA]</textarea>
                                 <table id="pedidosHistorialTable" class="table table-striped table-sm">
                                     <thead>
                                         <tr>
+                                            <th style="display: none;">ID</th>
                                             <th>FECHA</th>
                                             <th>ORDEN</th>
                                             <th>ESTADO</th>
                                             <th>TOTAL</th>
                                             <th>SALDO</th>
+                                            <th>ACCIONES</th>
                                         </tr>
                                     </thead>
                                     <tbody id="pedidosHistorialBody">
@@ -297,9 +299,11 @@ El equipo de [EMPRESA]</textarea>
                                 <table id="historialesClinicoTable" class="table table-striped table-sm">
                                     <thead>
                                         <tr>
+                                            <th style="display: none;">ID</th>
                                             <th>FECHA</th>
                                             <th>PRÓXIMA CONSULTA</th>
                                             <th>USUARIO</th>
+                                            <th>ACCIONES</th>
                                         </tr>
                                     </thead>
                                     <tbody id="historialesClinicoBody">
@@ -787,16 +791,22 @@ function mostrarHistorial(clienteId, nombre, apellidos, tipo) {
                     
                     pedidosBody.append(`
                         <tr>
+                            <td style="display: none;">${pedido.id}</td>
                             <td>${pedido.fecha}</td>
                             <td>${pedido.numero_orden}</td>
                             <td><span style="color: ${estadoColor}">${pedido.fact}</span></td>
                             <td>$${pedido.total_formatted}</td>
                             <td><span style="color: ${pedido.saldo == 0 ? 'green' : 'red'}">$${pedido.saldo_formatted}</span></td>
+                            <td>
+                                <a href="/Pedidos/${pedido.id}" target="_blank" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-eye"></i> VER
+                                </a>
+                            </td>
                         </tr>
                     `);
                 });
             } else {
-                pedidosBody.append('<tr><td colspan="5" class="text-center text-muted">NO HAY PEDIDOS REGISTRADOS</td></tr>');
+                pedidosBody.append('<tr><td colspan="7" class="text-center text-muted">NO HAY PEDIDOS REGISTRADOS</td></tr>');
             }
             
             // Llenar la tabla de historiales clínicos
@@ -811,22 +821,28 @@ function mostrarHistorial(clienteId, nombre, apellidos, tipo) {
                     
                     historialesBody.append(`
                         <tr>
+                            <td style="display: none;">${historial.id}</td>
                             <td>${historial.fecha}</td>
                             <td>${proximaConsulta}</td>
                             <td>${historial.usuario}</td>
+                            <td>
+                                <a href="/historiales_clinicos/${historial.id}" target="_blank" class="btn btn-info btn-sm">
+                                    <i class="fas fa-eye"></i> VER
+                                </a>
+                            </td>
                         </tr>
                     `);
                 });
             } else {
-                historialesBody.append('<tr><td colspan="3" class="text-center text-muted">NO HAY HISTORIALES CLÍNICOS REGISTRADOS</td></tr>');
+                historialesBody.append('<tr><td colspan="5" class="text-center text-muted">NO HAY HISTORIALES CLÍNICOS REGISTRADOS</td></tr>');
             }
             
             $('#historialLoader').hide();
             $('#historialContent').show();
         },
         error: function() {
-            $('#pedidosHistorialBody').html('<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR PEDIDOS</td></tr>');
-            $('#historialesClinicoBody').html('<tr><td colspan="4" class="text-center text-danger">ERROR AL CARGAR HISTORIALES</td></tr>');
+            $('#pedidosHistorialBody').html('<tr><td colspan="7" class="text-center text-danger">ERROR AL CARGAR PEDIDOS</td></tr>');
+            $('#historialesClinicoBody').html('<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR HISTORIALES</td></tr>');
             $('#historialLoader').hide();
             $('#historialContent').show();
         }

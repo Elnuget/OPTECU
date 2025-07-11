@@ -304,6 +304,7 @@ class TelemarketingController extends Controller
                     $pedidos = DB::table('pedidos')
                         ->where('cliente', $clienteInfo->nombre)
                         ->select(
+                            'id',
                             'fecha',
                             'numero_orden',
                             'fact',
@@ -314,6 +315,7 @@ class TelemarketingController extends Controller
                         ->get()
                         ->map(function ($pedido) {
                             return [
+                                'id' => $pedido->id,
                                 'fecha' => Carbon::parse($pedido->fecha)->format('d/m/Y'),
                                 'numero_orden' => $pedido->numero_orden,
                                 'fact' => $pedido->fact,
@@ -328,6 +330,7 @@ class TelemarketingController extends Controller
                         ->leftJoin('users', 'historiales_clinicos.usuario_id', '=', 'users.id')
                         ->where('nombres', $clienteInfo->nombre)
                         ->select(
+                            'historiales_clinicos.id',
                             'historiales_clinicos.fecha',
                             'historiales_clinicos.motivo_consulta',
                             'historiales_clinicos.proxima_consulta',
@@ -337,6 +340,7 @@ class TelemarketingController extends Controller
                         ->get()
                         ->map(function ($historial) {
                             return [
+                                'id' => $historial->id,
                                 'fecha' => Carbon::parse($historial->fecha)->format('d/m/Y'),
                                 'motivo_consulta' => $historial->motivo_consulta,
                                 'proxima_consulta' => $historial->proxima_consulta,
@@ -358,6 +362,7 @@ class TelemarketingController extends Controller
                         ->where('nombres', $pacienteInfo->nombres)
                         ->where('apellidos', $pacienteInfo->apellidos)
                         ->select(
+                            'historiales_clinicos.id',
                             'historiales_clinicos.fecha',
                             'historiales_clinicos.motivo_consulta',
                             'historiales_clinicos.proxima_consulta',
@@ -367,6 +372,7 @@ class TelemarketingController extends Controller
                         ->get()
                         ->map(function ($historial) {
                             return [
+                                'id' => $historial->id,
                                 'fecha' => Carbon::parse($historial->fecha)->format('d/m/Y'),
                                 'motivo_consulta' => $historial->motivo_consulta,
                                 'proxima_consulta' => $historial->proxima_consulta,
@@ -384,6 +390,7 @@ class TelemarketingController extends Controller
                                   ->orWhere('paciente', $nombreCompleto);
                         })
                         ->select(
+                            'id',
                             'fecha',
                             'numero_orden',
                             'fact',
@@ -394,6 +401,7 @@ class TelemarketingController extends Controller
                         ->get()
                         ->map(function ($pedido) {
                             return [
+                                'id' => $pedido->id,
                                 'fecha' => Carbon::parse($pedido->fecha)->format('d/m/Y'),
                                 'numero_orden' => $pedido->numero_orden,
                                 'fact' => $pedido->fact,
