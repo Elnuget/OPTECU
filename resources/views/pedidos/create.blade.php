@@ -244,7 +244,7 @@
                             {{-- Fila 3 --}}
                             <div class="row mb-3">
                                 <div class="col-md-3">
-                                    <label for="examen_visual" class="form-label">Examen Visual</label>
+                                    <label for="examen_visual" class="form-label">Costo Examen Visual</label>
                                     <input type="number" class="form-control form-control-sm" id="examen_visual" name="examen_visual" step="0.01" oninput="calculateTotal()">
                                 </div>                                <div class="col-md-3">
                                     <label for="celular" class="form-label">Celular</label>
@@ -345,7 +345,7 @@
                     {{-- Lunas --}}
                     <div id="lunas-container" class="card collapsed-card">
                         <div class="card-header">
-                            <h3 class="card-title">Lunas</h3>
+                            <h3 class="card-title">RECETA</h3>
                             <div class="card-tools">
                                 <button type="button" class="btn btn-tool" data-card-widget="collapse">
                                     <i class="fas fa-plus"></i>
