@@ -25,7 +25,7 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
-            padding: 10mm;
+            padding: 8mm;
         }
         
         .page:last-child {
@@ -36,49 +36,50 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            margin-bottom: 15mm;
-            border: 2px solid #000;
+            margin-bottom: 15mm; /* Espacio entre tablas ajustado para 2 filas */
+            border: 3px solid #000; /* Borde más grueso */
+            height: auto;
         }
         
         .excel-table td {
-            border: 1px solid #000;
-            padding: 3px;
+            border: 2px solid #000; /* Bordes más gruesos entre celdas */
+            padding: 4px;
             vertical-align: middle;
             text-align: center;
             word-wrap: break-word;
             position: relative;
-            height: 120px;
+            height: 120px; /* Altura ajustada para 2 filas por página */
             overflow: hidden;
         }
         
         .company-column {
-            width: 12%;
+            width: 12%; /* Aumentar ancho de empresa */
             background-color: #f8f9fa;
-            border: 1px solid #000;
+            border: 2px solid #000;
         }
         
         .info-column {
-            width: 15%;
+            width: 35%; /* Aumentar significativamente el ancho de información del pedido */
             background-color: #ffffff;
-            border: 1px solid #000;
+            border: 2px solid #000;
         }
         
         .empty-column {
-            width: 5%;
+            width: 4%; /* Aumentar ligeramente columna vacía */
             background-color: #f8f9fa;
-            border: 1px solid #000;
+            border: 2px solid #000;
         }
         
         .method-column {
-            width: 15%;
+            width: 12%; /* Aumentar ancho de método de envío */
             background-color: #e7f3ff;
-            border: 1px solid #000;
+            border: 2px solid #000;
         }
         
         .barbosa-column {
-            width: 8%;
+            width: 10%; /* Aumentar columna Barbosa */
             background-color: #ffffe0;
-            border: 1px solid #000;
+            border: 2px solid #000;
         }
         
         .vertical-text {
@@ -87,8 +88,8 @@
             transform: rotate(180deg);
             white-space: nowrap;
             font-weight: bold;
-            font-size: 9px;
-            line-height: 1.1;
+            font-size: 9px; /* Aumentar fuente para empresa */
+            line-height: 1.2;
             height: 100%;
             display: flex;
             align-items: center;
@@ -99,14 +100,15 @@
             writing-mode: vertical-lr;
             text-orientation: mixed;
             transform: rotate(180deg);
-            font-size: 8px;
-            line-height: 1.0;
+            font-size: 10px; /* Aumentar fuente para información */
+            line-height: 1.2;
             white-space: pre-line;
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 2px;
+            padding: 5px; /* Más padding */
+            font-weight: normal;
         }
         
         .method-text {
@@ -114,7 +116,7 @@
             text-orientation: mixed;
             transform: rotate(180deg);
             font-weight: bold;
-            font-size: 9px;
+            font-size: 9px; /* Aumentar fuente para método */
             color: #0066cc;
             height: 100%;
             display: flex;
@@ -127,7 +129,7 @@
             text-orientation: mixed;
             transform: rotate(180deg);
             font-weight: bold;
-            font-size: 8px;
+            font-size: 8px; /* Aumentar fuente para Barbosa */
             color: #333;
             height: 100%;
             display: flex;
@@ -138,63 +140,68 @@
         @media print {
             .page {
                 margin: 0;
-                padding: 10mm;
-                height: 297mm; /* A4 height */
-                width: 210mm;  /* A4 width */
+                padding: 8mm;
+                height: 210mm; /* A4 width en landscape */
+                width: 297mm;  /* A4 height en landscape */
             }
             
             .excel-table {
-                border: 2px solid #000 !important;
+                border: 3px solid #000 !important;
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
             
             .excel-table td {
-                border: 1px solid #000 !important;
+                border: 2px solid #000 !important;
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
             
             .company-column {
                 background-color: #f8f9fa !important;
+                border: 2px solid #000 !important;
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
             
             .info-column {
                 background-color: #ffffff !important;
+                border: 2px solid #000 !important;
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
             
             .empty-column {
                 background-color: #f8f9fa !important;
+                border: 2px solid #000 !important;
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
             
             .method-column {
                 background-color: #e7f3ff !important;
+                border: 2px solid #000 !important;
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
             
             .barbosa-column {
                 background-color: #ffffe0 !important;
+                border: 2px solid #000 !important;
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
         }
         
         @page {
-            size: A4;
+            size: A4 landscape; /* Orientación horizontal */
             margin: 10mm;
         }
     </style>
 </head>
 <body>
     @php
-        $filasPorPagina = 2;
+        $filasPorPagina = 2; // Cambiar a 2 filas por página
         $totalFilas = $pedidosAgrupados->count();
         $paginas = ceil($totalFilas / $filasPorPagina);
     @endphp
