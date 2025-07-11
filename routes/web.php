@@ -136,6 +136,8 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('Pedidos/Imprimir', [PedidosController::class, 'print'])->name('pedidos.print');
     Route::post('Pedidos/Imprimir', [PedidosController::class, 'print'])->name('pedidos.print.post');
     Route::post('Pedidos/Excel', [PedidosController::class, 'printExcel'])->name('pedidos.print.excel');
+    Route::post('Pedidos/Etiquetas', [PedidosController::class, 'printExcel'])->name('pedidos.print.etiquetas');
+    Route::post('Pedidos/DescargarExcel', [PedidosController::class, 'downloadExcel'])->name('pedidos.download.excel');
     Route::post('Pedidos/Cristaleria', [PedidosController::class, 'printCristaleria'])->name('pedidos.print.cristaleria');
     Route::post('Pedidos', [PedidosController::class, 'store'])->name('pedidos.store');
     Route::get('Pedidos/{id}', [PedidosController::class, 'show'])->name('pedidos.show');

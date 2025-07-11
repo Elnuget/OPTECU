@@ -167,4 +167,88 @@ class PedidoController extends Controller
             ], 500);
         }
     }
-} 
+
+    /**
+     * Generar Excel de pedidos seleccionados a través de API
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function generarExcel(Request $request)
+    {
+        try {
+            // Obtener IDs desde la petición
+            $ids = $request->input('ids');
+            
+            // Validar que se reciban IDs
+            if (empty($ids)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se seleccionaron pedidos para generar Excel'
+                ], 400);
+            }
+
+            // Convertir IDs de string a array si es necesario
+            if (is_string($ids)) {
+                $ids = explode(',', $ids);
+            }
+            
+            // Obtener los pedidos con sus relaciones
+            $pedidos = Pedido::with(['inventarios', 'lunas', 'empresa', 'pagos'])
+                ->whereIn('id', $ids)
+                ->select([
+                    'id', 'numero_orden', 'cliente', 'cedula', 'celular', 'direccion', 
+                    'correo_electronico', 'empresa_id', 'metodo_envio', 'fecha_entrega',
+                    'fecha', 'total', 'saldo', 'paciente'
+                ])
+                ->orderBy('numero_orden', 'desc')
+                ->get();
+
+            if ($pedidos->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontraron pedidos para generar Excel'
+                ], 404);
+            }
+
+            // Formatear los datos para Excel
+            $datosExcel = $pedidos->map(function($pedido) {
+                return [
+                    'numero_orden' => $pedido->numero_orden,
+                    'fecha' => $pedido->fecha,
+                    'cliente' => $pedido->cliente,
+                    'paciente' => $pedido->paciente,
+                    'cedula' => $pedido->cedula,
+                    'celular' => $pedido->celular,
+                    'direccion' => $pedido->direccion,
+                    'correo_electronico' => $pedido->correo_electronico,
+                    'total' => $pedido->total,
+                    'saldo' => $pedido->saldo,
+                    'pagado' => $pedido->pagos->sum('pago'),
+                    'metodo_envio' => $pedido->metodo_envio,
+                    'fecha_entrega' => $pedido->fecha_entrega,
+                    'empresa' => $pedido->empresa ? $pedido->empresa->nombre : 'N/A'
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $datosExcel,
+                'total_pedidos' => $pedidos->count(),
+                'resumen' => [
+                    'total_ventas' => $pedidos->sum('total'),
+                    'total_saldos' => $pedidos->sum('saldo'),
+                    'total_pagado' => $pedidos->sum(function($pedido) {
+                        return $pedido->pagos->sum('pago');
+                    })
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al generar Excel: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+}

@@ -32,6 +32,9 @@ Route::get('/clientes/{cliente}/ultimo-pedido', [PedidoController::class, 'getUl
 // Ruta para buscar pedidos por cualquier campo de datos personales
 Route::get('/pedidos/buscar-por/{campo}/{valor}', [PedidoController::class, 'buscarPedidoPorCampo']);
 
+// Ruta para generar Excel de pedidos
+Route::post('/pedidos/generar-excel', [PedidoController::class, 'generarExcel']);
+
 // Ruta para buscar historiales clínicos por cualquier campo de datos personales
 Route::get('/historiales-clinicos/buscar-por/{campo}/{valor}', [HistorialClinicoController::class, 'buscarPorCampo']);
 

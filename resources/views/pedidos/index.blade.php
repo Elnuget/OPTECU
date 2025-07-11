@@ -108,13 +108,16 @@
             <div class="col-md-8">
                 <div class="btn-group">
                     <a href="{{ route('pedidos.create') }}" class="btn btn-primary">Crear Pedido</a>
-                    <button type="button" class="btn btn-warning" id="generarExcel" disabled>
+                    <button type="button" class="btn btn-success" id="generarExcel" disabled>
                         <i class="fas fa-file-excel"></i> Generar Excel
+                    </button>
+                    <button type="button" class="btn btn-warning" id="imprimirEtiquetas" disabled>
+                        <i class="fas fa-tags"></i> Imprimir Etiquetas
                     </button>
                     <button type="button" class="btn btn-info" id="imprimirCristaleria" disabled>
                         <i class="fas fa-eye"></i> Imprimir Cristalería
                     </button>
-                    <button type="button" class="btn btn-success" id="imprimirInforme" disabled>
+                    <button type="button" class="btn btn-secondary" id="imprimirInforme" disabled>
                         <i class="fas fa-print"></i> Imprimir Informe
                     </button>
                 </div>
@@ -397,6 +400,7 @@ input[type="checkbox"]:after {
         function toggleImprimirButton() {
             var checkedCheckboxes = $('.pedido-checkbox:checked').length;
             $('#generarExcel').prop('disabled', checkedCheckboxes === 0);
+            $('#imprimirEtiquetas').prop('disabled', checkedCheckboxes === 0);
             $('#imprimirCristaleria').prop('disabled', checkedCheckboxes === 0);
             $('#imprimirInforme').prop('disabled', checkedCheckboxes === 0);
         }
@@ -510,7 +514,46 @@ input[type="checkbox"]:after {
             form.remove();
         });
 
-        // Manejar clic en el botón de generar Excel
+        // Manejar clic en el botón de imprimir etiquetas (antigua funcionalidad de generar excel)
+        $('#imprimirEtiquetas').click(function() {
+            var selectedIds = [];
+            $('.pedido-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            if (selectedIds.length === 0) {
+                alert('Por favor seleccione al menos un pedido para imprimir etiquetas');
+                return;
+            }
+            
+            // Crear formulario para envío POST
+            var form = $('<form>', {
+                'method': 'POST',
+                'action': '{{ route("pedidos.print.etiquetas") }}',
+                'target': '_blank'
+            });
+            
+            // Agregar token CSRF
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': '_token',
+                'value': $('meta[name="csrf-token"]').attr('content')
+            }));
+            
+            // Agregar IDs seleccionados
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'ids',
+                'value': selectedIds.join(',')
+            }));
+            
+            // Agregar al body y enviar
+            $('body').append(form);
+            form.submit();
+            form.remove();
+        });
+
+        // Manejar clic en el botón de generar Excel (usar la función del PedidosController)
         $('#generarExcel').click(function() {
             var selectedIds = [];
             $('.pedido-checkbox:checked').each(function() {
@@ -522,10 +565,10 @@ input[type="checkbox"]:after {
                 return;
             }
             
-            // Crear formulario para envío POST
+            // Crear formulario para envío POST usando la ruta downloadExcel del PedidosController
             var form = $('<form>', {
                 'method': 'POST',
-                'action': '{{ route("pedidos.print.excel") }}',
+                'action': '{{ route("pedidos.download.excel") }}',
                 'target': '_blank'
             });
             
