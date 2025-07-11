@@ -112,7 +112,7 @@
                                 <input type="date" name="proxima_consulta" id="proxima_consulta" class="form-control">
                             </div>
                             <div class="form-group col-md-4">
-                                <label for="empresa_id">Empresa</label>
+                                <label for="empresa_id">SUCURSAL</label>
                                 @if (!$isUserAdmin && $userEmpresaId)
                                     <select name="empresa_id" id="empresa_id" class="form-control" readonly disabled>
                                         @foreach($empresas as $empresa)

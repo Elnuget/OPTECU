@@ -87,9 +87,9 @@
             </div>
 
             <div class="form-group">
-                <label for="empresa_id">EMPRESA</label>
+                <label for="empresa_id">SUCURSAL</label>
                 <select name="empresa_id" id="empresa_id" class="form-control">
-                    <option value="">SIN EMPRESA</option>
+                    <option value="">SIN SUCURSAL</option>
                     @foreach($empresas as $empresa)
                         <option value="{{ $empresa->id }}" {{ old('empresa_id', $cashHistory->empresa_id) == $empresa->id ? 'selected' : '' }}>
                             {{ strtoupper($empresa->nombre) }}

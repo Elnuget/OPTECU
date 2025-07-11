@@ -114,7 +114,7 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="empresa_id">Empresa</label>
+                                        <label for="empresa_id">SUCURSAL</label>
                                         <div class="input-group">
                                             <div class="input-group-prepend">
                                                 <span class="input-group-text"><i class="fas fa-building"></i></span>

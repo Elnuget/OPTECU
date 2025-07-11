@@ -44,9 +44,9 @@
                         </select>
                     </div>
                     <div class="form-group mr-2">
-                        <label for="empresa_id" class="mr-2">EMPRESA:</label>
+                        <label for="empresa_id" class="mr-2">SUCURSAL:</label>
                         <select name="empresa_id" id="empresa_id" class="form-control" {{ !$isUserAdmin && $userEmpresaId ? 'disabled' : '' }}>
-                            <option value="">TODAS LAS EMPRESAS</option>
+                            <option value="">TODAS LAS SUCURSALES</option>
                             @foreach($empresas ?? [] as $empresa)
                                 <option value="{{ $empresa->id }}" {{ ($userEmpresaId == $empresa->id) || request('empresa_id') == $empresa->id ? 'selected' : '' }}>
                                     {{ strtoupper($empresa->nombre) }}

@@ -235,7 +235,7 @@ class AsistenciaController extends Controller
         $fechaFin = $request->input('fecha_fin', Carbon::now()->endOfMonth()->toDateString());
         $empresaId = $request->input('empresa_id');
 
-        // Obtener todas las empresas para el filtro
+        // Obtener TODAS LAS SUCURSALES para el filtro
         $empresas = \App\Models\Empresa::all();
 
         // Query base

@@ -106,7 +106,7 @@ class InventarioController extends Controller
             $empresas = \App\Models\Empresa::where('id', $user->empresa_id)->get();
             $userEmpresaId = $user->empresa_id;
         } else {
-            // Si es admin o no tiene empresa, mostrar todas las empresas
+            // Si es admin o no tiene empresa, mostrar TODAS LAS SUCURSALES
             $empresas = \App\Models\Empresa::orderBy('nombre')->get();
             $userEmpresaId = null;
         }
@@ -202,7 +202,7 @@ class InventarioController extends Controller
             $empresas = \App\Models\Empresa::where('id', $user->empresa_id)->get();
             $userEmpresaId = $user->empresa_id;
         } else {
-            // Si es admin o no tiene empresa, mostrar todas las empresas
+            // Si es admin o no tiene empresa, mostrar TODAS LAS SUCURSALES
             $empresas = \App\Models\Empresa::orderBy('nombre')->get();
             $userEmpresaId = null;
         }

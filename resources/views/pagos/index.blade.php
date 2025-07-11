@@ -130,11 +130,11 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label for="empresa">EMPRESA:</label>
+                    <label for="empresa">SUCURSAL:</label>
                     @if(isset($isAdmin) && $isAdmin)
                         {{-- Si es admin, puede seleccionar cualquier empresa --}}
                         <select name="empresa" class="form-control custom-select" id="filtroEmpresa">
-                            <option value="">TODAS LAS EMPRESAS</option>
+                            <option value="">TODAS LAS SUCURSALES</option>
                             @foreach($empresas ?? [] as $empresa)
                                 <option value="{{ $empresa->id }}" {{ request('empresa') == $empresa->id ? 'selected' : '' }}>
                                     {{ strtoupper($empresa->nombre) }}
@@ -157,7 +157,7 @@
                     @else
                         {{-- Si no es admin y no tiene empresa, mostrar selector pero deshabilitado --}}
                         <select name="empresa" class="form-control custom-select" id="filtroEmpresa" disabled>
-                            <option value="">TODAS LAS EMPRESAS</option>
+                            <option value="">TODAS LAS SUCURSALES</option>
                             @foreach($empresas ?? [] as $empresa)
                                 <option value="{{ $empresa->id }}" {{ request('empresa') == $empresa->id ? 'selected' : '' }}>
                                     {{ strtoupper($empresa->nombre) }}

@@ -33,7 +33,7 @@
                     <td>Nombre</td>
                     <td>Usuario</td>
                     <td>Mail</td>
-                    <td>Empresa</td>
+                    <td>Sucursal</td>
                     <td>Activo</td>
                     <td>Administrador</td>
                     <td>Acciones</td>
@@ -50,7 +50,7 @@
                         @if ($u->empresa)
                            {{$u->empresa->nombre}}
                         @else
-                           <span class="text-muted">Sin empresa</span>
+                           <span class="text-muted">Sin Sucursal</span>
                         @endif       
                         </td>
                         <td>

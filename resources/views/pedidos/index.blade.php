@@ -83,9 +83,9 @@
                 </select>
             </div>
             <div class="col-md-3">
-                <label for="empresa_id">EMPRESA:</label>
+                <label for="empresa_id">SUCURSAL:</label>
                 <select name="empresa_id" class="form-control" id="empresa_id" {{ !$isUserAdmin && $userEmpresaId ? 'disabled' : '' }}>
-                    <option value="">TODAS LAS EMPRESAS</option>
+                    <option value="">TODAS LAS SUCURSALES</option>
                     @foreach($empresas ?? [] as $empresa)
                         <option value="{{ $empresa->id }}" {{ ($userEmpresaId == $empresa->id) || request('empresa_id') == $empresa->id ? 'selected' : '' }}>
                             {{ strtoupper($empresa->nombre) }}

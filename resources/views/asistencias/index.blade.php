@@ -78,9 +78,9 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label for="empresa_id">EMPRESA</label>
+                                <label for="empresa_id">Sucursal</label>
                                 <select name="empresa_id" class="form-control">
-                                    <option value="">TODAS LAS EMPRESAS</option>
+                                    <option value="">TODAS LAS SUCURSALES</option>
                                     @foreach($empresas as $empresa)
                                         <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
                                             {{ strtoupper($empresa->nombre) }}
@@ -135,7 +135,7 @@
                         <tr>
                             <th>ID</th>
                             <th>USUARIO</th>
-                            <th>EMPRESA</th>
+                            <th>SUCURSAL</th>
                             <th>FECHA</th>
                             <th>HORA ENTRADA</th>
                             <th>HORA SALIDA</th>

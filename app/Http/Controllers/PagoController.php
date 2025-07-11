@@ -80,7 +80,7 @@ class PagoController extends Controller
         // Calcular el total de pagos
         $totalPagos = $pagos->sum('pago');
 
-        // Obtener todas las empresas para el filtro
+        // Obtener TODAS LAS SUCURSALES para el filtro
         $empresas = Empresa::orderBy('nombre')->get();
 
         return view('pagos.index', compact('pagos', 'mediosdepago', 'totalPagos', 'empresas', 'isAdmin', 'userEmpresaId'));

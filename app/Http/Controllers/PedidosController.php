@@ -109,7 +109,7 @@ class PedidosController extends Controller
                 })
             ];
 
-            // Obtener todas las empresas para el filtro
+            // Obtener TODAS LAS SUCURSALES para el filtro
             $empresas = Empresa::orderBy('nombre')->get();
 
             return view('pedidos.index', compact('pedidos', 'totales', 'empresas', 'userEmpresaId', 'isUserAdmin'));
@@ -201,7 +201,7 @@ class PedidosController extends Controller
             ->pluck('correo_electronico')
             ->toArray();
 
-        // Obtener todas las empresas para el select
+        // Obtener TODAS LAS SUCURSALES para el select
         $empresas = Empresa::orderBy('nombre')->get();
         
         // Obtener historiales clínicos para autocompletado
@@ -502,7 +502,7 @@ class PedidosController extends Controller
             $totalPagado = $pedido->pagos->sum('pago'); // Suma todos los pagos realizados
             $usuarios = \App\Models\User::all(); // Obtener todos los usuarios
             
-            // Obtener todas las empresas para el select
+            // Obtener TODAS LAS SUCURSALES para el select
             $empresas = Empresa::orderBy('nombre')->get();
             
             // Verificar si el usuario está asociado a una empresa y no es admin

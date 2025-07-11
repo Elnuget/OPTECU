@@ -42,7 +42,7 @@
 
                     <div class="form-group row">
                         <div class="col-12">
-                            <label>Empresa</label>
+                            <label>SUCURSAL</label>
                             <select name="empresa_id" class="form-control" {{ !auth()->user()->is_admin && isset($userEmpresaId) ? 'readonly disabled' : '' }}>
                                 <option value="">Seleccione una Empresa</option>
                                 @foreach ($empresas as $empresa)

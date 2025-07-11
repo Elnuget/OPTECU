@@ -2,7 +2,7 @@
 
 Para que el filtro de empresa funcione correctamente en la vista `resources/views/pagos/index.blade.php`, necesitas hacer los siguientes cambios en tu controlador:
 
-1. Obtener todas las empresas y pasarlas a la vista:
+1. Obtener TODAS LAS SUCURSALES y pasarlas a la vista:
 
 ```php
 use App\Models\Empresa;
@@ -12,7 +12,7 @@ public function index(Request $request)
 {
     // Código existente...
 
-    // Obtener todas las empresas para el filtro
+    // Obtener TODAS LAS SUCURSALES para el filtro
     $empresas = Empresa::orderBy('nombre')->get();
 
     // Incluir las empresas en los datos que se pasan a la vista

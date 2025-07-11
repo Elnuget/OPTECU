@@ -83,7 +83,7 @@
                         
                         <div class="input-group mr-2">
                             <div class="input-group-prepend">
-                                <span class="input-group-text">EMPRESA:</span>
+                                <span class="input-group-text">SUCURSAL:</span>
                             </div>
                             <select name="empresa_filtro" class="form-control">
                                 @if($currentUser->empresa_id && !$currentUser->is_admin)
@@ -91,13 +91,13 @@
                                         {{ strtoupper($currentUser->empresa->nombre) }}
                                     </option>
                                 @else
-                                    <option value="todas" {{ $empresaFiltro == 'todas' ? 'selected' : '' }}>TODAS LAS EMPRESAS</option>
+                                    <option value="todas" {{ $empresaFiltro == 'todas' ? 'selected' : '' }}>TODAS LAS SUCURSALES</option>
                                     @foreach($empresas as $empresa)
                                         <option value="{{ $empresa->id }}" {{ $empresaFiltro == $empresa->id ? 'selected' : '' }}>
                                             {{ strtoupper($empresa->nombre) }}
                                         </option>
                                     @endforeach
-                                    <option value="sin_empresa" {{ $empresaFiltro == 'sin_empresa' ? 'selected' : '' }}>SIN EMPRESA ASIGNADA</option>
+                                    <option value="sin_empresa" {{ $empresaFiltro == 'sin_empresa' ? 'selected' : '' }}>SIN SUCURSAL ASIGNADA</option>
                                 @endif
                             </select>
                         </div>
@@ -151,7 +151,7 @@
                             <i class="fas fa-question-circle"></i>
                         </span>
                         <div class="info-box-content">
-                            <span class="info-box-text">SIN EMPRESA ASIGNADA</span>
+                            <span class="info-box-text">SIN SUCURSAL ASIGNADA</span>
                             <span class="info-box-number">${{ number_format($totalSinEmpresa, 0, ',', '.') }}</span>
                         </div>
                     </div>
@@ -179,13 +179,13 @@
                     </div>
                     <div class="col-md-3">
                         <div class="form-group">
-                            <label>EMPRESA</label>
+                            <label>SUCURSAL</label>
                             @if($currentUser->empresa_id && !$currentUser->is_admin)
                                 <input type="hidden" name="empresa_id" value="{{ $currentUser->empresa_id }}">
                                 <input type="text" class="form-control" value="{{ strtoupper($currentUser->empresa->nombre) }}" readonly>
                             @else
                                 <select name="empresa_id" class="form-control">
-                                    <option value="">SELECCIONAR EMPRESA</option>
+                                    <option value="">SELECCIONAR SUCURSAL</option>
                                     @foreach($empresas as $empresa)
                                         <option value="{{ $empresa->id }}" {{ $currentUser->empresa_id == $empresa->id ? 'selected' : '' }}>
                                             {{ strtoupper($empresa->nombre) }}
@@ -227,13 +227,13 @@
                     </div>
                     <div class="col-md-3">
                         <div class="form-group">
-                            <label>EMPRESA</label>
+                            <label>SUCURSAL</label>
                             @if($currentUser->empresa_id && !$currentUser->is_admin)
                                 <input type="hidden" name="empresa_id" value="{{ $currentUser->empresa_id }}">
                                 <input type="text" class="form-control" value="{{ strtoupper($currentUser->empresa->nombre) }}" readonly>
                             @else
                                 <select name="empresa_id" class="form-control">
-                                    <option value="">SELECCIONAR EMPRESA</option>
+                                    <option value="">SELECCIONAR SUCURSAL</option>
                                     @foreach($empresas as $empresa)
                                         <option value="{{ $empresa->id }}" {{ $currentUser->empresa_id == $empresa->id ? 'selected' : '' }}>
                                             {{ strtoupper($empresa->nombre) }}
@@ -262,7 +262,7 @@
                             <th>FECHA</th>
                             <th>MOTIVO</th>
                             <th>USUARIO</th>
-                            <th>EMPRESA</th>
+                            <th>SUCURSAL</th>
                             <th>VALOR</th>
                             <th>ACCIONES</th>
                         </tr>
@@ -325,7 +325,7 @@
                             <input type="text" id="edit_motivo" name="motivo" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label>EMPRESA</label>
+                            <label>SUCURSAL</label>
                             @if($currentUser->empresa_id && !$currentUser->is_admin)
                                 <input type="hidden" id="edit_empresa_id_hidden" name="empresa_id">
                                 <input type="text" id="edit_empresa_readonly" class="form-control" readonly>
@@ -413,7 +413,7 @@
                     @else
                         // Si es admin o no pertenece a empresa, llenar el select
                         $('#edit_empresa_id').empty();
-                        $('#edit_empresa_id').append('<option value="">SELECCIONAR EMPRESA</option>');
+                        $('#edit_empresa_id').append('<option value="">SELECCIONAR SUCURSAL</option>');
                         response.empresas.forEach(function(empresa) {
                             var selected = empresa.id == response.caja.empresa_id ? 'selected' : '';
                             $('#edit_empresa_id').append('<option value="' + empresa.id + '" ' + selected + '>' + empresa.nombre.toUpperCase() + '</option>');

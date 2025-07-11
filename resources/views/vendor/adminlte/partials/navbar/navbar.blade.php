@@ -50,7 +50,7 @@
         <li class="nav-item d-flex align-items-center">
             <i class="fas fa-building ml-2 mr-2 text-secondary"></i>
             @if(Auth::user() && Auth::user()->is_admin)
-                {{-- Si es admin, mostrar todas las empresas --}}
+                {{-- Si es admin, mostrar TODAS LAS SUCURSALES --}}
                 @foreach(\App\Models\Empresa::all() as $empresa)
                     <span class="badge badge-info mr-2" style="font-size: 0.9rem; padding: 8px 12px;">
                         {{ $empresa->nombre }}

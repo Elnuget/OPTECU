@@ -58,7 +58,7 @@
                        value="{{ $pedido->correo_electronico }}">
             </div>
             <div class="col-md-3">
-                <label for="empresa_id" class="form-label">Empresa</label>
+                <label for="empresa_id" class="form-label">SUCURSAL</label>
                 <select name="empresa_id" id="empresa_id" class="form-control">
                     <option value="">Seleccione una empresa...</option>
                     @foreach($empresas as $empresa)

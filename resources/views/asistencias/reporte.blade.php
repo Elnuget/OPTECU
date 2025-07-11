@@ -83,9 +83,9 @@
                         <input type="date" name="fecha_fin" class="form-control" value="{{ $fechaFin }}">
                     </div>
                     <div class="col-md-3">
-                        <label for="empresa_id">EMPRESA</label>
+                        <label for="empresa_id">SUCURSAL</label>
                         <select name="empresa_id" class="form-control">
-                            <option value="">TODAS LAS EMPRESAS</option>
+                            <option value="">TODAS LAS SUCURSALES</option>
                             @foreach($empresas as $empresa)
                                 <option value="{{ $empresa->id }}" {{ $empresaId == $empresa->id ? 'selected' : '' }}>
                                     {{ strtoupper($empresa->nombre) }}

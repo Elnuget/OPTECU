@@ -51,7 +51,7 @@ class CajaController extends Controller
         $totalesPorEmpresa = [];
         
         if ($currentUser->is_admin) {
-            // Si es admin, mostrar todas las empresas
+            // Si es admin, mostrar TODAS LAS SUCURSALES
             foreach($empresas as $empresa) {
                 $totalEmpresa = Caja::where('empresa_id', $empresa->id)->sum('valor');
                 $totalesPorEmpresa[] = [

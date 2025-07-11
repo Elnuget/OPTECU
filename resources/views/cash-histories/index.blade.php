@@ -86,7 +86,7 @@
                 @if($currentUser->is_admin)
                     {{-- Si es admin, puede seleccionar cualquier empresa --}}
                     <select name="empresa_id" class="form-control">
-                        <option value="">TODAS LAS EMPRESAS</option>
+                        <option value="">TODAS LAS SUCURSALES</option>
                         @foreach($empresas as $empresa)
                             <option value="{{ $empresa->id }}" {{ request('empresa_id', '') == $empresa->id ? 'selected' : '' }}>
                                 {{ strtoupper($empresa->nombre) }}
@@ -187,7 +187,7 @@
                 <form id="adminCajaForm" action="{{ route('cash-histories.store') }}" method="POST">
                     @csrf
                     <div class="form-group">
-                        <label for="empresa_select">SELECCIONAR EMPRESA</label>
+                        <label for="empresa_select">SELECCIONAR SUCURSAL</label>
                         <select name="empresa_id" id="empresa_select" class="form-control" required>
                             <option value="">SELECCIONE UNA EMPRESA</option>
                             @foreach($empresas as $empresa)

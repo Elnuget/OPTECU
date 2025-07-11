@@ -52,7 +52,7 @@ class HistorialClinicoController extends Controller
         // Obtener los historiales
         $historiales = $query->get();
 
-        // Obtener todas las empresas para el filtro
+        // Obtener TODAS LAS SUCURSALES para el filtro
         $empresas = Empresa::orderBy('nombre')->get();
 
         return view('historiales_clinicos.index', compact('historiales', 'empresas', 'userEmpresaId', 'isUserAdmin'));
@@ -96,7 +96,7 @@ class HistorialClinicoController extends Controller
             ->pluck('celular')
             ->toArray();
 
-        // Obtener todas las empresas para el select
+        // Obtener TODAS LAS SUCURSALES para el select
         $empresas = Empresa::orderBy('nombre')->get();
 
         // Verificar si el usuario está asociado a una empresa y no es admin
@@ -287,7 +287,7 @@ class HistorialClinicoController extends Controller
     {
         $historialClinico = HistorialClinico::with('recetas')->findOrFail($id);
         
-        // Obtener todas las empresas para el select
+        // Obtener TODAS LAS SUCURSALES para el select
         $empresas = Empresa::orderBy('nombre')->get();
         
         // Verificar si el usuario está asociado a una empresa y no es admin

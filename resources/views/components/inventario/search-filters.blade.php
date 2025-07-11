@@ -8,10 +8,10 @@
                    value="{{ $fecha ?? now()->format('Y-m') }}" />
         </div>
         <div class="col-md-5">
-            <label for="empresa_id">EMPRESA:</label>
+            <label for="empresa_id">SUCURSAL:</label>
             <select name="empresa_id" id="empresa_id" class="form-control" {{ !auth()->user()->is_admin && auth()->user()->empresa_id ? 'readonly disabled' : '' }}>
                 @if(auth()->user()->is_admin || !auth()->user()->empresa_id)
-                    <option value="">TODAS LAS EMPRESAS</option>
+                    <option value="">TODAS LAS SUCURSALES</option>
                 @endif
                 @foreach($empresas as $empresa)
                     <option value="{{ $empresa->id }}" 

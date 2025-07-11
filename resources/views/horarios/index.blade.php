@@ -67,9 +67,9 @@
                     <form method="GET" action="{{ route('horarios.index') }}">
                         <div class="row">
                             <div class="col-md-6">
-                                <label for="empresa_id">EMPRESA</label>
+                                <label for="empresa_id">SUCURSAL</label>
                                 <select name="empresa_id" class="form-control">
-                                    <option value="">TODAS LAS EMPRESAS</option>
+                                    <option value="">TODAS LAS SUCURSALES</option>
                                     @foreach($empresas as $empresa)
                                         <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
                                             {{ strtoupper($empresa->nombre) }}

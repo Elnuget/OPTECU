@@ -42,9 +42,9 @@
                                 <small class="text-muted">Ingrese una nueva contraseña solo si desea cambiarla</small>
                         </div>
                         <div class ="form-group">
-                                <label>EMPRESA</label>
+                                <label>Sucursal</label>
                                 <select id="empresa_id" name="empresa_id" class="form-control">
-                                <option value="">Sin empresa</option>
+                                <option value="">Sin Sucursal</option>
                                 @foreach($empresas as $empresa)
                                     <option value="{{$empresa->id}}" 
                                         @if($usuario->empresa_id == $empresa->id) selected @endif>
