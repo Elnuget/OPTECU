@@ -71,6 +71,7 @@ class PedidosController extends Controller
                 'id',
                 'numero_orden',
                 'fecha',
+                'fecha_entrega',
                 'cliente',
                 'celular',
                 'total',

@@ -158,7 +158,12 @@
                         <td class="checkbox-cell">
                             <input type="checkbox" name="pedidos_selected[]" value="{{ $pedido->id }}" class="pedido-checkbox">
                         </td>
-                        <td>{{ $pedido->fecha ? $pedido->fecha->format('Y-m-d') : 'Sin fecha' }}</td>
+                        <td>
+                            <div>{{ $pedido->fecha ? $pedido->fecha->format('Y-m-d') : 'Sin fecha' }}</div>
+                            @if($pedido->fecha_entrega)
+                                <small class="text-info"><strong>Entrega:</strong><br>{{ $pedido->fecha_entrega->format('Y-m-d') }}</small>
+                            @endif
+                        </td>
                         <td>{{ $pedido->numero_orden }}</td>
                         <td>
                             <span style="color: 
