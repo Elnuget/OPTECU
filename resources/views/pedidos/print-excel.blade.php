@@ -25,7 +25,7 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
-            padding: 8mm;
+            padding: 5mm; /* Reducir padding para más espacio para las tablas */
         }
         
         .page:last-child {
@@ -36,19 +36,19 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            margin-bottom: 15mm; /* Espacio entre tablas ajustado para 2 filas */
+            margin-bottom: 8mm; /* Reducir espacio entre tablas para que estén más juntas */
             border: 3px solid #000; /* Borde más grueso */
-            height: auto;
+            height: 80mm; /* Altura fija más grande para ocupar más espacio de la hoja */
         }
         
         .excel-table td {
             border: 2px solid #000; /* Bordes más gruesos entre celdas */
-            padding: 4px;
+            padding: 6px;
             vertical-align: middle;
             text-align: center;
             word-wrap: break-word;
             position: relative;
-            height: 120px; /* Altura ajustada para 2 filas por página */
+            height: 80mm; /* Altura fija más grande para las celdas */
             overflow: hidden;
         }
         
@@ -88,27 +88,29 @@
             transform: rotate(180deg);
             white-space: nowrap;
             font-weight: bold;
-            font-size: 9px; /* Aumentar fuente para empresa */
-            line-height: 1.2;
+            font-size: 10px; /* Aumentar fuente para empresa */
+            line-height: 1.3;
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
+            letter-spacing: 0.5px;
         }
         
         .info-text {
             writing-mode: vertical-lr;
             text-orientation: mixed;
             transform: rotate(180deg);
-            font-size: 10px; /* Aumentar fuente para información */
-            line-height: 1.2;
+            font-size: 11px; /* Aumentar fuente para mejor legibilidad en celdas más grandes */
+            line-height: 1.3;
             white-space: pre-line;
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 5px; /* Más padding */
+            padding: 8px; /* Más padding para mejor distribución del texto */
             font-weight: normal;
+            word-spacing: 1px;
         }
         
         .method-text {
@@ -116,12 +118,13 @@
             text-orientation: mixed;
             transform: rotate(180deg);
             font-weight: bold;
-            font-size: 9px; /* Aumentar fuente para método */
+            font-size: 10px; /* Aumentar fuente para método */
             color: #0066cc;
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
+            letter-spacing: 0.5px;
         }
         
         .barbosa-text {
@@ -129,30 +132,33 @@
             text-orientation: mixed;
             transform: rotate(180deg);
             font-weight: bold;
-            font-size: 8px; /* Aumentar fuente para Barbosa */
+            font-size: 9px; /* Aumentar fuente para Barbosa */
             color: #333;
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
+            letter-spacing: 0.5px;
         }
         
         @media print {
             .page {
                 margin: 0;
-                padding: 8mm;
+                padding: 5mm; /* Reducir padding para más espacio */
                 height: 210mm; /* A4 width en landscape */
                 width: 297mm;  /* A4 height en landscape */
             }
             
             .excel-table {
                 border: 3px solid #000 !important;
+                height: 80mm !important; /* Asegurar altura fija en impresión */
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
             
             .excel-table td {
                 border: 2px solid #000 !important;
+                height: 80mm !important; /* Asegurar altura fija en impresión */
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
@@ -195,7 +201,7 @@
         
         @page {
             size: A4 landscape; /* Orientación horizontal */
-            margin: 10mm;
+            margin: 5mm; /* Reducir margen para más espacio */
         }
     </style>
 </head>
