@@ -41,10 +41,12 @@ class Pedido extends Model
         'motivo_compra',
         'usuario', // ...added usuario...
         'calificacion',
-        'comentario_calificacion'
+        'comentario_calificacion',
+        'metodo_envio',
+        'fecha_entrega'
     ];
 
-    protected $dates = ['deleted_at', 'fecha'];
+    protected $dates = ['deleted_at', 'fecha', 'fecha_entrega'];
 
     protected $casts = [
         'fecha' => 'datetime',

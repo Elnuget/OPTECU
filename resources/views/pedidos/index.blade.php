@@ -146,7 +146,6 @@
                         <th>Estado</th>
                         <th>Cliente</th>
                         <th>Celular</th>
-                        <th>Paciente</th>
                         <th>Total</th>
                         <th>Saldo</th>
                         <th>Acciones</th>
@@ -189,13 +188,13 @@
                                 </button>
                             @endif
                         </td>
-                        <td>{{ $pedido->paciente }}</td>
                         <td>${{ number_format($pedido->total, 0, ',', '.') }}</td>
                         <td>
                             <span style="color: {{ $pedido->saldo == 0 ? 'green' : 'red' }}">
                                 ${{ number_format($pedido->saldo, 0, ',', '.') }}
                             </span>
-                        </td>                        <td>
+                        </td>
+                        <td>
                             <div class="btn-group">
                                 <a href="{{ route('pedidos.show', $pedido->id) }}"
                                     class="btn btn-xs btn-default text-primary mx-1 shadow" title="Ver">

@@ -76,5 +76,25 @@
                 <input type="text" class="form-control" id="direccion" name="direccion"
                        value="{{ $pedido->direccion }}">
             </div>
+        </div>
+
+        {{-- Nuevos campos: Método de envío y Fecha de entrega --}}
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="metodo_envio" class="form-label">Método de Envío</label>
+                <select class="form-control" id="metodo_envio" name="metodo_envio">
+                    <option value="">Seleccione método de envío...</option>
+                    <option value="TIENDA" {{ $pedido->metodo_envio == 'TIENDA' ? 'selected' : '' }}>TIENDA</option>
+                    <option value="CORREOS DE CHILE" {{ $pedido->metodo_envio == 'CORREOS DE CHILE' ? 'selected' : '' }}>CORREOS DE CHILE</option>
+                    <option value="CHILEXPRESS" {{ $pedido->metodo_envio == 'CHILEXPRESS' ? 'selected' : '' }}>CHILEXPRESS</option>
+                    <option value="STARKEN" {{ $pedido->metodo_envio == 'STARKEN' ? 'selected' : '' }}>STARKEN</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="fecha_entrega" class="form-label">Fecha de Entrega</label>
+                <input type="date" class="form-control" id="fecha_entrega" name="fecha_entrega"
+                       value="{{ $pedido->fecha_entrega ? $pedido->fecha_entrega->format('Y-m-d') : '' }}">
+            </div>
+        </div>
     </div>
 </div> 

@@ -101,6 +101,8 @@
                     <li class="list-group-item"><strong>Celular:</strong> {{ $pedido->celular }}</li>
                     <li class="list-group-item"><strong>Correo Electrónico:</strong> {{ $pedido->correo_electronico }}</li>
                     <li class="list-group-item"><strong>Dirección:</strong> {{ $pedido->direccion }}</li>
+                    <li class="list-group-item"><strong>Método de Envío:</strong> {{ $pedido->metodo_envio ?? 'No especificado' }}</li>
+                    <li class="list-group-item"><strong>Fecha de Entrega:</strong> {{ $pedido->fecha_entrega ? $pedido->fecha_entrega->format('d/m/Y') : 'No especificada' }}</li>
                     <li class="list-group-item"><strong>Empresa:</strong> {{ $pedido->empresa ? $pedido->empresa->nombre : 'No asignada' }}</li>
                     <li class="list-group-item"><strong>Examen Visual:</strong> ${{ number_format($pedido->examen_visual, 0, ',', '.') }}</li>
                 </ul>

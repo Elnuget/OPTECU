@@ -73,7 +73,6 @@ class PedidosController extends Controller
                 'fecha',
                 'cliente',
                 'celular',
-                'paciente',
                 'total',
                 'saldo',
                 'fact',

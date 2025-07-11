@@ -270,6 +270,24 @@
                                     <input type="text" class="form-control" id="direccion" name="direccion" placeholder="Escriba la dirección" autocomplete="off">
                                 </div>
                             </div>
+
+                            {{-- Nuevos campos: Método de envío y Fecha de entrega --}}
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="metodo_envio" class="form-label">Método de Envío</label>
+                                    <select class="form-control" id="metodo_envio" name="metodo_envio">
+                                        <option value="">Seleccione método de envío...</option>
+                                        <option value="TIENDA">TIENDA</option>
+                                        <option value="CORREOS DE CHILE">CORREOS DE CHILE</option>
+                                        <option value="CHILEXPRESS">CHILEXPRESS</option>
+                                        <option value="STARKEN">STARKEN</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="fecha_entrega" class="form-label">Fecha de Entrega</label>
+                                    <input type="date" class="form-control" id="fecha_entrega" name="fecha_entrega">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
