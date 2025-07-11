@@ -20,35 +20,37 @@
         
         .page {
             width: 100%;
-            height: 100vh;
-            page-break-after: always;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
-            padding: 5mm; /* Reducir padding para más espacio para las tablas */
+            padding: 5mm;
+            break-after: page;
+            break-inside: avoid;
         }
         
         .page:last-child {
-            page-break-after: avoid;
+            break-after: avoid;
         }
         
         .excel-table {
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            margin-bottom: 8mm; /* Reducir espacio entre tablas para que estén más juntas */
-            border: 3px solid #000; /* Borde más grueso */
-            height: 80mm; /* Altura fija más grande para ocupar más espacio de la hoja */
+            margin-bottom: 8mm;
+            border: 3px solid #000;
+            height: 75mm;
+            break-inside: avoid;
         }
         
         .excel-table td {
-            border: 2px solid #000; /* Bordes más gruesos entre celdas */
+            border: 2px solid #000;
             padding: 6px;
             vertical-align: middle;
             text-align: center;
             word-wrap: break-word;
             position: relative;
-            height: 80mm; /* Altura fija más grande para las celdas */
+            height: 75mm;
             overflow: hidden;
         }
         
@@ -142,23 +144,35 @@
         }
         
         @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            
             .page {
                 margin: 0;
-                padding: 5mm; /* Reducir padding para más espacio */
-                height: 210mm; /* A4 width en landscape */
-                width: 297mm;  /* A4 height en landscape */
+                padding: 5mm;
+                min-height: auto;
+                height: auto;
+                break-after: page;
+                break-inside: avoid;
+            }
+            
+            .page:last-child {
+                break-after: avoid;
             }
             
             .excel-table {
                 border: 3px solid #000 !important;
-                height: 80mm !important; /* Asegurar altura fija en impresión */
+                height: 75mm !important;
+                break-inside: avoid !important;
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
             
             .excel-table td {
                 border: 2px solid #000 !important;
-                height: 80mm !important; /* Asegurar altura fija en impresión */
+                height: 75mm !important;
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
@@ -200,8 +214,10 @@
         }
         
         @page {
-            size: A4 landscape; /* Orientación horizontal */
-            margin: 5mm; /* Reducir margen para más espacio */
+            size: A4 landscape;
+            margin: 5mm;
+            orphans: 1;
+            widows: 1;
         }
     </style>
 </head>
