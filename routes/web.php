@@ -133,6 +133,8 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Pedidos
     Route::get('Pedidos', [PedidosController::class, 'index'])->name('pedidos.index');
     Route::get('Pedidos/Crear', [PedidosController::class, 'create'])->name('pedidos.create');
+    // API para obtener próximo número de orden
+    Route::get('api/pedidos/next-order-number', [PedidosController::class, 'getNextOrderNumber'])->name('api.pedidos.next-order-number');
     Route::get('Pedidos/Imprimir', [PedidosController::class, 'print'])->name('pedidos.print');
     Route::post('Pedidos/Imprimir', [PedidosController::class, 'print'])->name('pedidos.print.post');
     Route::post('Pedidos/Excel', [PedidosController::class, 'printExcel'])->name('pedidos.print.excel');

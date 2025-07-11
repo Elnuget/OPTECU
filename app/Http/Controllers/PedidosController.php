@@ -1351,4 +1351,28 @@ class PedidosController extends Controller
         exit;
     }
 
+    /**
+     * Obtener el próximo número de orden disponible
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getNextOrderNumber()
+    {
+        try {
+            $lastOrder = Pedido::orderBy('numero_orden', 'desc')->first();
+            $nextOrderNumber = $lastOrder ? $lastOrder->numero_orden + 1 : 1;
+            
+            return response()->json([
+                'success' => true,
+                'next_order_number' => $nextOrderNumber
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener el próximo número de orden',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

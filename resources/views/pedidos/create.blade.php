@@ -155,6 +155,9 @@
                                     <label for="numero_orden" class="form-label">Orden</label>
                                     <input type="number" class="form-control" id="numero_orden" name="numero_orden"
                                            value="{{ old('numero_orden', $nextOrderNumber) }}">
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-sync-alt"></i> Se actualiza automáticamente cada segundo
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -735,6 +738,9 @@
                 });
             });
 
+            // Inicializar actualización automática del número de orden
+            inicializarActualizacionNumeroOrden();
+
         });
 
         // Funciones simplificadas para historial clínico únicamente
@@ -959,6 +965,82 @@
             
             setTimeout(() => errorMsg.remove(), 3000);
         };
+
+        // Funciones para actualización automática del número de orden
+        let numeroOrdenInterval;
+        let actualizacionActiva = true;
+
+        window.inicializarActualizacionNumeroOrden = function() {
+            // Actualizar inmediatamente
+            actualizarNumeroOrden();
+            
+            // Configurar intervalo para actualizar cada segundo
+            numeroOrdenInterval = setInterval(() => {
+                if (actualizacionActiva) {
+                    actualizarNumeroOrden();
+                }
+            }, 1000);
+        };
+
+        window.actualizarNumeroOrden = function() {
+            if (!actualizacionActiva) return;
+            
+            fetch('/api/pedidos/next-order-number')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al obtener número de orden');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success && actualizacionActiva) {
+                        const numeroOrdenField = document.getElementById('numero_orden');
+                        if (numeroOrdenField) {
+                            // Solo actualizar si el campo está vacío o tiene un valor menor
+                            const valorActual = parseInt(numeroOrdenField.value) || 0;
+                            if (valorActual < data.next_order_number) {
+                                numeroOrdenField.value = data.next_order_number;
+                                
+                                // Mostrar brevemente que se actualizó (opcional)
+                                numeroOrdenField.style.backgroundColor = '#d4edda';
+                                setTimeout(() => {
+                                    numeroOrdenField.style.backgroundColor = '';
+                                }, 500);
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.warn('Error al actualizar número de orden:', error);
+                    // No mostrar error al usuario para no interferir con la experiencia
+                });
+        };
+
+        // Detener la actualización automática cuando se envíe el formulario
+        window.detenerActualizacionNumeroOrden = function() {
+            actualizacionActiva = false;
+            if (numeroOrdenInterval) {
+                clearInterval(numeroOrdenInterval);
+                numeroOrdenInterval = null;
+            }
+        };
+
+        // Agregar event listener al formulario para detener actualización al enviar
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('pedidoForm');
+            if (form) {
+                form.addEventListener('submit', detenerActualizacionNumeroOrden);
+            }
+            
+            // Detener actualización automática si el usuario modifica manualmente el número de orden
+            const numeroOrdenField = document.getElementById('numero_orden');
+            if (numeroOrdenField) {
+                numeroOrdenField.addEventListener('input', function() {
+                    // Detener actualizaciones automáticas si el usuario modifica el campo
+                    detenerActualizacionNumeroOrden();
+                });
+            }
+        });
 
         function calculateTotal() {
             let total = 0;
