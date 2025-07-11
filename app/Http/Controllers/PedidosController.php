@@ -1108,9 +1108,54 @@ class PedidosController extends Controller
     }
 
     /**
-     * Generar archivo Excel de pedidos seleccionados
+     * Generar vista de impresión con formato Excel de pedidos seleccionados
      */
     public function printExcel(Request $request)
+    {
+        // Obtener IDs desde GET o POST
+        $ids = $request->input('ids');
+        
+        // Validar que se reciban IDs
+        if (empty($ids)) {
+            return redirect()->back()->with([
+                'tipo' => 'alert-danger',
+                'mensaje' => 'No se seleccionaron pedidos para generar vista Excel'
+            ]);
+        }
+
+        // Convertir IDs de string a array si es necesario
+        if (is_string($ids)) {
+            $ids = explode(',', $ids);
+        }
+        
+        // Obtener los pedidos con sus relaciones
+        $pedidos = Pedido::with(['inventarios', 'lunas', 'empresa'])
+            ->whereIn('id', $ids)
+            ->select([
+                'id', 'numero_orden', 'cliente', 'cedula', 'celular', 'direccion', 
+                'correo_electronico', 'empresa_id', 'metodo_envio', 'fecha_entrega'
+            ])
+            ->orderBy('numero_orden', 'desc')
+            ->get();
+
+        if ($pedidos->isEmpty()) {
+            return redirect()->back()->with([
+                'tipo' => 'alert-danger',
+                'mensaje' => 'No se encontraron pedidos para generar vista Excel'
+            ]);
+        }
+
+        // Organizar los pedidos en filas de 3
+        $pedidosAgrupados = $pedidos->chunk(3);
+
+        // Generar la vista de impresión
+        return view('pedidos.print-excel', compact('pedidosAgrupados'));
+    }
+
+    /**
+     * Generar archivo Excel real de pedidos seleccionados (función auxiliar)
+     */
+    public function downloadExcel(Request $request)
     {
         // Obtener IDs desde GET o POST
         $ids = $request->input('ids');
