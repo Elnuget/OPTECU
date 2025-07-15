@@ -56,7 +56,15 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label>VALOR:</label>
-                        <p>${{ number_format($egreso->valor, 2) }}</p>
+                        <p>${{ number_format($egreso->valor, 0, ',', '.') }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>SUCURSAL:</label>
+                        <p>{{ $egreso->empresa ? $egreso->empresa->nombre : 'SIN SUCURSAL' }}</p>
                     </div>
                 </div>
             </div>

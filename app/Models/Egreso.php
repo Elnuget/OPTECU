@@ -14,6 +14,7 @@ class Egreso extends Model
     
     protected $fillable = [
         'user_id',
+        'empresa_id',
         'valor',
         'motivo'
     ];
@@ -30,6 +31,14 @@ class Egreso extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Obtener la empresa del egreso
+     */
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
     }
 
     /**

@@ -79,7 +79,7 @@
                                        class="form-control @error('valor') is-invalid @enderror" 
                                        id="valor" 
                                        name="valor" 
-                                       step="0.01" 
+                                       step="1" 
                                        min="0" 
                                        value="{{ old('valor') }}"
                                        required>
@@ -111,6 +111,30 @@
                     </div>
                 </div>
 
+                <div class="row">
+                    <!-- Sucursal -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="empresa_id">SUCURSAL</label>
+                            <select name="empresa_id" 
+                                    id="empresa_id" 
+                                    class="form-control @error('empresa_id') is-invalid @enderror">
+                                <option value="">SELECCIONE SUCURSAL</option>
+                                @foreach(\App\Models\Empresa::all() as $empresa)
+                                    <option value="{{ $empresa->id }}" {{ old('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                                        {{ $empresa->nombre }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('empresa_id')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row mt-4">
                     <div class="col-12">
                         <button type="submit" class="btn btn-primary">GUARDAR EGRESO</button>
@@ -126,6 +150,11 @@
 @include('atajos')
     <script>
         $(document).ready(function() {
+            // Auto-seleccionar la empresa del usuario actual
+            @if(auth()->user()->empresa_id)
+                $('#empresa_id').val('{{ auth()->user()->empresa_id }}');
+            @endif
+
             // Validación del formulario
             $('#egresoForm').submit(function(e) {
                 let valor = parseFloat($('#valor').val());
@@ -160,7 +189,7 @@
                 if (value !== '') {
                     value = parseFloat(value);
                     if (!isNaN(value)) {
-                        $(this).val(value.toFixed(2));
+                        $(this).val(Math.round(value));
                     }
                 }
             });

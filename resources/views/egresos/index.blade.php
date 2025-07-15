@@ -151,7 +151,7 @@
                                 <td>{{ $egreso->motivo }}</td>
                                 <td>${{ number_format($egreso->valor, 0, ',', '.') }}</td>
                                 <td>{{ $egreso->user->name }}</td>
-                                <td>{{ $egreso->user->empresa ? $egreso->user->empresa->nombre : 'SIN SUCURSAL' }}</td>
+                                <td>{{ $egreso->empresa ? $egreso->empresa->nombre : 'SIN SUCURSAL' }}</td>
                                 <td>
                                     <a href="{{ route('egresos.show', $egreso->id) }}"
                                         class="btn btn-xs btn-default text-info mx-1 shadow" title="Ver">

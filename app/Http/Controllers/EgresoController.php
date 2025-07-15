@@ -17,7 +17,7 @@ class EgresoController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Egreso::with(['user', 'user.empresa']);
+            $query = Egreso::with(['user', 'empresa']);
 
             // Obtener año y mes actual como valores por defecto
             $ano = $request->get('ano', date('Y'));
@@ -30,9 +30,7 @@ class EgresoController extends Controller
 
             // Filtrar por empresa si se especifica
             if ($empresa) {
-                $query->whereHas('user', function($q) use ($empresa) {
-                    $q->where('empresa_id', $empresa);
-                });
+                $query->where('empresa_id', $empresa);
             }
 
             $egresos = $query->orderBy('created_at', 'desc')->get();
@@ -64,12 +62,26 @@ class EgresoController extends Controller
             $request->validate([
                 'valor' => 'required|numeric|min:0',
                 'motivo' => 'required|string|max:255',
-                'usuario' => 'required_if:motivo,PAGO DE SUELDO|exists:users,id'
+                'usuario' => 'required_if:motivo,PAGO DE SUELDO|exists:users,id',
+                'empresa_id' => 'nullable|exists:empresas,id'
             ]);
 
             $egreso = new Egreso();
-            $egreso->user_id = $request->motivo === 'PAGO DE SUELDO' ? $request->usuario : auth()->id();
+            $targetUserId = $request->motivo === 'PAGO DE SUELDO' ? $request->usuario : auth()->id();
+            $egreso->user_id = $targetUserId;
             $egreso->valor = $request->valor;
+            
+            // Asignar empresa
+            if ($request->motivo === 'PAGO DE SUELDO') {
+                // Para pago de sueldo, usar la empresa del usuario al que se le paga
+                $targetUser = \App\Models\User::find($targetUserId);
+                if ($targetUser && $targetUser->empresa_id) {
+                    $egreso->empresa_id = $targetUser->empresa_id;
+                }
+            } else {
+                // Para otros egresos, usar la empresa seleccionada o la del usuario actual
+                $egreso->empresa_id = $request->empresa_id ?: auth()->user()->empresa_id;
+            }
             
             // Si es pago de sueldo, generar motivo con mes y año
             if ($request->motivo === 'PAGO DE SUELDO') {
@@ -107,11 +119,13 @@ class EgresoController extends Controller
 
     public function show(Egreso $egreso)
     {
+        $egreso->load(['user', 'empresa']);
         return view('egresos.show', compact('egreso'));
     }
 
     public function edit(Egreso $egreso)
     {
+        $egreso->load(['user', 'empresa']);
         return view('egresos.edit', compact('egreso'));
     }
 
@@ -120,11 +134,13 @@ class EgresoController extends Controller
         try {
             $request->validate([
                 'valor' => 'required|numeric|min:0',
-                'motivo' => 'required|string|max:255'
+                'motivo' => 'required|string|max:255',
+                'empresa_id' => 'nullable|exists:empresas,id'
             ]);
 
             $egreso->valor = $request->valor;
             $egreso->motivo = strtoupper($request->motivo);
+            $egreso->empresa_id = $request->empresa_id;
             $egreso->save();
 
             return redirect()->route('egresos.index')->with([

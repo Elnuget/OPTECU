@@ -79,7 +79,7 @@
                                        class="form-control @error('valor') is-invalid @enderror" 
                                        id="valor" 
                                        name="valor" 
-                                       step="0.01" 
+                                       step="1" 
                                        min="0" 
                                        value="{{ old('valor', $egreso->valor) }}"
                                        required>
@@ -103,6 +103,31 @@
                                    value="{{ old('motivo', $egreso->motivo) }}"
                                    required>
                             @error('motivo')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Sucursal -->
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="empresa_id">SUCURSAL</label>
+                            <select name="empresa_id" 
+                                    id="empresa_id" 
+                                    class="form-control @error('empresa_id') is-invalid @enderror">
+                                <option value="">SELECCIONE SUCURSAL</option>
+                                @foreach(\App\Models\Empresa::all() as $empresa)
+                                    <option value="{{ $empresa->id }}" 
+                                            {{ old('empresa_id', $egreso->empresa_id) == $empresa->id ? 'selected' : '' }}>
+                                        {{ $empresa->nombre }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('empresa_id')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
                                 </span>
@@ -175,7 +200,7 @@
                 if (value !== '') {
                     value = parseFloat(value);
                     if (!isNaN(value)) {
-                        $(this).val(value.toFixed(2));
+                        $(this).val(Math.round(value));
                     }
                 }
             });

@@ -64,4 +64,12 @@ class Empresa extends Model
     {
         return $this->hasMany(Inventario::class);
     }
+
+    /**
+     * Obtener los egresos de la empresa
+     */
+    public function egresos()
+    {
+        return $this->hasMany(Egreso::class);
+    }
 }
