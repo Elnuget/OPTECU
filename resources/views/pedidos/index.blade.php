@@ -97,7 +97,6 @@
                 @endif
             </div>
             <div class="col-md-5 align-self-end">
-                <button type="submit" class="btn btn-primary mr-2">FILTRAR</button>
                 <button type="button" class="btn btn-info" id="actualButton">ACTUAL</button>
                 <button type="button" class="btn btn-success" id="mostrarTodosButton">MOSTRAR TODOS</button>
             </div>
@@ -151,7 +150,7 @@
                         <th>Celular</th>
                         <th>Total</th>
                         <th>Saldo</th>
-                        <th>Empresa</th>
+                        <th>Sucursal</th>
                         <th>Acciones</th>
                         <th>Usuario</th>
                     </tr>
@@ -617,8 +616,8 @@ input[type="checkbox"]:after {
             }
         });
 
-        // Manejar cambios en los filtros
-        $('#filtroAno, #filtroMes').change(function() {
+        // Manejar cambios en los filtros - Filtrado automático
+        $('#filtroAno, #filtroMes, #empresa_id').change(function() {
             $('#filterForm').submit();
         });
 
