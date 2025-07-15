@@ -204,85 +204,129 @@
                         </td>
                         <td>{{ $pedido->empresa ? strtoupper($pedido->empresa->nombre) : 'SIN EMPRESA' }}</td>
                         <td>
-                            <div class="btn-group">
-                                <a href="{{ route('pedidos.show', $pedido->id) }}"
-                                    class="btn btn-xs btn-default text-primary mx-1 shadow" title="Ver">
-                                    <i class="fa fa-lg fa-fw fa-eye"></i>
-                                </a>
-                                <a href="{{ route('pedidos.edit', $pedido->id) }}"
-                                    class="btn btn-xs btn-default text-primary mx-1 shadow" title="Editar">
-                                    <i class="fa fa-lg fa-fw fa-pen"></i>
-                                </a>
-                                @can('admin')
-                                    <a class="btn btn-xs btn-default text-danger mx-1 shadow" href="#" data-toggle="modal"
-                                        data-target="#confirmarEliminarModal" data-id="{{ $pedido->id }}"
-                                        data-url="{{ route('pedidos.destroy', $pedido->id) }}">
-                                        <i class="fa fa-lg fa-fw fa-trash"></i>
+                            <div class="d-flex flex-wrap gap-1 align-items-center">
+                                <!-- Grupo de acciones principales -->
+                                <div class="btn-group me-1" role="group">
+                                    <a href="{{ route('pedidos.show', $pedido->id) }}"
+                                        class="btn btn-outline-info btn-sm" 
+                                        title="Ver Detalles del Pedido"
+                                        data-toggle="tooltip">
+                                        <i class="fas fa-eye me-1"></i>
+                                        <span class="d-none d-md-inline">Ver</span>
                                     </a>
-                                @endcan
-                                <!-- Botón de Pago -->
-                                <a href="{{ route('pagos.create', ['pedido_id' => $pedido->id]) }}"
-                                    class="btn btn-success btn-sm" title="Añadir Pago">
-                                    <i class="fas fa-money-bill-wave"></i>
-                                </a>
-                                
-                                <!-- Botón de Reclamo -->
-                                @if(is_null($pedido->reclamo) || trim($pedido->reclamo) === '')
-                                    <button type="button" class="btn btn-danger btn-sm btn-reclamo" 
-                                        title="Agregar Reclamo" 
-                                        data-pedido-id="{{ $pedido->id }}"
-                                        data-cliente="{{ $pedido->cliente }}">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                    </button>
-                                @else
-                                    <button type="button" class="btn btn-warning btn-sm btn-quitar-reclamo" 
-                                        title="Quitar Reclamo" 
-                                        data-pedido-id="{{ $pedido->id }}"
-                                        data-cliente="{{ $pedido->cliente }}">
-                                        <i class="fas fa-times-circle"></i>
-                                    </button>
-                                @endif
+                                    <a href="{{ route('pedidos.edit', $pedido->id) }}"
+                                        class="btn btn-outline-primary btn-sm" 
+                                        title="Editar Pedido"
+                                        data-toggle="tooltip">
+                                        <i class="fas fa-edit me-1"></i>
+                                        <span class="d-none d-md-inline">Editar</span>
+                                    </a>
+                                </div>
+
+                                <!-- Grupo de acciones financieras -->
+                                <div class="btn-group me-1" role="group">
+                                    <a href="{{ route('pagos.create', ['pedido_id' => $pedido->id]) }}"
+                                        class="btn btn-success btn-sm" 
+                                        title="Registrar Pago"
+                                        data-toggle="tooltip">
+                                        <i class="fas fa-dollar-sign me-1"></i>
+                                        <span class="d-none d-lg-inline">Pago</span>
+                                    </a>
+                                </div>
                                 
                                 <!-- Botones de cambio de estado -->
                                 @can('admin')
-                                    @if($pedido->fact == 'Pendiente')
-                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'separado']) }}" method="POST"
-                                            style="display:inline;">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="btn btn-secondary btn-sm" title="Marcar como Separado">
-                                                <i class="fas fa-hand-paper"></i>
-                                            </button>
-                                        </form>
-                                    @elseif($pedido->fact == 'Separado')
-                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'taller']) }}" method="POST"
-                                            style="display:inline;">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="btn btn-primary btn-sm" title="Marcar como Listo en Taller">
-                                                <i class="fas fa-tools"></i>
-                                            </button>
-                                        </form>
-                                    @elseif($pedido->fact == 'LISTO EN TALLER')
-                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'enviado']) }}" method="POST"
-                                            style="display:inline;">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="btn btn-info btn-sm" title="Marcar como Enviado">
-                                                <i class="fas fa-shipping-fast"></i>
-                                            </button>
-                                        </form>
-                                    @elseif($pedido->fact == 'Enviado')
-                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'entregado']) }}" method="POST"
-                                            style="display:inline;">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="btn btn-success btn-sm" title="Marcar como Entregado">
-                                                <i class="fas fa-check-double"></i>
-                                            </button>
-                                        </form>
-                                    @endif
+                                    <div class="me-1">
+                                        @if($pedido->fact == 'Pendiente')
+                                            <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'separado']) }}" method="POST"
+                                                style="display:inline;">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm estado-btn" 
+                                                    title="Cambiar a Estado: Separado"
+                                                    data-toggle="tooltip">
+                                                    <i class="fas fa-hand-paper me-1"></i>
+                                                    <span class="d-none d-xl-inline">Separar</span>
+                                                </button>
+                                            </form>
+                                        @elseif($pedido->fact == 'Separado')
+                                            <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'taller']) }}" method="POST"
+                                                style="display:inline;">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="btn btn-outline-primary btn-sm estado-btn" 
+                                                    title="Cambiar a Estado: Listo en Taller"
+                                                    data-toggle="tooltip">
+                                                    <i class="fas fa-tools me-1"></i>
+                                                    <span class="d-none d-xl-inline">Taller</span>
+                                                </button>
+                                            </form>
+                                        @elseif($pedido->fact == 'LISTO EN TALLER')
+                                            <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'enviado']) }}" method="POST"
+                                                style="display:inline;">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="btn btn-outline-info btn-sm estado-btn" 
+                                                    title="Cambiar a Estado: Enviado"
+                                                    data-toggle="tooltip">
+                                                    <i class="fas fa-shipping-fast me-1"></i>
+                                                    <span class="d-none d-xl-inline">Enviar</span>
+                                                </button>
+                                            </form>
+                                        @elseif($pedido->fact == 'Enviado')
+                                            <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'entregado']) }}" method="POST"
+                                                style="display:inline;">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="btn btn-outline-success btn-sm estado-btn" 
+                                                    title="Cambiar a Estado: Entregado"
+                                                    data-toggle="tooltip">
+                                                    <i class="fas fa-check-double me-1"></i>
+                                                    <span class="d-none d-xl-inline">Entregar</span>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 @endcan
+
+                                <!-- Botón de eliminar (solo admin) -->
+                                @can('admin')
+                                    <div class="me-1">
+                                        <button type="button" 
+                                            class="btn btn-outline-danger btn-sm" 
+                                            data-toggle="modal"
+                                            data-target="#confirmarEliminarModal" 
+                                            data-id="{{ $pedido->id }}"
+                                            data-url="{{ route('pedidos.destroy', $pedido->id) }}"
+                                            title="Eliminar Pedido"
+                                            data-toggle="tooltip">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                @endcan
+
+                                <!-- Botón de Reclamo -->
+                                <div class="me-1">
+                                    @if(is_null($pedido->reclamo) || trim($pedido->reclamo) === '')
+                                        <button type="button" class="btn btn-outline-danger btn-sm btn-reclamo" 
+                                            title="Agregar Reclamo del Cliente" 
+                                            data-pedido-id="{{ $pedido->id }}"
+                                            data-cliente="{{ $pedido->cliente }}"
+                                            data-toggle="tooltip">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            <span class="d-none d-lg-inline">Reclamo</span>
+                                        </button>
+                                    @else
+                                        <button type="button" class="btn btn-warning btn-sm btn-quitar-reclamo" 
+                                            title="Quitar Reclamo Existente" 
+                                            data-pedido-id="{{ $pedido->id }}"
+                                            data-cliente="{{ $pedido->cliente }}"
+                                            data-toggle="tooltip">
+                                            <i class="fas fa-times-circle me-1"></i>
+                                            <span class="d-none d-lg-inline">Quitar</span>
+                                        </button>
+                                    @endif
+                                </div>
                             </div>
                         </td>
                         <td>{{ $pedido->usuario }}</td>
@@ -473,8 +517,159 @@ input[type="checkbox"]:after {
     min-height: 120px;
 }
 
+/* Estilos para el contador de caracteres del reclamo */
 #contador-caracteres {
     font-weight: bold;
+}
+
+/* Estilos mejorados para los botones de acciones */
+.btn-group .btn {
+    border-radius: 0.25rem !important;
+    margin-right: 2px;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-group .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* Botones de estado con animación */
+.estado-btn {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.estado-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.estado-btn:active {
+    transform: translateY(0);
+}
+
+/* Mejoras para botones outline */
+.btn-outline-info:hover {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    color: white;
+}
+
+.btn-outline-primary:hover {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.btn-outline-success:hover {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: white;
+}
+
+/* Responsive para botones de acciones */
+@media (max-width: 768px) {
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        margin-bottom: 2px;
+        border-radius: 0.25rem !important;
+    }
+    
+    .d-flex.flex-wrap {
+        flex-direction: column !important;
+        gap: 5px !important;
+    }
+}
+
+/* Estilos para tooltips */
+.tooltip {
+    font-size: 0.875rem;
+}
+
+/* Espaciado mejorado para acciones */
+.gap-1 {
+    gap: 0.25rem !important;
+}
+
+/* Iconos con mejor espaciado */
+.me-1 {
+    margin-right: 0.25rem !important;
+}
+
+/* Botones con tamaño consistente */
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+}
+
+/* Mejora para el contenedor de acciones */
+.d-flex.flex-wrap {
+    min-height: 40px;
+    align-items: center;
+}
+
+/* Estilo especial para botones de estado activos */
+.estado-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.estado-btn.loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Mejora visual para botones agrupados */
+.btn-group .btn:not(:last-child) {
+    border-right: 1px solid rgba(0,0,0,0.1);
+}
+
+/* Colores específicos para cada tipo de acción */
+.btn-outline-info {
+    border-color: #17a2b8;
+    color: #17a2b8;
+}
+
+.btn-outline-primary {
+    border-color: #007bff;
+    color: #007bff;
+}
+
+/* Estilo para el botón de pago */
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+    transition: all 0.2s ease;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #1e7e34;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
 }
 </style>
 @endpush
@@ -485,6 +680,12 @@ input[type="checkbox"]:after {
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
 <script>
     $(document).ready(function () {
+        // Inicializar tooltips de Bootstrap
+        $('[data-toggle="tooltip"]').tooltip({
+            placement: 'top',
+            trigger: 'hover'
+        });
+
         // Manejar el checkbox "Seleccionar todos"
         $('#selectAll').change(function() {
             $('.pedido-checkbox').prop('checked', this.checked);
@@ -786,22 +987,33 @@ input[type="checkbox"]:after {
             var form = $(this);
             var button = form.find('button[type="submit"]');
             var originalText = button.html();
+            var originalTitle = button.attr('title');
             
-            // Deshabilitar el botón temporalmente
-            button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Actualizando...');
+            // Agregar clase de loading y deshabilitar el botón
+            button.addClass('loading')
+                  .prop('disabled', true)
+                  .html('<i class="fas fa-spinner fa-spin me-1"></i><span class="d-none d-xl-inline">Procesando...</span>')
+                  .attr('title', 'Procesando cambio de estado...');
             
             $.ajax({
                 url: form.attr('action'),
                 method: 'POST',
                 data: form.serialize(),
                 success: function(response) {
+                    // Cambiar a estado de éxito temporalmente
+                    button.removeClass('loading')
+                          .html('<i class="fas fa-check me-1"></i><span class="d-none d-xl-inline">¡Éxito!</span>')
+                          .attr('title', 'Estado actualizado correctamente');
+                    
                     // Mostrar mensaje de éxito
                     Swal.fire({
                         icon: 'success',
                         title: '¡Estado Actualizado!',
                         text: 'El estado del pedido se ha actualizado correctamente.',
                         timer: 2000,
-                        showConfirmButton: false
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
                     }).then(() => {
                         // Recargar la página para mostrar los cambios
                         window.location.reload();
@@ -817,14 +1029,26 @@ input[type="checkbox"]:after {
                         errorMessage = 'Sesión expirada. Por favor, recarga la página e intenta nuevamente.';
                     }
                     
+                    // Mostrar estado de error temporalmente
+                    button.removeClass('loading')
+                          .html('<i class="fas fa-exclamation-triangle me-1"></i><span class="d-none d-xl-inline">Error</span>')
+                          .attr('title', 'Error al procesar');
+                    
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: errorMessage
+                        text: errorMessage,
+                        toast: true,
+                        position: 'top-end',
+                        timer: 4000
                     });
                     
-                    // Restaurar el botón
-                    button.prop('disabled', false).html(originalText);
+                    // Restaurar el botón después de un breve delay
+                    setTimeout(() => {
+                        button.prop('disabled', false)
+                              .html(originalText)
+                              .attr('title', originalTitle);
+                    }, 2000);
                 }
             });
         });
