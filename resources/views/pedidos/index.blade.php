@@ -157,7 +157,7 @@
                 </thead>
                 <tbody>
                     @foreach ($pedidos as $pedido)
-                    <tr>
+                    <tr class="{{ !is_null($pedido->reclamo) && trim($pedido->reclamo) !== '' ? 'bg-danger-light reclamo-row' : '' }}">
                         <td class="checkbox-cell">
                             <input type="checkbox" name="pedidos_selected[]" value="{{ $pedido->id }}" class="pedido-checkbox">
                         </td>
@@ -452,6 +452,25 @@
 .rating label:hover,
 .rating label:hover ~ label {
     color: #ffd700;
+}
+
+/* Estilos para filas con reclamos */
+.reclamo-row {
+    background-color: #f8d7da !important; /* Fondo rojo claro */
+    border-left: 4px solid #dc3545 !important; /* Borde izquierdo rojo más fuerte */
+}
+
+.reclamo-row:hover {
+    background-color: #f5c6cb !important; /* Fondo un poco más oscuro al hacer hover */
+}
+
+.bg-danger-light {
+    background-color: #f8d7da !important;
+}
+
+/* Asegurar que el texto sea legible en las filas con reclamo */
+.reclamo-row td {
+    color: #721c24 !important;
 }
 
 /* Estilos para el botón de WhatsApp */
