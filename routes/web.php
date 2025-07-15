@@ -160,6 +160,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     
     // Rutas para reclamos
     Route::post('/pedidos/{id}/agregar-reclamo', [PedidosController::class, 'agregarReclamo'])->name('pedidos.agregar-reclamo');
+    Route::delete('/pedidos/{id}/quitar-reclamo', [PedidosController::class, 'quitarReclamo'])->name('pedidos.quitar-reclamo');
 
     // Historiales Clinicos
     Route::prefix('historiales_clinicos')->group(function () {

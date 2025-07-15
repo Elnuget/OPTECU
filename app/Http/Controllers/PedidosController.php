@@ -1429,4 +1429,40 @@ class PedidosController extends Controller
         }
     }
 
+    /**
+     * Quitar un reclamo de un pedido
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function quitarReclamo($id)
+    {
+        try {
+            $pedido = Pedido::findOrFail($id);
+            
+            // Verificar si tiene un reclamo
+            if (empty($pedido->reclamo)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Este pedido no tiene un reclamo registrado'
+                ], 400);
+            }
+
+            $pedido->reclamo = null;
+            $pedido->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Reclamo eliminado exitosamente'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar el reclamo',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

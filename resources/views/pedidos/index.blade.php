@@ -234,6 +234,13 @@
                                         data-cliente="{{ $pedido->cliente }}">
                                         <i class="fas fa-exclamation-triangle"></i>
                                     </button>
+                                @else
+                                    <button type="button" class="btn btn-warning btn-sm btn-quitar-reclamo" 
+                                        title="Quitar Reclamo" 
+                                        data-pedido-id="{{ $pedido->id }}"
+                                        data-cliente="{{ $pedido->cliente }}">
+                                        <i class="fas fa-times-circle"></i>
+                                    </button>
                                 @endif
                                 
                                 <!-- Botones de cambio de estado -->
@@ -428,6 +435,16 @@ input[type="checkbox"]:after {
 }
 
 .btn-reclamo:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Estilos para el botón de quitar reclamo */
+.btn-quitar-reclamo {
+    transition: all 0.2s ease;
+}
+
+.btn-quitar-reclamo:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
@@ -967,6 +984,64 @@ Su opinión es muy importante para nosotros.
             
             // Mostrar el modal
             $('#reclamoModal').modal('show');
+        });
+
+        // Manejar el botón de quitar reclamo
+        $('.btn-quitar-reclamo').click(function() {
+            var pedidoId = $(this).data('pedido-id');
+            var cliente = $(this).data('cliente');
+            
+            // Confirmar la eliminación del reclamo
+            Swal.fire({
+                title: '¿Quitar Reclamo?',
+                html: `¿Está seguro que desea quitar el reclamo del pedido de <strong>${cliente}</strong>?<br><br><small class="text-warning">Esta acción no se puede deshacer.</small>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, quitar reclamo',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Proceder a eliminar el reclamo
+                    $.ajax({
+                        url: '/pedidos/' + pedidoId + '/quitar-reclamo',
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Reclamo Eliminado!',
+                                    text: 'El reclamo se ha eliminado correctamente.',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    // Recargar la página para actualizar la vista
+                                    window.location.reload();
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            let errorMessage = 'Error al eliminar el reclamo';
+                            
+                            if (xhr.responseJSON) {
+                                if (xhr.responseJSON.message) {
+                                    errorMessage = xhr.responseJSON.message;
+                                }
+                            }
+                            
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: errorMessage
+                            });
+                        }
+                    });
+                }
+            });
         });
 
         // Contador de caracteres para el textarea del reclamo
