@@ -210,9 +210,10 @@
                                     </small>
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="fact" class="form-label">Factura</label>
+                                    <label for="fact" class="form-label">ESTADO</label>
                                     <select class="form-control" id="fact" name="fact">
                                         <option value="Pendiente" selected>Pendiente</option>
+                                        <option value="CRISTALERIA">Cristalería</option>
                                         <option value="Separado">Separado</option>
                                         <option value="LISTO EN TALLER">Listo en Taller</option>
                                         <option value="Enviado">Enviado</option>

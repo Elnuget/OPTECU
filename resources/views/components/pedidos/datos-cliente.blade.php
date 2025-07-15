@@ -12,9 +12,10 @@
     <div class="card-body">
         <div class="row mb-3">
             <div class="col-md-6">
-                <label for="fact" class="form-label">Factura</label>
+                <label for="fact" class="form-label">ESTADO</label>
                 <select class="form-control" id="fact" name="fact">
                     <option value="Pendiente" {{ $pedido->fact == 'Pendiente' ? 'selected' : '' }}>Pendiente</option>
+                    <option value="CRISTALERIA" {{ $pedido->fact == 'CRISTALERIA' ? 'selected' : '' }}>Cristalería</option>
                     <option value="Separado" {{ $pedido->fact == 'Separado' ? 'selected' : '' }}>Separado</option>
                     <option value="LISTO EN TALLER" {{ $pedido->fact == 'LISTO EN TALLER' ? 'selected' : '' }}>Listo en Taller</option>
                     <option value="Enviado" {{ $pedido->fact == 'Enviado' ? 'selected' : '' }}>Enviado</option>
