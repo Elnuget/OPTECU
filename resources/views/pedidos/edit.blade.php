@@ -94,6 +94,24 @@
         .dropdown-menu.show {
             z-index: 1050;
         }
+        
+        /* Estilos para el reclamo */
+        .card-header.bg-danger {
+            background-color: #dc3545 !important;
+        }
+        
+        .card-header.bg-danger .card-title {
+            color: white !important;
+        }
+        
+        .alert-danger {
+            border-color: #dc3545;
+        }
+        
+        .alert-danger .alert-heading {
+            color: #721c24;
+            font-weight: bold;
+        }
     </style>
 
     {{-- Mostrar mensajes de error --}}
@@ -174,6 +192,34 @@
 
                 {{-- Compra Rápida --}}
                 <x-pedidos.compra-rapida :pedido="$pedido" />
+
+                {{-- Reclamo --}}
+                @if(!empty($pedido->reclamo))
+                <div class="card">
+                    <div class="card-header bg-danger">
+                        <h3 class="card-title text-white">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            Reclamo Registrado
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-danger">
+                            <h5 class="alert-heading">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Descripción del Reclamo:
+                            </h5>
+                            <hr>
+                            <p class="mb-0" style="white-space: pre-wrap;">{{ $pedido->reclamo }}</p>
+                        </div>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i>
+                                Los reclamos no se pueden editar desde esta vista por seguridad.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                @endif
 
                 {{-- Totales --}}
                 <x-pedidos.totales :pedido="$pedido" :totalPagado="$totalPagado" />
