@@ -144,13 +144,13 @@
                             <input type="checkbox" id="selectAll">
                         </th>
                         <th>Fecha</th>
+                        <th>Sucursal</th>
                         <th>Orden</th>
                         <th>Estado</th>
                         <th>Cliente</th>
                         <th>Celular</th>
                         <th>Total</th>
                         <th>Saldo</th>
-                        <th>Sucursal</th>
                         <th>Acciones</th>
                         <th>Usuario</th>
                     </tr>
@@ -167,6 +167,7 @@
                                 <small class="text-info"><strong>Entrega:</strong><br>{{ $pedido->fecha_entrega->format('Y-m-d') }}</small>
                             @endif
                         </td>
+                        <td>{{ $pedido->empresa ? strtoupper($pedido->empresa->nombre) : 'SIN EMPRESA' }}</td>
                         <td>{{ $pedido->numero_orden }}</td>
                         <td>
                             <span style="color: 
@@ -203,7 +204,6 @@
                                 ${{ number_format($pedido->saldo, 0, ',', '.') }}
                             </span>
                         </td>
-                        <td>{{ $pedido->empresa ? strtoupper($pedido->empresa->nombre) : 'SIN EMPRESA' }}</td>
                         <td>
                             <div class="d-flex flex-wrap gap-1 align-items-center">
                                 <!-- Grupo de acciones principales -->
@@ -945,7 +945,7 @@ input[type="checkbox"]:after {
         var pedidosTable = $('#pedidosTable').DataTable({
             "processing": true,
             "scrollX": true,
-            "order": [[2, "desc"]], // Ordenar por número de orden descendente (ahora es la columna 2)
+            "order": [[3, "desc"]], // Ordenar por número de orden descendente (ahora es la columna 3)
             "paging": false, // Deshabilitar paginación
             "lengthChange": false,
             "info": false,
