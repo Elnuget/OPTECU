@@ -777,6 +777,10 @@ class PedidosController extends Controller
         
         // Actualizar el estado según el parámetro recibido
         switch ($state) {
+            case 'cristaleria':
+                $pedido->fact = 'CRISTALERIA';
+                $mensaje = 'Pedido actualizado a CRISTALERIA';
+                break;
             case 'separado':
                 $pedido->fact = 'Separado';
                 $mensaje = 'Pedido actualizado a Separado';

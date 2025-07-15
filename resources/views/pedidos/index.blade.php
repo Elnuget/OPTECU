@@ -171,10 +171,11 @@
                         <td>
                             <span style="color: 
                                 {{ $pedido->fact == 'Pendiente' ? 'orange' : 
-                                  ($pedido->fact == 'Separado' ? 'brown' : 
-                                   ($pedido->fact == 'LISTO EN TALLER' ? 'blue' : 
-                                    ($pedido->fact == 'Enviado' ? 'purple' : 
-                                     ($pedido->fact == 'ENTREGADO' ? 'green' : 'black')))) }}">
+                                  ($pedido->fact == 'CRISTALERIA' ? 'darkblue' : 
+                                   ($pedido->fact == 'Separado' ? 'brown' : 
+                                    ($pedido->fact == 'LISTO EN TALLER' ? 'blue' : 
+                                     ($pedido->fact == 'Enviado' ? 'purple' : 
+                                      ($pedido->fact == 'ENTREGADO' ? 'green' : 'black'))))) }}">
                                 {{ $pedido->fact }}
                             </span>
                         </td>
@@ -238,6 +239,18 @@
                                 @can('admin')
                                     <div class="me-1">
                                         @if($pedido->fact == 'Pendiente')
+                                            <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'cristaleria']) }}" method="POST"
+                                                style="display:inline;">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button type="submit" class="btn btn-outline-secondary btn-sm estado-btn" 
+                                                    title="Cambiar a Estado: Cristalería"
+                                                    data-toggle="tooltip">
+                                                    <i class="fas fa-glasses me-1"></i>
+                                                    <span class="d-none d-xl-inline">Cristalería</span>
+                                                </button>
+                                            </form>
+                                        @elseif($pedido->fact == 'CRISTALERIA')
                                             <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'separado']) }}" method="POST"
                                                 style="display:inline;">
                                                 @csrf
