@@ -34,7 +34,8 @@ class PedidosController extends Controller
                 ->with([
                     'aInventario:id,codigo,cantidad',
                     'dInventario:id,codigo,cantidad',
-                    'pagos:id,pedido_id,pago'
+                    'pagos:id,pedido_id,pago',
+                    'empresa:id,nombre'
                 ]);
 
             // Si no se solicitan todos los registros y no hay parámetros de fecha, redirigir al mes actual
@@ -73,6 +74,7 @@ class PedidosController extends Controller
 
             $pedidos = $query->select([
                 'id',
+                'empresa_id',
                 'numero_orden',
                 'fecha',
                 'fecha_entrega',

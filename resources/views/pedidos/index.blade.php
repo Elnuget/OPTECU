@@ -151,6 +151,7 @@
                         <th>Celular</th>
                         <th>Total</th>
                         <th>Saldo</th>
+                        <th>Empresa</th>
                         <th>Acciones</th>
                         <th>Usuario</th>
                     </tr>
@@ -202,6 +203,7 @@
                                 ${{ number_format($pedido->saldo, 0, ',', '.') }}
                             </span>
                         </td>
+                        <td>{{ $pedido->empresa ? strtoupper($pedido->empresa->nombre) : 'SIN EMPRESA' }}</td>
                         <td>
                             <div class="btn-group">
                                 <a href="{{ route('pedidos.show', $pedido->id) }}"
