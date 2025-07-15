@@ -226,6 +226,16 @@
                                     <i class="fas fa-money-bill-wave"></i>
                                 </a>
                                 
+                                <!-- Botón de Reclamo -->
+                                @if(is_null($pedido->reclamo) || trim($pedido->reclamo) === '')
+                                    <button type="button" class="btn btn-danger btn-sm btn-reclamo" 
+                                        title="Agregar Reclamo" 
+                                        data-pedido-id="{{ $pedido->id }}"
+                                        data-cliente="{{ $pedido->cliente }}">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </button>
+                                @endif
+                                
                                 <!-- Botones de cambio de estado -->
                                 @can('admin')
                                     @if($pedido->fact == 'Pendiente')
@@ -278,7 +288,7 @@
     </div>
 </div>
 
-{{-- Agregar el modal de confirmación después de la tabla --}}
+{{-- Modal de confirmación de eliminación --}}
 <div class="modal fade" id="confirmarEliminarModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -299,6 +309,48 @@
                     <button type="submit" class="btn btn-danger">Eliminar</button>
                 </form>
             </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal para agregar reclamo --}}
+<div class="modal fade" id="reclamoModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agregar Reclamo</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="reclamoForm">
+                @csrf
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="cliente-reclamo"><strong>Cliente:</strong></label>
+                        <p id="cliente-reclamo" class="form-control-plaintext"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="reclamo"><strong>Descripción del Reclamo:</strong></label>
+                        <textarea 
+                            id="reclamo" 
+                            name="reclamo" 
+                            class="form-control" 
+                            rows="5" 
+                            placeholder="Describa detalladamente el reclamo del cliente..."
+                            maxlength="1000"
+                            required></textarea>
+                        <small class="form-text text-muted">
+                            Mínimo 10 caracteres, máximo 1000 caracteres. 
+                            <span id="contador-caracteres">0/1000</span>
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Guardar Reclamo</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -368,6 +420,44 @@ input[type="checkbox"]:after {
     text-align: center !important;
     vertical-align: middle !important;
     width: 50px !important;
+}
+
+/* Estilos adicionales para el botón de reclamo */
+.btn-reclamo {
+    transition: all 0.2s ease;
+}
+
+.btn-reclamo:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Estilos para el modal de reclamo */
+#reclamoModal .modal-content {
+    border-radius: 8px;
+}
+
+#reclamoModal .modal-header {
+    background-color: #dc3545;
+    color: white;
+}
+
+#reclamoModal .modal-header .close {
+    color: white;
+    opacity: 1;
+}
+
+#reclamoModal .modal-header .close:hover {
+    opacity: 0.8;
+}
+
+#reclamo {
+    resize: vertical;
+    min-height: 120px;
+}
+
+#contador-caracteres {
+    font-weight: bold;
 }
 </style>
 @endpush
@@ -860,6 +950,105 @@ Su opinión es muy importante para nosotros.
                 complete: function() {
                     // Rehabilitar botón
                     button.prop('disabled', false);
+                }
+            });
+        });
+
+        // Manejar el modal de reclamos
+        $('.btn-reclamo').click(function() {
+            var pedidoId = $(this).data('pedido-id');
+            var cliente = $(this).data('cliente');
+            
+            // Configurar el modal
+            $('#cliente-reclamo').text(cliente);
+            $('#reclamoForm').data('pedido-id', pedidoId);
+            $('#reclamo').val('');
+            $('#contador-caracteres').text('0/1000');
+            
+            // Mostrar el modal
+            $('#reclamoModal').modal('show');
+        });
+
+        // Contador de caracteres para el textarea del reclamo
+        $('#reclamo').on('input', function() {
+            var length = $(this).val().length;
+            $('#contador-caracteres').text(length + '/1000');
+            
+            // Cambiar color si se acerca al límite
+            if (length > 900) {
+                $('#contador-caracteres').addClass('text-danger').removeClass('text-muted');
+            } else {
+                $('#contador-caracteres').addClass('text-muted').removeClass('text-danger');
+            }
+        });
+
+        // Manejar el envío del formulario de reclamo
+        $('#reclamoForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            var pedidoId = $(this).data('pedido-id');
+            var reclamo = $('#reclamo').val().trim();
+            var submitButton = $(this).find('button[type="submit"]');
+            var originalText = submitButton.text();
+            
+            // Validación del lado del cliente
+            if (reclamo.length < 10) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Reclamo muy corto',
+                    text: 'El reclamo debe tener al menos 10 caracteres'
+                });
+                return;
+            }
+            
+            // Deshabilitar botón durante el envío
+            submitButton.prop('disabled', true).text('Guardando...');
+            
+            $.ajax({
+                url: '/pedidos/' + pedidoId + '/agregar-reclamo',
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                data: {
+                    reclamo: reclamo
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#reclamoModal').modal('hide');
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Reclamo Guardado!',
+                            text: 'El reclamo se ha registrado correctamente.',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            // Recargar la página para actualizar la vista
+                            window.location.reload();
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    let errorMessage = 'Error al guardar el reclamo';
+                    
+                    if (xhr.responseJSON) {
+                        if (xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else if (xhr.responseJSON.errors && xhr.responseJSON.errors.reclamo) {
+                            errorMessage = xhr.responseJSON.errors.reclamo[0];
+                        }
+                    }
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: errorMessage
+                    });
+                },
+                complete: function() {
+                    // Rehabilitar botón
+                    submitButton.prop('disabled', false).text(originalText);
                 }
             });
         });

@@ -43,7 +43,8 @@ class Pedido extends Model
         'calificacion',
         'comentario_calificacion',
         'metodo_envio',
-        'fecha_entrega'
+        'fecha_entrega',
+        'reclamo'
     ];
 
     protected $dates = ['deleted_at', 'fecha', 'fecha_entrega'];

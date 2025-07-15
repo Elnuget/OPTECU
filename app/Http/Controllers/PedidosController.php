@@ -85,7 +85,8 @@ class PedidosController extends Controller
                 'fact',
                 'usuario',
                 'encuesta', // Asegurarnos de que la columna encuesta se cargue explícitamente
-                'metodo_envio'
+                'metodo_envio',
+                'reclamo' // Agregar el campo reclamo
             ])
             ->orderBy('numero_orden', 'desc')
             ->get();
@@ -1372,6 +1373,57 @@ class PedidosController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener el próximo número de orden',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Agregar un reclamo a un pedido
+     * 
+     * @param \Illuminate\Http\Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function agregarReclamo(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'reclamo' => 'required|string|min:10|max:1000'
+            ], [
+                'reclamo.required' => 'El reclamo es obligatorio',
+                'reclamo.min' => 'El reclamo debe tener al menos 10 caracteres',
+                'reclamo.max' => 'El reclamo no puede exceder 1000 caracteres'
+            ]);
+
+            $pedido = Pedido::findOrFail($id);
+            
+            // Verificar si ya tiene un reclamo
+            if (!empty($pedido->reclamo)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Este pedido ya tiene un reclamo registrado'
+                ], 400);
+            }
+
+            $pedido->reclamo = $request->reclamo;
+            $pedido->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Reclamo agregado exitosamente'
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al agregar el reclamo',
                 'error' => $e->getMessage()
             ], 500);
         }

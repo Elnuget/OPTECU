@@ -157,6 +157,9 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::post('/pedidos/{id}/actualizar-estado-encuesta/{estado?}', [PedidosController::class, 'actualizarEstadoEncuesta'])
         ->name('pedidos.actualizar-estado-encuesta')
         ->middleware('web');
+    
+    // Rutas para reclamos
+    Route::post('/pedidos/{id}/agregar-reclamo', [PedidosController::class, 'agregarReclamo'])->name('pedidos.agregar-reclamo');
 
     // Historiales Clinicos
     Route::prefix('historiales_clinicos')->group(function () {
