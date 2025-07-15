@@ -37,3 +37,7 @@ sudo php artisan optimize:clear
 sudo composer dump-autoload
 comando top
 sudo chmod -R 777 /var/www/OPTCH/public
+
+
+sudo chown -R www-data:www-data /var/www/OPTCH
+sudo chmod -R 755 /var/www/OPTCH
