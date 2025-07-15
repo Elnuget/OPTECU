@@ -17,15 +17,23 @@ class EgresoController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = Egreso::with('user');
+            $query = Egreso::with(['user', 'user.empresa']);
 
             // Obtener año y mes actual como valores por defecto
             $ano = $request->get('ano', date('Y'));
             $mes = $request->get('mes', date('n'));
+            $empresa = $request->get('empresa');
 
             // Aplicar filtros usando los valores por defecto o los proporcionados
             $query->whereYear('created_at', $ano)
                   ->whereMonth('created_at', $mes);
+
+            // Filtrar por empresa si se especifica
+            if ($empresa) {
+                $query->whereHas('user', function($q) use ($empresa) {
+                    $q->where('empresa_id', $empresa);
+                });
+            }
 
             $egresos = $query->orderBy('created_at', 'desc')->get();
 

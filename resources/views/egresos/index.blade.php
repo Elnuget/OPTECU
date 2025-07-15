@@ -105,6 +105,20 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="col-md-2">
+                    <label for="filtroEmpresa">SELECCIONAR SUCURSAL:</label>
+                    <select name="empresa" class="form-control custom-select" id="filtroEmpresa">
+                        <option value="">TODAS LAS SUCURSALES</option>
+                        @php
+                            $selectedEmpresa = request('empresa');
+                        @endphp
+                        @foreach(\App\Models\Empresa::all() as $empresa)
+                            <option value="{{ $empresa->id }}" {{ $selectedEmpresa == $empresa->id ? 'selected' : '' }}>
+                                {{ $empresa->nombre }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="col-md-2 align-self-end">
                     <button type="button" class="btn btn-primary" id="actualButton">ACTUAL</button>
                 </div>
@@ -126,6 +140,7 @@
                             <th>MOTIVO</th>
                             <th>VALOR</th>
                             <th>USUARIO</th>
+                            <th>SUCURSAL</th>
                             <th>ACCIONES</th>
                         </tr>
                     </thead>
@@ -136,6 +151,7 @@
                                 <td>{{ $egreso->motivo }}</td>
                                 <td>${{ number_format($egreso->valor, 0, ',', '.') }}</td>
                                 <td>{{ $egreso->user->name }}</td>
+                                <td>{{ $egreso->user->empresa ? $egreso->user->empresa->nombre : 'SIN SUCURSAL' }}</td>
                                 <td>
                                     <a href="{{ route('egresos.show', $egreso->id) }}"
                                         class="btn btn-xs btn-default text-info mx-1 shadow" title="Ver">
@@ -239,8 +255,10 @@
                             <label for="usuario">SELECCIONAR USUARIO:</label>
                             <select name="usuario" id="usuario" class="form-control" required>
                                 <option value="">SELECCIONE UN USUARIO</option>
-                                @foreach(\App\Models\User::all() as $user)
-                                    <option value="{{ $user->id }}">{{ $user->name }}</option>
+                                @foreach(\App\Models\User::with('empresa')->get() as $user)
+                                    <option value="{{ $user->id }}">
+                                        {{ $user->name }} - {{ $user->empresa ? $user->empresa->nombre : 'SIN SUCURSAL' }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
@@ -333,7 +351,7 @@
                         "text": 'IMPRIMIR',
                         "autoPrint": true,
                         "exportOptions": {
-                            "columns": [0, 1, 2, 3]
+                            "columns": [0, 1, 2, 3, 4]
                         },
                         "customize": function(win) {
                             $(win.document.body).css('font-size', '16pt');
@@ -348,7 +366,7 @@
                         "filename": 'Egresos.pdf',
                         "pageSize": 'LETTER',
                         "exportOptions": {
-                            "columns": [0, 1, 2, 3]
+                            "columns": [0, 1, 2, 3, 4]
                         }
                     }
                 ],
@@ -358,7 +376,7 @@
             });
 
             // Manejar cambios en los filtros
-            $('#filtroAno, #filtroMes').change(function() {
+            $('#filtroAno, #filtroMes, #filtroEmpresa').change(function() {
                 $('#filterForm').submit();
             });
 
