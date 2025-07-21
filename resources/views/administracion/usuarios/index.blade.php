@@ -54,19 +54,17 @@
                         @endif       
                         </td>
                         <td>
-                        @if ($u->active === 1)
-                           Activo
-                       
+                        @if ($u->active)
+                           <span class="badge badge-success">Activo</span>
                         @else
-                           Inactivo
+                           <span class="badge badge-secondary">Inactivo</span>
                         @endif       
                         </td>
                         <td>
-                        @if ($u->is_admin === 1)
-                           Sí
-                       
+                        @if ($u->is_admin)
+                           <span class="badge badge-primary">Sí</span>
                         @else
-                           No
+                           <span class="badge badge-light">No</span>
                         @endif       
                         </td>
                         <td><div class="btn-group">
