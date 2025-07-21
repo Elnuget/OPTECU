@@ -150,6 +150,54 @@
                 </div>
             </form>
 
+            {{-- Filtro por fecha específica --}}
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="form-inline">
+                        <div class="form-group mr-2">
+                            <label for="fechaSeleccion" class="mr-2">FILTRAR POR FECHA ESPECÍFICA:</label>
+                            <input type="date" class="form-control" id="fechaSeleccion" value="{{ request('fecha_especifica', date('Y-m-d')) }}">
+                        </div>
+                        <div class="btn-group">
+                            @if(request()->filled('fecha_especifica'))
+                                <button type="button" class="btn btn-danger" id="filtrarPorFecha">
+                                    <i class="fas fa-filter"></i> 
+                                    @if(request()->filled('empresa'))
+                                        FILTROS ACTIVOS ({{ $pagos->count() }})
+                                    @else
+                                        FILTRO FECHA ({{ $pagos->count() }})
+                                    @endif
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="limpiarFiltroFecha">
+                                    <i class="fas fa-times"></i> LIMPIAR FILTRO FECHA
+                                </button>
+                            @else
+                                <button type="button" class="btn btn-warning" id="filtrarPorFecha">
+                                    <i class="fas fa-calendar-day"></i> FILTRAR POR FECHA
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="limpiarFiltroFecha" style="display: none;">
+                                    <i class="fas fa-times"></i> LIMPIAR FILTRO FECHA
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+                    @if(request()->filled('fecha_especifica'))
+                        <small class="text-info d-block mt-2">
+                            <i class="fas fa-info-circle"></i> 
+                            MOSTRANDO PAGOS DEL {{ \Carbon\Carbon::parse(request('fecha_especifica'))->format('d/m/Y') }}
+                            @if(request()->filled('empresa'))
+                                @php
+                                    $empresaSeleccionada = $empresas->firstWhere('id', request('empresa'));
+                                @endphp
+                                @if($empresaSeleccionada)
+                                    EN <strong>{{ strtoupper($empresaSeleccionada->nombre) }}</strong>
+                                @endif
+                            @endif
+                        </small>
+                    @endif
+                </div>
+            </div>
+
             {{-- Botones de Filtro TC y Añadir Pago --}}
             <div class="btn-toolbar mb-3" role="toolbar" aria-label="Toolbar with button groups">
                 <div class="btn-group" role="group" aria-label="Grupo Añadir">
@@ -325,6 +373,47 @@
             // Manejar cambios en los filtros
             $('#filtroAno, #filtroMes, #metodo_pago, #filtroEmpresa').change(function() {
                 $('#filterForm').submit();
+            });
+
+            // NUEVA FUNCIONALIDAD: Filtro por fecha específica
+            $('#filtrarPorFecha').click(function() {
+                const fecha = $('#fechaSeleccion').val();
+                if (!fecha) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Fecha requerida',
+                        text: 'Por favor selecciona una fecha para filtrar.',
+                        showConfirmButton: true,
+                        timer: 3000
+                    });
+                    return;
+                }
+
+                // Obtener parámetros actuales
+                const urlParams = new URLSearchParams(window.location.search);
+                const empresa = urlParams.get('empresa') || '';
+                
+                // Construir URL con filtro de fecha específica
+                const baseUrl = window.location.href.split('?')[0];
+                let newUrl = baseUrl + '?fecha_especifica=' + encodeURIComponent(fecha);
+                
+                // Mantener filtro de empresa si existe
+                if (empresa) {
+                    newUrl += '&empresa=' + encodeURIComponent(empresa);
+                }
+                
+                window.location.href = newUrl;
+            });
+
+            // Limpiar filtro de fecha específica
+            $('#limpiarFiltroFecha').click(function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.delete('fecha_especifica');
+                
+                const baseUrl = window.location.href.split('?')[0];
+                const newUrl = baseUrl + (urlParams.toString() ? '?' + urlParams.toString() : '');
+                
+                window.location.href = newUrl;
             });
 
             // Configurar el modal antes de mostrarse

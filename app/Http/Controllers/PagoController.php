@@ -32,20 +32,31 @@ class PagoController extends Controller
         $isAdmin = $user->is_admin;
 
         // Si no se solicitan todos los registros y no hay parámetros de fecha, redirigir al mes actual
-        if (!$request->has('todos') && (!$request->filled('ano') || !$request->filled('mes'))) {
+        if (!$request->has('todos') && !$request->filled('fecha_especifica') && (!$request->filled('ano') || !$request->filled('mes'))) {
             $currentDate = now()->setTimezone('America/Guayaquil');
             $redirectParams = [
                 'ano' => $currentDate->format('Y'),
                 'mes' => $currentDate->format('m')
             ];
             
+            // Mantener el filtro de empresa si se especifica
+            if ($request->filled('empresa')) {
+                $redirectParams['empresa'] = $request->get('empresa');
+            }
+            
             return redirect()->route('pagos.index', $redirectParams);
         }
 
-        // Aplicar filtros de fecha solo si no se solicitan todos los registros
+        // Aplicar filtros de fecha
         if (!$request->has('todos')) {
-            $query->whereYear('created_at', '=', $request->get('ano'))
-                  ->whereMonth('created_at', '=', (int)$request->get('mes'));
+            // Si hay una fecha específica, filtrar solo por esa fecha
+            if ($request->filled('fecha_especifica')) {
+                $query->whereDate('created_at', $request->fecha_especifica);
+            } else {
+                // Usar filtros de año y mes como antes
+                $query->whereYear('created_at', '=', $request->get('ano'))
+                      ->whereMonth('created_at', '=', (int)$request->get('mes'));
+            }
         }
 
         // Aplicar filtro por método de pago si está seleccionado
