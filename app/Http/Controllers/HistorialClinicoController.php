@@ -39,21 +39,43 @@ class HistorialClinicoController extends Controller
         $userEmpresaId = null;
         $isUserAdmin = auth()->user()->is_admin;
         
-        if (!$isUserAdmin && auth()->user()->empresa_id) {
+        if (!$isUserAdmin) {
+            // Obtener todas las empresas del usuario (principal + adicionales)
+            $userEmpresas = auth()->user()->todasLasEmpresas();
             $userEmpresaId = auth()->user()->empresa_id;
             
-            // Si el usuario tiene empresa asignada y no es admin, filtramos por su empresa
-            // si no hay filtro de empresa específico en la solicitud
-            if (!$request->filled('empresa_id')) {
-                $query->where('empresa_id', $userEmpresaId);
+            if ($userEmpresas->count() > 0) {
+                // Si no hay filtro específico, mostrar historiales de todas sus empresas
+                if (!$request->filled('empresa_id')) {
+                    $empresaIds = $userEmpresas->pluck('id')->toArray();
+                    $query->whereIn('empresa_id', $empresaIds);
+                } else {
+                    // Si hay filtro específico, verificar que tenga acceso a esa empresa
+                    $empresaId = $request->empresa_id;
+                    if ($userEmpresas->where('id', $empresaId)->count() > 0) {
+                        $query->where('empresa_id', $empresaId);
+                    } else {
+                        // Si no tiene acceso, mostrar sus empresas por defecto
+                        $empresaIds = $userEmpresas->pluck('id')->toArray();
+                        $query->whereIn('empresa_id', $empresaIds);
+                    }
+                }
             }
+        } else if ($request->filled('empresa_id')) {
+            // Si es admin, aplicar el filtro seleccionado
+            $query->where('empresa_id', $request->get('empresa_id'));
         }
 
         // Obtener los historiales
         $historiales = $query->get();
 
-        // Obtener TODAS LAS SUCURSALES para el filtro
-        $empresas = Empresa::orderBy('nombre')->get();
+        // Obtener empresas para el filtro según el tipo de usuario
+        if ($isUserAdmin) {
+            $empresas = Empresa::orderBy('nombre')->get();
+        } else {
+            // Para usuarios no admin, mostrar solo sus empresas asignadas
+            $empresas = auth()->user()->todasLasEmpresas()->sortBy('nombre')->values();
+        }
 
         return view('historiales_clinicos.index', compact('historiales', 'empresas', 'userEmpresaId', 'isUserAdmin'));
     }
@@ -96,14 +118,19 @@ class HistorialClinicoController extends Controller
             ->pluck('celular')
             ->toArray();
 
-        // Obtener TODAS LAS SUCURSALES para el select
-        $empresas = Empresa::orderBy('nombre')->get();
+        // Obtener empresas para el select según el tipo de usuario
+        if (auth()->user()->is_admin) {
+            $empresas = Empresa::orderBy('nombre')->get();
+        } else {
+            // Para usuarios no admin, mostrar solo sus empresas asignadas
+            $empresas = auth()->user()->todasLasEmpresas()->sortBy('nombre')->values();
+        }
 
         // Verificar si el usuario está asociado a una empresa y no es admin
         $userEmpresaId = null;
         $isUserAdmin = auth()->user()->is_admin;
         
-        if (!$isUserAdmin && auth()->user()->empresa_id) {
+        if (!$isUserAdmin) {
             $userEmpresaId = auth()->user()->empresa_id;
         }
 
@@ -287,14 +314,19 @@ class HistorialClinicoController extends Controller
     {
         $historialClinico = HistorialClinico::with('recetas')->findOrFail($id);
         
-        // Obtener TODAS LAS SUCURSALES para el select
-        $empresas = Empresa::orderBy('nombre')->get();
+        // Obtener empresas para el select según el tipo de usuario
+        if (auth()->user()->is_admin) {
+            $empresas = Empresa::orderBy('nombre')->get();
+        } else {
+            // Para usuarios no admin, mostrar solo sus empresas asignadas
+            $empresas = auth()->user()->todasLasEmpresas()->sortBy('nombre')->values();
+        }
         
         // Verificar si el usuario está asociado a una empresa y no es admin
         $userEmpresaId = null;
         $isUserAdmin = auth()->user()->is_admin;
         
-        if (!$isUserAdmin && auth()->user()->empresa_id) {
+        if (!$isUserAdmin) {
             $userEmpresaId = auth()->user()->empresa_id;
         }
         
