@@ -26,11 +26,20 @@ class Empresa extends Model
     }
 
     /**
-     * Obtener los usuarios de la empresa
+     * Obtener los usuarios de la empresa (relación original - un usuario pertenece a una empresa)
      */
     public function usuarios()
     {
         return $this->hasMany(User::class);
+    }
+
+    /**
+     * Obtener los usuarios asociados a la empresa (relación muchos a muchos)
+     */
+    public function usuariosAsociados()
+    {
+        return $this->belongsToMany(User::class, 'user_empresa', 'empresa_id', 'user_id')
+                    ->withTimestamps();
     }
 
     /**

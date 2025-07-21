@@ -80,10 +80,52 @@ class User extends Authenticatable
     }
 
     /**
-     * Obtener la empresa del usuario
+     * Obtener la empresa del usuario (relación original - una sola empresa)
      */
     public function empresa()
     {
         return $this->belongsTo(Empresa::class);
+    }
+
+    /**
+     * Obtener las empresas del usuario (relación muchos a muchos)
+     */
+    public function empresas()
+    {
+        return $this->belongsToMany(Empresa::class, 'user_empresa', 'user_id', 'empresa_id')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Obtener todas las empresas del usuario (principal + adicionales)
+     */
+    public function todasLasEmpresas()
+    {
+        $empresas = collect();
+        
+        // Agregar empresa principal si existe
+        if ($this->empresa) {
+            $empresas->push($this->empresa);
+        }
+        
+        // Agregar empresas adicionales
+        $empresasAdicionales = $this->empresas;
+        
+        // Combinar y remover duplicados por ID
+        return $empresas->merge($empresasAdicionales)->unique('id');
+    }
+
+    /**
+     * Verificar si el usuario tiene acceso a una empresa específica
+     */
+    public function tieneAccesoAEmpresa($empresaId)
+    {
+        // Verificar si es la empresa principal
+        if ($this->empresa_id == $empresaId) {
+            return true;
+        }
+        
+        // Verificar si está en las empresas adicionales
+        return $this->empresas()->where('empresa_id', $empresaId)->exists();
     }
 }

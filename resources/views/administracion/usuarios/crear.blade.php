@@ -97,7 +97,7 @@
                                 <small class="text-muted">El email debe ser único</small>
                         </div>
                         <div class="form-group">
-                                <label>Sucursal</label>
+                                <label>Sucursal Principal</label>
                                 <select id="empresa_id" name="empresa_id" class="form-control @error('empresa_id') is-invalid @enderror">
                                 <option value="">Sin Sucursal</option>
                                 @foreach($empresas as $empresa)
@@ -109,6 +109,30 @@
                                 @error('empresa_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
+                                <small class="text-muted">Esta será la empresa principal del usuario</small>
+                        </div>
+                        <div class="form-group">
+                                <label>Empresas Adicionales</label>
+                                <div class="card">
+                                    <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                                        @foreach($empresas as $empresa)
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                       name="empresas_adicionales[]" 
+                                                       value="{{$empresa->id}}" 
+                                                       id="empresa_{{$empresa->id}}"
+                                                       {{in_array($empresa->id, old('empresas_adicionales', [])) ? 'checked' : ''}}>
+                                                <label class="form-check-label" for="empresa_{{$empresa->id}}">
+                                                    {{$empresa->nombre}}
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                @error('empresas_adicionales')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                                <small class="text-muted">Seleccione las empresas adicionales a las que tendrá acceso el usuario</small>
                         </div>
                         <div class="form-group">
                                 <label>ACTIVO</label>
@@ -169,6 +193,22 @@
 @section('js')
 <script>
 $(document).ready(function() {
+    // Evitar que la empresa principal se seleccione también como adicional
+    $('#empresa_id').on('change', function() {
+        const empresaPrincipal = $(this).val();
+        
+        // Desmarcar la empresa principal de las adicionales
+        if (empresaPrincipal) {
+            $(`#empresa_${empresaPrincipal}`).prop('checked', false).prop('disabled', true);
+        }
+        
+        // Habilitar todas las demás empresas
+        $('input[name="empresas_adicionales[]"]').not(`#empresa_${empresaPrincipal}`).prop('disabled', false);
+    });
+
+    // Ejecutar la validación inicial
+    $('#empresa_id').trigger('change');
+
     // Validación en tiempo real del email
     $('input[name="email"]').on('blur', function() {
         const email = $(this).val();

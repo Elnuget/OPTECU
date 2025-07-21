@@ -48,7 +48,7 @@
                         <td>{{$u->email}}</td>
                         <td>
                         @if ($u->empresa)
-                           {{$u->empresa->nombre}}
+                           {{$u->empresa->nombre}} 
                         @else
                            <span class="text-muted">Sin Sucursal</span>
                         @endif       

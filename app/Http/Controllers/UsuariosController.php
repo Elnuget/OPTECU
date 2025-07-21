@@ -10,7 +10,7 @@ class UsuariosController extends Controller
 {
     public function index()
     {
-        $usuarios = User::with('empresa')->get();
+        $usuarios = User::with(['empresa', 'empresas'])->get();
         return view('administracion.usuarios.index', compact('usuarios'));
     }
     public function create()
@@ -30,7 +30,9 @@ class UsuariosController extends Controller
                 'password_confirmation' => 'required|string|min:8',
                 'activo' => 'required|boolean',
                 'is_admin' => 'required|boolean',
-                'empresa_id' => 'nullable|exists:empresas,id'
+                'empresa_id' => 'nullable|exists:empresas,id',
+                'empresas_adicionales' => 'nullable|array',
+                'empresas_adicionales.*' => 'exists:empresas,id'
             ], [
                 'nombre.required' => 'El nombre es obligatorio',
                 'nombre.min' => 'El nombre debe tener al menos 2 caracteres',
@@ -52,7 +54,9 @@ class UsuariosController extends Controller
                 'activo.boolean' => 'El campo activo debe ser verdadero o falso',
                 'is_admin.required' => 'Debe especificar si el usuario es administrador',
                 'is_admin.boolean' => 'El campo administrador debe ser verdadero o falso',
-                'empresa_id.exists' => 'La sucursal seleccionada no existe'
+                'empresa_id.exists' => 'La sucursal seleccionada no existe',
+                'empresas_adicionales.array' => 'Las empresas adicionales deben ser un array',
+                'empresas_adicionales.*.exists' => 'Una o más empresas adicionales no existen'
             ]);
 
             $usuario = new User();
@@ -65,12 +69,27 @@ class UsuariosController extends Controller
             $usuario->password = Hash::make($request->password);
             
             $usuario->save();
+
+            // Manejar empresas adicionales (relación muchos a muchos)
+            if ($request->filled('empresas_adicionales')) {
+                $empresasAdicionales = $request->empresas_adicionales;
+                
+                // Filtrar la empresa principal de las adicionales para evitar duplicados
+                if ($request->empresa_id) {
+                    $empresasAdicionales = array_filter($empresasAdicionales, function($empresaId) use ($request) {
+                        return $empresaId != $request->empresa_id;
+                    });
+                }
+                
+                $usuario->empresas()->sync($empresasAdicionales);
+            }
             
             return redirect()->route('configuracion.usuarios.index')->with([
                 'error' => 'Éxito',
                 'mensaje' => 'Usuario creado exitosamente',
                 'tipo' => 'alert-success'
             ]);
+            
             
         } catch (\Illuminate\Database\QueryException $e) {
             // Manejar errores específicos de base de datos
@@ -108,7 +127,7 @@ class UsuariosController extends Controller
     }
     public function show($id)
     {
-        $usuario = User::with('empresa')->find($id);
+        $usuario = User::with(['empresa', 'empresas'])->find($id);
         $empresas = \App\Models\Empresa::all();
         return view('administracion.usuarios.editar', compact('usuario', 'empresas'));
     }
@@ -124,7 +143,9 @@ class UsuariosController extends Controller
                 'password' => 'nullable|string|min:8|confirmed',
                 'activo' => 'required|boolean',
                 'is_admin' => 'required|boolean',
-                'empresa_id' => 'nullable|exists:empresas,id'
+                'empresa_id' => 'nullable|exists:empresas,id',
+                'empresas_adicionales' => 'nullable|array',
+                'empresas_adicionales.*' => 'exists:empresas,id'
             ], [
                 'nombre.required' => 'El nombre es obligatorio',
                 'nombre.min' => 'El nombre debe tener al menos 2 caracteres',
@@ -144,7 +165,9 @@ class UsuariosController extends Controller
                 'activo.boolean' => 'El campo activo debe ser verdadero o falso',
                 'is_admin.required' => 'Debe especificar si el usuario es administrador',
                 'is_admin.boolean' => 'El campo administrador debe ser verdadero o falso',
-                'empresa_id.exists' => 'La sucursal seleccionada no existe'
+                'empresa_id.exists' => 'La sucursal seleccionada no existe',
+                'empresas_adicionales.array' => 'Las empresas adicionales deben ser un array',
+                'empresas_adicionales.*.exists' => 'Una o más empresas adicionales no existen'
             ]);
 
             $usuario->name = $request->nombre;
@@ -160,6 +183,23 @@ class UsuariosController extends Controller
             }
             
             $usuario->save();
+
+            // Manejar empresas adicionales (relación muchos a muchos)
+            if ($request->has('empresas_adicionales')) {
+                $empresasAdicionales = $request->empresas_adicionales ?: [];
+                
+                // Filtrar la empresa principal de las adicionales para evitar duplicados
+                if ($request->empresa_id) {
+                    $empresasAdicionales = array_filter($empresasAdicionales, function($empresaId) use ($request) {
+                        return $empresaId != $request->empresa_id;
+                    });
+                }
+                
+                $usuario->empresas()->sync($empresasAdicionales);
+            } else {
+                // Si no se envían empresas adicionales, limpiar la relación
+                $usuario->empresas()->sync([]);
+            }
             
             return redirect()->route('configuracion.usuarios.index')->with([
                 'error' => 'Éxito',
