@@ -39,18 +39,31 @@ class PedidosController extends Controller
                 ]);
 
             // Si no se solicitan todos los registros y no hay parámetros de fecha, redirigir al mes actual
-            if (!$request->has('todos') && (!$request->filled('ano') || !$request->filled('mes'))) {
+            if (!$request->has('todos') && !$request->filled('fecha_especifica') && (!$request->filled('ano') || !$request->filled('mes'))) {
                 $currentDate = now()->setTimezone('America/Guayaquil');
-                return redirect()->route('pedidos.index', [
+                $redirectParams = [
                     'ano' => $currentDate->format('Y'),
                     'mes' => $currentDate->format('m')
-                ]);
+                ];
+                
+                // Mantener el filtro de empresa si se especifica
+                if ($request->filled('empresa_id')) {
+                    $redirectParams['empresa_id'] = $request->get('empresa_id');
+                }
+                
+                return redirect()->route('pedidos.index', $redirectParams);
             }
 
-            // Aplicar filtros de fecha solo si no se solicitan todos los registros
+            // Aplicar filtros de fecha
             if (!$request->has('todos')) {
-                $query->whereYear('fecha', $request->ano)
-                      ->whereMonth('fecha', $request->mes);
+                // Si hay una fecha específica, filtrar solo por esa fecha
+                if ($request->filled('fecha_especifica')) {
+                    $query->whereDate('fecha', $request->fecha_especifica);
+                } else {
+                    // Usar filtros de año y mes como antes
+                    $query->whereYear('fecha', $request->ano)
+                          ->whereMonth('fecha', $request->mes);
+                }
             }
             
             // Aplicar filtro de empresa si se especifica

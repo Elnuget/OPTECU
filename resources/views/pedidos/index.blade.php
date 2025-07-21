@@ -124,13 +124,44 @@
             </div>
             <div class="col-md-4">
                 <div class="input-group">
-                    <input type="date" class="form-control" id="fechaSeleccion" value="{{ date('Y-m-d') }}">
+                    <input type="date" class="form-control" id="fechaSeleccion" value="{{ request('fecha_especifica', date('Y-m-d')) }}">
                     <div class="input-group-append">
-                        <button type="button" class="btn btn-warning" id="seleccionarDiarios">
-                            <i class="fas fa-calendar-day"></i> Seleccionar Diarios
-                        </button>
+                        @if(request()->filled('fecha_especifica'))
+                            <button type="button" class="btn btn-danger" id="seleccionarDiarios">
+                                <i class="fas fa-filter"></i> 
+                                @if(request()->filled('empresa_id'))
+                                    Filtros Activos ({{ $pedidos->count() }})
+                                @else
+                                    Filtro Fecha ({{ $pedidos->count() }})
+                                @endif
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="limpiarFiltroFecha">
+                                <i class="fas fa-times"></i> Limpiar Filtro Fecha
+                            </button>
+                        @else
+                            <button type="button" class="btn btn-warning" id="seleccionarDiarios">
+                                <i class="fas fa-calendar-day"></i> Filtrar por Fecha
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="limpiarFiltroFecha" style="display: none;">
+                                <i class="fas fa-times"></i> Limpiar Filtro
+                            </button>
+                        @endif
                     </div>
                 </div>
+                @if(request()->filled('fecha_especifica'))
+                    <small class="text-info">
+                        <i class="fas fa-info-circle"></i> 
+                        Mostrando pedidos del {{ \Carbon\Carbon::parse(request('fecha_especifica'))->format('d/m/Y') }}
+                        @if(request()->filled('empresa_id'))
+                            @php
+                                $empresaSeleccionada = $empresas->firstWhere('id', request('empresa_id'));
+                            @endphp
+                            @if($empresaSeleccionada)
+                                en <strong>{{ strtoupper($empresaSeleccionada->nombre) }}</strong>
+                            @endif
+                        @endif
+                    </small>
+                @endif
             </div>
         </div>
 
@@ -717,6 +748,13 @@ input[type="checkbox"]:after {
             trigger: 'hover'
         });
 
+        // Verificar si hay filtro de fecha activo y mostrar/ocultar botón de limpiar filtro
+        @if(request()->filled('fecha_especifica'))
+            $('#limpiarFiltroFecha').show();
+        @else
+            $('#limpiarFiltroFecha').hide();
+        @endif
+
         // Manejar el checkbox "Seleccionar todos"
         $('#selectAll').change(function() {
             $('.pedido-checkbox').prop('checked', this.checked);
@@ -745,42 +783,80 @@ input[type="checkbox"]:after {
             $('#imprimirInforme').prop('disabled', checkedCheckboxes === 0);
         }
 
-        // Manejar clic en el botón de seleccionar diarios
+        // Manejar clic en el botón de filtrar por fecha - ENVIAR AL SERVIDOR
         $('#seleccionarDiarios').click(function() {
             var fechaSeleccionada = $('#fechaSeleccion').val();
             
             if (!fechaSeleccionada) {
-                alert('Por favor seleccione una fecha');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Fecha Requerida',
+                    text: 'Por favor seleccione una fecha para filtrar'
+                });
                 return;
             }
             
-            // Desmarcar todos los checkboxes primero
-            $('.pedido-checkbox').prop('checked', false);
-            $('#selectAll').prop('checked', false);
-            
-            var pedidosSeleccionados = 0;
-            
-            // Recorrer todas las filas de la tabla
-            $('#pedidosTable tbody tr').each(function() {
-                var fila = $(this);
-                var fechaPedido = fila.find('td:nth-child(2)').text().trim(); // Columna de fecha (índice 2)
-                
-                // Comparar fechas
-                if (fechaPedido === fechaSeleccionada) {
-                    fila.find('.pedido-checkbox').prop('checked', true);
-                    pedidosSeleccionados++;
+            // Mostrar indicador de carga
+            Swal.fire({
+                title: 'Filtrando pedidos...',
+                text: 'Cargando pedidos del ' + fechaSeleccionada,
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
                 }
             });
             
-            // Actualizar estado de los botones
-            toggleImprimirButton();
+            // Construir URL con filtro de fecha y mantener filtro de sucursal si existe
+            const params = new URLSearchParams();
+            params.set('fecha_especifica', fechaSeleccionada);
             
-            // Mostrar mensaje informativo
-            if (pedidosSeleccionados > 0) {
-                alert('Se seleccionaron ' + pedidosSeleccionados + ' pedidos de la fecha ' + fechaSeleccionada);
-            } else {
-                alert('No se encontraron pedidos para la fecha ' + fechaSeleccionada);
+            // Mantener el filtro de empresa/sucursal si está seleccionado
+            if ($('#empresa_id').val()) {
+                params.set('empresa_id', $('#empresa_id').val());
             }
+            
+            // Redirigir al servidor con los filtros combinados
+            window.location.href = '{{ route("pedidos.index") }}?' + params.toString();
+        });
+
+        // Manejar clic en el botón de limpiar filtro de fecha - REDIRIGIR AL SERVIDOR
+        $('#limpiarFiltroFecha').click(function() {
+            // Mostrar indicador de carga
+            Swal.fire({
+                title: 'Limpiando filtro...',
+                text: 'Volviendo a mostrar pedidos por mes',
+                allowOutsideClick: false,
+                timer: 1000,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Obtener parámetros actuales y remover solo la fecha específica
+            var currentParams = new URLSearchParams(window.location.search);
+            currentParams.delete('fecha_especifica'); // Remover el filtro de fecha específica
+            
+            var newUrl = '{{ route("pedidos.index") }}';
+            
+            // Si hay otros parámetros (como sucursal), mantenerlos
+            if (currentParams.toString()) {
+                newUrl += '?' + currentParams.toString();
+            } else {
+                // Si no hay otros parámetros, ir al mes actual pero mantener sucursal si existe
+                const params = new URLSearchParams();
+                const now = new Date();
+                params.set('ano', now.getFullYear());
+                params.set('mes', now.getMonth() + 1);
+                
+                // Mantener el filtro de empresa/sucursal si está seleccionado
+                if ($('#empresa_id').val()) {
+                    params.set('empresa_id', $('#empresa_id').val());
+                }
+                
+                newUrl += '?' + params.toString();
+            }
+            
+            window.location.href = newUrl;
         });
 
         // Manejar clic en el botón de imprimir cristalería
@@ -957,27 +1033,57 @@ input[type="checkbox"]:after {
 
         // Manejar cambios en los filtros - Filtrado automático
         $('#filtroAno, #filtroMes, #empresa_id').change(function() {
-            $('#filterForm').submit();
+            const params = new URLSearchParams();
+            
+            // Mantener el filtro de fecha específica si está activo
+            var currentParams = new URLSearchParams(window.location.search);
+            if (currentParams.has('fecha_especifica')) {
+                params.set('fecha_especifica', currentParams.get('fecha_especifica'));
+            } else {
+                // Solo aplicar filtros de año y mes si no hay fecha específica
+                if ($('#filtroAno').val()) params.set('ano', $('#filtroAno').val());
+                if ($('#filtroMes').val()) params.set('mes', $('#filtroMes').val());
+                
+                // Si no hay año ni mes, agregar parámetro "todos"
+                if (!$('#filtroAno').val() && !$('#filtroMes').val()) {
+                    params.set('todos', '1');
+                }
+            }
+            
+            // Siempre agregar el filtro de empresa si está seleccionado
+            if ($('#empresa_id').val()) {
+                params.set('empresa_id', $('#empresa_id').val());
+            }
+            
+            window.location.href = '{{ route("pedidos.index") }}?' + params.toString();
         });
 
         // Botón "Actual"
         $('#actualButton').click(function() {
             const now = new Date();
-            $('#filtroAno').val(now.getFullYear());
-            $('#filtroMes').val(now.getMonth() + 1);
-            // No cambiamos el filtro de empresa, mantenemos el valor actual
-            $('#filterForm').submit();
+            const params = new URLSearchParams();
+            params.set('ano', now.getFullYear());
+            params.set('mes', now.getMonth() + 1);
+            
+            // Mantener el filtro de empresa si existe
+            if ($('#empresa_id').val()) {
+                params.set('empresa_id', $('#empresa_id').val());
+            }
+            
+            window.location.href = '{{ route("pedidos.index") }}?' + params.toString();
         });
 
         // Botón "Mostrar Todos los Pedidos"
         $('#mostrarTodosButton').click(function() {
-            $('#filtroAno').val('');
-            $('#filtroMes').val('');
-            $('#empresa_id').val('');
+            const params = new URLSearchParams();
+            params.set('todos', '1');
             
-            const form = $('#filterForm');
-            form.append('<input type="hidden" name="todos" value="1">');
-            form.submit();
+            // Mantener el filtro de empresa si existe
+            if ($('#empresa_id').val()) {
+                params.set('empresa_id', $('#empresa_id').val());
+            }
+            
+            window.location.href = '{{ route("pedidos.index") }}?' + params.toString();
         });
 
         // Configurar el modal de eliminación
