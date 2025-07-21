@@ -39,38 +39,51 @@ class PagoController extends Controller
                 'mes' => $currentDate->format('m')
             ];
             
-            // Si el usuario no es admin y tiene empresa asociada, añadir el parámetro de empresa
-            if (!$isAdmin && $userEmpresaId) {
-                $redirectParams['empresa'] = $userEmpresaId;
-            }
-            
             return redirect()->route('pagos.index', $redirectParams);
         }
 
         // Aplicar filtros de fecha solo si no se solicitan todos los registros
         if (!$request->has('todos')) {
-            $query->whereYear('created_at', '=', $request->ano)
-                  ->whereMonth('created_at', '=', (int)$request->mes);
+            $query->whereYear('created_at', '=', $request->get('ano'))
+                  ->whereMonth('created_at', '=', (int)$request->get('mes'));
         }
 
         // Aplicar filtro por método de pago si está seleccionado
         if ($request->filled('metodo_pago')) {
-            $query->where('mediodepago_id', $request->metodo_pago);
+            $query->where('mediodepago_id', $request->get('metodo_pago'));
         }
 
         // Obtener los pagos
         $pagos = $query->orderBy('created_at', 'desc')->get();
         
-        // Para usuarios no admin con empresa asociada, forzar el filtro por su empresa
-        // Para usuarios admin o peticiones explícitas, usar el filtro de empresa proporcionado
-        if (!$isAdmin && $userEmpresaId) {
-            // Forzar filtro por la empresa del usuario
-            $pagos = $pagos->filter(function($pago) use ($userEmpresaId) {
-                return $pago->pedido->empresa_id == $userEmpresaId;
-            });
-            // Forzar el valor de empresa en la solicitud para el formulario
-            $request->merge(['empresa' => $userEmpresaId]);
-        } else if ($request->has('empresa') && $request->empresa != '') {
+        // Manejar filtrado por empresa según tipo de usuario
+        if (!$isAdmin) {
+            // Para usuarios no admin, obtener todas sus empresas asignadas
+            $userEmpresas = $user->todasLasEmpresas();
+            
+            if ($userEmpresas->count() > 0) {
+                $empresaIds = $userEmpresas->pluck('id')->toArray();
+                
+                if ($request->filled('empresa')) {
+                    // Si hay filtro específico, verificar que tenga acceso a esa empresa
+                    if (in_array($request->get('empresa'), $empresaIds)) {
+                        $pagos = $pagos->filter(function($pago) use ($request) {
+                            return $pago->pedido->empresa_id == $request->get('empresa');
+                        });
+                    } else {
+                        // Si no tiene acceso, mostrar pagos de todas sus empresas
+                        $pagos = $pagos->filter(function($pago) use ($empresaIds) {
+                            return in_array($pago->pedido->empresa_id, $empresaIds);
+                        });
+                    }
+                } else {
+                    // Si no hay filtro específico, mostrar pagos de todas sus empresas
+                    $pagos = $pagos->filter(function($pago) use ($empresaIds) {
+                        return in_array($pago->pedido->empresa_id, $empresaIds);
+                    });
+                }
+            }
+        } else if ($request->filled('empresa')) {
             // Para admins, aplicar el filtro normalmente
             $pagos = $pagos->filter(function($pago) use ($request) {
                 return $pago->pedido->empresa_id == $request->empresa;
@@ -80,8 +93,13 @@ class PagoController extends Controller
         // Calcular el total de pagos
         $totalPagos = $pagos->sum('pago');
 
-        // Obtener TODAS LAS SUCURSALES para el filtro
-        $empresas = Empresa::orderBy('nombre')->get();
+        // Obtener empresas para el filtro según el tipo de usuario
+        if ($isAdmin) {
+            $empresas = Empresa::orderBy('nombre')->get();
+        } else {
+            // Para usuarios no admin, mostrar solo sus empresas asignadas
+            $empresas = $user->todasLasEmpresas()->sortBy('nombre')->values();
+        }
 
         return view('pagos.index', compact('pagos', 'mediosdepago', 'totalPagos', 'empresas', 'isAdmin', 'userEmpresaId'));
     }
