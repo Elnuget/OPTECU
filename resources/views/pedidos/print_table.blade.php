@@ -108,6 +108,7 @@
                 <th>MEDIDAS</th>
                 <th>ESTADO</th>
                 <th>TOTAL</th>
+                <th>PAGOS</th>
                 <th>SALDO</th>
                 <th>USUARIO</th>
             </tr>
@@ -116,17 +117,21 @@
             @php
                 $totalVentas = 0;
                 $totalSaldos = 0;
+                $totalPagos = 0;
+                $pagosPorTipo = [];
             @endphp
             
             @foreach($pedidos as $pedido)
                 @php
-                    $totalVentas += floatval(str_replace(',', '.', str_replace('.', '', $pedido->total)));
-                    $totalSaldos += floatval(str_replace(',', '.', str_replace('.', '', $pedido->saldo)));
+                    // Convertir correctamente a enteros eliminando decimales
+                    $totalVentas += intval(floatval($pedido->total));
+                    $totalSaldos += intval(floatval($pedido->saldo));
                     
                     // Preparar datos de armazones y accesorios
                     $armazones = [];
                     foreach ($pedido->inventarios as $inventario) {
-                        $armazones[] = $inventario->codigo . ' (' . number_format($inventario->pivot->precio * (1 - ($inventario->pivot->descuento / 100)), 2, ',', '.') . ')';
+                        $precio = intval($inventario->pivot->precio * (1 - ($inventario->pivot->descuento / 100)));
+                        $armazones[] = $inventario->codigo . ' ($' . number_format($precio, 0, '', '.') . ')';
                     }
                     $armazonesStr = implode(', ', $armazones);
                     
@@ -136,6 +141,26 @@
                         $medidas[] = $luna->l_detalle . ': ' . $luna->l_medida;
                     }
                     $medidasStr = implode(' | ', $medidas);
+                    
+                    // Preparar datos de pagos
+                    $pagosInfo = [];
+                    $totalPagadoPedido = 0;
+                    foreach ($pedido->pagos as $pago) {
+                        $pagoEntero = intval(floatval($pago->pago));
+                        $totalPagadoPedido += $pagoEntero;
+                        $totalPagos += $pagoEntero;
+                        
+                        $medioPago = $pago->mediodepago ? $pago->mediodepago->medio_de_pago : 'N/A';
+                        $fechaPago = $pago->created_at ? $pago->created_at->format('d-m-Y') : 'N/A';
+                        $pagosInfo[] = '$' . number_format($pagoEntero, 0, '', '.') . ' (' . $medioPago . ' - ' . $fechaPago . ')';
+                        
+                        // Acumular pagos por tipo
+                        if (!isset($pagosPorTipo[$medioPago])) {
+                            $pagosPorTipo[$medioPago] = 0;
+                        }
+                        $pagosPorTipo[$medioPago] += $pagoEntero;
+                    }
+                    $pagosStr = implode(' | ', $pagosInfo);
                 @endphp
                 <tr>
                     <td>{{ $pedido->empresa ? $pedido->empresa->nombre : 'N/A' }}</td>
@@ -147,38 +172,73 @@
                     <td>{{ $armazonesStr ?: 'N/A' }}</td>
                     <td>{{ $medidasStr ?: 'N/A' }}</td>
                     <td>{{ $pedido->fact }}</td>
-                    <td class="text-right">${{ $pedido->total }}</td>
-                    <td class="text-right">${{ $pedido->saldo }}</td>
+                    <td class="text-right">${{ number_format(intval(floatval($pedido->total)), 0, '', '.') }}</td>
+                    <td>{{ $pagosStr ?: 'Sin pagos' }}</td>
+                    <td class="text-right">${{ number_format(intval(floatval($pedido->saldo)), 0, '', '.') }}</td>
                     <td>{{ $pedido->usuario }}</td>
                 </tr>
             @endforeach
-            
-            <tr class="summary-row">
-                <td colspan="10" class="text-right">TOTALES:</td>
-                <td class="text-right">${{ number_format($totalVentas, 2, ',', '.') }}</td>
-                <td class="text-right">${{ number_format($totalSaldos, 2, ',', '.') }}</td>
-                <td></td>
-            </tr>
         </tbody>
     </table>
     
-    <div class="totales">
-        <div class="total-row">
-            <span>CANTIDAD DE PEDIDOS:</span>
-            <span>{{ $pedidos->count() }}</span>
+    <!-- Tarjetas de Resumen -->
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px;">
+        
+        <!-- Tarjeta de Totales Generales -->
+        <div style="background-color: #f0f8ff; padding: 15px; border: 2px solid #4169e1; border-radius: 8px;">
+            <h3 style="margin: 0 0 10px 0; color: #4169e1; text-align: center; font-size: 14px;">RESUMEN GENERAL</h3>
+            <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #ddd;">
+                <span style="font-weight: bold;">CANTIDAD DE PEDIDOS:</span>
+                <span>{{ $pedidos->count() }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #ddd;">
+                <span style="font-weight: bold;">TOTAL VENTAS:</span>
+                <span style="color: #008000; font-weight: bold;">${{ number_format($totalVentas, 0, '', '.') }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #ddd;">
+                <span style="font-weight: bold;">TOTAL SALDOS PENDIENTES:</span>
+                <span style="color: #ff4500; font-weight: bold;">${{ number_format($totalSaldos, 0, '', '.') }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #ddd;">
+                <span style="font-weight: bold;">TOTAL DE PAGOS:</span>
+                <span style="color: #32cd32; font-weight: bold;">${{ number_format($totalPagos, 0, '', '.') }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 8px 0; background-color: #e6f3ff; margin-top: 5px; border-radius: 4px;">
+                <span style="font-weight: bold; font-size: 12px;">TOTAL COBRADO:</span>
+                <span style="color: #0066cc; font-weight: bold; font-size: 12px;">${{ number_format($totalPagos, 0, '', '.') }}</span>
+            </div>
         </div>
-        <div class="total-row">
-            <span>TOTAL VENTAS:</span>
-            <span>${{ number_format($totalVentas, 2, ',', '.') }}</span>
+
+        <!-- Tarjeta de Pagos por Tipo -->
+        <div style="background-color: #f0fff0; padding: 15px; border: 2px solid #32cd32; border-radius: 8px;">
+            <h3 style="margin: 0 0 10px 0; color: #32cd32; text-align: center; font-size: 14px;">PAGOS POR TIPO</h3>
+            @php
+                arsort($pagosPorTipo); // Ordenar de mayor a menor
+            @endphp
+            @foreach($pagosPorTipo as $tipo => $monto)
+                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #ddd;">
+                    <span style="font-weight: bold;">{{ strtoupper($tipo) }}:</span>
+                    <span style="color: #228b22; font-weight: bold;">${{ number_format($monto, 0, '', '.') }}</span>
+                </div>
+            @endforeach
+            
+            @if(empty($pagosPorTipo))
+                <div style="text-align: center; color: #666; font-style: italic; padding: 20px 0;">
+                    No hay pagos registrados
+                </div>
+            @endif
+            
+            <!-- Verificación -->
+            <div style="background-color: #e6ffe6; padding: 8px; margin-top: 10px; border-radius: 4px; border: 1px solid #90ee90;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px;">
+                    <span>VERIFICACIÓN:</span>
+                    <span style="color: {{ $totalPagos == array_sum($pagosPorTipo) ? '#008000' : '#ff0000' }};">
+                        {{ $totalPagos == array_sum($pagosPorTipo) ? '✓ CORRECTO' : '✗ ERROR' }}
+                    </span>
+                </div>
+            </div>
         </div>
-        <div class="total-row">
-            <span>TOTAL SALDOS PENDIENTES:</span>
-            <span>${{ number_format($totalSaldos, 2, ',', '.') }}</span>
-        </div>
-        <div class="total-row">
-            <span>TOTAL COBRADO:</span>
-            <span>${{ number_format($totalVentas - $totalSaldos, 2, ',', '.') }}</span>
-        </div>
+        
     </div>
 
     <script>
