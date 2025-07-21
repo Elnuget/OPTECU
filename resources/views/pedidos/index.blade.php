@@ -184,7 +184,6 @@
                         <th>Total</th>
                         <th>Saldo</th>
                         <th>Acciones</th>
-                        <th>Usuario</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -372,7 +371,6 @@
                                 </div>
                             </div>
                         </td>
-                        <td>{{ $pedido->usuario }}</td>
                     </tr>
                     @endforeach
                 </tbody>
