@@ -61,8 +61,19 @@ class PedidosController extends Controller
             // Verificar si el usuario está asociado a una empresa y no es admin
             $userEmpresaId = null;
             $isUserAdmin = auth()->user()->is_admin;
+            $userEmpresas = collect(); // Para almacenar todas las empresas del usuario
             
-            if (!$isUserAdmin && auth()->user()->empresa_id) {
+            if (!$isUserAdmin) {
+                // Obtener todas las empresas del usuario (principal + adicionales)
+                $userEmpresas = auth()->user()->todasLasEmpresas();
+                $userEmpresaId = auth()->user()->empresa_id;
+                
+                // Si el usuario tiene empresas asignadas y no hay filtro específico
+                if ($userEmpresas->count() > 0 && !$request->filled('empresa_id')) {
+                    $empresaIds = $userEmpresas->pluck('id')->toArray();
+                    $query->whereIn('empresa_id', $empresaIds);
+                }
+            } else if (!$isUserAdmin && auth()->user()->empresa_id) {
                 $userEmpresaId = auth()->user()->empresa_id;
                 
                 // Si el usuario tiene empresa asignada y no es admin, filtramos por su empresa
@@ -112,8 +123,13 @@ class PedidosController extends Controller
                 })
             ];
 
-            // Obtener TODAS LAS SUCURSALES para el filtro
-            $empresas = Empresa::orderBy('nombre')->get();
+            // Obtener empresas para el filtro según el tipo de usuario
+            if ($isUserAdmin) {
+                $empresas = Empresa::orderBy('nombre')->get();
+            } else {
+                // Para usuarios no admin, mostrar solo sus empresas asignadas
+                $empresas = auth()->user()->todasLasEmpresas()->sortBy('nombre')->values();
+            }
 
             return view('pedidos.index', compact('pedidos', 'totales', 'empresas', 'userEmpresaId', 'isUserAdmin'));
         } catch (\Exception $e) {

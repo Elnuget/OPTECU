@@ -84,17 +84,18 @@
             </div>
             <div class="col-md-3">
                 <label for="empresa_id">SUCURSAL:</label>
-                <select name="empresa_id" class="form-control" id="empresa_id" {{ !$isUserAdmin && $userEmpresaId ? 'disabled' : '' }}>
-                    <option value="">TODAS LAS SUCURSALES</option>
+                <select name="empresa_id" class="form-control" id="empresa_id">
+                    @if($isUserAdmin)
+                        <option value="">TODAS LAS SUCURSALES</option>
+                    @else
+                        <option value="">MIS SUCURSALES</option>
+                    @endif
                     @foreach($empresas ?? [] as $empresa)
-                        <option value="{{ $empresa->id }}" {{ ($userEmpresaId == $empresa->id) || request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                        <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
                             {{ strtoupper($empresa->nombre) }}
                         </option>
                     @endforeach
                 </select>
-                @if(!$isUserAdmin && $userEmpresaId)
-                    <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}">
-                @endif
             </div>
             <div class="col-md-5 align-self-end">
                 <button type="button" class="btn btn-info" id="actualButton">ACTUAL</button>
@@ -236,71 +237,69 @@
                                 </div>
                                 
                                 <!-- Botones de cambio de estado -->
-                                @can('admin')
-                                    <div class="me-1">
-                                        @if($pedido->fact == 'Pendiente')
-                                            <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'cristaleria']) }}" method="POST"
-                                                style="display:inline;">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit" class="btn btn-outline-secondary btn-sm estado-btn" 
-                                                    title="Cambiar a Estado: Cristalería"
-                                                    data-toggle="tooltip">
-                                                    <i class="fas fa-glasses me-1"></i>
-                                                    <span class="d-none d-xl-inline">Cristalería</span>
-                                                </button>
-                                            </form>
-                                        @elseif($pedido->fact == 'CRISTALERIA')
-                                            <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'separado']) }}" method="POST"
-                                                style="display:inline;">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit" class="btn btn-outline-secondary btn-sm estado-btn" 
-                                                    title="Cambiar a Estado: Separado"
-                                                    data-toggle="tooltip">
-                                                    <i class="fas fa-hand-paper me-1"></i>
-                                                    <span class="d-none d-xl-inline">Separar</span>
-                                                </button>
-                                            </form>
-                                        @elseif($pedido->fact == 'Separado')
-                                            <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'taller']) }}" method="POST"
-                                                style="display:inline;">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit" class="btn btn-outline-primary btn-sm estado-btn" 
-                                                    title="Cambiar a Estado: Listo en Taller"
-                                                    data-toggle="tooltip">
-                                                    <i class="fas fa-tools me-1"></i>
-                                                    <span class="d-none d-xl-inline">Taller</span>
-                                                </button>
-                                            </form>
-                                        @elseif($pedido->fact == 'LISTO EN TALLER')
-                                            <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'enviado']) }}" method="POST"
-                                                style="display:inline;">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit" class="btn btn-outline-info btn-sm estado-btn" 
-                                                    title="Cambiar a Estado: Enviado"
-                                                    data-toggle="tooltip">
-                                                    <i class="fas fa-shipping-fast me-1"></i>
-                                                    <span class="d-none d-xl-inline">Enviar</span>
-                                                </button>
-                                            </form>
-                                        @elseif($pedido->fact == 'Enviado')
-                                            <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'entregado']) }}" method="POST"
-                                                style="display:inline;">
-                                                @csrf
-                                                @method('PATCH')
-                                                <button type="submit" class="btn btn-outline-success btn-sm estado-btn" 
-                                                    title="Cambiar a Estado: Entregado"
-                                                    data-toggle="tooltip">
-                                                    <i class="fas fa-check-double me-1"></i>
-                                                    <span class="d-none d-xl-inline">Entregar</span>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                @endcan
+                                <div class="me-1">
+                                    @if($pedido->fact == 'Pendiente')
+                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'cristaleria']) }}" method="POST"
+                                            style="display:inline;">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="btn btn-outline-secondary btn-sm estado-btn" 
+                                                title="Cambiar a Estado: Cristalería"
+                                                data-toggle="tooltip">
+                                                <i class="fas fa-glasses me-1"></i>
+                                                <span class="d-none d-xl-inline">Cristalería</span>
+                                            </button>
+                                        </form>
+                                    @elseif($pedido->fact == 'CRISTALERIA')
+                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'separado']) }}" method="POST"
+                                            style="display:inline;">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="btn btn-outline-secondary btn-sm estado-btn" 
+                                                title="Cambiar a Estado: Separado"
+                                                data-toggle="tooltip">
+                                                <i class="fas fa-hand-paper me-1"></i>
+                                                <span class="d-none d-xl-inline">Separar</span>
+                                            </button>
+                                        </form>
+                                    @elseif($pedido->fact == 'Separado')
+                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'taller']) }}" method="POST"
+                                            style="display:inline;">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="btn btn-outline-primary btn-sm estado-btn" 
+                                                title="Cambiar a Estado: Listo en Taller"
+                                                data-toggle="tooltip">
+                                                <i class="fas fa-tools me-1"></i>
+                                                <span class="d-none d-xl-inline">Taller</span>
+                                            </button>
+                                        </form>
+                                    @elseif($pedido->fact == 'LISTO EN TALLER')
+                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'enviado']) }}" method="POST"
+                                            style="display:inline;">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="btn btn-outline-info btn-sm estado-btn" 
+                                                title="Cambiar a Estado: Enviado"
+                                                data-toggle="tooltip">
+                                                <i class="fas fa-shipping-fast me-1"></i>
+                                                <span class="d-none d-xl-inline">Enviar</span>
+                                            </button>
+                                        </form>
+                                    @elseif($pedido->fact == 'Enviado')
+                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'entregado']) }}" method="POST"
+                                            style="display:inline;">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="btn btn-outline-success btn-sm estado-btn" 
+                                                title="Cambiar a Estado: Entregado"
+                                                data-toggle="tooltip">
+                                                <i class="fas fa-check-double me-1"></i>
+                                                <span class="d-none d-xl-inline">Entregar</span>
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
 
                                 <!-- Botón de eliminar (solo admin) -->
                                 @can('admin')
@@ -974,11 +973,7 @@ input[type="checkbox"]:after {
         $('#mostrarTodosButton').click(function() {
             $('#filtroAno').val('');
             $('#filtroMes').val('');
-            
-            // Solo limpiamos el filtro de empresa si el usuario es administrador o no tiene empresa asignada
-            @if($isUserAdmin || !$userEmpresaId)
-                $('#empresa_id').val('');
-            @endif
+            $('#empresa_id').val('');
             
             const form = $('#filterForm');
             form.append('<input type="hidden" name="todos" value="1">');
