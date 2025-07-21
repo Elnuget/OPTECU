@@ -50,12 +50,24 @@
         <li class="nav-item d-flex align-items-center">
             <i class="fas fa-building ml-2 mr-2 text-secondary"></i>
             @if(Auth::user() && Auth::user()->is_admin)
-                {{-- Si es admin, mostrar TODAS LAS SUCURSALES --}}
-                @foreach(\App\Models\Empresa::all() as $empresa)
+                {{-- Si es admin, mostrar máximo 4 sucursales y botón "Ver todas" si hay más --}}
+                @php
+                    $todasEmpresas = \App\Models\Empresa::all();
+                    $empresasLimitadas = $todasEmpresas->take(4);
+                @endphp
+                
+                @foreach($empresasLimitadas as $empresa)
                     <span class="badge badge-info mr-2" style="font-size: 0.9rem; padding: 8px 12px;">
                         {{ $empresa->nombre }}
                     </span>
                 @endforeach
+                
+                @if($todasEmpresas->count() > 4)
+                    <button class="badge badge-secondary mr-2" style="font-size: 0.9rem; padding: 8px 12px; border: none; cursor: pointer;" 
+                            data-toggle="modal" data-target="#modalTodasEmpresas">
+                        Ver todas ({{ $todasEmpresas->count() }})
+                    </button>
+                @endif
             @elseif(Auth::user() && Auth::user()->empresa_id)
                 {{-- Si no es admin, mostrar solo su empresa --}}
                 @php
@@ -213,6 +225,51 @@
     </ul>
 </nav>
 
+{{-- Modal para mostrar todas las empresas --}}
+<div class="modal fade" id="modalTodasEmpresas" tabindex="-1" role="dialog" aria-labelledby="modalTodasEmpresasLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h5 class="modal-title text-white" id="modalTodasEmpresasLabel">
+                    <i class="fas fa-building mr-2"></i>Todas las Sucursales
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    @if(Auth::user() && Auth::user()->is_admin)
+                        @foreach(\App\Models\Empresa::all() as $empresa)
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-building fa-2x text-info mb-2"></i>
+                                        <h6 class="card-title">{{ $empresa->nombre }}</h6>
+                                        @if($empresa->direccion)
+                                            <p class="card-text text-muted small">
+                                                <i class="fas fa-map-marker-alt"></i> {{ $empresa->direccion }}
+                                            </p>
+                                        @endif
+                                        @if($empresa->telefono)
+                                            <p class="card-text text-muted small">
+                                                <i class="fas fa-phone"></i> {{ $empresa->telefono }}
+                                            </p>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    @endif
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     .btn-outline-danger {
         border: 2px solid #dc3545;
@@ -255,5 +312,33 @@
         .btn-outline-danger {
             padding: 8px 15px !important;
         }
+    }
+
+    /* Estilos para el botón "Ver todas" */
+    .badge.badge-secondary[data-toggle="modal"] {
+        transition: all 0.3s ease;
+        background-color: #6c757d;
+    }
+
+    .badge.badge-secondary[data-toggle="modal"]:hover {
+        background-color: #5a6268;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Estilos para las tarjetas del modal */
+    .modal-body .card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid #e3e6f0;
+    }
+
+    .modal-body .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .modal-body .card-title {
+        color: #2c3e50;
+        font-weight: 600;
     }
 </style>
