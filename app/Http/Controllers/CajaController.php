@@ -21,37 +21,53 @@ class CajaController extends Controller
     {
         $query = Caja::with(['user', 'empresa']);
         $currentUser = Auth::user();
+        $isAdmin = $currentUser->is_admin;
         
         // Use current date as default if no date filter is provided
-        $fechaFiltro = $request->fecha_filtro ?? now()->format('Y-m-d');
+        $fechaFiltro = $request->get('fecha_filtro') ?? now()->format('Y-m-d');
         
         // If no date filter is provided or "todos" is selected, don't apply date filter
-        if ($request->has('mostrar_todos') || $request->fecha_filtro === 'todos') {
+        if ($request->has('mostrar_todos') || $request->get('fecha_filtro') === 'todos') {
             // Don't apply date filter
         } else {
             $query->whereDate('created_at', $fechaFiltro);
         }
 
+        // Obtener empresas según el tipo de usuario
+        if ($isAdmin) {
+            $empresas = Empresa::all();
+        } else {
+            // Para usuarios no admin, obtener todas sus empresas asignadas
+            $empresas = $currentUser->todasLasEmpresas();
+        }
+
         // Filter by company if specified
-        $empresaFiltro = $request->empresa_filtro ?? ($currentUser->empresa_id ? $currentUser->empresa_id : 'todas');
+        $empresaFiltro = $request->get('empresa_filtro') ?? ($currentUser->empresa_id ? $currentUser->empresa_id : 'todas');
         
         if ($empresaFiltro && $empresaFiltro !== 'todas') {
             if ($empresaFiltro === 'sin_empresa') {
                 $query->whereNull('empresa_id');
             } else {
+                // Para usuarios no admin, verificar que tengan acceso a la empresa solicitada
+                if (!$isAdmin) {
+                    $empresaIds = $empresas->pluck('id')->toArray();
+                    if (!in_array($empresaFiltro, $empresaIds)) {
+                        // Si no tiene acceso, usar su empresa principal por defecto
+                        $empresaFiltro = $currentUser->empresa_id;
+                    }
+                }
                 $query->where('empresa_id', $empresaFiltro);
             }
         }
         
         $movimientos = $query->latest()->get();
-        $totalCaja = $currentUser->is_admin ? Caja::sum('valor') : 0; // Calculate total from all records only for admins
-        $empresas = Empresa::all(); // Get all companies for the dropdown
+        $totalCaja = $isAdmin ? Caja::sum('valor') : 0; // Calculate total from all records only for admins
         
         // Calculate total per company
         $totalesPorEmpresa = [];
         
-        if ($currentUser->is_admin) {
-            // Si es admin, mostrar TODAS LAS SUCURSALES
+        if ($isAdmin) {
+            // Si es admin, mostrar TODAS LAS EMPRESAS
             foreach($empresas as $empresa) {
                 $totalEmpresa = Caja::where('empresa_id', $empresa->id)->sum('valor');
                 $totalesPorEmpresa[] = [
@@ -60,18 +76,18 @@ class CajaController extends Controller
                 ];
             }
         } else {
-            // Si no es admin y tiene empresa, mostrar solo su empresa
-            if ($currentUser->empresa_id) {
-                $totalEmpresa = Caja::where('empresa_id', $currentUser->empresa_id)->sum('valor');
+            // Si no es admin, mostrar totales de sus empresas asignadas
+            foreach($empresas as $empresa) {
+                $totalEmpresa = Caja::where('empresa_id', $empresa->id)->sum('valor');
                 $totalesPorEmpresa[] = [
-                    'empresa' => $currentUser->empresa,
+                    'empresa' => $empresa,
                     'total' => $totalEmpresa
                 ];
             }
         }
         
         // Calculate total for movements without company assigned (solo para admins)
-        $totalSinEmpresa = $currentUser->is_admin ? Caja::whereNull('empresa_id')->sum('valor') : 0;
+        $totalSinEmpresa = $isAdmin ? Caja::whereNull('empresa_id')->sum('valor') : 0;
         
         return view('caja.index', compact('movimientos', 'fechaFiltro', 'totalCaja', 'empresas', 'totalesPorEmpresa', 'totalSinEmpresa', 'empresaFiltro', 'currentUser'));
     }
@@ -86,20 +102,20 @@ class CajaController extends Controller
         ]);
 
         // Verificar si es un cuadre de caja (positivo) o un retiro (negativo)
-        if ($request->has('is_positive') && $request->is_positive == 1) {
+        if ($request->has('is_positive') && $request->get('is_positive') == 1) {
             // Para cuadrar caja, aseguramos que sea positivo
-            $valor = abs($request->valor);
+            $valor = abs($request->get('valor'));
         } else {
             // Para retiros, aseguramos que sea negativo
-            $valor = -abs($request->valor);
+            $valor = -abs($request->get('valor'));
         }
 
         // Create Caja entry
         $caja = Caja::create([
             'valor' => $valor,
-            'motivo' => $request->motivo,
+            'motivo' => $request->get('motivo'),
             'user_id' => Auth::id(),
-            'empresa_id' => $request->empresa_id
+            'empresa_id' => $request->get('empresa_id')
         ]);
 
         return redirect()->back()->with('success', 'Movimiento registrado exitosamente');
@@ -107,7 +123,14 @@ class CajaController extends Controller
 
     public function edit(Caja $caja)
     {
-        $empresas = Empresa::all();
+        $currentUser = Auth::user();
+        
+        if ($currentUser->is_admin) {
+            $empresas = Empresa::all();
+        } else {
+            $empresas = $currentUser->todasLasEmpresas();
+        }
+        
         return response()->json([
             'caja' => $caja->load('user', 'empresa'),
             'empresas' => $empresas
@@ -124,9 +147,9 @@ class CajaController extends Controller
 
         // Update the caja entry
         $caja->update([
-            'valor' => $request->valor,
-            'motivo' => $request->motivo,
-            'empresa_id' => $request->empresa_id
+            'valor' => $request->get('valor'),
+            'motivo' => $request->get('motivo'),
+            'empresa_id' => $request->get('empresa_id')
         ]);
 
         return redirect()->back()->with('success', 'Movimiento actualizado exitosamente');

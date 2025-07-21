@@ -86,11 +86,7 @@
                                 <span class="input-group-text">SUCURSAL:</span>
                             </div>
                             <select name="empresa_filtro" class="form-control">
-                                @if($currentUser->empresa_id && !$currentUser->is_admin)
-                                    <option value="{{ $currentUser->empresa_id }}" selected>
-                                        {{ strtoupper($currentUser->empresa->nombre) }}
-                                    </option>
-                                @else
+                                @if($currentUser->is_admin)
                                     <option value="todas" {{ $empresaFiltro == 'todas' ? 'selected' : '' }}>TODAS LAS SUCURSALES</option>
                                     @foreach($empresas as $empresa)
                                         <option value="{{ $empresa->id }}" {{ $empresaFiltro == $empresa->id ? 'selected' : '' }}>
@@ -98,6 +94,13 @@
                                         </option>
                                     @endforeach
                                     <option value="sin_empresa" {{ $empresaFiltro == 'sin_empresa' ? 'selected' : '' }}>SIN SUCURSAL ASIGNADA</option>
+                                @else
+                                    <option value="todas" {{ $empresaFiltro == 'todas' ? 'selected' : '' }}>MIS SUCURSALES</option>
+                                    @foreach($empresas as $empresa)
+                                        <option value="{{ $empresa->id }}" {{ $empresaFiltro == $empresa->id ? 'selected' : '' }}>
+                                            {{ strtoupper($empresa->nombre) }}
+                                        </option>
+                                    @endforeach
                                 @endif
                             </select>
                         </div>
@@ -180,9 +183,18 @@
                     <div class="col-md-3">
                         <div class="form-group">
                             <label>SUCURSAL</label>
-                            @if($currentUser->empresa_id && !$currentUser->is_admin)
-                                <input type="hidden" name="empresa_id" value="{{ $currentUser->empresa_id }}">
-                                <input type="text" class="form-control" value="{{ strtoupper($currentUser->empresa->nombre) }}" readonly>
+                            @if(!$currentUser->is_admin && $empresas->count() == 1)
+                                <input type="hidden" name="empresa_id" value="{{ $empresas->first()->id }}">
+                                <input type="text" class="form-control" value="{{ strtoupper($empresas->first()->nombre) }}" readonly>
+                            @elseif(!$currentUser->is_admin)
+                                <select name="empresa_id" class="form-control">
+                                    <option value="">SELECCIONAR SUCURSAL</option>
+                                    @foreach($empresas as $empresa)
+                                        <option value="{{ $empresa->id }}" {{ $currentUser->empresa_id == $empresa->id ? 'selected' : '' }}>
+                                            {{ strtoupper($empresa->nombre) }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             @else
                                 <select name="empresa_id" class="form-control">
                                     <option value="">SELECCIONAR SUCURSAL</option>
@@ -228,19 +240,14 @@
                     <div class="col-md-3">
                         <div class="form-group">
                             <label>SUCURSAL</label>
-                            @if($currentUser->empresa_id && !$currentUser->is_admin)
-                                <input type="hidden" name="empresa_id" value="{{ $currentUser->empresa_id }}">
-                                <input type="text" class="form-control" value="{{ strtoupper($currentUser->empresa->nombre) }}" readonly>
-                            @else
-                                <select name="empresa_id" class="form-control">
-                                    <option value="">SELECCIONAR SUCURSAL</option>
-                                    @foreach($empresas as $empresa)
-                                        <option value="{{ $empresa->id }}" {{ $currentUser->empresa_id == $empresa->id ? 'selected' : '' }}>
-                                            {{ strtoupper($empresa->nombre) }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            @endif
+                            <select name="empresa_id" class="form-control">
+                                <option value="">SELECCIONAR SUCURSAL</option>
+                                @foreach($empresas as $empresa)
+                                    <option value="{{ $empresa->id }}" {{ $currentUser->empresa_id == $empresa->id ? 'selected' : '' }}>
+                                        {{ strtoupper($empresa->nombre) }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -326,12 +333,16 @@
                         </div>
                         <div class="form-group">
                             <label>SUCURSAL</label>
-                            @if($currentUser->empresa_id && !$currentUser->is_admin)
+                            @if(!$currentUser->is_admin && $empresas->count() == 1)
                                 <input type="hidden" id="edit_empresa_id_hidden" name="empresa_id">
                                 <input type="text" id="edit_empresa_readonly" class="form-control" readonly>
+                            @elseif(!$currentUser->is_admin)
+                                <select id="edit_empresa_id" name="empresa_id" class="form-control">
+                                    <option value="">SELECCIONAR SUCURSAL</option>
+                                </select>
                             @else
                                 <select id="edit_empresa_id" name="empresa_id" class="form-control">
-                                    <option value="">SELECCIONAR EMPRESA</option>
+                                    <option value="">SELECCIONAR SUCURSAL</option>
                                 </select>
                             @endif
                         </div>
@@ -406,12 +417,12 @@
                     $('#edit_usuario').val(response.caja.user ? response.caja.user.name : 'N/A');
                     $('#edit_fecha').val(new Date(response.caja.created_at).toLocaleString());
                     
-                    @if($currentUser->empresa_id && !$currentUser->is_admin)
-                        // Si el usuario no es admin y pertenece a una empresa, mostrar campo readonly
+                    @if(!$currentUser->is_admin && $empresas->count() == 1)
+                        // Si el usuario no es admin y tiene solo una empresa, mostrar campo readonly
                         $('#edit_empresa_id_hidden').val(response.caja.empresa_id || '');
                         $('#edit_empresa_readonly').val(response.caja.empresa ? response.caja.empresa.nombre.toUpperCase() : 'N/A');
                     @else
-                        // Si es admin o no pertenece a empresa, llenar el select
+                        // Si es admin o usuario con múltiples empresas, llenar el select
                         $('#edit_empresa_id').empty();
                         $('#edit_empresa_id').append('<option value="">SELECCIONAR SUCURSAL</option>');
                         response.empresas.forEach(function(empresa) {
