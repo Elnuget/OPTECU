@@ -64,6 +64,54 @@
             </div>
         </div>
 
+        {{-- Filtro por fecha específica --}}
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <div class="form-inline">
+                    <div class="form-group mr-2">
+                        <label for="fechaSeleccion" class="mr-2">FILTRAR POR FECHA ESPECÍFICA:</label>
+                        <input type="date" class="form-control" id="fechaSeleccion" value="{{ request('fecha_especifica', date('Y-m-d')) }}">
+                    </div>
+                    <div class="btn-group">
+                        @if(request()->filled('fecha_especifica'))
+                            <button type="button" class="btn btn-danger" id="filtrarPorFecha">
+                                <i class="fas fa-filter"></i> 
+                                @if(request()->filled('empresa_id'))
+                                    FILTROS ACTIVOS ({{ $historiales->count() }})
+                                @else
+                                    FILTRO FECHA ({{ $historiales->count() }})
+                                @endif
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="limpiarFiltroFecha">
+                                <i class="fas fa-times"></i> LIMPIAR FILTRO FECHA
+                            </button>
+                        @else
+                            <button type="button" class="btn btn-warning" id="filtrarPorFecha">
+                                <i class="fas fa-calendar-day"></i> FILTRAR POR FECHA
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="limpiarFiltroFecha" style="display: none;">
+                                <i class="fas fa-times"></i> LIMPIAR FILTRO FECHA
+                            </button>
+                        @endif
+                    </div>
+                </div>
+                @if(request()->filled('fecha_especifica'))
+                    <small class="text-info d-block mt-2">
+                        <i class="fas fa-info-circle"></i> 
+                        MOSTRANDO HISTORIALES DEL {{ \Carbon\Carbon::parse(request('fecha_especifica'))->format('d/m/Y') }}
+                        @if(request()->filled('empresa_id'))
+                            @php
+                                $empresaSeleccionada = $empresas->firstWhere('id', request('empresa_id'));
+                            @endphp
+                            @if($empresaSeleccionada)
+                                EN <strong>{{ strtoupper($empresaSeleccionada->nombre) }}</strong>
+                            @endif
+                        @endif
+                    </small>
+                @endif
+            </div>
+        </div>
+
         {{-- Botón Añadir Historial Clínico --}}
         <div class="btn-group mb-3">
             <a type="button" class="btn btn-success" href="{{ route('historiales_clinicos.create') }}">
@@ -254,6 +302,52 @@
         background-color: #6c757d;
         color: white;
     }
+
+    /* Estilos para el filtro por fecha */
+    .form-inline .form-group {
+        margin-bottom: 0.5rem;
+    }
+
+    .btn-group .btn {
+        transition: all 0.2s ease-in-out;
+    }
+
+    .btn-group .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+    /* Estilos para el indicador de filtro activo */
+    .text-info {
+        font-weight: 500;
+    }
+
+    .text-info i {
+        margin-right: 5px;
+    }
+
+    /* Mejoras responsive para los filtros */
+    @media (max-width: 768px) {
+        .form-inline {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .form-inline .form-group {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        
+        .form-inline .btn-group {
+            width: 100%;
+            flex-direction: column;
+        }
+        
+        .form-inline .btn-group .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
 </style>
 @stop
 
@@ -319,14 +413,101 @@
 
         // Botón Mostrar Todos
         $('#mostrarTodosButton').click(function() {
-            $('#mes').val('');
-            $('#ano').val('');
-            $('#empresa_id').val('');
+            const params = new URLSearchParams();
+            params.set('todos', '1');
             
-            const form = $(this).closest('form');
-            form.append('<input type="hidden" name="todos" value="1">');
-            form.submit();
+            // Mantener el filtro de empresa si existe
+            if ($('#empresa_id').val()) {
+                params.set('empresa_id', $('#empresa_id').val());
+            }
+            
+            window.location.href = '{{ route("historiales_clinicos.index") }}?' + params.toString();
         });
+
+        // Manejar cambios en los filtros - Filtrado automático
+        $('#mes, #ano, #empresa_id').change(function() {
+            const params = new URLSearchParams();
+            
+            // Mantener el filtro de fecha específica si está activo
+            var currentParams = new URLSearchParams(window.location.search);
+            if (currentParams.has('fecha_especifica')) {
+                params.set('fecha_especifica', currentParams.get('fecha_especifica'));
+            } else {
+                // Solo aplicar filtros de año y mes si no hay fecha específica
+                if ($('#ano').val()) params.set('ano', $('#ano').val());
+                if ($('#mes').val()) params.set('mes', $('#mes').val());
+                
+                // Si no hay año ni mes, agregar parámetro "todos"
+                if (!$('#ano').val() && !$('#mes').val()) {
+                    params.set('todos', '1');
+                }
+            }
+            
+            // Siempre agregar el filtro de empresa si está seleccionado
+            if ($('#empresa_id').val()) {
+                params.set('empresa_id', $('#empresa_id').val());
+            }
+            
+            window.location.href = '{{ route("historiales_clinicos.index") }}?' + params.toString();
+        });
+
+        // Manejar clic en el botón de filtrar por fecha - ENVIAR AL SERVIDOR
+        $('#filtrarPorFecha').click(function() {
+            var fechaSeleccionada = $('#fechaSeleccion').val();
+            
+            if (!fechaSeleccionada) {
+                alert('POR FAVOR SELECCIONE UNA FECHA PARA FILTRAR');
+                return;
+            }
+            
+            // Construir URL con filtro de fecha y mantener filtro de sucursal si existe
+            const params = new URLSearchParams();
+            params.set('fecha_especifica', fechaSeleccionada);
+            
+            // Mantener el filtro de empresa/sucursal si está seleccionado
+            if ($('#empresa_id').val()) {
+                params.set('empresa_id', $('#empresa_id').val());
+            }
+            
+            // Redirigir al servidor con los filtros combinados
+            window.location.href = '{{ route("historiales_clinicos.index") }}?' + params.toString();
+        });
+
+        // Manejar clic en el botón de limpiar filtro de fecha - REDIRIGIR AL SERVIDOR
+        $('#limpiarFiltroFecha').click(function() {
+            // Obtener parámetros actuales y remover solo la fecha específica
+            var currentParams = new URLSearchParams(window.location.search);
+            currentParams.delete('fecha_especifica'); // Remover el filtro de fecha específica
+            
+            var newUrl = '{{ route("historiales_clinicos.index") }}';
+            
+            // Si hay otros parámetros (como sucursal), mantenerlos
+            if (currentParams.toString()) {
+                newUrl += '?' + currentParams.toString();
+            } else {
+                // Si no hay otros parámetros, ir al mes actual pero mantener sucursal si existe
+                const params = new URLSearchParams();
+                const now = new Date();
+                params.set('ano', now.getFullYear());
+                params.set('mes', (now.getMonth() + 1).toString().padStart(2, '0'));
+                
+                // Mantener el filtro de empresa/sucursal si está seleccionado
+                if ($('#empresa_id').val()) {
+                    params.set('empresa_id', $('#empresa_id').val());
+                }
+                
+                newUrl += '?' + params.toString();
+            }
+            
+            window.location.href = newUrl;
+        });
+
+        // Verificar si hay filtro de fecha activo y mostrar/ocultar botón de limpiar filtro
+        @if(request()->filled('fecha_especifica'))
+            $('#limpiarFiltroFecha').show();
+        @else
+            $('#limpiarFiltroFecha').hide();
+        @endif
 
         // Manejo del botón de ver historiales relacionados
         $('.ver-historiales-relacionados').click(function() {
