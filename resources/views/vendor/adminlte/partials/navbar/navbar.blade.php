@@ -68,15 +68,28 @@
                         Ver todas ({{ $todasEmpresas->count() }})
                     </button>
                 @endif
-            @elseif(Auth::user() && Auth::user()->empresa_id)
-                {{-- Si no es admin, mostrar solo su empresa --}}
+            @elseif(Auth::user())
+                {{-- Si no es admin, mostrar su empresa principal y empresas adicionales --}}
                 @php
-                    $userEmpresa = \App\Models\Empresa::find(Auth::user()->empresa_id);
+                    $todasEmpresasUsuario = Auth::user()->todasLasEmpresas();
+                    $empresasLimitadas = $todasEmpresasUsuario->take(3); // Limitamos a 3 para no sobrecargar el navbar
                 @endphp
-                @if($userEmpresa)
-                    <span class="badge badge-info mr-2" style="font-size: 0.9rem; padding: 8px 12px;">
-                        {{ $userEmpresa->nombre }}
-                    </span>
+                
+                @if($todasEmpresasUsuario->count() > 0)
+                    {{-- Mostrar hasta 3 empresas --}}
+                    @foreach($empresasLimitadas as $empresa)
+                        <span class="badge badge-info mr-2" style="font-size: 0.9rem; padding: 8px 12px;">
+                            {{ $empresa->nombre }}
+                        </span>
+                    @endforeach
+                    
+                    {{-- Si tiene más de 3 empresas, mostrar botón "Ver todas" --}}
+                    @if($todasEmpresasUsuario->count() > 3)
+                        <button class="badge badge-secondary mr-2" style="font-size: 0.9rem; padding: 8px 12px; border: none; cursor: pointer;" 
+                                data-toggle="modal" data-target="#modalEmpresasUsuario">
+                            Ver todas ({{ $todasEmpresasUsuario->count() }})
+                        </button>
+                    @endif
                 @else
                     <span class="badge badge-secondary mr-2" style="font-size: 0.9rem; padding: 8px 12px;">
                         SIN EMPRESA ASIGNADA
@@ -246,6 +259,57 @@
                                     <div class="card-body text-center">
                                         <i class="fas fa-building fa-2x text-info mb-2"></i>
                                         <h6 class="card-title">{{ $empresa->nombre }}</h6>
+                                        @if($empresa->direccion)
+                                            <p class="card-text text-muted small">
+                                                <i class="fas fa-map-marker-alt"></i> {{ $empresa->direccion }}
+                                            </p>
+                                        @endif
+                                        @if($empresa->telefono)
+                                            <p class="card-text text-muted small">
+                                                <i class="fas fa-phone"></i> {{ $empresa->telefono }}
+                                            </p>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    @endif
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal para mostrar todas las empresas del usuario no admin --}}
+<div class="modal fade" id="modalEmpresasUsuario" tabindex="-1" role="dialog" aria-labelledby="modalEmpresasUsuarioLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info">
+                <h5 class="modal-title text-white" id="modalEmpresasUsuarioLabel">
+                    <i class="fas fa-building mr-2"></i>Mis Sucursales Asignadas
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    @if(Auth::user() && !Auth::user()->is_admin)
+                        @foreach(Auth::user()->todasLasEmpresas() as $empresa)
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-building fa-2x text-info mb-2"></i>
+                                        <h6 class="card-title">{{ $empresa->nombre }}
+                                            @if(Auth::user()->empresa_id == $empresa->id)
+                                                <span class="badge badge-success ml-1" title="Sucursal Principal">Principal</span>
+                                            @else
+                                                <span class="badge badge-secondary ml-1" title="Sucursal Adicional">Adicional</span>
+                                            @endif
+                                        </h6>
                                         @if($empresa->direccion)
                                             <p class="card-text text-muted small">
                                                 <i class="fas fa-map-marker-alt"></i> {{ $empresa->direccion }}
