@@ -1,7 +1,22 @@
 @extends('adminlte::auth.auth-page', ['auth_type' => 'login'])
 
 @section('adminlte_css_pre')
-    
+    <style>
+        .alert-danger {
+            border-left: 4px solid #dc3545;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        .alert-danger .fas.fa-ban {
+            color: #dc3545;
+        }
+        
+        .invalid-feedback {
+            display: block;
+        }
+    </style>
 @stop
 
 @php( $login_url = View::getSection('login_url') ?? config('adminlte.login_url', 'login') )
@@ -21,6 +36,17 @@
 @section('auth_header', __('adminlte::adminlte.login_message'))
 
 @section('auth_body')
+    {{-- Mostrar errores generales de autenticación --}}
+    @if ($errors->any())
+        <div class="alert alert-danger alert-dismissible">
+            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+            <h5><i class="icon fas fa-ban"></i> Error!</h5>
+            @foreach ($errors->all() as $error)
+                <p class="mb-0">{{ $error }}</p>
+            @endforeach
+        </div>
+    @endif
+
     <form action="{{ $login_url }}" method="post">
         {{ csrf_field() }}
 
@@ -33,9 +59,9 @@
                     <span class="fas fa-user {{ config('adminlte.classes_auth_icon', '') }}"></span>
                 </div>
             </div>
-            @if($errors->has('email'))
+            @if($errors->has('user'))
                 <div class="invalid-feedback">
-                    <strong>{{ $errors->first('email') }}</strong>
+                    <strong>{{ $errors->first('user') }}</strong>
                 </div>
             @endif
         </div>
