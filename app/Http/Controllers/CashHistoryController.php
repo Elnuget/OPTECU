@@ -13,32 +13,48 @@ class CashHistoryController extends Controller
     public function index(Request $request)
     {
         $currentUser = Auth::user();
+        $isAdmin = $currentUser->is_admin;
         $query = CashHistory::with(['user', 'empresa']);
         
-        // Si el usuario no es administrador, solo muestra registros de su empresa
-        if ($currentUser && !$currentUser->is_admin && $currentUser->empresa_id) {
-            $query->where('empresa_id', $currentUser->empresa_id);
+        // Obtener empresas según el tipo de usuario
+        if ($isAdmin) {
+            $empresas = \App\Models\Empresa::orderBy('nombre')->get();
+        } else {
+            // Para usuarios no admin, obtener todas sus empresas asignadas
+            $empresas = $currentUser->todasLasEmpresas();
+        }
+        
+        // Si el usuario no es administrador, filtrar solo por sus empresas asignadas
+        if (!$isAdmin && $empresas->count() > 0) {
+            $empresaIds = $empresas->pluck('id')->toArray();
+            $query->whereIn('empresa_id', $empresaIds);
         }
         
         // Filtrar por fecha si se proporciona
-        if ($request->has('fecha_filtro') && $request->fecha_filtro) {
-            $query->whereDate('created_at', $request->fecha_filtro);
+        if ($request->has('fecha_filtro') && $request->filled('fecha_filtro')) {
+            $query->whereDate('created_at', $request->get('fecha_filtro'));
         }
         
-        // Filtrar por empresa si se proporciona y el usuario es administrador
-        if ($currentUser && $currentUser->is_admin && $request->has('empresa_id') && $request->empresa_id) {
-            $query->where('empresa_id', $request->empresa_id);
+        // Filtrar por empresa específica si se proporciona
+        if ($request->has('empresa_id') && $request->filled('empresa_id')) {
+            $empresaFiltro = $request->get('empresa_id');
+            
+            // Para usuarios no admin, verificar que tengan acceso a la empresa solicitada
+            if (!$isAdmin) {
+                $empresaIds = $empresas->pluck('id')->toArray();
+                if (!in_array($empresaFiltro, $empresaIds)) {
+                    // Si no tiene acceso, no aplicar filtro específico (mostrará todas sus empresas)
+                    $empresaFiltro = null;
+                }
+            }
+            
+            if ($empresaFiltro) {
+                $query->where('empresa_id', $empresaFiltro);
+            }
         }
         
         $cashHistories = $query->latest()->get();
         $sumCaja = Caja::sum('valor');
-        
-        // Si el usuario no es administrador, solo muestra su empresa asignada
-        if ($currentUser && !$currentUser->is_admin && $currentUser->empresa_id) {
-            $empresas = \App\Models\Empresa::where('id', $currentUser->empresa_id)->get();
-        } else {
-            $empresas = \App\Models\Empresa::orderBy('nombre')->get();
-        }
         
         return view('cash-histories.index', compact('cashHistories', 'sumCaja', 'empresas', 'currentUser'));
     }
@@ -52,7 +68,7 @@ class CashHistoryController extends Controller
             ]);
 
             $lastRecord = CashHistory::latest()->first();
-            $requestedState = $request->estado;
+            $requestedState = $request->get('estado');
 
             if ($requestedState === 'Cierre' && (!$lastRecord || $lastRecord->estado !== 'Apertura')) {
                 $message = 'No se puede cerrar una caja que no ha sido abierta';
@@ -66,13 +82,13 @@ class CashHistoryController extends Controller
             }
 
             $cashHistory = new CashHistory();
-            $cashHistory->monto = $request->monto;
+            $cashHistory->monto = $request->get('monto');
             $cashHistory->estado = $requestedState;
             $cashHistory->user_id = auth()->id();
             
             // Asignar empresa_id si está disponible en la solicitud o usar la empresa del usuario autenticado
             if ($request->has('empresa_id')) {
-                $cashHistory->empresa_id = $request->empresa_id;
+                $cashHistory->empresa_id = $request->get('empresa_id');
             } elseif (auth()->user()->empresa_id) {
                 $cashHistory->empresa_id = auth()->user()->empresa_id;
             }
@@ -176,7 +192,7 @@ class CashHistoryController extends Controller
             'empresa_id' => 'required|exists:empresas,id'
         ]);
 
-        $empresaId = $request->empresa_id;
+        $empresaId = $request->get('empresa_id');
         
         // Obtener el último registro de caja para esta empresa
         $lastCashHistory = CashHistory::where('empresa_id', $empresaId)

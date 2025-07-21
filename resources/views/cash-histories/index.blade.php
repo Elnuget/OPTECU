@@ -93,21 +93,15 @@
                             </option>
                         @endforeach
                     </select>
-                @elseif($currentUser->empresa_id)
-                    {{-- Si no es admin y tiene empresa asignada, muestra solo su empresa --}}
-                    <select name="empresa_id" class="form-control" disabled>
+                @else
+                    {{-- Para usuarios no admin, mostrar sus empresas asignadas --}}
+                    <select name="empresa_id" class="form-control">
+                        <option value="">MIS SUCURSALES</option>
                         @foreach($empresas as $empresa)
-                            <option value="{{ $empresa->id }}" {{ $currentUser->empresa_id == $empresa->id ? 'selected' : '' }}>
+                            <option value="{{ $empresa->id }}" {{ request('empresa_id', '') == $empresa->id ? 'selected' : '' }}>
                                 {{ strtoupper($empresa->nombre) }}
                             </option>
                         @endforeach
-                    </select>
-                    {{-- Campo oculto para enviar el valor en el formulario --}}
-                    <input type="hidden" name="empresa_id" value="{{ $currentUser->empresa_id }}">
-                @else
-                    {{-- Si no tiene empresa asignada --}}
-                    <select name="empresa_id" class="form-control" disabled>
-                        <option value="">SIN EMPRESA ASIGNADA</option>
                     </select>
                 @endif
             </div>
