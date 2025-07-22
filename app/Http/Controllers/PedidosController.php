@@ -162,11 +162,17 @@ class PedidosController extends Controller
         $currentYear = date('Y');
         $currentMonth = date('m');
         
-        // Verificar si el usuario está asociado a una empresa y no es admin
+        // Verificar si el usuario está asociado a empresas y no es admin
         $userEmpresaId = null;
+        $userEmpresasIds = collect();
         $isUserAdmin = auth()->user()->is_admin;
         
-        if (!$isUserAdmin && auth()->user()->empresa_id) {
+        if (!$isUserAdmin) {
+            // Obtener todas las empresas del usuario (principal + adicionales)
+            $todasLasEmpresas = auth()->user()->todasLasEmpresas();
+            $userEmpresasIds = $todasLasEmpresas->pluck('id');
+            
+            // Mantener compatibilidad con empresa_id individual
             $userEmpresaId = auth()->user()->empresa_id;
         }
 
@@ -175,9 +181,9 @@ class PedidosController extends Controller
             ->whereYear('fecha', $currentYear)
             ->whereMonth('fecha', $currentMonth);
             
-        // Si el usuario no es admin y tiene empresa, filtrar por empresa
-        if (!$isUserAdmin && $userEmpresaId) {
-            $inventarioQuery->where('empresa_id', $userEmpresaId);
+        // Si el usuario no es admin, filtrar por todas sus empresas asociadas
+        if (!$isUserAdmin && $userEmpresasIds->isNotEmpty()) {
+            $inventarioQuery->whereIn('empresa_id', $userEmpresasIds);
         }
         
         $inventario = $inventarioQuery->with('empresa')->get();
@@ -233,8 +239,14 @@ class PedidosController extends Controller
             ->pluck('correo_electronico')
             ->toArray();
 
-        // Obtener TODAS LAS SUCURSALES para el select
-        $empresas = Empresa::orderBy('nombre')->get();
+        // Obtener empresas para el select según el tipo de usuario
+        if ($isUserAdmin) {
+            // Administradores pueden ver todas las empresas
+            $empresas = Empresa::orderBy('nombre')->get();
+        } else {
+            // Usuarios no administradores solo ven sus empresas asociadas
+            $empresas = auth()->user()->todasLasEmpresas()->sortBy('nombre');
+        }
         
         // Obtener historiales clínicos para autocompletado
         $historialesQuery = \App\Models\HistorialClinico::select('nombres', 'apellidos', 'cedula', 'celular', 'correo', 'direccion', 'empresa_id', 'fecha')
@@ -242,9 +254,9 @@ class PedidosController extends Controller
             ->whereNotNull('nombres')
             ->whereNotNull('apellidos');
             
-        // Si el usuario no es admin y tiene empresa, filtrar por empresa
-        if (!$isUserAdmin && $userEmpresaId) {
-            $historialesQuery->where('empresa_id', $userEmpresaId);
+        // Si el usuario no es admin, filtrar por todas sus empresas asociadas
+        if (!$isUserAdmin && $userEmpresasIds->isNotEmpty()) {
+            $historialesQuery->whereIn('empresa_id', $userEmpresasIds);
         }
         
         $historiales = $historialesQuery->orderBy('fecha', 'desc')->get();
@@ -268,7 +280,8 @@ class PedidosController extends Controller
             'empresas',
             'historiales',
             'userEmpresaId',
-            'isUserAdmin'
+            'isUserAdmin',
+            'userEmpresasIds'
         ));
     }
 
@@ -534,14 +547,28 @@ class PedidosController extends Controller
             $totalPagado = $pedido->pagos->sum('pago'); // Suma todos los pagos realizados
             $usuarios = \App\Models\User::all(); // Obtener todos los usuarios
             
-            // Obtener TODAS LAS SUCURSALES para el select
-            $empresas = Empresa::orderBy('nombre')->get();
-            
-            // Verificar si el usuario está asociado a una empresa y no es admin
-            $userEmpresaId = null;
+            // Verificar si el usuario es administrador
             $isUserAdmin = auth()->user()->is_admin;
             
-            if (!$isUserAdmin && auth()->user()->empresa_id) {
+            // Obtener empresas para el select según el tipo de usuario
+            if ($isUserAdmin) {
+                // Administradores pueden ver todas las empresas
+                $empresas = Empresa::orderBy('nombre')->get();
+            } else {
+                // Usuarios no administradores solo ven sus empresas asociadas
+                $empresas = auth()->user()->todasLasEmpresas()->sortBy('nombre');
+            }
+            
+            // Verificar si el usuario está asociado a empresas y no es admin
+            $userEmpresaId = null;
+            $userEmpresasIds = collect();
+            
+            if (!$isUserAdmin) {
+                // Obtener todas las empresas del usuario (principal + adicionales)
+                $todasLasEmpresas = auth()->user()->todasLasEmpresas();
+                $userEmpresasIds = $todasLasEmpresas->pluck('id');
+                
+                // Mantener compatibilidad con empresa_id individual
                 $userEmpresaId = auth()->user()->empresa_id;
             }
             
@@ -549,7 +576,7 @@ class PedidosController extends Controller
             $filtroMes = $currentMonth;
             $filtroAno = $currentYear;
 
-            return view('pedidos.edit', compact('pedido', 'inventarioItems', 'totalPagado', 'usuarios', 'filtroMes', 'filtroAno', 'empresas', 'userEmpresaId', 'isUserAdmin'));
+            return view('pedidos.edit', compact('pedido', 'inventarioItems', 'totalPagado', 'usuarios', 'filtroMes', 'filtroAno', 'empresas', 'userEmpresaId', 'isUserAdmin', 'userEmpresasIds'));
             
         } catch (\Exception $e) {
             \Log::error('Error en PedidosController@edit: ' . $e->getMessage());

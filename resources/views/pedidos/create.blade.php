@@ -220,7 +220,7 @@
                                         <option value="ENTREGADO">Entregado</option>
                                     </select>
                                 </div>
-                                <div class="col-<md-6">
+                                <div class="col-md-6">
                                     <label for="cliente" class="form-label">Cliente</label>
                                     <input type="text" class="form-control" id="cliente" name="cliente" required>
                                 </div>
@@ -256,14 +256,17 @@
                                 </div>
                                 <div class="col-md-3">
                                     <label for="empresa_id" class="form-label">SUCURSAL</label>
-                                    <select name="empresa_id" id="empresa_id" class="form-control" {{ !$isUserAdmin && $userEmpresaId ? 'disabled' : '' }}>
+                                    <select name="empresa_id" id="empresa_id" class="form-control" {{ !$isUserAdmin && $empresas->count() <= 1 ? 'disabled' : '' }}>
                                         <option value="">Seleccione una empresa...</option>
                                         @foreach($empresas as $empresa)
                                             <option value="{{ $empresa->id }}" {{ ($userEmpresaId == $empresa->id) ? 'selected' : '' }}>{{ $empresa->nombre }}</option>
                                         @endforeach
                                     </select>
-                                    @if(!$isUserAdmin && $userEmpresaId)
+                                    @if(!$isUserAdmin && $empresas->count() <= 1 && $userEmpresaId)
                                         <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}">
+                                        <small class="form-text text-muted">Solo tiene acceso a esta empresa</small>
+                                    @elseif(!$isUserAdmin && $empresas->count() > 1)
+                                        <small class="form-text text-muted">Seleccione entre sus empresas asociadas</small>
                                     @endif
                                 </div>
                             </div>

@@ -182,7 +182,7 @@
                 <x-pedidos.informacion-basica :pedido="$pedido" :usuarios="$usuarios" />
 
                 {{-- Datos del Cliente --}}
-                <x-pedidos.datos-cliente :pedido="$pedido" :empresas="$empresas" />
+                <x-pedidos.datos-cliente :pedido="$pedido" :empresas="$empresas" :userEmpresaId="$userEmpresaId ?? null" :isUserAdmin="$isUserAdmin ?? false" />
 
                 {{-- Armazón y Accesorios --}}
                 <x-pedidos.armazones :pedido="$pedido" :inventarioItems="$inventarioItems" :filtroMes="$filtroMes ?? null" :filtroAno="$filtroAno ?? null" />

@@ -1,4 +1,4 @@
-@props(['pedido', 'empresas' => []])
+@props(['pedido', 'empresas' => [], 'userEmpresaId' => null, 'isUserAdmin' => false])
 
 <div class="card">
     <div class="card-header">
@@ -60,7 +60,7 @@
             </div>
             <div class="col-md-3">
                 <label for="empresa_id" class="form-label">SUCURSAL</label>
-                <select name="empresa_id" id="empresa_id" class="form-control">
+                <select name="empresa_id" id="empresa_id" class="form-control" {{ !$isUserAdmin && count($empresas) <= 1 ? 'disabled' : '' }}>
                     <option value="">Seleccione una empresa...</option>
                     @foreach($empresas as $empresa)
                         <option value="{{ $empresa->id }}" {{ $pedido->empresa_id == $empresa->id ? 'selected' : '' }}>
@@ -68,6 +68,12 @@
                         </option>
                     @endforeach
                 </select>
+                @if(!$isUserAdmin && count($empresas) <= 1 && $userEmpresaId)
+                    <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}">
+                    <small class="form-text text-muted">Solo tiene acceso a esta empresa</small>
+                @elseif(!$isUserAdmin && count($empresas) > 1)
+                    <small class="form-text text-muted">Seleccione entre sus empresas asociadas</small>
+                @endif
             </div>
         </div>
 
