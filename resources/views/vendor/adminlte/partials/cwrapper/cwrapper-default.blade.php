@@ -7,17 +7,24 @@
     $userEmpresas = collect();
     $sumCaja = 0;
     $empresasCaja = [];
+    $aperturaAutomatica = false;
+    $cajasAbiertas = 0;
     
     if ($currentUser) {
         if ($currentUser->is_admin) {
             // Para admins, no mostrar tarjetas de apertura/cierre
             $isClosed = false;
         } else {
-            // Para usuarios no admin, obtener todas sus empresas asignadas
+            // Para usuarios no admin, intentar apertura automática
+            $controller = new \App\Http\Controllers\CashHistoryController();
+            $cajasAbiertas = $controller->autoOpenCashForUser($currentUser);
+            $aperturaAutomatica = $cajasAbiertas > 0;
+            
+            // Obtener todas sus empresas asignadas
             $userEmpresas = $currentUser->todasLasEmpresas();
             
             if ($userEmpresas->count() > 0) {
-                // Preparar información de caja para cada empresa
+                // Preparar información de caja para cada empresa (después de la apertura automática)
                 foreach ($userEmpresas as $empresa) {
                     $lastHistory = \App\Models\CashHistory::where('empresa_id', $empresa->id)
                                                          ->latest()
@@ -37,7 +44,7 @@
                     ];
                 }
                 
-                // Verificar si hay alguna caja que necesite apertura
+                // Verificar si hay alguna caja que necesite apertura (debería ser false después de la apertura automática)
                 $isClosed = collect($empresasCaja)->contains('isClosed', true);
                 
                 // Si solo hay una empresa, usar la lógica anterior
@@ -54,6 +61,27 @@
     
     $showClosingCard = session('showClosingCard', false);
 @endphp
+
+{{-- Notificación de apertura automática --}}
+@if($aperturaAutomatica)
+<div class="alert alert-success alert-dismissible position-fixed" 
+     style="top: 20px; right: 20px; z-index: 9998; min-width: 300px;">
+    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+    <h5><i class="icon fas fa-check"></i> Apertura Automática Exitosa</h5>
+    @if($cajasAbiertas == 1)
+        Se ha abierto automáticamente 1 caja al iniciar sesión.
+    @else
+        Se han abierto automáticamente {{ $cajasAbiertas }} cajas al iniciar sesión.
+    @endif
+</div>
+
+<script>
+    // Auto-dismiss notification after 5 seconds
+    setTimeout(function() {
+        $('.alert-dismissible').fadeOut('slow');
+    }, 5000);
+</script>
+@endif
 
 {{-- Tarjeta de Apertura de Caja (solo para usuarios no administradores) --}}
 @if($currentUser && !$currentUser->is_admin && $isClosed && $userEmpresas->count() > 0)

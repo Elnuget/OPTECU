@@ -214,4 +214,61 @@ class CashHistoryController extends Controller
             'lastCashHistory' => $lastCashHistory
         ]);
     }
+
+    /**
+     * Abre automáticamente las cajas para un usuario no administrador
+     * Solo abre cajas que estén cerradas y no hayan sido abiertas hoy
+     */
+    public function autoOpenCashForUser($user)
+    {
+        if ($user->is_admin) {
+            return false; // Los administradores no necesitan apertura automática
+        }
+
+        $empresas = $user->todasLasEmpresas();
+        $openedCount = 0;
+
+        foreach ($empresas as $empresa) {
+            // Verificar si ya existe una apertura hoy
+            $aperturaHoy = CashHistory::where('empresa_id', $empresa->id)
+                                     ->where('estado', 'Apertura')
+                                     ->whereDate('created_at', now())
+                                     ->first();
+
+            if ($aperturaHoy) {
+                continue; // Ya hay apertura hoy, saltar esta empresa
+            }
+
+            // Verificar el último estado de la caja
+            $lastHistory = CashHistory::where('empresa_id', $empresa->id)
+                                     ->latest()
+                                     ->first();
+
+            $isClosed = !$lastHistory || $lastHistory->estado !== 'Apertura';
+
+            if ($isClosed) {
+                try {
+                    // Obtener el valor actual en caja
+                    $sumCaja = Caja::where('empresa_id', $empresa->id)->sum('valor');
+
+                    // Crear el registro de apertura automática
+                    $cashHistory = new CashHistory();
+                    $cashHistory->monto = intval($sumCaja);
+                    $cashHistory->estado = 'Apertura';
+                    $cashHistory->user_id = $user->id;
+                    $cashHistory->empresa_id = $empresa->id;
+                    $cashHistory->save();
+
+                    $openedCount++;
+
+                    Log::info("Apertura automática de caja - Usuario: {$user->name}, Empresa: {$empresa->nombre}, Monto: {$sumCaja}");
+                    
+                } catch (\Exception $e) {
+                    Log::error('Error en apertura automática de caja: ' . $e->getMessage());
+                }
+            }
+        }
+
+        return $openedCount;
+    }
 }
