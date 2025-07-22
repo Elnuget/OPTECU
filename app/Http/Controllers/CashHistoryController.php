@@ -62,16 +62,27 @@ class CashHistoryController extends Controller
     public function store(Request $request)
     {
         try {
+            // Log de debug para ver qué datos llegan
+            Log::info('CashHistory store request data: ' . json_encode($request->all()));
+            
             $request->validate([
                 'monto' => 'required|numeric',
-                'estado' => 'required|in:Apertura,Cierre'
+                'estado' => 'required|in:Apertura,Cierre',
+                'empresa_id' => 'nullable|exists:empresas,id'
             ]);
 
-            $lastRecord = CashHistory::latest()->first();
             $requestedState = $request->get('estado');
-
-            if ($requestedState === 'Cierre' && (!$lastRecord || $lastRecord->estado !== 'Apertura')) {
-                $message = 'No se puede cerrar una caja que no ha sido abierta';
+            $empresaId = $request->get('empresa_id');
+            
+            // Si no se proporciona empresa_id, intentar obtenerla del usuario
+            if (!$empresaId && auth()->user()->empresa_id) {
+                $empresaId = auth()->user()->empresa_id;
+            }
+            
+            // Validar que se tenga una empresa_id válida
+            if (!$empresaId) {
+                $message = 'No se puede determinar la empresa para esta operación de caja';
+                Log::warning('CashHistory store: No empresa_id provided');
                 if ($request->wantsJson()) {
                     return response()->json([
                         'success' => false,
@@ -80,40 +91,102 @@ class CashHistoryController extends Controller
                 }
                 return redirect()->back()->with('error', $message);
             }
+            
+            // Obtener el último registro para la empresa específica
+            $lastRecord = CashHistory::where('empresa_id', $empresaId)
+                                    ->latest()
+                                    ->first();
+
+            Log::info("CashHistory store: Last record for empresa {$empresaId}: " . ($lastRecord ? $lastRecord->estado : 'None'));
+
+            // Validación específica para cierre de caja
+            if ($requestedState === 'Cierre') {
+                if (!$lastRecord || $lastRecord->estado !== 'Apertura') {
+                    $message = 'No se puede cerrar una caja que no ha sido abierta para esta empresa';
+                    Log::warning("CashHistory store: Cannot close unopened cash box for empresa {$empresaId}");
+                    if ($request->wantsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $message
+                        ], 400);
+                    }
+                    return redirect()->back()->with('error', $message);
+                }
+            }
+
+            // Validación específica para apertura de caja
+            if ($requestedState === 'Apertura') {
+                if ($lastRecord && $lastRecord->estado === 'Apertura') {
+                    $message = 'La caja ya está abierta para esta empresa';
+                    Log::warning("CashHistory store: Cash box already open for empresa {$empresaId}");
+                    if ($request->wantsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $message
+                        ], 400);
+                    }
+                    return redirect()->back()->with('error', $message);
+                }
+            }
 
             $cashHistory = new CashHistory();
-            $cashHistory->monto = $request->get('monto');
+            $cashHistory->monto = floatval($request->get('monto'));
             $cashHistory->estado = $requestedState;
             $cashHistory->user_id = auth()->id();
+            $cashHistory->empresa_id = $empresaId;
             
-            // Asignar empresa_id si está disponible en la solicitud o usar la empresa del usuario autenticado
-            if ($request->has('empresa_id')) {
-                $cashHistory->empresa_id = $request->get('empresa_id');
-            } elseif (auth()->user()->empresa_id) {
-                $cashHistory->empresa_id = auth()->user()->empresa_id;
+            $savedSuccessfully = $cashHistory->save();
+            
+            if (!$savedSuccessfully) {
+                throw new \Exception('Error al guardar el registro de caja en la base de datos');
             }
-            
-            $cashHistory->save();
 
             $message = $requestedState === 'Apertura' ? 'Caja abierta exitosamente' : 'Caja cerrada exitosamente';
+
+            Log::info("CashHistory saved successfully - ID: {$cashHistory->id}, Estado: {$requestedState}, Usuario: " . auth()->user()->name . ", Empresa ID: {$empresaId}, Monto: {$cashHistory->monto}");
 
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => true,
-                    'message' => $message
+                    'message' => $message,
+                    'data' => [
+                        'id' => $cashHistory->id,
+                        'estado' => $cashHistory->estado,
+                        'monto' => $cashHistory->monto,
+                        'empresa_id' => $cashHistory->empresa_id,
+                        'user_id' => $cashHistory->user_id,
+                        'created_at' => $cashHistory->created_at->format('Y-m-d H:i:s')
+                    ]
                 ]);
             }
 
             return redirect()->route('cash-histories.index')->with('success', $message);
 
-        } catch (\Exception $e) {
-            Log::error('Error en operación de caja: ' . $e->getMessage());
-            $message = 'Error al procesar la operación de caja';
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('CashHistory validation error: ' . json_encode($e->errors()));
+            $errors = collect($e->errors())->flatten();
+            $message = 'Datos de entrada inválidos: ' . $errors->implode(', ');
             
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $message
+                    'message' => $message,
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            
+            return redirect()->back()->with('error', $message);
+
+        } catch (\Exception $e) {
+            Log::error('CashHistory store error: ' . $e->getMessage() . ' - File: ' . $e->getFile() . ' - Line: ' . $e->getLine());
+            Log::error('CashHistory store trace: ' . $e->getTraceAsString());
+            $message = 'Error al procesar la operación de caja. Por favor, inténtelo de nuevo.';
+            
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'debug' => config('app.debug') ? $e->getMessage() : null
                 ], 500);
             }
             
@@ -222,7 +295,7 @@ class CashHistoryController extends Controller
     public function autoOpenCashForUser($user)
     {
         if ($user->is_admin) {
-            return false; // Los administradores no necesitan apertura automática
+            return 0; // Los administradores no necesitan apertura automática
         }
 
         $empresas = $user->todasLasEmpresas();
@@ -270,5 +343,31 @@ class CashHistoryController extends Controller
         }
 
         return $openedCount;
+    }
+    
+    /**
+     * Método para debuggear el estado de la caja de una empresa específica
+     */
+    public function debugCashStatus(Request $request)
+    {
+        if (!auth()->user()->is_admin) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+        
+        $empresaId = $request->get('empresa_id');
+        
+        $records = CashHistory::where('empresa_id', $empresaId)
+                             ->orderBy('created_at', 'desc')
+                             ->limit(10)
+                             ->get();
+        
+        $cajaSum = Caja::where('empresa_id', $empresaId)->sum('valor');
+        
+        return response()->json([
+            'empresa_id' => $empresaId,
+            'caja_sum' => $cajaSum,
+            'recent_records' => $records,
+            'last_record' => $records->first()
+        ]);
     }
 }

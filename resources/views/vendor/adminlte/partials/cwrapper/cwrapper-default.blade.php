@@ -239,6 +239,10 @@
                 <h3 class="text-info">SELECCIONE SUCURSAL</h3>
             @endif
             <p>Usuario actual: {{ auth()->user()->name }}</p>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle mr-2"></i>
+                Puede cerrar múltiples cajas y luego cerrar sesión, o cancelar para continuar trabajando.
+            </div>
         </div>
 
         <div class="card shadow">
@@ -261,12 +265,16 @@
                         <input type="hidden" name="empresa_id" value="{{ $userEmpresa->id }}">
                         
                         <div class="d-flex justify-content-between mt-4">
-                            <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg flex-grow-1 mr-2">
+                            <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg mr-2">
                                 <i class="fas fa-times mr-2"></i>Cancelar
                             </a>
-                            <button type="submit" class="btn btn-danger btn-lg flex-grow-1">
+                            <button type="submit" class="btn btn-danger btn-lg mr-2">
                                 <i class="fas fa-door-closed mr-2"></i>Confirmar Cierre
                             </button>
+                            <a href="{{ route('logout') }}" class="btn btn-warning btn-lg" 
+                               onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+                            </a>
                         </div>
                     </form>
                 @else
@@ -302,12 +310,16 @@
                         <input type="hidden" name="estado" value="Cierre">
                         
                         <div class="d-flex justify-content-between mt-4">
-                            <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg flex-grow-1 mr-2">
+                            <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg mr-2">
                                 <i class="fas fa-times mr-2"></i>Cancelar
                             </a>
-                            <button type="submit" class="btn btn-danger btn-lg flex-grow-1" id="btn_cerrar" disabled>
+                            <button type="submit" class="btn btn-danger btn-lg mr-2" id="btn_cerrar" disabled>
                                 <i class="fas fa-door-closed mr-2"></i>Confirmar Cierre
                             </button>
+                            <a href="{{ route('logout') }}" class="btn btn-warning btn-lg" 
+                               onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+                            </a>
                         </div>
                     </form>
 
@@ -378,36 +390,61 @@
                                 'Accept': 'application/json'
                             },
                             body: JSON.stringify({
-                                monto: monto,
+                                monto: parseFloat(monto),
                                 estado: 'Cierre',
-                                empresa_id: empresaId,
+                                empresa_id: parseInt(empresaId),
                                 _token: token
                             })
                         })
                         .then(response => {
+                            console.log('Response status:', response.status);
                             if (!response.ok) {
-                                throw new Error('Error en la respuesta del servidor');
+                                return response.json().then(errorData => {
+                                    throw new Error(errorData.message || 'Error en la respuesta del servidor');
+                                });
                             }
                             return response.json();
                         })
                         .then(data => {
+                            console.log('Response data:', data);
                             if (data.success) {
-                                // Primero cerrar caja
+                                // Mostrar éxito
                                 submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Caja Cerrada';
                                 
-                                // Esperar 1 segundo y luego cerrar sesión
+                                // Mostrar mensaje de éxito
+                                const alertDiv = document.createElement('div');
+                                alertDiv.className = 'alert alert-success mt-3';
+                                alertDiv.innerHTML = '<i class="fas fa-check mr-2"></i>Caja cerrada exitosamente. Puede cerrar otra caja o cerrar sesión.';
+                                submitBtn.parentNode.parentNode.appendChild(alertDiv);
+                                
+                                // Recargar la página después de 3 segundos para actualizar el estado
                                 setTimeout(() => {
-                                    submitBtn.innerHTML = '<i class="fas fa-sign-out-alt mr-2"></i>Cerrando Sesión...';
-                                    document.getElementById('logout-form').submit();
-                                }, 1000);
+                                    window.location.reload();
+                                }, 3000);
                             } else {
-                                throw new Error(data.message || 'Error al cerrar la caja');
+                                throw new Error(data.message || 'Error desconocido');
                             }
                         })
                         .catch(error => {
+                            console.error('Error detail:', error);
                             submitBtn.disabled = false;
                             submitBtn.innerHTML = originalText;
-                            alert('Error: ' + error.message);
+                            
+                            // Mostrar error detallado
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'alert alert-danger mt-3';
+                            errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i>Error: ' + error.message;
+                            
+                            // Remover alertas anteriores
+                            const existingAlerts = submitBtn.parentNode.parentNode.querySelectorAll('.alert');
+                            existingAlerts.forEach(alert => alert.remove());
+                            
+                            submitBtn.parentNode.parentNode.appendChild(errorDiv);
+                            
+                            // Auto-remover el error después de 5 segundos
+                            setTimeout(() => {
+                                errorDiv.remove();
+                            }, 5000);
                         });
                     });
                 </script>
