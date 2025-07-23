@@ -113,17 +113,36 @@
                             </div>
                             <div class="form-group col-md-4">
                                 <label for="empresa_id">SUCURSAL</label>
-                                @if (!$isUserAdmin && $userEmpresaId)
+                                @if (!$isUserAdmin && $empresas->count() == 1)
+                                    {{-- Si el usuario no es admin y solo tiene una empresa, mostrar como readonly --}}
                                     <select name="empresa_id" id="empresa_id" class="form-control" readonly disabled>
                                         @foreach($empresas as $empresa)
-                                            <option value="{{ $empresa->id }}" {{ $userEmpresaId == $empresa->id ? 'selected' : '' }}>
+                                            <option value="{{ $empresa->id }}" selected>
                                                 {{ $empresa->nombre }}
                                             </option>
                                         @endforeach
                                     </select>
-                                    <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}">
-                                    <small class="text-muted">Tu usuario está asociado a esta empresa y no puede ser cambiada.</small>
+                                    <input type="hidden" name="empresa_id" value="{{ $empresas->first()->id }}">
+                                    <small class="text-muted">Tu usuario está asociado únicamente a esta empresa.</small>
+                                @elseif (!$isUserAdmin && $empresas->count() > 1)
+                                    {{-- Si el usuario no es admin pero tiene múltiples empresas, permitir selección --}}
+                                    <select name="empresa_id" id="empresa_id" class="form-control">
+                                        <option value="">Seleccione una sucursal...</option>
+                                        @foreach($empresas as $empresa)
+                                            <option value="{{ $empresa->id }}" {{ $userEmpresaId == $empresa->id ? 'selected' : '' }}>
+                                                {{ $empresa->nombre }}{{ $userEmpresaId == $empresa->id ? ' (Principal)' : '' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        Puede seleccionar cualquiera de las empresas a las que está asociado.
+                                        @if($userEmpresaId)
+                                            <br><strong>Empresa principal:</strong> {{ $empresas->where('id', $userEmpresaId)->first()->nombre ?? 'No encontrada' }}
+                                        @endif
+                                    </small>
                                 @else
+                                    {{-- Usuario administrador --}}
                                     <select name="empresa_id" id="empresa_id" class="form-control">
                                         <option value="">Seleccione una empresa...</option>
                                         @foreach($empresas as $empresa)
