@@ -29,6 +29,9 @@ Route::get('/caja/historial', [CashHistoryController::class, 'getHistorialCaja']
 // Ruta para obtener último pedido de un cliente
 Route::get('/clientes/{cliente}/ultimo-pedido', [PedidoController::class, 'getUltimoPedidoCliente']);
 
+// Ruta para buscar información por RUT/Cédula
+Route::get('/pedidos/buscar-rut/{cedula}', [PedidoController::class, 'buscarPorRut']);
+
 // Ruta para buscar pedidos por cualquier campo de datos personales
 Route::get('/pedidos/buscar-por/{campo}/{valor}', [PedidoController::class, 'buscarPedidoPorCampo']);
 

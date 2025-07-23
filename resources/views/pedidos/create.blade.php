@@ -235,6 +235,9 @@
                                             <option value="{{ $cedula }}">
                                         @endforeach
                                     </datalist>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-magic"></i> Se buscará automáticamente información del historial clínico y pedidos anteriores
+                                    </small>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="paciente" class="form-label">Paciente</label>
@@ -700,14 +703,17 @@
                 }
             });
 
-            // Manejar cédula - buscar en historial clínico
+            // Manejar cédula - buscar en historial clínico y pedidos anteriores
             $('#cedula').on('input', function() {
                 const valor = this.value.trim();
                 if (valor.length >= 3) {
                     setTimeout(() => {
                         const valorActual = $('#cedula').val();
                         if (valorActual === valor) {
+                            // Buscar en historial clínico
                             buscarHistorialClinicoPorCedula(valor);
+                            // Buscar información de pedidos anteriores
+                            buscarPedidoAnteriorPorRut(valor);
                         }
                     }, 300);
                 }
@@ -757,7 +763,7 @@
         // Función para limpiar campos de autocompletado
         window.limpiarCamposAutocompletado = function() {
             const mensajesPrevios = document.querySelectorAll(
-                '.loading-indicator-historial, .info-historial, .error-historial, .alert-success, .info-historial-registro'
+                '.loading-indicator-historial, .info-historial, .error-historial, .alert-success, .info-historial-registro, .loading-indicator-pedido, .info-pedido-anterior'
             );
             mensajesPrevios.forEach(msg => msg.remove());
         };
@@ -968,6 +974,141 @@
             document.getElementById('buscar_historial_clinico').parentNode.appendChild(errorMsg);
             
             setTimeout(() => errorMsg.remove(), 3000);
+        };
+
+        // Función para buscar información de pedidos anteriores por RUT
+        window.buscarPedidoAnteriorPorRut = function(rut) {
+            if (!rut || rut.length < 3) return;
+            
+            // Mostrar indicador de carga para pedidos anteriores
+            const loadingIndicator = document.createElement('small');
+            loadingIndicator.classList.add('loading-indicator-pedido', 'text-primary', 'ml-2');
+            loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando pedidos anteriores...';
+            document.getElementById('cedula').parentNode.appendChild(loadingIndicator);
+            
+            // Petición AJAX para buscar pedidos anteriores
+            const url = `/api/pedidos/buscar-rut/${encodeURIComponent(rut)}`;
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            return null; // No hay pedidos anteriores, no es un error
+                        }
+                        return response.json().then(err => {
+                            throw new Error(err.message || 'Error al buscar pedidos anteriores');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Remover indicador de carga
+                    document.querySelectorAll('.loading-indicator-pedido').forEach(el => el.remove());
+                    
+                    if (data && data.success && data.pedido) {
+                        procesarRespuestaPedidoAnterior(data);
+                    } else {
+                        mostrarInfoPedidoAnterior('No se encontraron pedidos anteriores para este RUT');
+                    }
+                })
+                .catch(error => {
+                    // Remover indicador de carga
+                    document.querySelectorAll('.loading-indicator-pedido').forEach(el => el.remove());
+                    
+                    // No mostrar error si no hay pedidos anteriores
+                    console.log('No se encontraron pedidos anteriores:', error.message);
+                });
+        };
+
+        // Función para procesar la respuesta de pedidos anteriores
+        window.procesarRespuestaPedidoAnterior = function(data) {
+            const pedido = data.pedido;
+            const receta = data.receta;
+            
+            // Autocompletar información del cliente si los campos están vacíos
+            if (!$('#cliente').val() && pedido.cliente) {
+                $('#cliente').val(pedido.cliente);
+            }
+            if (!$('#paciente').val() && pedido.paciente) {
+                $('#paciente').val(pedido.paciente);
+            }
+            if (!$('#celular').val() && pedido.celular) {
+                $('#celular').val(pedido.celular);
+            }
+            if (!$('#correo_electronico').val() && pedido.correo_electronico) {
+                $('#correo_electronico').val(pedido.correo_electronico);
+            }
+            if (!$('#direccion').val() && pedido.direccion) {
+                $('#direccion').val(pedido.direccion);
+            }
+            if (!$('#empresa_id').val() && pedido.empresa_id) {
+                $('#empresa_id').val(pedido.empresa_id);
+            }
+            if (!$('#metodo_envio').val() && pedido.metodo_envio) {
+                $('#metodo_envio').val(pedido.metodo_envio);
+            }
+            
+            // Autocompletar información de la receta si existe
+            if (receta && Object.keys(receta).length > 0) {
+                // Expandir la sección de lunas si está colapsada
+                const lunasContainer = document.querySelector('#lunas-container');
+                if (lunasContainer && lunasContainer.classList.contains('collapsed-card')) {
+                    const collapseButton = lunasContainer.querySelector('.btn-tool');
+                    if (collapseButton) {
+                        collapseButton.click();
+                    }
+                }
+                
+                // Llenar campos de receta
+                setTimeout(() => {
+                    if (receta.tipo_lente && !$('[name="tipo_lente[]"]').first().val()) {
+                        $('[name="tipo_lente[]"]').first().val(receta.tipo_lente);
+                    }
+                    if (receta.material && !$('[name="material[]"]').first().val()) {
+                        $('[name="material[]"]').first().val(receta.material);
+                    }
+                    if (receta.filtro && !$('.filtros-hidden').first().val()) {
+                        $('.filtros-hidden').first().val(receta.filtro);
+                        // Actualizar display de filtros
+                        const filtroContainer = document.querySelector('.filtros-container');
+                        if (filtroContainer) {
+                            filtroContainer.innerHTML = `<div class="filtro-item mb-2">
+                                <span class="badge badge-info">${receta.filtro}</span>
+                            </div>`;
+                        }
+                    }
+                    if (receta.l_medida && !$('[name="l_medida[]"]').first().val()) {
+                        $('[name="l_medida[]"]').first().val(receta.l_medida);
+                    }
+                    if (receta.l_detalle && !$('[name="l_detalle[]"]').first().val()) {
+                        $('[name="l_detalle[]"]').first().val(receta.l_detalle);
+                    }
+                }, 100);
+            }
+            
+            // Mostrar mensaje de éxito
+            mostrarInfoPedidoAnterior(`Información cargada del último pedido (${pedido.cliente})`, 'success');
+        };
+
+        // Función para mostrar información sobre pedidos anteriores
+        window.mostrarInfoPedidoAnterior = function(mensaje, tipo = 'info') {
+            // Remover mensajes previos
+            document.querySelectorAll('.info-pedido-anterior').forEach(el => el.remove());
+            
+            const infoMsg = document.createElement('small');
+            infoMsg.classList.add('info-pedido-anterior', 'ml-2');
+            
+            if (tipo === 'success') {
+                infoMsg.classList.add('text-success');
+                infoMsg.innerHTML = `<i class="fas fa-check-circle"></i> ${mensaje}`;
+            } else {
+                infoMsg.classList.add('text-muted');
+                infoMsg.innerHTML = `<i class="fas fa-info-circle"></i> ${mensaje}`;
+            }
+            
+            document.getElementById('cedula').parentNode.appendChild(infoMsg);
+            
+            setTimeout(() => infoMsg.remove(), 4000);
         };
 
         // Funciones para actualización automática del número de orden

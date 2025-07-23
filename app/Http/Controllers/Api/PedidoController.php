@@ -169,6 +169,68 @@ class PedidoController extends Controller
     }
 
     /**
+     * Buscar información del último pedido por RUT/Cédula
+     * 
+     * @param string $cedula RUT/Cédula del cliente
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function buscarPorRut($cedula)
+    {
+        try {
+            // Decodificar la cédula (ya que viene de una URL)
+            $cedulaDecodificada = urldecode($cedula);
+            
+            // Buscar el último pedido del cliente por cédula
+            $pedido = Pedido::with(['lunas', 'inventarios'])
+                ->where('cedula', $cedulaDecodificada)
+                ->select([
+                    'id',
+                    'cliente',
+                    'cedula', 
+                    'paciente',
+                    'celular',
+                    'correo_electronico',
+                    'direccion',
+                    'empresa_id',
+                    'metodo_envio'
+                ])
+                ->orderBy('created_at', 'desc')
+                ->first();
+                
+            if (!$pedido) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontraron pedidos para este RUT'
+                ], 404);
+            }
+
+            // Obtener información de las lunas del último pedido
+            $recetaInfo = [];
+            if ($pedido->lunas && $pedido->lunas->count() > 0) {
+                $ultimaLuna = $pedido->lunas->first();
+                $recetaInfo = [
+                    'l_medida' => $ultimaLuna->l_medida,
+                    'l_detalle' => $ultimaLuna->l_detalle,
+                    'tipo_lente' => $ultimaLuna->tipo_lente,
+                    'material' => $ultimaLuna->material,
+                    'filtro' => $ultimaLuna->filtro
+                ];
+            }
+            
+            return response()->json([
+                'success' => true,
+                'pedido' => $pedido,
+                'receta' => $recetaInfo
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al buscar información del RUT: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Generar Excel de pedidos seleccionados a través de API
      * 
      * @param Request $request
