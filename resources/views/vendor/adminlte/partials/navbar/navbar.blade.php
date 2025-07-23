@@ -48,7 +48,8 @@
 
         {{-- Lista de Empresas en fila --}}
         <li class="nav-item d-flex align-items-center">
-            <i class="fas fa-building ml-2 mr-2 text-secondary"></i>
+            <i class="fas fa-building ml-2 mr-1 text-secondary d-none d-md-inline"></i>
+            <i class="fas fa-building ml-1 mr-1 text-secondary d-md-none" style="font-size: 0.8rem;"></i>
             @if(Auth::user() && Auth::user()->is_admin)
                 {{-- Si es admin, mostrar máximo 4 sucursales y botón "Ver todas" si hay más --}}
                 @php
@@ -56,16 +57,18 @@
                     $empresasLimitadas = $todasEmpresas->take(4);
                 @endphp
                 
-                @foreach($empresasLimitadas as $empresa)
-                    <span class="badge badge-info mr-2" style="font-size: 0.9rem; padding: 8px 12px;">
-                        {{ $empresa->nombre }}
+                @foreach($empresasLimitadas as $index => $empresa)
+                    <span class="badge badge-info mr-1 mr-md-2" style="font-size: 0.8rem; padding: 6px 8px;" title="{{ $empresa->nombre }}">
+                        <span class="d-none d-md-inline" style="font-size: 0.9rem; padding: 8px 12px;">{{ $empresa->nombre }}</span>
+                        <span class="d-md-none">{{ $index + 1 }}</span>
                     </span>
                 @endforeach
                 
                 @if($todasEmpresas->count() > 4)
-                    <button class="badge badge-secondary mr-2" style="font-size: 0.9rem; padding: 8px 12px; border: none; cursor: pointer;" 
-                            data-toggle="modal" data-target="#modalTodasEmpresas">
-                        Ver todas ({{ $todasEmpresas->count() }})
+                    <button class="badge badge-secondary mr-1 mr-md-2" style="font-size: 0.8rem; padding: 6px 8px; border: none; cursor: pointer;" 
+                            data-toggle="modal" data-target="#modalTodasEmpresas" title="Ver todas las empresas ({{ $todasEmpresas->count() }})">
+                        <span class="d-none d-md-inline" style="font-size: 0.9rem; padding: 8px 12px;">Ver todas ({{ $todasEmpresas->count() }})</span>
+                        <span class="d-md-none">+{{ $todasEmpresas->count() - 4 }}</span>
                     </button>
                 @endif
             @elseif(Auth::user())
@@ -77,17 +80,19 @@
                 
                 @if($todasEmpresasUsuario->count() > 0)
                     {{-- Mostrar hasta 3 empresas --}}
-                    @foreach($empresasLimitadas as $empresa)
-                        <span class="badge badge-info mr-2" style="font-size: 0.9rem; padding: 8px 12px;">
-                            {{ $empresa->nombre }}
+                    @foreach($empresasLimitadas as $index => $empresa)
+                        <span class="badge badge-info mr-1 mr-md-2" style="font-size: 0.8rem; padding: 6px 8px;" title="{{ $empresa->nombre }}">
+                            <span class="d-none d-md-inline" style="font-size: 0.9rem; padding: 8px 12px;">{{ $empresa->nombre }}</span>
+                            <span class="d-md-none">{{ $index + 1 }}</span>
                         </span>
                     @endforeach
                     
                     {{-- Si tiene más de 3 empresas, mostrar botón "Ver todas" --}}
                     @if($todasEmpresasUsuario->count() > 3)
-                        <button class="badge badge-secondary mr-2" style="font-size: 0.9rem; padding: 8px 12px; border: none; cursor: pointer;" 
-                                data-toggle="modal" data-target="#modalEmpresasUsuario">
-                            Ver todas ({{ $todasEmpresasUsuario->count() }})
+                        <button class="badge badge-secondary mr-1 mr-md-2" style="font-size: 0.8rem; padding: 6px 8px; border: none; cursor: pointer;" 
+                                data-toggle="modal" data-target="#modalEmpresasUsuario" title="Ver todas mis empresas ({{ $todasEmpresasUsuario->count() }})">
+                            <span class="d-none d-md-inline" style="font-size: 0.9rem; padding: 8px 12px;">Ver todas ({{ $todasEmpresasUsuario->count() }})</span>
+                            <span class="d-md-none">+{{ $todasEmpresasUsuario->count() - 3 }}</span>
                         </button>
                     @endif
                 @else
@@ -375,6 +380,23 @@
     @media (max-width: 576px) {
         .btn-outline-danger {
             padding: 8px 15px !important;
+        }
+        
+        /* Ajustes para badges de empresa en móviles */
+        .badge {
+            font-size: 0.75rem !important;
+            padding: 4px 6px !important;
+            margin-right: 0.25rem !important;
+        }
+        
+        /* Reducir espaciado en navbar para móviles */
+        .navbar-nav .nav-item {
+            margin-right: 0.25rem;
+        }
+        
+        /* Ocultar algunos elementos en pantallas muy pequeñas */
+        .d-xs-none {
+            display: none !important;
         }
     }
 
