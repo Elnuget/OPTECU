@@ -177,14 +177,10 @@ class PedidosController extends Controller
         }
 
         // Obtener armazones y accesorios del mes actual (solo con cantidad > 0)
+        // Quitamos restricción de empresa - todos los usuarios pueden ver todos los inventarios
         $inventarioQuery = Inventario::where('cantidad', '>', 0)
             ->whereYear('fecha', $currentYear)
             ->whereMonth('fecha', $currentMonth);
-            
-        // Si el usuario no es admin, filtrar por todas sus empresas asociadas
-        if (!$isUserAdmin && $userEmpresasIds->isNotEmpty()) {
-            $inventarioQuery->whereIn('empresa_id', $userEmpresasIds);
-        }
         
         $inventario = $inventarioQuery->with('empresa')->get();
 
@@ -249,15 +245,11 @@ class PedidosController extends Controller
         }
         
         // Obtener historiales clínicos para autocompletado
+        // Quitamos restricción de empresa - todos los usuarios pueden ver todos los historiales
         $historialesQuery = \App\Models\HistorialClinico::select('nombres', 'apellidos', 'cedula', 'celular', 'correo', 'direccion', 'empresa_id', 'fecha')
             ->with('empresa')
             ->whereNotNull('nombres')
             ->whereNotNull('apellidos');
-            
-        // Si el usuario no es admin, filtrar por todas sus empresas asociadas
-        if (!$isUserAdmin && $userEmpresasIds->isNotEmpty()) {
-            $historialesQuery->whereIn('empresa_id', $userEmpresasIds);
-        }
         
         $historiales = $historialesQuery->orderBy('fecha', 'desc')->get();
         
