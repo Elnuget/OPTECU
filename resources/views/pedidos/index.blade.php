@@ -181,6 +181,8 @@
                         <th>Estado</th>
                         <th>Cliente</th>
                         <th>Celular</th>
+                        <th>Usuario</th>
+                        <th>Tipo de Lente</th>
                         <th>Total</th>
                         <th>Saldo</th>
                         <th>Acciones</th>
@@ -227,6 +229,17 @@
                                         {{ trim($pedido->encuesta) === 'enviado' ? 'Volver a enviar' : 'Enviar' }}
                                     </span>
                                 </button>
+                            @endif
+                        </td>
+                        <td>{{ $pedido->usuario ? strtoupper($pedido->usuario) : 'SIN USUARIO' }}</td>
+                        <td>
+                            @if($pedido->lunas->count() > 0)
+                                {{ strtoupper($pedido->lunas->first()->tipo_lente ?: 'NO ESPECIFICADO') }}
+                                @if($pedido->lunas->count() > 1)
+                                    <small class="text-info"><br>(+{{ $pedido->lunas->count() - 1 }} más)</small>
+                                @endif
+                            @else
+                                <span class="text-muted">SIN LUNAS</span>
                             @endif
                         </td>
                         <td>${{ number_format($pedido->total, 0, ',', '.') }}</td>
