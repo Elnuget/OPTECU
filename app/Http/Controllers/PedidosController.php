@@ -448,10 +448,24 @@ class PedidosController extends Controller
 
             \DB::commit();
 
+            // Verificar que el pedido se haya guardado correctamente
+            if (!$pedido->id) {
+                throw new \Exception('Error: El pedido no se pudo guardar correctamente.');
+            }
+
+            // Log de éxito con información del pedido creado
+            \Log::info('Pedido creado exitosamente', [
+                'pedido_id' => $pedido->id,
+                'numero_orden' => $pedido->numero_orden,
+                'cliente' => $pedido->cliente,
+                'total' => $pedido->total,
+                'usuario' => auth()->user()->name
+            ]);
+
             // Redirigir a la vista de creación de pagos con el ID del pedido creado
             return redirect()->route('pagos.create', ['pedido_id' => $pedido->id])->with([
                 'error' => 'Exito',
-                'mensaje' => 'Pedido creado exitosamente. Ahora puede registrar un pago.',
+                'mensaje' => "Pedido #{$pedido->numero_orden} creado exitosamente. Ahora puede registrar un pago.",
                 'tipo' => 'alert-success'
             ]);
 

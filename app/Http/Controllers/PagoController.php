@@ -123,9 +123,27 @@ class PagoController extends Controller
     public function create(Request $request)
     {
         $mediosdepago = mediosdepago::all();
-        $pedidos = Pedido::select('id', 'numero_orden', 'saldo', 'cliente')->get(); // Seleccionar solo id, numero_orden, saldo y cliente
         $selectedPedidoId = $request->get('pedido_id'); // Obtener el pedido seleccionado si existe
-        return view('pagos.create', compact('mediosdepago', 'pedidos', 'selectedPedidoId')); // Pasar pedidos a la vista
+        
+        // Si se especifica un pedido_id, verificar que existe y obtener sus datos
+        $selectedPedido = null;
+        if ($selectedPedidoId) {
+            $selectedPedido = Pedido::select('id', 'numero_orden', 'saldo', 'cliente')
+                ->where('id', $selectedPedidoId)
+                ->first();
+                
+            // Si no se encuentra el pedido especificado, log del error
+            if (!$selectedPedido) {
+                \Log::warning('Pedido no encontrado con ID: ' . $selectedPedidoId);
+            }
+        }
+        
+        // Obtener todos los pedidos para el select, ordenados por número de orden descendente
+        $pedidos = Pedido::select('id', 'numero_orden', 'saldo', 'cliente')
+            ->orderBy('numero_orden', 'desc')
+            ->get();
+            
+        return view('pagos.create', compact('mediosdepago', 'pedidos', 'selectedPedidoId', 'selectedPedido'));
     }
 
     /**
