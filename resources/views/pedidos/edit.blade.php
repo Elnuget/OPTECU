@@ -112,6 +112,49 @@
             color: #721c24;
             font-weight: bold;
         }
+
+        /* Estilos para la edición de recetas en lunas */
+        .medida-input {
+            font-size: 0.875rem;
+        }
+        
+        .medida-input.is-invalid {
+            border-color: #dc3545;
+            background-color: #fff5f5;
+        }
+        
+        .invalid-feedback {
+            display: block;
+            width: 100%;
+            margin-top: 0.25rem;
+            font-size: 0.75rem;
+            color: #dc3545;
+        }
+        
+        .material-input {
+            font-size: 0.875rem;
+        }
+        
+        /* Mejorar la visualización de las tablas de receta */
+        .table-bordered td, .table-bordered th {
+            border: 1px solid #dee2e6;
+        }
+        
+        .table-sm td, .table-sm th {
+            padding: 0.5rem;
+        }
+        
+        /* Resaltar campos de receta cuando tienen foco */
+        .medida-input:focus, .material-input:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.1rem rgba(0, 123, 255, 0.25);
+        }
+
+        /* Estilos para indicar campos obligatorios en receta */
+        .receta-required::after {
+            content: " *";
+            color: #dc3545;
+        }
     </style>
 
     {{-- Mostrar mensajes de error --}}
@@ -297,6 +340,190 @@
         
         // Calcular el total inicial
         calculateTotal();
+        
+        // Inicializar funcionalidades de receta/lunas
+        inicializarRecetaFunctionality();
+    });
+
+    // Función para inicializar la funcionalidad de recetas en lunas
+    function inicializarRecetaFunctionality() {
+        // Agregar event listeners para campos de medidas de lunas
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('medida-input')) {
+                formatearMedidasLunasSeccion(e.target.closest('.luna-section'));
+            }
+            
+            if (e.target.classList.contains('material-input')) {
+                formatearMaterialSeccion(e.target.closest('.luna-section'));
+            }
+        });
+
+        // Validación en tiempo real para campos de receta en lunas
+        document.addEventListener('input', function(e) {
+            if (e.target.name && e.target.name.includes('od_') || 
+                e.target.name && e.target.name.includes('oi_') || 
+                e.target.name && e.target.name.includes('add') || 
+                e.target.name && e.target.name.includes('dp')) {
+                
+                validarCampoReceta(e.target);
+            }
+        });
+
+        // Auto-formatear campos de eje para agregar símbolo de grado
+        document.addEventListener('blur', function(e) {
+            if (e.target.name && (e.target.name.includes('od_eje') || e.target.name.includes('oi_eje'))) {
+                let valor = e.target.value.trim();
+                if (valor && !valor.includes('°')) {
+                    const numero = parseInt(valor);
+                    if (!isNaN(numero) && numero >= 0 && numero <= 180) {
+                        e.target.value = numero + '°';
+                        // Actualizar también el campo hidden de medida
+                        formatearMedidasLunasSeccion(e.target.closest('.luna-section'));
+                    }
+                }
+            }
+        });
+    }
+
+    // Función para validar campos de receta
+    function validarCampoReceta(campo) {
+        const valor = campo.value.trim();
+        
+        // Remover estilos de error previos
+        campo.classList.remove('is-invalid');
+        const errorMsg = campo.parentNode.querySelector('.invalid-feedback');
+        if (errorMsg) errorMsg.remove();
+        
+        if (valor) {
+            if (campo.name.includes('eje')) {
+                // Para eje (debe ser un número entre 0 y 180)
+                const eje = parseInt(valor.replace('°', ''));
+                if (isNaN(eje) || eje < 0 || eje > 180) {
+                    mostrarErrorCampo(campo, 'El eje debe ser un número entre 0 y 180');
+                }
+            } else if (campo.name.includes('dp')) {
+                // Para DP (debe ser un número positivo)
+                const dp = parseInt(valor);
+                if (isNaN(dp) || dp <= 0) {
+                    mostrarErrorCampo(campo, 'La distancia pupilar debe ser un número positivo');
+                }
+            } else {
+                // Para esfera, cilindro, ADD (deben ser números con posibles signos + o -)
+                const patronNumerico = /^[+\-]?\d*\.?\d*$/;
+                if (!patronNumerico.test(valor)) {
+                    mostrarErrorCampo(campo, 'Debe ser un valor numérico válido (ej: +2.25, -1.50)');
+                }
+            }
+        }
+    }
+
+    // Función para mostrar error en campo
+    function mostrarErrorCampo(campo, mensaje) {
+        campo.classList.add('is-invalid');
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'invalid-feedback';
+        errorDiv.textContent = mensaje;
+        campo.parentNode.appendChild(errorDiv);
+    }
+
+    // Función mejorada para formatear las medidas de lunas en una sección específica
+    function formatearMedidasLunasSeccion(seccion) {
+        if (!seccion) return;
+        
+        // Obtener valores de los campos de esta sección específica
+        const odEsfera = seccion.querySelector('[name="od_esfera[]"]')?.value?.trim() || '';
+        const odCilindro = seccion.querySelector('[name="od_cilindro[]"]')?.value?.trim() || '';
+        const odEje = seccion.querySelector('[name="od_eje[]"]')?.value?.trim() || '';
+        const oiEsfera = seccion.querySelector('[name="oi_esfera[]"]')?.value?.trim() || '';
+        const oiCilindro = seccion.querySelector('[name="oi_cilindro[]"]')?.value?.trim() || '';
+        const oiEje = seccion.querySelector('[name="oi_eje[]"]')?.value?.trim() || '';
+        const add = seccion.querySelector('[name="add[]"]')?.value?.trim() || '';
+        const dp = seccion.querySelector('[name="dp[]"]')?.value?.trim() || '';
+        
+        // Formatear valores con signos apropiados
+        const formatearValor = (valor) => {
+            if (!valor) return '';
+            const num = parseFloat(valor.replace(/[^\d.-]/g, ''));
+            return isNaN(num) ? valor : (num > 0 ? '+' + num.toFixed(2) : num.toFixed(2));
+        };
+        
+        // Construir la cadena de medidas
+        let medidaCompleta = '';
+        
+        // OD
+        if (odEsfera || odCilindro || odEje) {
+            medidaCompleta += 'OD: ';
+            if (odEsfera) medidaCompleta += formatearValor(odEsfera) + ' ';
+            if (odCilindro) medidaCompleta += formatearValor(odCilindro) + ' ';
+            if (odEje) medidaCompleta += 'X' + odEje.replace('°', '') + '° ';
+            medidaCompleta = medidaCompleta.trim() + ' / ';
+        }
+        
+        // OI
+        if (oiEsfera || oiCilindro || oiEje) {
+            medidaCompleta += 'OI: ';
+            if (oiEsfera) medidaCompleta += formatearValor(oiEsfera) + ' ';
+            if (oiCilindro) medidaCompleta += formatearValor(oiCilindro) + ' ';
+            if (oiEje) medidaCompleta += 'X' + oiEje.replace('°', '') + '° ';
+            medidaCompleta = medidaCompleta.trim() + ' ';
+        }
+        
+        // ADD
+        if (add) {
+            medidaCompleta += 'ADD: ' + formatearValor(add) + ' ';
+        }
+        
+        // DP
+        if (dp) {
+            medidaCompleta += 'DP: ' + dp;
+        }
+        
+        // Actualizar el campo oculto
+        const campoMedida = seccion.querySelector('.l-medida-hidden');
+        if (campoMedida) {
+            campoMedida.value = medidaCompleta.trim();
+        }
+    }
+
+    // Función para formatear material en una sección específica
+    function formatearMaterialSeccion(seccion) {
+        if (!seccion) return;
+        
+        const materialOD = seccion.querySelector('[name="material_od[]"]')?.value?.trim() || '';
+        const materialOI = seccion.querySelector('[name="material_oi[]"]')?.value?.trim() || '';
+        
+        let materialCompleto = '';
+        if (materialOD || materialOI) {
+            if (materialOD === materialOI && materialOD) {
+                materialCompleto = materialOD;
+            } else {
+                if (materialOD) materialCompleto += 'OD: ' + materialOD;
+                if (materialOI) {
+                    if (materialCompleto) materialCompleto += ' | ';
+                    materialCompleto += 'OI: ' + materialOI;
+                }
+            }
+        }
+        
+        const campoMaterial = seccion.querySelector('.material-hidden');
+        if (campoMaterial) {
+            campoMaterial.value = materialCompleto;
+        }
+    }
+
+    // Validación antes del envío del formulario
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const errores = document.querySelectorAll('.is-invalid').length;
+                if (errores > 0) {
+                    e.preventDefault();
+                    alert('Por favor corrige los errores en los campos de receta marcados antes de continuar.');
+                    return false;
+                }
+            });
+        }
     });
 </script>
 @stop
