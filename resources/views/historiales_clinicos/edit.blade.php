@@ -9,6 +9,26 @@
 @section('content')
 <div class="card">
     <div class="card-body">
+        {{-- Mensajes de éxito --}}
+        @if (session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle"></i> {{ session('success') }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        @endif
+
+        {{-- Mensajes de error --}}
+        @if (session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-triangle"></i> {{ session('error') }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="alert alert-danger">
                 <h6><i class="fas fa-exclamation-triangle"></i> Por favor corrige los siguientes errores:</h6>
@@ -17,6 +37,15 @@
                         <li>{{ $error }}</li>
                     @endforeach
                 </ul>
+            </div>
+        @endif
+
+        {{-- Debug de la receta (solo en desarrollo) --}}
+        @if (config('app.debug') && isset($receta))
+            <div class="alert alert-info">
+                <small><strong>Debug - Receta encontrada:</strong> ID: {{ $receta->id ?? 'N/A' }} | 
+                OD: {{ $receta->od_esfera ?? 'N/A' }} {{ $receta->od_cilindro ?? 'N/A' }} x {{ $receta->od_eje ?? 'N/A' }} | 
+                OI: {{ $receta->oi_esfera ?? 'N/A' }} {{ $receta->oi_cilindro ?? 'N/A' }} x {{ $receta->oi_eje ?? 'N/A' }}</small>
             </div>
         @endif
 
@@ -509,6 +538,64 @@
                 $('#edad').val(edad);
             }
         });
+
+        // Validación en tiempo real para campos de receta
+        $('input[name^="od_"], input[name^="oi_"], input[name="add"], input[name="dp"]').on('input', function() {
+            const campo = $(this);
+            const valor = campo.val().trim();
+            
+            // Remover estilos de error previos
+            campo.removeClass('is-invalid');
+            campo.next('.invalid-feedback').remove();
+            
+            // Validar campos numéricos de la receta
+            if (valor && campo.attr('name') !== 'od_eje' && campo.attr('name') !== 'oi_eje') {
+                // Para esfera, cilindro, ADD (deben ser números con posibles signos + o -)
+                const patronNumerico = /^[+\-]?\d*\.?\d*$/;
+                if (!patronNumerico.test(valor)) {
+                    campo.addClass('is-invalid');
+                    campo.after('<div class="invalid-feedback">Debe ser un valor numérico válido (ej: +2.25, -1.50)</div>');
+                }
+            } else if (valor && (campo.attr('name') === 'od_eje' || campo.attr('name') === 'oi_eje')) {
+                // Para eje (debe ser un número entre 0 y 180)
+                const eje = parseInt(valor.replace('°', ''));
+                if (isNaN(eje) || eje < 0 || eje > 180) {
+                    campo.addClass('is-invalid');
+                    campo.after('<div class="invalid-feedback">El eje debe ser un número entre 0 y 180</div>');
+                }
+            } else if (valor && campo.attr('name') === 'dp') {
+                // Para DP (debe ser un número positivo)
+                const dp = parseInt(valor);
+                if (isNaN(dp) || dp <= 0) {
+                    campo.addClass('is-invalid');
+                    campo.after('<div class="invalid-feedback">La distancia pupilar debe ser un número positivo</div>');
+                }
+            }
+        });
+
+        // Auto-formatear campos de eje para agregar símbolo de grado
+        $('input[name="od_eje"], input[name="oi_eje"]').on('blur', function() {
+            let valor = $(this).val().trim();
+            if (valor && !valor.includes('°')) {
+                const numero = parseInt(valor);
+                if (!isNaN(numero) && numero >= 0 && numero <= 180) {
+                    $(this).val(numero + '°');
+                }
+            }
+        });
+
+        // Validación antes del envío del formulario
+        $('form').on('submit', function(e) {
+            const errores = $('.is-invalid').length;
+            if (errores > 0) {
+                e.preventDefault();
+                alert('Por favor corrige los errores en los campos marcados antes de continuar.');
+                return false;
+            }
+        });
+
+        // Llamar a la función de diagnóstico al cargar la página
+        actualizarDiagnosticoString();
     });
 </script>
 @stop

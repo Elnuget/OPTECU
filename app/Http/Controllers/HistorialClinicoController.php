@@ -212,6 +212,16 @@ class HistorialClinicoController extends Controller
             'proxima_consulta' => 'nullable|date',
             'cotizacion' => 'nullable|string|max:1000',
             'usuario_id' => 'nullable|exists:users,id',
+            
+            // Reglas de validación para campos de receta
+            'od_esfera' => 'nullable|string|max:20',
+            'od_cilindro' => 'nullable|string|max:20',
+            'od_eje' => 'nullable|string|max:20',
+            'oi_esfera' => 'nullable|string|max:20',
+            'oi_cilindro' => 'nullable|string|max:20',
+            'oi_eje' => 'nullable|string|max:20',
+            'dp' => 'nullable|string|max:20',
+            'observaciones' => 'nullable|string|max:1000',
         ];
     }
 
@@ -352,12 +362,14 @@ class HistorialClinicoController extends Controller
     public function update(Request $request, $id)
     {
         try {
+            \DB::beginTransaction();
+            
             $historialClinico = HistorialClinico::findOrFail($id);
             
             // Obtener los datos validados
             $data = $request->validate($this->validationRules());
             
-            // Filtrar campos vacíos
+            // Filtrar campos vacíos del historial clínico
             $data = array_filter($data, function($value) {
                 return $value !== null && $value !== '';
             });
@@ -365,50 +377,64 @@ class HistorialClinicoController extends Controller
             // Asegurar que el usuario_id se mantiene
             $data['usuario_id'] = $historialClinico->usuario_id;
             
-            // Actualizar el registro
+            // Actualizar el registro del historial clínico
             $historialClinico->update($data);
             
-            // Actualizar o crear la receta asociada
-            $recetaData = [
-                'od_esfera' => $request->input('od_esfera'),
-                'od_cilindro' => $request->input('od_cilindro'),
-                'od_eje' => $request->input('od_eje'),
-                'od_adicion' => $request->input('add'),
-                'oi_esfera' => $request->input('oi_esfera'),
-                'oi_cilindro' => $request->input('oi_cilindro'),
-                'oi_eje' => $request->input('oi_eje'),
-                'oi_adicion' => $request->input('add'),
-                'dp' => $request->input('dp'),
-                'observaciones' => $request->input('observaciones')
-            ];
+            // Manejar la receta asociada
+            $this->actualizarReceta($request, $historialClinico->id);
             
-            // Filtrar campos vacíos en la receta
-            $recetaData = array_filter($recetaData, function($value) {
-                return $value !== null && $value !== '';
-            });
-            
-            // Buscar si ya existe una receta para este historial
-            $receta = \App\Models\Receta::where('historial_clinico_id', $id)->first();
-            
-            if ($receta) {
-                // Actualizar la receta existente
-                $receta->update($recetaData);
-            } else if (count($recetaData) > 0) {
-                // Crear una nueva receta si hay datos
-                $recetaData['historial_clinico_id'] = $id;
-                \App\Models\Receta::create($recetaData);
-            }
+            \DB::commit();
             
             return redirect()
                 ->route('historiales_clinicos.index')
                 ->with('success', 'Historial clínico y receta actualizados exitosamente');
                 
         } catch (\Exception $e) {
-            Log::error('Error al actualizar: ' . $e->getMessage());
+            \DB::rollback();
+            Log::error('Error al actualizar historial clínico: ' . $e->getMessage());
             return redirect()
                 ->back()
                 ->withInput()
                 ->with('error', 'Error al actualizar el historial clínico: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Actualizar o crear la receta asociada al historial clínico
+     */
+    private function actualizarReceta(Request $request, $historialClinicoId)
+    {
+        // Preparar datos de la receta
+        $recetaData = [
+            'od_esfera' => $request->input('od_esfera'),
+            'od_cilindro' => $request->input('od_cilindro'),
+            'od_eje' => $request->input('od_eje'),
+            'od_adicion' => $request->input('add'), // ADD se aplica a ambos ojos
+            'oi_esfera' => $request->input('oi_esfera'),
+            'oi_cilindro' => $request->input('oi_cilindro'),
+            'oi_eje' => $request->input('oi_eje'),
+            'oi_adicion' => $request->input('add'), // ADD se aplica a ambos ojos
+            'dp' => $request->input('dp'),
+            'observaciones' => $request->input('observaciones')
+        ];
+        
+        // Filtrar campos vacíos en la receta
+        $recetaData = array_filter($recetaData, function($value) {
+            return $value !== null && $value !== '';
+        });
+        
+        // Buscar si ya existe una receta para este historial
+        $receta = \App\Models\Receta::where('historial_clinico_id', $historialClinicoId)->first();
+        
+        if ($receta) {
+            // Actualizar la receta existente
+            $receta->update($recetaData);
+            Log::info('Receta actualizada para historial clínico ID: ' . $historialClinicoId);
+        } else if (count($recetaData) > 0) {
+            // Crear una nueva receta si hay datos y no existe una
+            $recetaData['historial_clinico_id'] = $historialClinicoId;
+            \App\Models\Receta::create($recetaData);
+            Log::info('Nueva receta creada para historial clínico ID: ' . $historialClinicoId);
         }
     }
 

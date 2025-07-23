@@ -262,8 +262,7 @@ class PedidosController extends Controller
         $historiales = $historialesQuery->orderBy('fecha', 'desc')->get();
         
         $currentDate = date('Y-m-d');
-        $lastOrder = Pedido::orderBy('numero_orden', 'desc')->first();
-        $nextOrderNumber = $lastOrder ? $lastOrder->numero_orden + 1 : 1;
+        $nextOrderNumber = $this->obtenerNumeroOrdenUnico();
         $nextInvoiceNumber = 'Pendiente';
 
         return view('pedidos.create', compact(
@@ -304,9 +303,14 @@ class PedidosController extends Controller
                 })
                 ->toArray();
 
+            // Verificar y asegurar que el número de orden sea único
+            $numeroOrdenSolicitado = $pedidoData['numero_orden'] ?? null;
+            $numeroOrdenUnico = $this->obtenerNumeroOrdenUnico($numeroOrdenSolicitado);
+
             // Create basic pedido
             $pedido = new Pedido();
             $pedido->fill($pedidoData);
+            $pedido->numero_orden = $numeroOrdenUnico; // Asignar el número de orden único
             $pedido->usuario = auth()->user()->name;
 
             // Asegurar que los campos tengan valores por defecto si están vacíos
@@ -724,45 +728,8 @@ class PedidosController extends Controller
                 \Log::info('Omitiendo actualización de inventario en backend para pedido #' . $pedido->id . ' (ya manejado en frontend)');
             }
 
-            // Update lunas
-            // Primero guardamos las fotos existentes antes de hacer delete
-            $fotosLunasExistentes = [];
-            foreach ($pedido->lunas as $index => $luna) {
-                if ($luna->foto) {
-                    $fotosLunasExistentes[$index] = $luna->foto;
-                }
-            }
-            
-            $pedido->lunas()->delete(); // Remove existing lunas
-            if ($request->has('l_medida')) {
-                foreach ($request->l_medida as $key => $medida) {
-                    if (!empty($medida)) {
-                        $foto = null;
-                        
-                        // Manejar la foto si existe
-                        if ($request->hasFile('l_foto') && isset($request->file('l_foto')[$key])) {
-                            $fotoFile = $request->file('l_foto')[$key];
-                            $fotoName = time() . '_luna_update_' . $key . '.' . $fotoFile->getClientOriginalExtension();
-                            $fotoFile->move(public_path('img/lunas'), $fotoName);
-                            $foto = 'img/lunas/' . $fotoName;
-                        } else {
-                            // Si no se sube nueva foto, mantener la existente si había una
-                            $foto = $fotosLunasExistentes[$key] ?? null;
-                        }
-                        
-                        $pedido->lunas()->create([
-                            'l_medida' => $medida,
-                            'l_detalle' => $request->l_detalle[$key] ?? null,
-                            'l_precio' => $request->l_precio[$key] ?? 0,
-                            'tipo_lente' => $request->tipo_lente[$key] ?? null,
-                            'material' => $request->material[$key] ?? null,
-                            'filtro' => $request->filtro[$key] ?? null,
-                            'l_precio_descuento' => $request->l_precio_descuento[$key] ?? 0,
-                            'foto' => $foto
-                        ]);
-                    }
-                }
-            }
+            // Update lunas con manejo mejorado
+            $this->actualizarLunasPedido($request, $pedido);
 
             \DB::commit();
 
@@ -1422,8 +1389,7 @@ class PedidosController extends Controller
     public function getNextOrderNumber()
     {
         try {
-            $lastOrder = Pedido::orderBy('numero_orden', 'desc')->first();
-            $nextOrderNumber = $lastOrder ? $lastOrder->numero_orden + 1 : 1;
+            $nextOrderNumber = $this->obtenerNumeroOrdenUnico();
             
             return response()->json([
                 'success' => true,
@@ -1522,6 +1488,105 @@ class PedidosController extends Controller
                 'message' => 'Error al eliminar el reclamo',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Obtener un número de orden único
+     * Si el número solicitado ya existe, incrementa hasta encontrar uno disponible
+     * 
+     * @param int|null $numeroSolicitado
+     * @return int
+     */
+    private function obtenerNumeroOrdenUnico($numeroSolicitado = null)
+    {
+        // Si no se proporciona número, obtener el siguiente disponible
+        if (is_null($numeroSolicitado)) {
+            $ultimoNumero = Pedido::max('numero_orden') ?? 0;
+            $numeroSolicitado = $ultimoNumero + 1;
+        }
+
+        // Verificar si el número solicitado ya existe
+        while (Pedido::where('numero_orden', $numeroSolicitado)->exists()) {
+            $numeroSolicitado++;
+        }
+
+        return $numeroSolicitado;
+    }
+
+    /**
+     * Actualizar las lunas de un pedido con manejo mejorado
+     * 
+     * @param \Illuminate\Http\Request $request
+     * @param \App\Models\Pedido $pedido
+     * @return void
+     */
+    private function actualizarLunasPedido($request, $pedido)
+    {
+        // Primero guardamos las fotos existentes antes de hacer delete
+        $fotosLunasExistentes = [];
+        foreach ($pedido->lunas as $index => $luna) {
+            if ($luna->foto) {
+                $fotosLunasExistentes[$index] = $luna->foto;
+            }
+        }
+        
+        // Eliminar lunas existentes
+        $pedido->lunas()->delete();
+        
+        // Verificar si hay datos de lunas para agregar
+        if (!$request->has('l_medida') || !is_array($request->l_medida)) {
+            return;
+        }
+        
+        foreach ($request->l_medida as $key => $medida) {
+            if (!empty($medida)) {
+                $foto = null;
+                
+                // Manejar la foto si existe
+                if ($request->hasFile('l_foto') && isset($request->file('l_foto')[$key])) {
+                    try {
+                        $fotoFile = $request->file('l_foto')[$key];
+                        $fotoName = time() . '_luna_update_' . $key . '.' . $fotoFile->getClientOriginalExtension();
+                        
+                        // Verificar que la carpeta existe
+                        $carpetaDestino = public_path('img/lunas');
+                        if (!file_exists($carpetaDestino)) {
+                            mkdir($carpetaDestino, 0755, true);
+                        }
+                        
+                        $fotoFile->move($carpetaDestino, $fotoName);
+                        $foto = 'img/lunas/' . $fotoName;
+                        
+                        \Log::info('Foto de luna actualizada: ' . $foto);
+                    } catch (\Exception $e) {
+                        \Log::error('Error al subir foto de luna: ' . $e->getMessage());
+                        // Si hay error con la foto, mantener la existente si había una
+                        $foto = $fotosLunasExistentes[$key] ?? null;
+                    }
+                } else {
+                    // Si no se sube nueva foto, mantener la existente si había una
+                    $foto = $fotosLunasExistentes[$key] ?? null;
+                }
+                
+                try {
+                    $pedido->lunas()->create([
+                        'l_medida' => $medida,
+                        'l_detalle' => $request->l_detalle[$key] ?? null,
+                        'l_precio' => $request->l_precio[$key] ?? 0,
+                        'tipo_lente' => $request->tipo_lente[$key] ?? null,
+                        'material' => $request->material[$key] ?? null,
+                        'filtro' => $request->filtro[$key] ?? null,
+                        'l_precio_descuento' => $request->l_precio_descuento[$key] ?? 0,
+                        'foto' => $foto
+                    ]);
+                    
+                    \Log::info('Luna actualizada exitosamente para pedido ' . $pedido->numero_orden);
+                } catch (\Exception $e) {
+                    \Log::error('Error al crear luna: ' . $e->getMessage());
+                    throw $e;
+                }
+            }
         }
     }
 
