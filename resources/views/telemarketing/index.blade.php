@@ -37,20 +37,6 @@ use App\Models\MensajePredeterminado;
             <div class="col-md-12">
                 <form method="GET" class="form-inline" id="filtroForm">
                     <div class="form-group mr-2">
-                        <label for="empresa_id" class="mr-2">SUCURSAL:</label>
-                        <select name="empresa_id" id="empresa_id" class="form-control" {{ (!isset($isUserAdmin) || !$isUserAdmin) && isset($userEmpresaId) && $userEmpresaId ? 'disabled' : '' }}>
-                            <option value="">TODAS LAS SUCURSALES</option>
-                            @foreach($empresas ?? [] as $empresa)
-                                <option value="{{ $empresa->id }}" {{ (isset($userEmpresaId) && $userEmpresaId == $empresa->id) || request('empresa_id') == $empresa->id ? 'selected' : '' }}>
-                                    {{ strtoupper($empresa->nombre) }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @if((!isset($isUserAdmin) || !$isUserAdmin) && isset($userEmpresaId) && $userEmpresaId)
-                            <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}">
-                        @endif
-                    </div>
-                    <div class="form-group mr-2">
                         <label for="tipo_cliente" class="mr-2">TIPO:</label>
                         <select name="tipo_cliente" id="tipo_cliente" class="form-control">
                             <option value="">TODOS</option>
@@ -874,12 +860,6 @@ $(document).ready(function() {
     // Botón Mostrar Todos
     $('#mostrarTodosButton').click(function() {
         $('#tipo_cliente').val('');
-        
-        // Solo limpiamos el filtro de empresa si el usuario es administrador o no tiene empresa asignada
-        @if(isset($isUserAdmin) && ($isUserAdmin || !isset($userEmpresaId) || !$userEmpresaId))
-            $('#empresa_id').val('');
-        @endif
-        
         $('#filtroForm').submit();
     });
     

@@ -17,16 +17,6 @@ class TelemarketingController extends Controller
 {
     public function index(Request $request)
     {
-        // Verificar si el usuario está asociado a una empresa y no es admin
-        $userEmpresaId = null;
-        $isUserAdmin = auth()->user()->is_admin ?? false;
-        
-        if (!$isUserAdmin && auth()->user()->empresa_id) {
-            $userEmpresaId = auth()->user()->empresa_id;
-        }
-
-        // Obtener empresas para el filtro
-        $empresas = Empresa::all();
 
         // Unión de clientes y pacientes
         $clientesQuery = DB::table('pedidos')
@@ -35,7 +25,7 @@ class TelemarketingController extends Controller
                 DB::raw('NULL as apellidos'),
                 'celular',
                 DB::raw("'cliente' as tipo"),
-                'empresa_id',
+                'empresa_id',s
                 DB::raw('MAX(fecha) as ultimo_pedido'),
                 'id'
             )
@@ -79,14 +69,6 @@ class TelemarketingController extends Controller
             ->whereNotNull('pedidos.celular')
             ->where('pedidos.celular', '!=', '');
 
-        // Aplicar filtros de empresa para clientes
-        if ($request->filled('empresa_id')) {
-            $clientes->where('pedidos.empresa_id', $request->get('empresa_id'));
-        }
-        if (!$isUserAdmin && $userEmpresaId) {
-            $clientes->where('pedidos.empresa_id', $userEmpresaId);
-        }
-
         $clientes = $clientes->groupBy('pedidos.cliente', 'pedidos.celular', 'pedidos.empresa_id', 'empresas.nombre');
 
         // Obtener pacientes únicos de historiales clínicos
@@ -106,14 +88,6 @@ class TelemarketingController extends Controller
             ->where('historiales_clinicos.nombres', '!=', '')
             ->whereNotNull('historiales_clinicos.celular')
             ->where('historiales_clinicos.celular', '!=', '');
-
-        // Aplicar filtros de empresa para pacientes
-        if ($request->filled('empresa_id')) {
-            $pacientes->where('historiales_clinicos.empresa_id', $request->get('empresa_id'));
-        }
-        if (!$isUserAdmin && $userEmpresaId) {
-            $pacientes->where('historiales_clinicos.empresa_id', $userEmpresaId);
-        }
 
         $pacientes = $pacientes->groupBy('historiales_clinicos.nombres', 'historiales_clinicos.apellidos', 'historiales_clinicos.celular', 'historiales_clinicos.empresa_id', 'empresas.nombre');
 
@@ -176,7 +150,7 @@ class TelemarketingController extends Controller
             ];
         })->sortBy('nombre');
 
-        return view('telemarketing.index', compact('clientes', 'empresas', 'isUserAdmin', 'userEmpresaId'));
+        return view('telemarketing.index', compact('clientes'));
     }
 
     public function enviarMensaje(Request $request, $clienteId)
