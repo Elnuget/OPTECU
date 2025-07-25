@@ -2,7 +2,7 @@
 
 <div id="lunas-container" class="card collapsed-card">
     <div class="card-header">
-        <h3 class="card-title">Lunas</h3>
+        <h3 class="card-title">Receta</h3>
         <div class="card-tools">
             <button type="button" class="btn btn-tool" data-card-widget="collapse">
                 <i class="fas fa-plus"></i>
@@ -23,7 +23,7 @@
                 
                 <div class="row mb-3">
                     <div class="col-md-12">
-                        <label class="form-label">Prescripción/Medidas de Lunas</label>
+                        <label class="form-label">Prescripción/Medidas</label>
                         <div class="table-responsive">
                             <table class="table table-bordered table-sm">
                                 <thead class="thead-light">
@@ -194,7 +194,7 @@
         @endforeach
     </div>
     <div class="card-footer">
-        <button type="button" class="btn btn-success" onclick="duplicateLunas()">Agregar más Lunas</button>
+        <button type="button" class="btn btn-success" onclick="duplicateLunas()">Agregar Receta</button>
     </div>
 </div>
 

@@ -363,7 +363,7 @@
                             {{-- Fila 6 - Prescripción/Medidas --}}
                             <div class="row mb-3">
                                 <div class="col-md-12">
-                                    <label class="form-label">Prescripción/Medidas de Lunas</label>
+                                    <label class="form-label">Prescripción/Medidas</label>
                                     <div class="table-responsive">
                                         <table class="table table-bordered table-sm">
                                             <thead class="thead-light">
@@ -506,7 +506,7 @@
                             </div>
                         </div>
                         <div class="card-footer">
-                            <button type="button" class="btn btn-success" onclick="duplicateLunas()">Agregar más Lunas</button>
+                            <button type="button" class="btn btn-success" onclick="duplicateLunas()">Agregar Receta</button>
                         </div>
                     </div>
 
@@ -1389,7 +1389,7 @@
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-12">
-                                <label class="form-label">Prescripción/Medidas de Lunas</label>
+                                <label class="form-label">Prescripción/Medidas</label>
                                 <div class="table-responsive">
                                     <table class="table table-bordered table-sm">
                                         <thead class="thead-light">
