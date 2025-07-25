@@ -1146,7 +1146,7 @@ function mostrarHistorial(clienteId, nombre, apellidos, tipo) {
                             <td>$${pedido.total_formatted}</td>
                             <td><span style="color: ${pedido.saldo == 0 ? 'green' : 'red'}">$${pedido.saldo_formatted}</span></td>
                             <td>
-                                <a href="/Pedidos/${pedido.id}" target="_blank" class="btn btn-primary btn-sm">
+                                <a href="/Pedidos/${pedido.id}" class="btn btn-primary btn-sm">
                                     <i class="fas fa-eye"></i> VER
                                 </a>
                             </td>
@@ -1174,7 +1174,7 @@ function mostrarHistorial(clienteId, nombre, apellidos, tipo) {
                             <td>${proximaConsulta}</td>
                             <td>${historial.usuario}</td>
                             <td>
-                                <a href="/historiales_clinicos/${historial.id}" target="_blank" class="btn btn-info btn-sm">
+                                <a href="/historiales_clinicos/${historial.id}" class="btn btn-info btn-sm">
                                     <i class="fas fa-eye"></i> VER
                                 </a>
                             </td>
