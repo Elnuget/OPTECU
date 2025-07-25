@@ -25,7 +25,7 @@ class TelemarketingController extends Controller
                 DB::raw('NULL as apellidos'),
                 'celular',
                 DB::raw("'cliente' as tipo"),
-                'empresa_id',s
+                'empresa_id',
                 DB::raw('MAX(fecha) as ultimo_pedido'),
                 'id'
             )
