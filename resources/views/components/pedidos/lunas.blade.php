@@ -21,6 +21,18 @@
                     </div>
                 @endif
                 
+                {{-- Campo Tipo de Receta --}}
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label"><strong>Tipo de Receta</strong></label>
+                        <select class="form-control" name="tipo[]">
+                            <option value="">Seleccionar...</option>
+                            <option value="CERCA" {{ $luna->tipo == 'CERCA' ? 'selected' : '' }}>CERCA</option>
+                            <option value="LEJOS" {{ $luna->tipo == 'LEJOS' ? 'selected' : '' }}>LEJOS</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <label class="form-label">Prescripción/Medidas</label>
@@ -101,18 +113,6 @@
                             <i class="fas fa-info-circle mr-1"></i>
                             <strong>Formato de ejemplo:</strong> OD: +2.00 -1.50 X90° / OI: +1.75 -1.25 X85° ADD: +2.00 DP: 62
                         </small>
-                    </div>
-                </div>
-
-                {{-- Campo Tipo de Receta --}}
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <label class="form-label"><strong>Tipo de Receta</strong></label>
-                        <select class="form-control" name="tipo[]">
-                            <option value="">Seleccionar...</option>
-                            <option value="CERCA" {{ $luna->tipo == 'CERCA' ? 'selected' : '' }}>CERCA</option>
-                            <option value="LEJOS" {{ $luna->tipo == 'LEJOS' ? 'selected' : '' }}>LEJOS</option>
-                        </select>
                     </div>
                 </div>
 
