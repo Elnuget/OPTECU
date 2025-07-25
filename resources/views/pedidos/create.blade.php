@@ -408,6 +408,17 @@
                                     </small>
                                 </div>
                             </div>
+                            {{-- Campo Tipo de Receta --}}
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label for="tipo" class="form-label"><strong>Tipo de Receta</strong></label>
+                                    <select class="form-control" name="tipo[]">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="CERCA">CERCA</option>
+                                        <option value="LEJOS">LEJOS</option>
+                                    </select>
+                                </div>
+                            </div>
                             {{-- Fila nueva para tipo de lente, material y filtro --}}
                             <div class="row mb-3">
                                 <div class="col-md-3">
@@ -1061,6 +1072,9 @@
                 
                 // Llenar campos de receta
                 setTimeout(() => {
+                    if (receta.tipo && !$('[name="tipo[]"]').first().val()) {
+                        $('[name="tipo[]"]').first().val(receta.tipo);
+                    }
                     if (receta.tipo_lente && !$('[name="tipo_lente[]"]').first().val()) {
                         $('[name="tipo_lente[]"]').first().val(receta.tipo_lente);
                     }
@@ -1418,6 +1432,17 @@
                                     <i class="fas fa-info-circle mr-1"></i>
                                     <strong>Formato de ejemplo:</strong> OD: +2.00 -1.50 X90° / OI: +1.75 -1.25 X85° ADD: +2.00 DP: 62
                                 </small>
+                            </div>
+                        </div>
+                        {{-- Campo Tipo de Receta --}}
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="tipo" class="form-label"><strong>Tipo de Receta</strong></label>
+                                <select class="form-control" name="tipo[]">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="CERCA">CERCA</option>
+                                    <option value="LEJOS">LEJOS</option>
+                                </select>
                             </div>
                         </div>
                         <div class="row mb-3">

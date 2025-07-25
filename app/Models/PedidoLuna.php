@@ -14,6 +14,7 @@ class PedidoLuna extends Model
 
     protected $fillable = [
         'pedido_id',
+        'tipo',
         'l_medida',
         'l_detalle',
         'l_precio',

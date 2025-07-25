@@ -313,6 +313,18 @@
                                         <table class="table table-bordered table-sm">
                                             <tbody>
                                                 <tr>
+                                                    <td><strong>Tipo de Receta:</strong></td>
+                                                    <td>
+                                                        @if($luna->tipo)
+                                                            <span class="badge badge-{{ $luna->tipo == 'CERCA' ? 'info' : 'primary' }}">
+                                                                {{ $luna->tipo }}
+                                                            </span>
+                                                        @else
+                                                            <span class="text-muted">No especificado</span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                                <tr>
                                                     <td><strong>Tipo de Lente:</strong></td>
                                                     <td>{{ $luna->tipo_lente ?: 'No especificado' }}</td>
                                                 </tr>

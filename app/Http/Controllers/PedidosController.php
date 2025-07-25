@@ -379,6 +379,7 @@ class PedidosController extends Controller
                             'material' => $request->material[$key] ?? null,
                             'filtro' => $request->filtro[$key] ?? null,
                             'l_precio_descuento' => (float)($request->l_precio_descuento[$key] ?? 0),
+                            'tipo' => $request->tipo[$key] ?? null,
                             'foto' => $foto
                         ]);
                         $pedido->lunas()->save($luna);
@@ -1584,6 +1585,7 @@ class PedidosController extends Controller
                         'material' => $request->material[$key] ?? null,
                         'filtro' => $request->filtro[$key] ?? null,
                         'l_precio_descuento' => $request->l_precio_descuento[$key] ?? 0,
+                        'tipo' => $request->tipo[$key] ?? null,
                         'foto' => $foto
                     ]);
                     

@@ -213,7 +213,8 @@ class PedidoController extends Controller
                     'l_detalle' => $ultimaLuna->l_detalle,
                     'tipo_lente' => $ultimaLuna->tipo_lente,
                     'material' => $ultimaLuna->material,
-                    'filtro' => $ultimaLuna->filtro
+                    'filtro' => $ultimaLuna->filtro,
+                    'tipo' => $ultimaLuna->tipo
                 ];
             }
             

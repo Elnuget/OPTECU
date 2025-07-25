@@ -104,6 +104,18 @@
                     </div>
                 </div>
 
+                {{-- Campo Tipo de Receta --}}
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label"><strong>Tipo de Receta</strong></label>
+                        <select class="form-control" name="tipo[]">
+                            <option value="">Seleccionar...</option>
+                            <option value="CERCA" {{ $luna->tipo == 'CERCA' ? 'selected' : '' }}>CERCA</option>
+                            <option value="LEJOS" {{ $luna->tipo == 'LEJOS' ? 'selected' : '' }}>LEJOS</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="row mb-3">
                     <div class="col-md-3">
                         <label class="form-label">Tipo de Lente</label>
