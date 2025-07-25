@@ -69,6 +69,14 @@ class TelemarketingController extends Controller
             ->whereNotNull('pedidos.celular')
             ->where('pedidos.celular', '!=', '');
 
+        // Aplicar filtros de fecha para clientes
+        if ($request->filled('fecha_inicio')) {
+            $clientes = $clientes->where('pedidos.fecha', '>=', $request->get('fecha_inicio'));
+        }
+        if ($request->filled('fecha_fin')) {
+            $clientes = $clientes->where('pedidos.fecha', '<=', $request->get('fecha_fin'));
+        }
+
         $clientes = $clientes->groupBy('pedidos.cliente', 'pedidos.celular', 'pedidos.empresa_id', 'empresas.nombre');
 
         // Obtener pacientes únicos de historiales clínicos
@@ -88,6 +96,14 @@ class TelemarketingController extends Controller
             ->where('historiales_clinicos.nombres', '!=', '')
             ->whereNotNull('historiales_clinicos.celular')
             ->where('historiales_clinicos.celular', '!=', '');
+
+        // Aplicar filtros de fecha para pacientes
+        if ($request->filled('fecha_inicio')) {
+            $pacientes = $pacientes->where('historiales_clinicos.fecha', '>=', $request->get('fecha_inicio'));
+        }
+        if ($request->filled('fecha_fin')) {
+            $pacientes = $pacientes->where('historiales_clinicos.fecha', '<=', $request->get('fecha_fin'));
+        }
 
         $pacientes = $pacientes->groupBy('historiales_clinicos.nombres', 'historiales_clinicos.apellidos', 'historiales_clinicos.celular', 'historiales_clinicos.empresa_id', 'empresas.nombre');
 
@@ -150,7 +166,14 @@ class TelemarketingController extends Controller
             ];
         })->sortBy('nombre');
 
-        return view('telemarketing.index', compact('clientes'));
+        // Preparar información de filtros para la vista
+        $filtrosActivos = [
+            'tipo_cliente' => $request->get('tipo_cliente'),
+            'fecha_inicio' => $request->get('fecha_inicio'),
+            'fecha_fin' => $request->get('fecha_fin'),
+        ];
+
+        return view('telemarketing.index', compact('clientes', 'filtrosActivos'));
     }
 
     public function enviarMensaje(Request $request, $clienteId)

@@ -35,24 +35,154 @@ use App\Models\MensajePredeterminado;
         {{-- Filtros --}}
         <div class="row mb-3">
             <div class="col-md-12">
-                <form method="GET" class="form-inline" id="filtroForm">
-                    <div class="form-group mr-2">
-                        <label for="tipo_cliente" class="mr-2">TIPO:</label>
-                        <select name="tipo_cliente" id="tipo_cliente" class="form-control">
-                            <option value="">TODOS</option>
-                            <option value="cliente" {{ request('tipo_cliente') == 'cliente' ? 'selected' : '' }}>SOLO CLIENTES</option>
-                            <option value="paciente" {{ request('tipo_cliente') == 'paciente' ? 'selected' : '' }}>SOLO PACIENTES</option>
-                        </select>
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-filter"></i> FILTROS DE BÚSQUEDA</h5>
                     </div>
-                    <button type="submit" class="btn btn-primary mr-2">FILTRAR</button>
-                    <button type="button" class="btn btn-success" id="mostrarTodosButton">MOSTRAR TODOS</button>
-                </form>
+                    <div class="card-body">
+                        <form method="GET" id="filtroForm">
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label for="tipo_cliente" class="form-label">TIPO DE CLIENTE:</label>
+                                    <select name="tipo_cliente" id="tipo_cliente" class="form-control">
+                                        <option value="">TODOS</option>
+                                        <option value="cliente" {{ request('tipo_cliente') == 'cliente' ? 'selected' : '' }}>SOLO CLIENTES</option>
+                                        <option value="paciente" {{ request('tipo_cliente') == 'paciente' ? 'selected' : '' }}>SOLO PACIENTES</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="fecha_inicio" class="form-label">FECHA INICIO:</label>
+                                    <input type="date" name="fecha_inicio" id="fecha_inicio" class="form-control" value="{{ request('fecha_inicio') }}">
+                                    <small class="text-muted">Desde esta fecha</small>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label for="fecha_fin" class="form-label">FECHA FIN:</label>
+                                    <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" value="{{ request('fecha_fin') }}">
+                                    <small class="text-muted">Hasta esta fecha</small>
+                                </div>
+                                <div class="col-md-3 mb-3 d-flex align-items-end">
+                                    <div class="btn-group w-100" role="group">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-search"></i> FILTRAR
+                                        </button>
+                                        <button type="button" class="btn btn-success" id="mostrarTodosButton">
+                                            <i class="fas fa-list"></i> TODOS
+                                        </button>
+                                        <button type="button" class="btn btn-info" id="limpiarFiltrosButton">
+                                            <i class="fas fa-eraser"></i> LIMPIAR
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Filtros rápidos de fecha -->
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <small class="text-muted"><strong>FILTROS RÁPIDOS:</strong></small>
+                                    <div class="btn-toolbar mt-2" role="toolbar">
+                                        <div class="btn-group btn-group-sm mr-2" role="group">
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="setFechaRapida('hoy')"
+                                                    data-toggle="tooltip" 
+                                                    title="Filtrar registros de hoy únicamente">
+                                                HOY
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="setFechaRapida('ayer')"
+                                                    data-toggle="tooltip" 
+                                                    title="Filtrar registros de ayer únicamente">
+                                                AYER
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="setFechaRapida('semana')"
+                                                    data-toggle="tooltip" 
+                                                    title="Desde el lunes de esta semana hasta hoy">
+                                                ESTA SEMANA
+                                            </button>
+                                        </div>
+                                        <div class="btn-group btn-group-sm mr-2" role="group">
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="setFechaRapida('mes')"
+                                                    data-toggle="tooltip" 
+                                                    title="Desde el 1ro del mes actual hasta hoy">
+                                                ESTE MES
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="setFechaRapida('mes_anterior')"
+                                                    data-toggle="tooltip" 
+                                                    title="Todo el mes anterior completo">
+                                                MES ANTERIOR
+                                            </button>
+                                        </div>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="setFechaRapida('trimestre')"
+                                                    data-toggle="tooltip" 
+                                                    title="Desde el inicio del trimestre actual hasta hoy">
+                                                TRIMESTRE
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="setFechaRapida('año')"
+                                                    data-toggle="tooltip" 
+                                                    title="Desde el 1 de enero hasta hoy">
+                                                ESTE AÑO
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-info">
+                                            <i class="fas fa-info-circle"></i> 
+                                            <strong>Los filtros rápidos establecen las fechas automáticamente. 
+                                            Luego haga clic en "FILTRAR" para aplicar el filtro.</strong>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
 
+        {{-- Indicador de resultados y filtros activos --}}
+        @if(request()->hasAny(['tipo_cliente', 'fecha_inicio', 'fecha_fin']))
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-filter"></i> <strong>FILTROS ACTIVOS:</strong>
+                    @if(request('tipo_cliente'))
+                        <span class="badge badge-primary ml-1">
+                            TIPO: {{ strtoupper(request('tipo_cliente')) }}
+                        </span>
+                    @endif
+                    @if(request('fecha_inicio'))
+                        <span class="badge badge-success ml-1">
+                            DESDE: {{ \Carbon\Carbon::parse(request('fecha_inicio'))->format('d/m/Y') }}
+                        </span>
+                    @endif
+                    @if(request('fecha_fin'))
+                        <span class="badge badge-warning ml-1">
+                            HASTA: {{ \Carbon\Carbon::parse(request('fecha_fin'))->format('d/m/Y') }}
+                        </span>
+                    @endif
+                    <span class="float-right">
+                        <strong>{{ $clientes->count() }} resultado(s) encontrado(s)</strong>
+                    </span>
+                </div>
+            </div>
+        </div>
+        @endif
+
         @if($clientes->isEmpty())
             <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> NO HAY CLIENTES REGISTRADOS.
+                <i class="fas fa-info-circle"></i> 
+                @if(request()->hasAny(['tipo_cliente', 'fecha_inicio', 'fecha_fin']))
+                    NO SE ENCONTRARON CLIENTES CON LOS FILTROS APLICADOS. 
+                    <a href="{{ route('telemarketing.index') }}" class="btn btn-sm btn-primary ml-2">
+                        <i class="fas fa-refresh"></i> VER TODOS
+                    </a>
+                @else
+                    NO HAY CLIENTES REGISTRADOS.
+                @endif
             </div>
         @else
             <div class="table-responsive">
@@ -359,6 +489,79 @@ El equipo de [EMPRESA]</textarea>
     .ultimo-mensaje-info {
         max-width: 200px;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Estilos para filtros */
+    .form-label {
+        font-weight: bold;
+        color: #495057;
+        text-transform: uppercase;
+    }
+    
+    .card-title {
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+    
+    .btn-group .btn {
+        white-space: nowrap;
+    }
+    
+    @media (max-width: 768px) {
+        .btn-group {
+            flex-direction: column;
+        }
+        .btn-group .btn {
+            margin-bottom: 5px;
+            border-radius: 4px !important;
+        }
+        .btn-toolbar {
+            flex-direction: column;
+        }
+        .btn-toolbar .btn-group {
+            margin-bottom: 10px;
+            margin-right: 0 !important;
+        }
+    }
+
+    /* Estilos para filtros rápidos */
+    .btn-toolbar .btn-group-sm .btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-outline-secondary:hover {
+        color: #fff;
+        background-color: #6c757d;
+        border-color: #6c757d;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .btn-outline-secondary:active {
+        background-color: #007bff !important;
+        border-color: #007bff !important;
+        transform: translateY(0px);
+    }
+    
+    .btn-outline-secondary.clicked {
+        background-color: #28a745 !important;
+        border-color: #28a745 !important;
+        color: white !important;
+    }
+    
+    /* Animación para indicar carga */
+    .filtro-loading {
+        opacity: 0.7;
+        pointer-events: none;
+    }
+    
+    .filtro-loading::after {
+        content: ' ⏳';
+    }
         overflow: hidden;
         text-overflow: ellipsis;
     }
@@ -750,6 +953,165 @@ function enviarMensaje() {
     }
 }
 
+// Función de testing para verificar que los filtros funcionan (SIN AUTO-SUBMIT)
+function testFiltrosRapidos() {
+    console.log('=== TEST DE FILTROS RÁPIDOS ===');
+    console.log('setFechaRapida disponible:', typeof setFechaRapida);
+    console.log('jQuery disponible:', typeof $);
+    console.log('SweetAlert disponible:', typeof Swal);
+    
+    const botones = $('.btn-toolbar button[onclick*="setFechaRapida"]');
+    console.log('Botones encontrados:', botones.length);
+    
+    botones.each(function(index) {
+        const onclick = $(this).attr('onclick');
+        console.log(`Botón ${index + 1}: ${onclick}`);
+    });
+    
+    console.log('ℹ️  Los filtros rápidos solo establecen fechas - el usuario debe hacer clic en FILTRAR');
+    console.log('✅ Configuración anti-reload lista');
+}
+
+// Función para establecer fechas rápidas
+function setFechaRapida(periodo) {
+    console.log('Aplicando filtro rápido:', periodo);
+    
+    try {
+        // Encontrar el botón que fue clickeado para darle feedback visual
+        if (typeof event !== 'undefined' && event.target) {
+            const botonClickeado = event.target;
+            
+            // Agregar clase de "clicked" temporalmente
+            $(botonClickeado).addClass('clicked');
+            setTimeout(() => {
+                $(botonClickeado).removeClass('clicked');
+            }, 1000);
+        }
+        
+        var hoy = new Date();
+        var fechaInicio, fechaFin;
+        
+        // Configurar fechas según el período seleccionado
+        switch(periodo) {
+            case 'hoy':
+                fechaInicio = fechaFin = hoy.toISOString().split('T')[0];
+                break;
+                
+            case 'ayer':
+                var ayer = new Date(hoy);
+                ayer.setDate(hoy.getDate() - 1);
+                fechaInicio = fechaFin = ayer.toISOString().split('T')[0];
+                break;
+                
+            case 'semana':
+                // Desde el lunes de esta semana hasta hoy
+                var inicioSemana = new Date(hoy);
+                var dia = inicioSemana.getDay();
+                var diferencia = dia === 0 ? 6 : dia - 1; // Si es domingo (0), retroceder 6 días
+                inicioSemana.setDate(hoy.getDate() - diferencia);
+                fechaInicio = inicioSemana.toISOString().split('T')[0];
+                fechaFin = hoy.toISOString().split('T')[0];
+                break;
+                
+            case 'mes':
+                // Desde el primer día del mes actual hasta hoy
+                fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+                fechaFin = hoy.toISOString().split('T')[0];
+                break;
+                
+            case 'mes_anterior':
+                // Todo el mes anterior completo
+                var mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+                var finMesAnterior = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+                fechaInicio = mesAnterior.toISOString().split('T')[0];
+                fechaFin = finMesAnterior.toISOString().split('T')[0];
+                break;
+                
+            case 'trimestre':
+                // Desde el inicio del trimestre actual hasta hoy
+                var mesActual = hoy.getMonth();
+                var inicioTrimestre = Math.floor(mesActual / 3) * 3;
+                fechaInicio = new Date(hoy.getFullYear(), inicioTrimestre, 1).toISOString().split('T')[0];
+                fechaFin = hoy.toISOString().split('T')[0];
+                break;
+                
+            case 'año':
+                // Desde el 1 de enero del año actual hasta hoy
+                fechaInicio = new Date(hoy.getFullYear(), 0, 1).toISOString().split('T')[0];
+                fechaFin = hoy.toISOString().split('T')[0];
+                break;
+                
+            default:
+                console.error('Período no reconocido:', periodo);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Período no reconocido: ' + periodo,
+                        timer: 3000
+                    });
+                }
+                return;
+        }
+        
+        // Validar que las fechas sean válidas
+        if (!fechaInicio || !fechaFin) {
+            console.error('Error al calcular fechas para el período:', periodo);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No se pudieron calcular las fechas para el período seleccionado.',
+                    timer: 3000
+                });
+            }
+            return;
+        }
+        
+        // Establecer las fechas en los campos
+        $('#fecha_inicio').val(fechaInicio);
+        $('#fecha_fin').val(fechaFin);
+        
+        // Mostrar notificación del filtro aplicado
+        const periodoTexto = {
+            'hoy': 'HOY',
+            'ayer': 'AYER',
+            'semana': 'ESTA SEMANA',
+            'mes': 'ESTE MES',
+            'mes_anterior': 'MES ANTERIOR',
+            'trimestre': 'ESTE TRIMESTRE',
+            'año': 'ESTE AÑO'
+        };
+        
+        // Formatear fechas para mostrar
+        const fechaInicioFormateada = new Date(fechaInicio).toLocaleDateString('es-CL');
+        const fechaFinFormateada = new Date(fechaFin).toLocaleDateString('es-CL');
+        
+        // Mostrar toast de confirmación si SweetAlert está disponible
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'success',
+                title: `📅 ${periodoTexto[periodo]}`,
+                text: `${fechaInicioFormateada} → ${fechaFinFormateada} - Presione "FILTRAR" para aplicar`,
+                timer: 3000,
+                timerProgressBar: true,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                background: '#d4edda',
+                color: '#155724'
+            });
+        }
+        
+        // NO aplicar filtro automáticamente - el usuario debe hacer clic en "FILTRAR"
+        console.log('Fechas establecidas. El usuario debe hacer clic en FILTRAR para aplicar el filtro.');
+        
+    } catch (error) {
+        console.error('Error en setFechaRapida:', error);
+        alert('Error al aplicar el filtro rápido: ' + error.message);
+    }
+}
+
 function mostrarHistorial(clienteId, nombre, apellidos, tipo) {
     $('#clienteNombre').text((nombre + ' ' + apellidos).toUpperCase());
     $('#historialLoader').show();
@@ -860,8 +1222,36 @@ $(document).ready(function() {
     // Botón Mostrar Todos
     $('#mostrarTodosButton').click(function() {
         $('#tipo_cliente').val('');
+        $('#fecha_inicio').val('');
+        $('#fecha_fin').val('');
         $('#filtroForm').submit();
     });
+
+    // Botón Limpiar Filtros
+    $('#limpiarFiltrosButton').click(function() {
+        $('#tipo_cliente').val('');
+        $('#fecha_inicio').val('');
+        $('#fecha_fin').val('');
+    });
+
+    // Validación de fechas (sin auto-submit)
+    $('#fecha_inicio, #fecha_fin').on('change', function() {
+        var fechaInicio = $('#fecha_inicio').val();
+        var fechaFin = $('#fecha_fin').val();
+        
+        if (fechaInicio && fechaFin && fechaInicio > fechaFin) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Fechas Inválidas',
+                text: 'La fecha de inicio no puede ser mayor que la fecha de fin.',
+                confirmButtonText: 'Entendido'
+            });
+            $(this).val('');
+        }
+    });
+
+    // Funcionalidad de botones deshabilitada para evitar auto-submits
+    // Los botones de filtros rápidos solo establecen fechas, el usuario debe hacer clic en FILTRAR
     
     // Cargar mensaje predeterminado desde el servidor
     try {
@@ -885,6 +1275,89 @@ $(document).ready(function() {
     
     // Inicializar tooltips
     $('[data-toggle="tooltip"]').tooltip();
+    
+    // Función para destacar el filtro rápido activo
+    function actualizarFiltrosRapidosActivos() {
+        const fechaInicio = $('#fecha_inicio').val();
+        const fechaFin = $('#fecha_fin').val();
+        
+        if (!fechaInicio || !fechaFin) {
+            // Remover todas las clases activas si no hay fechas
+            $('.btn-toolbar .btn').removeClass('btn-primary').addClass('btn-outline-secondary');
+            return;
+        }
+        
+        const hoy = new Date();
+        const fechaHoy = hoy.toISOString().split('T')[0];
+        
+        // Remover clases activas primero
+        $('.btn-toolbar .btn').removeClass('btn-primary').addClass('btn-outline-secondary');
+        
+        // Verificar qué filtro corresponde a las fechas actuales
+        if (fechaInicio === fechaFin && fechaInicio === fechaHoy) {
+            $('button[onclick="setFechaRapida(\'hoy\')"]').removeClass('btn-outline-secondary').addClass('btn-primary');
+        } else if (fechaInicio === fechaFin) {
+            const ayer = new Date(hoy);
+            ayer.setDate(hoy.getDate() - 1);
+            if (fechaInicio === ayer.toISOString().split('T')[0]) {
+                $('button[onclick="setFechaRapida(\'ayer\')"]').removeClass('btn-outline-secondary').addClass('btn-primary');
+            }
+        } else {
+            // Verificar otros períodos...
+            const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+            if (fechaInicio === inicioMes && fechaFin === fechaHoy) {
+                $('button[onclick="setFechaRapida(\'mes\')"]').removeClass('btn-outline-secondary').addClass('btn-primary');
+            }
+            
+            const inicioAño = new Date(hoy.getFullYear(), 0, 1).toISOString().split('T')[0];
+            if (fechaInicio === inicioAño && fechaFin === fechaHoy) {
+                $('button[onclick="setFechaRapida(\'año\')"]').removeClass('btn-outline-secondary').addClass('btn-primary');
+            }
+        }
+    }
+    
+    // Llamar la función al cargar la página y cuando cambien las fechas (sin auto-submit)
+    actualizarFiltrosRapidosActivos();
+    $('#fecha_inicio, #fecha_fin').on('change', actualizarFiltrosRapidosActivos);
+    
+    // Event listeners de filtros rápidos DESHABILITADOS para evitar conflictos
+    // Solo se usará el onclick de los botones
+    /*
+    $('.btn-toolbar button[onclick*="setFechaRapida"]').each(function() {
+        const $button = $(this);
+        const onclick = $button.attr('onclick');
+        if (onclick) {
+            const match = onclick.match(/setFechaRapida\('([^']+)'\)/);
+            if (match) {
+                const periodo = match[1];
+                $button.off('click.filtroRapido').on('click.filtroRapido', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Ejecutando filtro rápido via event listener:', periodo);
+                    setFechaRapida(periodo);
+                });
+            }
+        }
+    });
+    */
+    
+    // Verificación final: asegurar que la función setFechaRapida esté disponible globalmente
+    if (typeof window.setFechaRapida === 'undefined') {
+        console.log('Definiendo setFechaRapida globalmente...');
+        window.setFechaRapida = setFechaRapida;
+    }
+    
+    console.log('Script de telemarketing cargado correctamente. setFechaRapida disponible:', typeof setFechaRapida);
+    
+    // Ejecutar test después de un breve delay para asegurar que todo esté cargado
+    setTimeout(() => {
+        testFiltrosRapidos();
+    }, 1000);
 });
+
+// Asegurar que la función esté disponible globalmente
+if (typeof window.setFechaRapida === 'undefined') {
+    window.setFechaRapida = setFechaRapida;
+}
 </script>
 @stop
