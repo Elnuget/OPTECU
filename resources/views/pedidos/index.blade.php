@@ -120,6 +120,9 @@
                     <button type="button" class="btn btn-secondary" id="imprimirInforme" disabled>
                         <i class="fas fa-print"></i> Imprimir Informe
                     </button>
+                    <button type="button" class="btn btn-danger" id="filtrarReclamos">
+                        <i class="fas fa-exclamation-triangle"></i> Ver Reclamos
+                    </button>
                 </div>
             </div>
             <div class="col-md-4">
@@ -713,6 +716,29 @@ input[type="checkbox"]:after {
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+/* Estilos para el botón de filtrar reclamos */
+#filtrarReclamos {
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+#filtrarReclamos.active {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: white !important;
+    box-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
+}
+
+#filtrarReclamos:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+#filtrarReclamos.active::after {
+    content: " (Activo)";
+    font-size: 0.8em;
 }
 
 /* Mejora visual para botones agrupados */
@@ -1426,6 +1452,169 @@ Su opinión es muy importante para nosotros.
         });
 
         // Manejar el envío del formulario de reclamo
+        $('#reclamoForm').on('submit', function(e) {
+            e.preventDefault();
+            var pedidoId = $(this).data('pedido-id');
+            var reclamo = $('#reclamo').val().trim();
+            
+            if (reclamo.length < 10) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Descripción insuficiente',
+                    text: 'El reclamo debe tener al menos 10 caracteres.'
+                });
+                return;
+            }
+            
+            // Enviar el reclamo al servidor
+            $.ajax({
+                url: '/pedidos/' + pedidoId + '/reclamo',
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                data: {
+                    reclamo: reclamo
+                },
+                success: function(response) {
+                    $('#reclamoModal').modal('hide');
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Reclamo Registrado!',
+                        text: 'El reclamo se ha guardado correctamente.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        // Recargar la página para mostrar los cambios
+                        window.location.reload();
+                    });
+                },
+                error: function(xhr) {
+                    let errorMessage = 'Error al guardar el reclamo';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: errorMessage
+                    });
+                }
+            });
+        });
+
+        // Variables para el filtro de reclamos
+        var filtroReclamosActivo = false;
+        var todasLasFilas = [];
+        
+        // Guardar todas las filas al cargar la página
+        $(document).ready(function() {
+            todasLasFilas = $('#pedidosTable tbody tr').toArray();
+        });
+
+        // Manejar el botón de filtrar reclamos
+        $('#filtrarReclamos').click(function() {
+            var button = $(this);
+            var tabla = $('#pedidosTable tbody');
+            
+            if (!filtroReclamosActivo) {
+                // Activar filtro de reclamos
+                filtroReclamosActivo = true;
+                
+                // Cambiar estado visual del botón
+                button.addClass('active')
+                      .html('<i class="fas fa-eye-slash"></i> Ocultar Reclamos')
+                      .attr('title', 'Ocultar pedidos con reclamos y mostrar todos');
+                
+                // Ocultar todas las filas que NO tienen reclamos
+                tabla.find('tr').each(function() {
+                    var fila = $(this);
+                    var tieneReclamo = fila.hasClass('reclamo-row') || fila.hasClass('bg-danger-light');
+                    
+                    if (!tieneReclamo) {
+                        fila.hide();
+                    }
+                });
+                
+                // Verificar si hay reclamos para mostrar
+                var filasConReclamo = tabla.find('tr.reclamo-row:visible, tr.bg-danger-light:visible').length;
+                
+                if (filasConReclamo === 0) {
+                    // Si no hay reclamos, mostrar mensaje
+                    var mensajeNoReclamos = '<tr id="no-reclamos-message"><td colspan="12" class="text-center text-muted py-4">' +
+                                          '<i class="fas fa-check-circle fa-2x mb-2 text-success"></i><br>' +
+                                          '<strong>¡Excelente!</strong><br>' +
+                                          'No hay pedidos con reclamos en este momento.' +
+                                          '</td></tr>';
+                    tabla.append(mensajeNoReclamos);
+                }
+                
+                // Mostrar notificación
+                Swal.fire({
+                    icon: filasConReclamo > 0 ? 'info' : 'success',
+                    title: filasConReclamo > 0 ? 'Mostrando Reclamos' : '¡Sin Reclamos!',
+                    text: filasConReclamo > 0 ? 
+                          `Se encontraron ${filasConReclamo} pedido(s) con reclamos.` : 
+                          'No hay pedidos con reclamos actualmente.',
+                    timer: 3000,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false
+                });
+                
+            } else {
+                // Desactivar filtro de reclamos
+                filtroReclamosActivo = false;
+                
+                // Cambiar estado visual del botón
+                button.removeClass('active')
+                      .html('<i class="fas fa-exclamation-triangle"></i> Ver Reclamos')
+                      .attr('title', 'Mostrar solo pedidos con reclamos');
+                
+                // Remover mensaje de "no reclamos" si existe
+                $('#no-reclamos-message').remove();
+                
+                // Mostrar todas las filas originales
+                tabla.find('tr').show();
+                
+                // Mostrar notificación
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Mostrando Todos',
+                    text: 'Se están mostrando todos los pedidos nuevamente.',
+                    timer: 2000,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false
+                });
+            }
+            
+            // Actualizar el contador de DataTables si existe
+            if (pedidosTable && pedidosTable.page) {
+                pedidosTable.draw(false);
+            }
+        });
+
+        // Asegurar que el filtro se mantenga después de operaciones de DataTables
+        if (typeof pedidosTable !== 'undefined') {
+            pedidosTable.on('draw', function() {
+                if (filtroReclamosActivo) {
+                    // Reaplica el filtro después de un redraw de DataTables
+                    setTimeout(function() {
+                        $('#pedidosTable tbody tr').each(function() {
+                            var fila = $(this);
+                            var tieneReclamo = fila.hasClass('reclamo-row') || fila.hasClass('bg-danger-light');
+                            
+                            if (!tieneReclamo && fila.attr('id') !== 'no-reclamos-message') {
+                                fila.hide();
+                            }
+                        });
+                    }, 100);
+                }
+            });
+        }
         $('#reclamoForm').on('submit', function(e) {
             e.preventDefault();
             
