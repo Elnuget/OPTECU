@@ -60,6 +60,18 @@
             </div>
             <div id="prescripcion" class="collapse show">
                 <div class="card-body">
+                    {{-- Mostrar Tipo de Receta --}}
+                    @if($historialClinico->recetas->first()->tipo)
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="alert alert-info mb-0">
+                                <strong><i class="fas fa-tag mr-2"></i>Tipo de Receta:</strong> 
+                                <span class="badge badge-primary ml-2">{{ $historialClinico->recetas->first()->tipo }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                    
                     <div class="table-responsive mb-3">
                         <table class="table table-bordered text-center">
                             <thead class="thead-light">

@@ -60,6 +60,7 @@ class RecetaController extends Controller
                 'oi_adicion' => 'nullable|string|max:50',
                 'dp' => 'nullable|string|max:50',
                 'observaciones' => 'nullable|string|max:1000',
+                'tipo' => 'nullable|string|max:255',
             ]);
 
             $receta = Receta::create($validatedData);
@@ -123,6 +124,7 @@ class RecetaController extends Controller
                 'oi_adicion' => 'nullable|string|max:50',
                 'dp' => 'nullable|string|max:50',
                 'observaciones' => 'nullable|string|max:1000',
+                'tipo' => 'nullable|string|max:255',
             ]);
 
             $receta->update($validatedData);

@@ -307,7 +307,8 @@ class HistorialClinicoController extends Controller
                     'oi_eje' => $request->input('oi_eje'),
                     'oi_adicion' => $request->input('add'), // Usamos el mismo valor de ADD para ambos ojos
                     'dp' => $request->input('dp'),
-                    'observaciones' => $request->input('observaciones')
+                    'observaciones' => $request->input('observaciones'),
+                    'tipo' => $request->input('tipo')
                 ];
                 
                 // Crear la receta
@@ -415,7 +416,8 @@ class HistorialClinicoController extends Controller
             'oi_eje' => $request->input('oi_eje'),
             'oi_adicion' => $request->input('add'), // ADD se aplica a ambos ojos
             'dp' => $request->input('dp'),
-            'observaciones' => $request->input('observaciones')
+            'observaciones' => $request->input('observaciones'),
+            'tipo' => $request->input('tipo')
         ];
         
         // Filtrar campos vacíos en la receta

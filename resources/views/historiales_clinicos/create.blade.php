@@ -166,6 +166,20 @@
                 </div>
                 <div id="prescripcion" class="collapse">
                     <div class="card-body">
+                        {{-- Campo Tipo de Receta --}}
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="tipo"><strong>Tipo de Receta</strong></label>
+                                    <select name="tipo" id="tipo" class="form-control">
+                                        <option value="">Seleccionar...</option>
+                                        <option value="CERCA">CERCA</option>
+                                        <option value="LEJOS">LEJOS</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div class="table-responsive mb-3">
                             <table class="table table-bordered">
                                 <thead class="bg-primary text-white">
@@ -740,6 +754,9 @@
                         document.getElementsByName('oi_esfera')[0].value = historial.oi_esfera || '';
                         document.getElementsByName('oi_cilindro')[0].value = historial.oi_cilindro || '';
                         document.getElementsByName('oi_eje')[0].value = historial.oi_eje || '';
+                        
+                        // Cargar tipo de receta
+                        document.getElementById('tipo').value = historial.tipo || '';
                         
                         // Poblar ADD y DP
                         document.getElementById('add').value = historial.add || '';

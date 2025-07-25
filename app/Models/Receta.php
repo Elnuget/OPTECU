@@ -29,7 +29,8 @@ class Receta extends Model
         'oi_eje',
         'oi_adicion',
         'dp',
-        'observaciones'
+        'observaciones',
+        'tipo'
     ];
 
     /**
