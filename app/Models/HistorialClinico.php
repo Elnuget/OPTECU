@@ -84,4 +84,16 @@ class HistorialClinico extends Model
     {
         return $this->hasMany(Receta::class, 'historial_clinico_id');
     }
+
+    // Obtener la última receta
+    public function ultimaReceta()
+    {
+        return $this->hasOne(Receta::class, 'historial_clinico_id')->latest();
+    }
+
+    // Accessor para obtener la cantidad de recetas
+    public function getCantidadRecetasAttribute()
+    {
+        return $this->recetas()->count();
+    }
 }

@@ -50,64 +50,105 @@
             </div>
         </div>
 
-        {{-- PRESCRIPCIÓN / RECETA --}}
+        {{-- PRESCRIPCIÓN / RECETAS --}}
         @if($historialClinico->recetas && $historialClinico->recetas->count() > 0)
         <div class="card mb-4">
             <div class="card-header" data-toggle="collapse" data-target="#prescripcion" style="cursor: pointer">
                 <h5 class="mb-0">
-                    <i class="fas fa-prescription mr-2"></i> Receta
+                    <i class="fas fa-prescription mr-2"></i> Recetas
+                    <span class="badge badge-secondary ml-2">{{ $historialClinico->recetas->count() }}</span>
                 </h5>
             </div>
             <div id="prescripcion" class="collapse show">
                 <div class="card-body">
-                    {{-- Mostrar Tipo de Receta --}}
-                    @if($historialClinico->recetas->first()->tipo)
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <div class="alert alert-info mb-0">
-                                <strong><i class="fas fa-tag mr-2"></i>Tipo de Receta:</strong> 
-                                <span class="badge badge-primary ml-2">{{ $historialClinico->recetas->first()->tipo }}</span>
+                    @foreach($historialClinico->recetas as $index => $receta)
+                        <div class="receta-container border rounded p-3 mb-4 {{ $loop->last ? 'mb-0' : '' }}">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0 text-primary">
+                                    <i class="fas fa-prescription mr-2"></i>Receta #{{ $index + 1 }}
+                                    @if($receta->tipo)
+                                        <span class="badge badge-primary ml-2">{{ $receta->tipo }}</span>
+                                    @endif
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt mr-1"></i>
+                                    {{ $receta->created_at ? $receta->created_at->format('d/m/Y H:i') : 'Fecha no disponible' }}
+                                </small>
+                            </div>
+                            
+                            <div class="table-responsive mb-3">
+                                <table class="table table-bordered text-center">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th></th>
+                                            <th>ESFERA</th>
+                                            <th>CILINDRO</th>
+                                            <th>EJE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>OD</strong></td>
+                                            <td>{{ $receta->od_esfera ?? 'N/A' }}</td>
+                                            <td>{{ $receta->od_cilindro ?? 'N/A' }}</td>
+                                            <td>{{ $receta->od_eje ?? 'N/A' }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>OI</strong></td>
+                                            <td>{{ $receta->oi_esfera ?? 'N/A' }}</td>
+                                            <td>{{ $receta->oi_cilindro ?? 'N/A' }}</td>
+                                            <td>{{ $receta->oi_eje ?? 'N/A' }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <dl class="row mb-0">
+                                        <dt class="col-sm-6">ADD OD:</dt>
+                                        <dd class="col-sm-6">{{ strtoupper($receta->od_adicion ?? 'N/A') }}</dd>
+                                        <dt class="col-sm-6">ADD OI:</dt>
+                                        <dd class="col-sm-6">{{ strtoupper($receta->oi_adicion ?? 'N/A') }}</dd>
+                                        <dt class="col-sm-6">DP:</dt>
+                                        <dd class="col-sm-6">{{ strtoupper($receta->dp ?? 'N/A') }}</dd>
+                                    </dl>
+                                </div>
+                                <div class="col-md-6">
+                                    <dl class="row mb-0">
+                                        <dt class="col-12">OBSERVACIONES:</dt>
+                                        <dd class="col-12">
+                                            @if($receta->observaciones)
+                                                <div class="p-2 bg-light rounded">
+                                                    {{ strtoupper($receta->observaciones) }}
+                                                </div>
+                                            @else
+                                                <span class="text-muted">Sin observaciones</span>
+                                            @endif
+                                        </dd>
+                                    </dl>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    @endif
-                    
-                    <div class="table-responsive mb-3">
-                        <table class="table table-bordered text-center">
-                            <thead class="thead-light">
-                                <tr>
-                                    <th></th>
-                                    <th>ESFERA</th>
-                                    <th>CILINDRO</th>
-                                    <th>EJE</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>OD</strong></td>
-                                    <td>{{ $historialClinico->recetas->first()->od_esfera ?? 'N/A' }}</td>
-                                    <td>{{ $historialClinico->recetas->first()->od_cilindro ?? 'N/A' }}</td>
-                                    <td>{{ $historialClinico->recetas->first()->od_eje ?? 'N/A' }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>OI</strong></td>
-                                    <td>{{ $historialClinico->recetas->first()->oi_esfera ?? 'N/A' }}</td>
-                                    <td>{{ $historialClinico->recetas->first()->oi_cilindro ?? 'N/A' }}</td>
-                                    <td>{{ $historialClinico->recetas->first()->oi_eje ?? 'N/A' }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <dl class="row">
-                        <dt class="col-sm-3">ADD OD:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->recetas->first()->od_adicion ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">ADD OI:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->recetas->first()->oi_adicion ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">DP:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->recetas->first()->dp ?? 'N/A') }}</dd>
-                        <dt class="col-sm-3">OBSERVACIONES:</dt>
-                        <dd class="col-sm-9">{{ strtoupper($historialClinico->recetas->first()->observaciones ?? 'N/A') }}</dd>
-                    </dl>
+                        
+                        @if(!$loop->last)
+                            <hr class="my-4">
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+        </div>
+        @else
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-prescription mr-2"></i> Recetas
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    No hay recetas registradas para este historial clínico.
                 </div>
             </div>
         </div>
@@ -328,6 +369,28 @@
     }
     .btn {
         text-transform: uppercase;
+    }
+    
+    /* Estilos para múltiples recetas */
+    .receta-container {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6 !important;
+        transition: all 0.3s ease;
+    }
+    .receta-container:hover {
+        background-color: #e9ecef;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .receta-container .table {
+        background-color: white;
+        margin-bottom: 0;
+    }
+    .receta-container .table thead {
+        background-color: #007bff !important;
+        color: white !important;
+    }
+    .badge-secondary {
+        background-color: #6c757d;
     }
 </style>
 @stop

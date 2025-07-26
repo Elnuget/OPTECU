@@ -150,119 +150,180 @@
                 </div>
             </div>
 
-            {{-- PRESCRIPCIÓN / RECETA --}}
+            {{-- PRESCRIPCIÓN / RECETAS --}}
             <div class="card mb-4">
                 <div class="card-header" data-toggle="collapse" data-target="#prescripcion" style="cursor: pointer">
                     <h5 class="mb-0">
-                        <i class="fas fa-prescription mr-2"></i> Receta
+                        <i class="fas fa-prescription mr-2"></i> Recetas
                     </h5>
                 </div>
                 <div id="prescripcion" class="collapse show">
                     <div class="card-body">
-                        {{-- Campo Tipo de Receta --}}
+                        {{-- Botón para añadir nueva receta --}}
                         <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="tipo"><strong>Tipo de Receta</strong></label>
-                                    <select name="tipo" id="tipo" class="form-control">
-                                        <option value="">Seleccionar...</option>
-                                        <option value="CERCA" {{ old('tipo', $receta->tipo ?? '') == 'CERCA' ? 'selected' : '' }}>CERCA</option>
-                                        <option value="LEJOS" {{ old('tipo', $receta->tipo ?? '') == 'LEJOS' ? 'selected' : '' }}>LEJOS</option>
-                                    </select>
-                                </div>
+                            <div class="col-md-12">
+                                <button type="button" id="btnAnadirReceta" class="btn btn-success btn-sm">
+                                    <i class="fas fa-plus mr-2"></i>Añadir Receta
+                                </button>
+                                <hr>
                             </div>
                         </div>
-                        
-                        <div class="table-responsive mb-3">
-                            <table class="table table-bordered">
-                                <thead class="bg-primary text-white">
-                                    <tr>
-                                        <th></th>
-                                        <th class="text-center">Esfera</th>
-                                        <th class="text-center">Cilindro</th>
-                                        <th class="text-center">Eje</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td class="font-weight-bold">OD</td>
-                                        <td><input type="text" name="od_esfera" class="form-control" value="{{ old('od_esfera', $receta->od_esfera ?? '') }}"></td>
-                                        <td><input type="text" name="od_cilindro" class="form-control" value="{{ old('od_cilindro', $receta->od_cilindro ?? '') }}"></td>
-                                        <td><input type="text" name="od_eje" class="form-control" value="{{ old('od_eje', $receta->od_eje ?? '') }}"></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">OI</td>
-                                        <td><input type="text" name="oi_esfera" class="form-control" value="{{ old('oi_esfera', $receta->oi_esfera ?? '') }}"></td>
-                                        <td><input type="text" name="oi_cilindro" class="form-control" value="{{ old('oi_cilindro', $receta->oi_cilindro ?? '') }}"></td>
-                                        <td><input type="text" name="oi_eje" class="form-control" value="{{ old('oi_eje', $receta->oi_eje ?? '') }}"></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="add">ADD</label>
-                                    <input type="text" name="add" id="add" class="form-control" value="{{ old('add', $historialClinico->add) }}">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="dp">DP pl/pc</label>
-                                    <input type="text" name="dp" id="dp" class="form-control" value="{{ old('dp', $receta->dp ?? '') }}">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header bg-light">
-                                        <h6 class="mb-0">Diagnóstico:</h6>
+
+                        {{-- Contenedor para todas las recetas --}}
+                        <div id="recetasContainer">
+                            @if($recetas && $recetas->count() > 0)
+                                {{-- Mostrar recetas existentes --}}
+                                @foreach($recetas as $index => $recetaItem)
+                                    <div class="receta-item border rounded p-3 mb-3" data-receta-index="{{ $index }}">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 class="mb-0 text-primary">
+                                                <i class="fas fa-prescription mr-2"></i>Receta #<span class="receta-number">{{ $index + 1 }}</span>
+                                            </h6>
+                                            <button type="button" class="btn btn-danger btn-sm btn-eliminar-receta" style="{{ $recetas->count() <= 1 ? 'display: none;' : '' }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+
+                                        {{-- Campo Tipo de Receta --}}
+                                        <div class="row mb-3">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label><strong>Tipo de Receta</strong></label>
+                                                    <select name="recetas[{{ $index }}][tipo]" class="form-control">
+                                                        <option value="">Seleccionar...</option>
+                                                        <option value="CERCA" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'CERCA' ? 'selected' : '' }}>CERCA</option>
+                                                        <option value="LEJOS" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'LEJOS' ? 'selected' : '' }}>LEJOS</option>
+                                                        <option value="BIFOCAL" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'BIFOCAL' ? 'selected' : '' }}>BIFOCAL</option>
+                                                        <option value="PROGRESIVO" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'PROGRESIVO' ? 'selected' : '' }}>PROGRESIVO</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="table-responsive mb-3">
+                                            <table class="table table-bordered">
+                                                <thead class="bg-primary text-white">
+                                                    <tr>
+                                                        <th></th>
+                                                        <th class="text-center">Esfera</th>
+                                                        <th class="text-center">Cilindro</th>
+                                                        <th class="text-center">Eje</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="font-weight-bold">OD</td>
+                                                        <td><input type="text" name="recetas[{{ $index }}][od_esfera]" class="form-control" value="{{ old("recetas.{$index}.od_esfera", $recetaItem->od_esfera) }}"></td>
+                                                        <td><input type="text" name="recetas[{{ $index }}][od_cilindro]" class="form-control" value="{{ old("recetas.{$index}.od_cilindro", $recetaItem->od_cilindro) }}"></td>
+                                                        <td><input type="text" name="recetas[{{ $index }}][od_eje]" class="form-control" value="{{ old("recetas.{$index}.od_eje", $recetaItem->od_eje) }}"></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="font-weight-bold">OI</td>
+                                                        <td><input type="text" name="recetas[{{ $index }}][oi_esfera]" class="form-control" value="{{ old("recetas.{$index}.oi_esfera", $recetaItem->oi_esfera) }}"></td>
+                                                        <td><input type="text" name="recetas[{{ $index }}][oi_cilindro]" class="form-control" value="{{ old("recetas.{$index}.oi_cilindro", $recetaItem->oi_cilindro) }}"></td>
+                                                        <td><input type="text" name="recetas[{{ $index }}][oi_eje]" class="form-control" value="{{ old("recetas.{$index}.oi_eje", $recetaItem->oi_eje) }}"></td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>ADD</label>
+                                                    <input type="text" name="recetas[{{ $index }}][od_adicion]" class="form-control" value="{{ old("recetas.{$index}.od_adicion", $recetaItem->od_adicion) }}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label>DP pl/pc</label>
+                                                    <input type="text" name="recetas[{{ $index }}][dp]" class="form-control" value="{{ old("recetas.{$index}.dp", $recetaItem->dp) }}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group">
+                                            <label>Observaciones:</label>
+                                            <textarea name="recetas[{{ $index }}][observaciones]" class="form-control" rows="3">{{ old("recetas.{$index}.observaciones", $recetaItem->observaciones) }}</textarea>
+                                        </div>
                                     </div>
-                                    <div class="card-body">
-                                        @php
-                                            $diagnosticosGuardados = explode(',', strtoupper($historialClinico->diagnostico ?? ''));
-                                            $diagnosticosGuardados = array_map('trim', $diagnosticosGuardados);
-                                        @endphp
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" value="Astigmatismo" id="astigmatismo" {{ in_array('ASTIGMATISMO', $diagnosticosGuardados) ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="astigmatismo">Astigmatismo</label>
+                                @endforeach
+                            @else
+                                {{-- Si no hay recetas, mostrar template vacío --}}
+                                <div class="receta-item border rounded p-3 mb-3" data-receta-index="0">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="mb-0 text-primary">
+                                            <i class="fas fa-prescription mr-2"></i>Receta #<span class="receta-number">1</span>
+                                        </h6>
+                                        <button type="button" class="btn btn-danger btn-sm btn-eliminar-receta" style="display: none;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+
+                                    {{-- Campo Tipo de Receta --}}
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label><strong>Tipo de Receta</strong></label>
+                                                <select name="recetas[0][tipo]" class="form-control">
+                                                    <option value="">Seleccionar...</option>
+                                                    <option value="CERCA">CERCA</option>
+                                                    <option value="LEJOS">LEJOS</option>
+                                                    <option value="BIFOCAL">BIFOCAL</option>
+                                                    <option value="PROGRESIVO">PROGRESIVO</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" value="Hipermetropía" id="hipermetropia" {{ in_array('HIPERMETROPÍA', $diagnosticosGuardados) ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="hipermetropia">Hipermetropía</label>
+                                    </div>
+                                    
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-bordered">
+                                            <thead class="bg-primary text-white">
+                                                <tr>
+                                                    <th></th>
+                                                    <th class="text-center">Esfera</th>
+                                                    <th class="text-center">Cilindro</th>
+                                                    <th class="text-center">Eje</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td class="font-weight-bold">OD</td>
+                                                    <td><input type="text" name="recetas[0][od_esfera]" class="form-control"></td>
+                                                    <td><input type="text" name="recetas[0][od_cilindro]" class="form-control"></td>
+                                                    <td><input type="text" name="recetas[0][od_eje]" class="form-control"></td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="font-weight-bold">OI</td>
+                                                    <td><input type="text" name="recetas[0][oi_esfera]" class="form-control"></td>
+                                                    <td><input type="text" name="recetas[0][oi_cilindro]" class="form-control"></td>
+                                                    <td><input type="text" name="recetas[0][oi_eje]" class="form-control"></td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>ADD</label>
+                                                <input type="text" name="recetas[0][od_adicion]" class="form-control">
+                                            </div>
                                         </div>
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" value="Miopía" id="miopia" {{ in_array('MIOPÍA', $diagnosticosGuardados) ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="miopia">Miopía</label>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label>DP pl/pc</label>
+                                                <input type="text" name="recetas[0][dp]" class="form-control">
+                                            </div>
                                         </div>
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" value="Presbicia" id="presbicia" {{ in_array('PRESBICIA', $diagnosticosGuardados) ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="presbicia">Presbicia</label>
-                                        </div>
-                                        <input type="hidden" name="diagnostico" id="diagnostico_string" value="{{ old('diagnostico', $historialClinico->diagnostico) }}">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Observaciones:</label>
+                                        <textarea name="recetas[0][observaciones]" class="form-control" rows="3"></textarea>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <h6 class="card-title">NOTA IMPORTANTE:</h6>
-                                        <p class="card-text">
-                                            El período de adaptación del lente óptico varía de 2 a 3 semanas, puede tener molestias como:
-                                            mareos, dolor de cabeza, visión a desnivel.
-                                            Estas desaparecerán a medida que se adapte al lente.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group mt-4">
-                            <label for="observaciones">Observaciones:</label>
-                            <textarea name="observaciones" id="observaciones" class="form-control" rows="3">{{ old('observaciones', $receta->observaciones ?? '') }}</textarea>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -610,6 +671,181 @@
 
         // Llamar a la función de diagnóstico al cargar la página
         actualizarDiagnosticoString();
+
+        // Funcionalidad para múltiples recetas
+        let recetaIndex = {{ $recetas && $recetas->count() > 0 ? $recetas->count() - 1 : 0 }};
+
+        // Función para añadir nueva receta
+        $('#btnAnadirReceta').on('click', function() {
+            recetaIndex++;
+            
+            const nuevaReceta = `
+                <div class="receta-item border rounded p-3 mb-3" data-receta-index="${recetaIndex}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0 text-primary">
+                            <i class="fas fa-prescription mr-2"></i>Receta #<span class="receta-number">${recetaIndex + 1}</span>
+                        </h6>
+                        <button type="button" class="btn btn-danger btn-sm btn-eliminar-receta">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label><strong>Tipo de Receta</strong></label>
+                                <select name="recetas[${recetaIndex}][tipo]" class="form-control">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="CERCA">CERCA</option>
+                                    <option value="LEJOS">LEJOS</option>
+                                    <option value="BIFOCAL">BIFOCAL</option>
+                                    <option value="PROGRESIVO">PROGRESIVO</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered">
+                            <thead class="bg-primary text-white">
+                                <tr>
+                                    <th></th>
+                                    <th class="text-center">Esfera</th>
+                                    <th class="text-center">Cilindro</th>
+                                    <th class="text-center">Eje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-weight-bold">OD</td>
+                                    <td><input type="text" name="recetas[${recetaIndex}][od_esfera]" class="form-control"></td>
+                                    <td><input type="text" name="recetas[${recetaIndex}][od_cilindro]" class="form-control"></td>
+                                    <td><input type="text" name="recetas[${recetaIndex}][od_eje]" class="form-control"></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-weight-bold">OI</td>
+                                    <td><input type="text" name="recetas[${recetaIndex}][oi_esfera]" class="form-control"></td>
+                                    <td><input type="text" name="recetas[${recetaIndex}][oi_cilindro]" class="form-control"></td>
+                                    <td><input type="text" name="recetas[${recetaIndex}][oi_eje]" class="form-control"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>ADD</label>
+                                <input type="text" name="recetas[${recetaIndex}][od_adicion]" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>DP pl/pc</label>
+                                <input type="text" name="recetas[${recetaIndex}][dp]" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Observaciones:</label>
+                        <textarea name="recetas[${recetaIndex}][observaciones]" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+            `;
+            
+            $('#recetasContainer').append(nuevaReceta);
+            actualizarBotonesEliminar();
+            
+            // Aplicar eventos a los nuevos campos
+            aplicarEventosReceta();
+        });
+
+        // Función para eliminar receta
+        $(document).on('click', '.btn-eliminar-receta', function() {
+            $(this).closest('.receta-item').remove();
+            actualizarNumerosRecetas();
+            actualizarBotonesEliminar();
+        });
+
+        // Función para actualizar números de recetas
+        function actualizarNumerosRecetas() {
+            $('.receta-item').each(function(index) {
+                $(this).find('.receta-number').text(index + 1);
+            });
+        }
+
+        // Función para mostrar/ocultar botones de eliminar
+        function actualizarBotonesEliminar() {
+            const totalRecetas = $('.receta-item').length;
+            if (totalRecetas > 1) {
+                $('.btn-eliminar-receta').show();
+            } else {
+                $('.btn-eliminar-receta').hide();
+            }
+        }
+
+        // Función para aplicar eventos a campos de receta
+        function aplicarEventosReceta() {
+            // Validación en tiempo real para campos de receta
+            $('input[name*="[od_esfera]"], input[name*="[od_cilindro]"], input[name*="[oi_esfera]"], input[name*="[oi_cilindro]"], input[name*="[od_adicion]"], input[name*="[dp]"]').off('input').on('input', function() {
+                const campo = $(this);
+                const valor = campo.val().trim();
+                
+                // Remover estilos de error previos
+                campo.removeClass('is-invalid');
+                campo.next('.invalid-feedback').remove();
+                
+                // Validar campos numéricos de la receta
+                if (valor) {
+                    // Para esfera, cilindro, ADD (deben ser números con posibles signos + o -)
+                    const patronNumerico = /^[+\-]?\d*\.?\d*$/;
+                    if (!patronNumerico.test(valor)) {
+                        campo.addClass('is-invalid');
+                        campo.after('<div class="invalid-feedback">Debe ser un valor numérico válido (ej: +2.25, -1.50)</div>');
+                    }
+                }
+            });
+
+            // Para campos de eje
+            $('input[name*="[od_eje]"], input[name*="[oi_eje]"]').off('input').on('input', function() {
+                const campo = $(this);
+                const valor = campo.val().trim();
+                
+                // Remover estilos de error previos
+                campo.removeClass('is-invalid');
+                campo.next('.invalid-feedback').remove();
+                
+                if (valor) {
+                    // Para eje (debe ser un número entre 0 y 180)
+                    const eje = parseInt(valor.replace('°', ''));
+                    if (isNaN(eje) || eje < 0 || eje > 180) {
+                        campo.addClass('is-invalid');
+                        campo.after('<div class="invalid-feedback">El eje debe ser un número entre 0 y 180</div>');
+                    }
+                }
+            });
+
+            // Auto-formatear campos de eje para agregar símbolo de grado
+            $('input[name*="[od_eje]"], input[name*="[oi_eje]"]').off('blur').on('blur', function() {
+                let valor = $(this).val().trim();
+                if (valor && !valor.includes('°')) {
+                    const numero = parseInt(valor);
+                    if (!isNaN(numero) && numero >= 0 && numero <= 180) {
+                        $(this).val(numero + '°');
+                    }
+                }
+            });
+
+            // Convertir campos de texto a mayúsculas
+            $('input[name*="recetas"], textarea[name*="recetas"]').off('input.uppercase').on('input.uppercase', function() {
+                $(this).val($(this).val().toUpperCase());
+            });
+        }
+
+        // Aplicar eventos iniciales
+        aplicarEventosReceta();
+        actualizarBotonesEliminar();
     });
 </script>
 @stop

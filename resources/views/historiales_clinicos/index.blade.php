@@ -128,6 +128,7 @@
                         <th>APELLIDOS</th>
                         <th>FECHA</th>
                         <th>PRÓXIMA CONSULTA</th>
+                        <th>RECETAS</th>
                         <th>EMPRESA</th>
                         <th>USUARIO</th>
                         <th>ACCIONES</th>
@@ -147,6 +148,17 @@
                                 </span>
                             @else
                                 <span class="badge badge-secondary">NO PROGRAMADA</span>
+                            @endif
+                        </td>
+                        <td class="text-center">
+                            @if($historial->recetas && $historial->recetas->count() > 0)
+                                <span class="badge badge-primary" title="Número de recetas">
+                                    <i class="fas fa-prescription mr-1"></i>{{ $historial->recetas->count() }}
+                                </span>
+                            @else
+                                <span class="badge badge-secondary" title="Sin recetas">
+                                    <i class="fas fa-prescription mr-1"></i>0
+                                </span>
                             @endif
                         </td>
                         <td>{{ $historial->empresa ? strtoupper($historial->empresa->nombre) : 'SIN EMPRESA' }}</td>

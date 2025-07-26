@@ -213,15 +213,19 @@ class HistorialClinicoController extends Controller
             'cotizacion' => 'nullable|string|max:1000',
             'usuario_id' => 'nullable|exists:users,id',
             
-            // Reglas de validación para campos de receta
-            'od_esfera' => 'nullable|string|max:20',
-            'od_cilindro' => 'nullable|string|max:20',
-            'od_eje' => 'nullable|string|max:20',
-            'oi_esfera' => 'nullable|string|max:20',
-            'oi_cilindro' => 'nullable|string|max:20',
-            'oi_eje' => 'nullable|string|max:20',
-            'dp' => 'nullable|string|max:20',
-            'observaciones' => 'nullable|string|max:1000',
+            // Reglas de validación para múltiples recetas
+            'recetas' => 'nullable|array',
+            'recetas.*.od_esfera' => 'nullable|string|max:20',
+            'recetas.*.od_cilindro' => 'nullable|string|max:20',
+            'recetas.*.od_eje' => 'nullable|string|max:20',
+            'recetas.*.od_adicion' => 'nullable|string|max:20',
+            'recetas.*.oi_esfera' => 'nullable|string|max:20',
+            'recetas.*.oi_cilindro' => 'nullable|string|max:20',
+            'recetas.*.oi_eje' => 'nullable|string|max:20',
+            'recetas.*.oi_adicion' => 'nullable|string|max:20',
+            'recetas.*.dp' => 'nullable|string|max:20',
+            'recetas.*.observaciones' => 'nullable|string|max:1000',
+            'recetas.*.tipo' => 'nullable|string|max:50',
         ];
     }
 
@@ -293,31 +297,14 @@ class HistorialClinicoController extends Controller
             // Crear el historial clínico
             $historialClinico = HistorialClinico::create($data);
 
-            // Guardar la receta asociada al historial clínico
-            if ($historialClinico) {
-                // Extraer los datos de la receta del formulario
-                $recetaData = [
-                    'historial_clinico_id' => $historialClinico->id,
-                    'od_esfera' => $request->input('od_esfera'),
-                    'od_cilindro' => $request->input('od_cilindro'),
-                    'od_eje' => $request->input('od_eje'),
-                    'od_adicion' => $request->input('add'), // Usamos el mismo valor de ADD para ambos ojos
-                    'oi_esfera' => $request->input('oi_esfera'),
-                    'oi_cilindro' => $request->input('oi_cilindro'),
-                    'oi_eje' => $request->input('oi_eje'),
-                    'oi_adicion' => $request->input('add'), // Usamos el mismo valor de ADD para ambos ojos
-                    'dp' => $request->input('dp'),
-                    'observaciones' => $request->input('observaciones'),
-                    'tipo' => $request->input('tipo')
-                ];
-                
-                // Crear la receta
-                \App\Models\Receta::create($recetaData);
+            // Guardar las recetas asociadas al historial clínico
+            if ($historialClinico && $request->has('recetas')) {
+                $this->guardarMultiplesRecetas($request->input('recetas'), $historialClinico->id);
             }
 
             return redirect()
                 ->route('historiales_clinicos.index')
-                ->with('success', 'Historial clínico y receta creados exitosamente');
+                ->with('success', 'Historial clínico y recetas creados exitosamente');
                 
         } catch (\Exception $e) {
             Log::error('Error al crear historial clínico: ' . $e->getMessage());
@@ -354,10 +341,11 @@ class HistorialClinicoController extends Controller
             $userEmpresaId = auth()->user()->empresa_id;
         }
         
-        // Obtener la receta asociada al historial clínico
-        $receta = $historialClinico->recetas->first();
+        // Obtener todas las recetas asociadas al historial clínico
+        $recetas = $historialClinico->recetas;
+        $receta = $recetas->first(); // Mantener compatibilidad con la vista actual
         
-        return view('historiales_clinicos.edit', compact('historialClinico', 'empresas', 'userEmpresaId', 'isUserAdmin', 'receta'));
+        return view('historiales_clinicos.edit', compact('historialClinico', 'empresas', 'userEmpresaId', 'isUserAdmin', 'receta', 'recetas'));
     }
 
     public function update(Request $request, $id)
@@ -381,14 +369,14 @@ class HistorialClinicoController extends Controller
             // Actualizar el registro del historial clínico
             $historialClinico->update($data);
             
-            // Manejar la receta asociada
-            $this->actualizarReceta($request, $historialClinico->id);
+            // Manejar las recetas asociadas
+            $this->actualizarMultiplesRecetas($request, $historialClinico->id);
             
             \DB::commit();
             
             return redirect()
                 ->route('historiales_clinicos.index')
-                ->with('success', 'Historial clínico y receta actualizados exitosamente');
+                ->with('success', 'Historial clínico y recetas actualizadas exitosamente');
                 
         } catch (\Exception $e) {
             \DB::rollback();
@@ -862,5 +850,49 @@ class HistorialClinicoController extends Controller
             ->distinct()
             ->pluck($tipo)
             ->toArray();
+    }
+
+    /**
+     * Guardar múltiples recetas asociadas a un historial clínico
+     */
+    private function guardarMultiplesRecetas($recetas, $historialClinicoId)
+    {
+        foreach ($recetas as $recetaData) {
+            // Filtrar campos vacíos
+            $recetaData = array_filter($recetaData, function($value) {
+                return $value !== null && $value !== '';
+            });
+            
+            // Solo crear la receta si tiene al menos un campo con datos
+            if (count($recetaData) > 0) {
+                $recetaData['historial_clinico_id'] = $historialClinicoId;
+                
+                // Asegurar que oi_adicion tenga el mismo valor que od_adicion si no está definido
+                if (isset($recetaData['od_adicion']) && !isset($recetaData['oi_adicion'])) {
+                    $recetaData['oi_adicion'] = $recetaData['od_adicion'];
+                }
+                
+                \App\Models\Receta::create($recetaData);
+                Log::info('Receta creada para historial clínico ID: ' . $historialClinicoId);
+            }
+        }
+    }
+
+    /**
+     * Actualizar múltiples recetas asociadas a un historial clínico
+     */
+    private function actualizarMultiplesRecetas(Request $request, $historialClinicoId)
+    {
+        // Si el request contiene recetas múltiples, usar ese formato
+        if ($request->has('recetas')) {
+            // Eliminar recetas existentes
+            \App\Models\Receta::where('historial_clinico_id', $historialClinicoId)->delete();
+            
+            // Crear las nuevas recetas
+            $this->guardarMultiplesRecetas($request->input('recetas'), $historialClinicoId);
+        } else {
+            // Mantener compatibilidad con formato antiguo
+            $this->actualizarReceta($request, $historialClinicoId);
+        }
     }
 }

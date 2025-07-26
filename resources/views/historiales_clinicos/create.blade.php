@@ -156,125 +156,102 @@
                 </div>
             </div>
 
-            {{-- PRESCRIPCIÓN / RECETA --}}
+            {{-- PRESCRIPCIÓN / RECETAS --}}
             <div class="card mb-4">
                 <div class="card-header" data-toggle="collapse" data-target="#prescripcion" style="cursor: pointer">
                     <h5 class="mb-0">
-                        <i class="fas fa-prescription mr-2"></i> Receta
+                        <i class="fas fa-prescription mr-2"></i> Recetas
                         <small class="text-muted ml-2">(Al buscar un paciente, se cargarán los datos de su última receta)</small>
                     </h5>
                 </div>
                 <div id="prescripcion" class="collapse">
                     <div class="card-body">
-                        {{-- Campo Tipo de Receta --}}
+                        {{-- Botón para añadir nueva receta --}}
                         <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="tipo"><strong>Tipo de Receta</strong></label>
-                                    <select name="tipo" id="tipo" class="form-control">
-                                        <option value="">Seleccionar...</option>
-                                        <option value="CERCA">CERCA</option>
-                                        <option value="LEJOS">LEJOS</option>
-                                    </select>
-                                </div>
+                            <div class="col-md-12">
+                                <button type="button" id="btnAnadirReceta" class="btn btn-success btn-sm">
+                                    <i class="fas fa-plus mr-2"></i>Añadir Receta
+                                </button>
+                                <hr>
                             </div>
                         </div>
-                        
-                        <div class="table-responsive mb-3">
-                            <table class="table table-bordered">
-                                <thead class="bg-primary text-white">
-                                    <tr>
-                                        <th></th>
-                                        <th class="text-center">Esfera</th>
-                                        <th class="text-center">Cilindro</th>
-                                        <th class="text-center">Eje</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td class="font-weight-bold">OD</td>
-                                        <td><input type="text" name="od_esfera" class="form-control"></td>
-                                        <td><input type="text" name="od_cilindro" class="form-control"></td>
-                                        <td><input type="text" name="od_eje" class="form-control"></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="font-weight-bold">OI</td>
-                                        <td><input type="text" name="oi_esfera" class="form-control"></td>
-                                        <td><input type="text" name="oi_cilindro" class="form-control"></td>
-                                        <td><input type="text" name="oi_eje" class="form-control"></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="add">ADD</label>
-                                    <input type="text" name="add" id="add" class="form-control">
+
+                        {{-- Contenedor para todas las recetas --}}
+                        <div id="recetasContainer">
+                            {{-- Primera receta (template inicial) --}}
+                            <div class="receta-item border rounded p-3 mb-3" data-receta-index="0">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h6 class="mb-0 text-primary">
+                                        <i class="fas fa-prescription mr-2"></i>Receta #<span class="receta-number">1</span>
+                                    </h6>
+                                    <button type="button" class="btn btn-danger btn-sm btn-eliminar-receta" style="display: none;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="dp">DP pl/pc</label>
-                                    <input type="text" name="dp" id="dp" class="form-control">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header bg-light">
-                                        <h6 class="mb-0">Diagnóstico:</h6>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Astigmatismo" id="astigmatismo">
-                                            <label class="form-check-label" for="astigmatismo">
-                                                Astigmatismo
-                                            </label>
+
+                                {{-- Campo Tipo de Receta --}}
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label for="recetas[0][tipo]"><strong>Tipo de Receta</strong></label>
+                                            <select name="recetas[0][tipo]" class="form-control">
+                                                <option value="">Seleccionar...</option>
+                                                <option value="CERCA">CERCA</option>
+                                                <option value="LEJOS">LEJOS</option>
+                                                <option value="BIFOCAL">BIFOCAL</option>
+                                                <option value="PROGRESIVO">PROGRESIVO</option>
+                                            </select>
                                         </div>
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Hipermetropía" id="hipermetropia">
-                                            <label class="form-check-label" for="hipermetropia">
-                                                Hipermetropía
-                                            </label>
-                                        </div>
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Miopía" id="miopia">
-                                            <label class="form-check-label" for="miopia">
-                                                Miopía
-                                            </label>
-                                        </div>
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Presbicia" id="presbicia">
-                                            <label class="form-check-label" for="presbicia">
-                                                Presbicia
-                                            </label>
-                                        </div>
-                                        <!-- Campo oculto para almacenar diagnósticos como string -->
-                                        <input type="hidden" name="diagnostico" id="diagnostico_string" value="">
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <h6 class="card-title">NOTA IMPORTANTE:</h6>
-                                        <p class="card-text">
-                                            El período de adaptación del lente óptico varía de 2 a 3 semanas, puede tener molestias como:
-                                            mareos, dolor de cabeza, visión a desnivel.
-                                            Estas desaparecerán a medida que se adapte al lente.
-                                        </p>
+                        
+                                <div class="table-responsive mb-3">
+                                    <table class="table table-bordered">
+                                        <thead class="bg-primary text-white">
+                                            <tr>
+                                                <th></th>
+                                                <th class="text-center">Esfera</th>
+                                                <th class="text-center">Cilindro</th>
+                                                <th class="text-center">Eje</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td class="font-weight-bold">OD</td>
+                                                <td><input type="text" name="recetas[0][od_esfera]" class="form-control"></td>
+                                                <td><input type="text" name="recetas[0][od_cilindro]" class="form-control"></td>
+                                                <td><input type="text" name="recetas[0][od_eje]" class="form-control"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="font-weight-bold">OI</td>
+                                                <td><input type="text" name="recetas[0][oi_esfera]" class="form-control"></td>
+                                                <td><input type="text" name="recetas[0][oi_cilindro]" class="form-control"></td>
+                                                <td><input type="text" name="recetas[0][oi_eje]" class="form-control"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>ADD</label>
+                                            <input type="text" name="recetas[0][od_adicion]" class="form-control">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>DP pl/pc</label>
+                                            <input type="text" name="recetas[0][dp]" class="form-control">
+                                        </div>
                                     </div>
                                 </div>
+                                
+                                <div class="form-group">
+                                    <label>Observaciones:</label>
+                                    <textarea name="recetas[0][observaciones]" class="form-control" rows="3"></textarea>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <div class="form-group mt-4">
-                            <label for="observaciones">Observaciones:</label>
-                            <textarea name="observaciones" id="observaciones" class="form-control" rows="3"></textarea>
                         </div>
                     </div>
                 </div>
@@ -805,6 +782,116 @@
                 cargarDatosPersonales('celular', this.value);
             }
         });
+
+        // Funcionalidad para múltiples recetas
+        let recetaIndex = 0;
+
+        // Función para añadir nueva receta
+        $('#btnAnadirReceta').on('click', function() {
+            recetaIndex++;
+            
+            const nuevaReceta = `
+                <div class="receta-item border rounded p-3 mb-3" data-receta-index="${recetaIndex}">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0 text-primary">
+                            <i class="fas fa-prescription mr-2"></i>Receta #<span class="receta-number">${recetaIndex + 1}</span>
+                        </h6>
+                        <button type="button" class="btn btn-danger btn-sm btn-eliminar-receta">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label><strong>Tipo de Receta</strong></label>
+                                <select name="recetas[${recetaIndex}][tipo]" class="form-control">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="CERCA">CERCA</option>
+                                    <option value="LEJOS">LEJOS</option>
+                                    <option value="BIFOCAL">BIFOCAL</option>
+                                    <option value="PROGRESIVO">PROGRESIVO</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered">
+                            <thead class="bg-primary text-white">
+                                <tr>
+                                    <th></th>
+                                    <th class="text-center">Esfera</th>
+                                    <th class="text-center">Cilindro</th>
+                                    <th class="text-center">Eje</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-weight-bold">OD</td>
+                                    <td><input type="text" name="recetas[${recetaIndex}][od_esfera]" class="form-control"></td>
+                                    <td><input type="text" name="recetas[${recetaIndex}][od_cilindro]" class="form-control"></td>
+                                    <td><input type="text" name="recetas[${recetaIndex}][od_eje]" class="form-control"></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-weight-bold">OI</td>
+                                    <td><input type="text" name="recetas[${recetaIndex}][oi_esfera]" class="form-control"></td>
+                                    <td><input type="text" name="recetas[${recetaIndex}][oi_cilindro]" class="form-control"></td>
+                                    <td><input type="text" name="recetas[${recetaIndex}][oi_eje]" class="form-control"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>ADD</label>
+                                <input type="text" name="recetas[${recetaIndex}][od_adicion]" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>DP pl/pc</label>
+                                <input type="text" name="recetas[${recetaIndex}][dp]" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Observaciones:</label>
+                        <textarea name="recetas[${recetaIndex}][observaciones]" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+            `;
+            
+            $('#recetasContainer').append(nuevaReceta);
+            actualizarBotonesEliminar();
+        });
+
+        // Función para eliminar receta
+        $(document).on('click', '.btn-eliminar-receta', function() {
+            $(this).closest('.receta-item').remove();
+            actualizarNumerosRecetas();
+            actualizarBotonesEliminar();
+        });
+
+        // Función para actualizar números de recetas
+        function actualizarNumerosRecetas() {
+            $('.receta-item').each(function(index) {
+                $(this).find('.receta-number').text(index + 1);
+            });
+        }
+
+        // Función para mostrar/ocultar botones de eliminar
+        function actualizarBotonesEliminar() {
+            const totalRecetas = $('.receta-item').length;
+            if (totalRecetas > 1) {
+                $('.btn-eliminar-receta').show();
+            } else {
+                $('.btn-eliminar-receta').hide();
+            }
+        }
     });
 </script>
 @stop
