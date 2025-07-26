@@ -110,7 +110,8 @@ class PedidosController extends Controller
                 'usuario',
                 'encuesta', // Asegurarnos de que la columna encuesta se cargue explícitamente
                 'metodo_envio',
-                'reclamo' // Agregar el campo reclamo
+                'reclamo', // Agregar el campo reclamo
+                'urgente' // Agregar el campo urgente
             ])
             ->orderBy('numero_orden', 'desc')
             ->get();

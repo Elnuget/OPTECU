@@ -28,6 +28,27 @@
         .btn {
             text-transform: uppercase !important;
         }
+
+        /* Estilos para filas con reclamos */
+        .reclamo-row {
+            background-color: #f8d7da !important; /* Fondo rojo claro */
+        }
+
+        /* Estilos para filas urgentes */
+        .urgente-row {
+            background-color: #fff3cd !important; /* Fondo amarillo claro */
+            border-left: 4px solid #ffc107 !important; /* Borde izquierdo amarillo */
+        }
+
+        /* Estilos para filas urgentes con reclamo (prioridad a urgente) */
+        .urgente-con-reclamo {
+            background: linear-gradient(90deg, #fff3cd 50%, #f8d7da 50%) !important;
+            border-left: 4px solid #ffc107 !important;
+        }
+
+        .bg-warning-light {
+            background-color: #fff3cd !important;
+        }
     </style>
 
 <div class="card">
@@ -193,7 +214,11 @@
                 </thead>
                 <tbody>
                     @foreach ($pedidos as $pedido)
-                    <tr class="{{ !is_null($pedido->reclamo) && trim($pedido->reclamo) !== '' ? 'bg-danger-light reclamo-row' : '' }}">
+                    <tr class="{{ 
+                        $pedido->urgente && (!is_null($pedido->reclamo) && trim($pedido->reclamo) !== '') ? 'bg-warning-light urgente-row reclamo-row urgente-con-reclamo' : 
+                        ($pedido->urgente ? 'bg-warning-light urgente-row' : 
+                        (!is_null($pedido->reclamo) && trim($pedido->reclamo) !== '' ? 'bg-danger-light reclamo-row' : ''))
+                    }}">
                         <td class="checkbox-cell">
                             <input type="checkbox" name="pedidos_selected[]" value="{{ $pedido->id }}" class="pedido-checkbox">
                         </td>
@@ -385,6 +410,18 @@
                                         </button>
                                     @endif
                                 </div>
+
+                                <!-- Indicador de URGENTE -->
+                                @if($pedido->urgente)
+                                    <div class="me-1">
+                                        <span class="badge badge-warning text-dark font-weight-bold" 
+                                            title="Pedido Urgente"
+                                            data-toggle="tooltip">
+                                            <i class="fas fa-exclamation-circle me-1"></i>
+                                            URGENTE
+                                        </span>
+                                    </div>
+                                @endif
                             </div>
                         </td>
                     </tr>
