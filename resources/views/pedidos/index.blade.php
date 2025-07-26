@@ -420,7 +420,7 @@
                                             data-cliente="{{ $pedido->cliente }}"
                                             data-toggle="tooltip">
                                             <i class="fas fa-exclamation-circle me-1"></i>
-                                            <span class="d-none d-lg-inline">Quitar Urgente</span>
+                                            <span class="d-none d-lg-inline">Desmarcar</span>
                                         </button>
                                     @else
                                         <button type="button" class="btn btn-outline-warning btn-sm btn-marcar-urgente" 
@@ -429,7 +429,7 @@
                                             data-cliente="{{ $pedido->cliente }}"
                                             data-toggle="tooltip">
                                             <i class="fas fa-clock me-1"></i>
-                                            <span class="d-none d-lg-inline">Marcar Urgente</span>
+                                            <span class="d-none d-lg-inline">Marcar</span>
                                         </button>
                                     @endif
                                 </div>
