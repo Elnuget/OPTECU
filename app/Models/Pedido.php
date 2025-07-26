@@ -44,13 +44,15 @@ class Pedido extends Model
         'comentario_calificacion',
         'metodo_envio',
         'fecha_entrega',
-        'reclamo'
+        'reclamo',
+        'urgente'
     ];
 
     protected $dates = ['deleted_at', 'fecha', 'fecha_entrega'];
 
     protected $casts = [
         'fecha' => 'datetime',
+        'urgente' => 'boolean',
     ];
 
     // Define si tu modelo debe usar timestamps (created_at y updated_at)
