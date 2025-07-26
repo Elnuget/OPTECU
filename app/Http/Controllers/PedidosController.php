@@ -1599,4 +1599,98 @@ class PedidosController extends Controller
         }
     }
 
+    /**
+     * Marcar un pedido como urgente
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function marcarUrgente($id)
+    {
+        try {
+            $pedido = Pedido::findOrFail($id);
+            
+            // Verificar que no esté ya marcado como urgente
+            if ($pedido->urgente) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El pedido ya está marcado como urgente'
+                ], 400);
+            }
+            
+            $pedido->urgente = true;
+            $pedido->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pedido marcado como urgente exitosamente',
+                'pedido' => [
+                    'id' => $pedido->id,
+                    'numero_orden' => $pedido->numero_orden,
+                    'cliente' => $pedido->cliente,
+                    'urgente' => $pedido->urgente
+                ]
+            ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pedido no encontrado'
+            ], 404);
+        } catch (\Exception $e) {
+            \Log::error('Error al marcar pedido como urgente: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor al marcar como urgente'
+            ], 500);
+        }
+    }
+
+    /**
+     * Desmarcar un pedido como urgente
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function desmarcarUrgente($id)
+    {
+        try {
+            $pedido = Pedido::findOrFail($id);
+            
+            // Verificar que esté marcado como urgente
+            if (!$pedido->urgente) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El pedido no está marcado como urgente'
+                ], 400);
+            }
+            
+            $pedido->urgente = false;
+            $pedido->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Marca de urgente removida exitosamente',
+                'pedido' => [
+                    'id' => $pedido->id,
+                    'numero_orden' => $pedido->numero_orden,
+                    'cliente' => $pedido->cliente,
+                    'urgente' => $pedido->urgente
+                ]
+            ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pedido no encontrado'
+            ], 404);
+        } catch (\Exception $e) {
+            \Log::error('Error al desmarcar pedido como urgente: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor al quitar marca de urgente'
+            ], 500);
+        }
+    }
+
 }

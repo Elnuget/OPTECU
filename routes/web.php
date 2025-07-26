@@ -162,6 +162,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::post('/pedidos/{id}/agregar-reclamo', [PedidosController::class, 'agregarReclamo'])->name('pedidos.agregar-reclamo');
     Route::delete('/pedidos/{id}/quitar-reclamo', [PedidosController::class, 'quitarReclamo'])->name('pedidos.quitar-reclamo');
 
+    // Rutas para marcar/desmarcar urgente
+    Route::post('/pedidos/{id}/marcar-urgente', [PedidosController::class, 'marcarUrgente'])->name('pedidos.marcar-urgente');
+    Route::delete('/pedidos/{id}/desmarcar-urgente', [PedidosController::class, 'desmarcarUrgente'])->name('pedidos.desmarcar-urgente');
+
     // Historiales Clinicos
     Route::prefix('historiales_clinicos')->group(function () {
         // Rutas sin parámetros primero

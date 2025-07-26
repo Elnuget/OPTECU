@@ -411,17 +411,28 @@
                                     @endif
                                 </div>
 
-                                <!-- Indicador de URGENTE -->
-                                @if($pedido->urgente)
-                                    <div class="me-1">
-                                        <span class="badge badge-warning text-dark font-weight-bold" 
-                                            title="Pedido Urgente"
+                                <!-- Botón de marcar/desmarcar URGENTE -->
+                                <div class="me-1">
+                                    @if($pedido->urgente)
+                                        <button type="button" class="btn btn-warning btn-sm btn-desmarcar-urgente" 
+                                            title="Desmarcar como Urgente" 
+                                            data-pedido-id="{{ $pedido->id }}"
+                                            data-cliente="{{ $pedido->cliente }}"
                                             data-toggle="tooltip">
                                             <i class="fas fa-exclamation-circle me-1"></i>
-                                            URGENTE
-                                        </span>
-                                    </div>
-                                @endif
+                                            <span class="d-none d-lg-inline">Quitar Urgente</span>
+                                        </button>
+                                    @else
+                                        <button type="button" class="btn btn-outline-warning btn-sm btn-marcar-urgente" 
+                                            title="Marcar como Urgente" 
+                                            data-pedido-id="{{ $pedido->id }}"
+                                            data-cliente="{{ $pedido->cliente }}"
+                                            data-toggle="tooltip">
+                                            <i class="fas fa-clock me-1"></i>
+                                            <span class="d-none d-lg-inline">Marcar Urgente</span>
+                                        </button>
+                                    @endif
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -794,7 +805,7 @@ input[type="checkbox"]:after {
     color: #007bff;
 }
 
-/* Estilo para el botón de pago */
+/* Estilos para el botón de pago */
 .btn-success {
     background-color: #28a745;
     border-color: #28a745;
@@ -806,6 +817,38 @@ input[type="checkbox"]:after {
     border-color: #1e7e34;
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+}
+
+/* Estilos para botones de urgente */
+.btn-marcar-urgente {
+    transition: all 0.2s ease;
+}
+
+.btn-marcar-urgente:hover {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(255, 193, 7, 0.3);
+}
+
+.btn-desmarcar-urgente {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+    transition: all 0.2s ease;
+}
+
+.btn-desmarcar-urgente:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+    color: #212529;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(255, 193, 7, 0.4);
+}
+
+.btn-desmarcar-urgente:focus {
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.5);
 }
 </style>
 @endpush
@@ -1469,6 +1512,136 @@ Su opinión es muy importante para nosotros.
                                 title: 'Error',
                                 text: errorMessage
                             });
+                        }
+                    });
+                }
+            });
+        });
+
+        // Manejar el botón de marcar como urgente (usando delegación de eventos)
+        $(document).on('click', '.btn-marcar-urgente', function() {
+            var button = $(this);
+            var pedidoId = button.data('pedido-id');
+            var cliente = button.data('cliente');
+            
+            // Confirmar la acción
+            Swal.fire({
+                title: '¿Marcar como Urgente?',
+                html: `¿Está seguro que desea marcar como <strong>URGENTE</strong> el pedido de <strong>${cliente}</strong>?<br><br><small class="text-info">El pedido se destacará con fondo amarillo en la lista.</small>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#ffc107',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, marcar como urgente',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Deshabilitar botón temporalmente
+                    button.prop('disabled', true);
+                    
+                    // Proceder a marcar como urgente
+                    $.ajax({
+                        url: '/pedidos/' + pedidoId + '/marcar-urgente',
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Marcado como Urgente!',
+                                    text: 'El pedido se ha marcado como urgente correctamente.',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    // Recargar la página para actualizar la vista
+                                    window.location.reload();
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            let errorMessage = 'Error al marcar como urgente';
+                            
+                            if (xhr.responseJSON) {
+                                if (xhr.responseJSON.message) {
+                                    errorMessage = xhr.responseJSON.message;
+                                }
+                            }
+                            
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: errorMessage
+                            });
+                            
+                            // Rehabilitar botón
+                            button.prop('disabled', false);
+                        }
+                    });
+                }
+            });
+        });
+
+        // Manejar el botón de desmarcar urgente (usando delegación de eventos)
+        $(document).on('click', '.btn-desmarcar-urgente', function() {
+            var button = $(this);
+            var pedidoId = button.data('pedido-id');
+            var cliente = button.data('cliente');
+            
+            // Confirmar la acción
+            Swal.fire({
+                title: '¿Quitar marca de Urgente?',
+                html: `¿Está seguro que desea quitar la marca de <strong>URGENTE</strong> del pedido de <strong>${cliente}</strong>?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#6c757d',
+                cancelButtonColor: '#ffc107',
+                confirmButtonText: 'Sí, quitar urgente',
+                cancelButtonText: 'Mantener urgente'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Deshabilitar botón temporalmente
+                    button.prop('disabled', true);
+                    
+                    // Proceder a desmarcar como urgente
+                    $.ajax({
+                        url: '/pedidos/' + pedidoId + '/desmarcar-urgente',
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Urgente Removido!',
+                                    text: 'La marca de urgente se ha removido correctamente.',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    // Recargar la página para actualizar la vista
+                                    window.location.reload();
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            let errorMessage = 'Error al quitar marca de urgente';
+                            
+                            if (xhr.responseJSON) {
+                                if (xhr.responseJSON.message) {
+                                    errorMessage = xhr.responseJSON.message;
+                                }
+                            }
+                            
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: errorMessage
+                            });
+                            
+                            // Rehabilitar botón
+                            button.prop('disabled', false);
                         }
                     });
                 }
