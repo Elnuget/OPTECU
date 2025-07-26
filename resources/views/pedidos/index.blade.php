@@ -1137,7 +1137,7 @@ input[type="checkbox"]:after {
         var pedidosTable = $('#pedidosTable').DataTable({
             "processing": true,
             "scrollX": true,
-            "order": [[3, "desc"]], // Ordenar por número de orden descendente (ahora es la columna 3)
+            "order": [], // Sin ordenamiento inicial para mantener el orden del servidor (urgentes primero)
             "paging": false, // Deshabilitar paginación
             "lengthChange": false,
             "info": false,

@@ -113,7 +113,8 @@ class PedidosController extends Controller
                 'reclamo', // Agregar el campo reclamo
                 'urgente' // Agregar el campo urgente
             ])
-            ->orderBy('numero_orden', 'desc')
+            ->orderBy('urgente', 'desc') // Pedidos urgentes primero
+            ->orderBy('numero_orden', 'desc') // Luego por número de orden
             ->get();
 
             // Log para debugging
