@@ -162,7 +162,7 @@ class PagoController extends Controller
                 'pago' => 'required|regex:/^\d+(\.\d{1,2})?$/',
                 'created_at' => 'sometimes|nullable|date',
                 'TC' => 'sometimes|nullable|boolean',
-                'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:1048576',
             ]);
 
             // Verificar que el pedido existe
@@ -330,7 +330,7 @@ class PagoController extends Controller
                 'pago' => 'nullable|regex:/^\d+(\.\d{1,2})?$/',
                 'created_at' => 'sometimes|nullable|date',
                 'TC' => 'sometimes|nullable|boolean',
-                'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:1048576',
             ]);
 
             // Format pago to ensure exact decimal
