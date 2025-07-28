@@ -6,11 +6,11 @@
     <title>HISTORIAL CLÍNICO - {{ strtoupper($historialClinico->nombres) }} {{ strtoupper($historialClinico->apellidos) }}</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 20px;
-            line-height: 1.3;
+            line-height: 1.4;
             color: #000;
-            font-size: 12px;
+            font-size: 14px;
             background: #ffffff;
         }
         
@@ -21,7 +21,7 @@
         
         .header h1 {
             margin: 0;
-            font-size: 18px;
+            font-size: 22px;
             font-weight: bold;
             text-transform: uppercase;
             color: #000;
@@ -30,14 +30,14 @@
         .fecha-impresion {
             text-align: right;
             margin-bottom: 15px;
-            font-size: 11px;
+            font-size: 13px;
             color: #000;
         }
         
         .empresa-info {
             text-align: center;
             margin: 5px 0;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: bold;
             color: #000;
         }
@@ -54,7 +54,7 @@
         
         .info-item {
             margin-bottom: 3px;
-            font-size: 11px;
+            font-size: 13px;
         }
         
         .info-label {
@@ -76,15 +76,15 @@
             padding: 0;
             margin: 0 0 5px 0;
             text-transform: uppercase;
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
             color: #000;
         }
         
         .text-content {
-            font-size: 11px;
+            font-size: 13px;
             color: #000;
-            line-height: 1.3;
+            line-height: 1.4;
             margin-bottom: 5px;
         }
         
@@ -99,7 +99,7 @@
         .receta-header {
             font-weight: bold;
             text-transform: uppercase;
-            font-size: 11px;
+            font-size: 13px;
             color: #000;
             margin-bottom: 5px;
         }
@@ -117,9 +117,9 @@
         .receta-table th,
         .receta-table td {
             border: 1px solid #000;
-            padding: 3px;
+            padding: 4px;
             text-align: center;
-            font-size: 10px;
+            font-size: 12px;
         }
         
         .receta-table th {
@@ -163,7 +163,7 @@
         }
         
         .receta-info {
-            font-size: 10px;
+            font-size: 12px;
             margin-top: 5px;
         }
         
@@ -202,26 +202,26 @@
         .firma-texto {
             font-weight: bold;
             text-transform: uppercase;
-            font-size: 10px;
+            font-size: 12px;
             color: #000;
         }
         
         @media print {
             body {
                 margin: 10px;
-                font-size: 10px;
+                font-size: 12px;
                 -webkit-print-color-adjust: exact;
                 color-adjust: exact;
             }
             
             .header h1 {
-                font-size: 16px;
+                font-size: 20px;
             }
             
             .receta-table th,
             .receta-table td {
-                font-size: 8px;
-                padding: 2px;
+                font-size: 10px;
+                padding: 3px;
                 border: 1px solid #000 !important;
             }
             
@@ -432,7 +432,7 @@
                         @endif
                         
                         <!-- Nota importante -->
-                        <div style="margin-top: 10px; font-size: 9px; color: #000; line-height: 1.2;">
+                        <div style="margin-top: 10px; font-size: 12px; color: #000; line-height: 1.4; font-weight: bold;">
                             <strong>NOTA IMPORTANTE:</strong><br>
                             El período de adaptación del lente oftícovaria de 2 a 3 semanas, puede tener molestias como: mareos, dolor de cabeza, náuseas.<br>
                             Estas desaparecerán a medida que se adapte al lente.
