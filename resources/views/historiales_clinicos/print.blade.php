@@ -17,12 +17,13 @@
         .header {
             text-align: center;
             margin-bottom: 15px;
+            margin-top: 70px;
             position: relative;
         }
         
         .logo {
             position: absolute;
-            top: 0;
+            top: -70px;
             left: 0;
             width: 80px;
             height: auto;
@@ -232,6 +233,11 @@
             .logo {
                 width: 70px !important;
                 max-height: 50px !important;
+                top: -60px !important;
+            }
+            
+            .header {
+                margin-top: 60px !important;
             }
             
             .receta-table th,
