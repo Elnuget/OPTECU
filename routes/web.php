@@ -190,6 +190,9 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::get('/{historial}/edit', [HistorialClinicoController::class, 'edit'])
             ->name('historiales_clinicos.edit');
         
+        Route::get('/{historial}/print', [HistorialClinicoController::class, 'print'])
+            ->name('historiales_clinicos.print');
+        
         Route::put('/{historial}', [HistorialClinicoController::class, 'update'])
             ->name('historiales_clinicos.update');
         

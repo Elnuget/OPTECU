@@ -174,6 +174,12 @@
                                 title="EDITAR">
                                 <i class="fa fa-lg fa-fw fa-pen"></i>
                             </a>
+                            <a href="{{ route('historiales_clinicos.print', $historial->id) }}"
+                                class="btn btn-xs btn-default text-success mx-1 shadow" 
+                                title="IMPRIMIR HISTORIAL"
+                                target="_blank">
+                                <i class="fa fa-lg fa-fw fa-print"></i>
+                            </a>
                             <button type="button" 
                                 class="btn btn-xs btn-info mx-1 shadow ver-historiales-relacionados" 
                                 data-nombres="{{ $historial->nombres }}" 

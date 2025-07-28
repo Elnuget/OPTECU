@@ -321,6 +321,12 @@ class HistorialClinicoController extends Controller
         return view('historiales_clinicos.show', compact('historialClinico'));
     }
 
+    public function print($id)
+    {
+        $historialClinico = HistorialClinico::with(['empresa', 'recetas', 'usuario'])->findOrFail($id);
+        return view('historiales_clinicos.print', compact('historialClinico'));
+    }
+
     public function edit($id)
     {
         $historialClinico = HistorialClinico::with('recetas')->findOrFail($id);
