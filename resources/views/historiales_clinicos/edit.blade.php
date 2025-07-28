@@ -329,6 +329,59 @@
                 </div>
             </div>
 
+            {{-- DIAGNÓSTICO --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#diagnostico" style="cursor: pointer">
+                    <h5 class="mb-0">
+                        <i class="fas fa-stethoscope mr-2"></i> Diagnóstico
+                    </h5>
+                </div>
+                <div id="diagnostico" class="collapse">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Astigmatismo" id="astigmatismo" 
+                                        {{ str_contains(old('diagnostico', $historialClinico->diagnostico ?? ''), 'Astigmatismo') ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="astigmatismo">
+                                        Astigmatismo
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Miopía" id="miopia"
+                                        {{ str_contains(old('diagnostico', $historialClinico->diagnostico ?? ''), 'Miopía') ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="miopia">
+                                        Miopía
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Hipermetropía" id="hipermetropia"
+                                        {{ str_contains(old('diagnostico', $historialClinico->diagnostico ?? ''), 'Hipermetropía') ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="hipermetropia">
+                                        Hipermetropía
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Presbicia" id="presbicia"
+                                        {{ str_contains(old('diagnostico', $historialClinico->diagnostico ?? ''), 'Presbicia') ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="presbicia">
+                                        Presbicia
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        {{-- Campo oculto para enviar el diagnóstico como string --}}
+                        <input type="hidden" name="diagnostico" id="diagnostico_string" value="{{ old('diagnostico', $historialClinico->diagnostico) }}">
+                    </div>
+                </div>
+            </div>
+
             {{-- BOTÓN PARA MOSTRAR/OCULTAR SECCIONES OPCIONALES --}}
             <div class="text-center mb-4">
                 <button type="button" id="btnMostrarOpcionales" class="btn btn-outline-primary">
@@ -583,15 +636,18 @@
 
         // Función para actualizar el campo diagnóstico basado en los checkboxes seleccionados
         function actualizarDiagnosticoString() {
-            const diagnosticoSeleccionados = $('input[type="checkbox"]:checked').map(function() {
+            const diagnosticoSeleccionados = $('input[name="diagnostico[]"]:checked').map(function() {
                 return this.value;
             }).get();
             
             $('#diagnostico_string').val(diagnosticoSeleccionados.join(', '));
         }
         
+        // Inicializar el campo diagnóstico al cargar la página
+        actualizarDiagnosticoString();
+        
         // Manejar cambio en checkboxes de diagnóstico
-        $('input[type="checkbox"]').on('change', function() {
+        $('input[name="diagnostico[]"]').on('change', function() {
             actualizarDiagnosticoString();
         });
 

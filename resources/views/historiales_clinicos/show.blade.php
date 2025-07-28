@@ -154,6 +154,70 @@
         </div>
         @endif
 
+        {{-- DIAGNÓSTICO --}}
+        <div class="card mb-4">
+            <div class="card-header" data-toggle="collapse" data-target="#diagnostico" style="cursor: pointer">
+                <h5 class="mb-0">
+                    <i class="fas fa-stethoscope mr-2"></i> Diagnóstico
+                </h5>
+            </div>
+            <div id="diagnostico" class="collapse show">
+                <div class="card-body">
+                    @if($historialClinico->diagnostico)
+                        @php
+                            $diagnosticos = explode(',', $historialClinico->diagnostico);
+                            $diagnosticos = array_map('trim', $diagnosticos);
+                        @endphp
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" disabled {{ in_array('Astigmatismo', $diagnosticos) ? 'checked' : '' }}>
+                                    <label class="form-check-label">
+                                        Astigmatismo
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" disabled {{ in_array('Miopía', $diagnosticos) ? 'checked' : '' }}>
+                                    <label class="form-check-label">
+                                        Miopía
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" disabled {{ in_array('Hipermetropía', $diagnosticos) ? 'checked' : '' }}>
+                                    <label class="form-check-label">
+                                        Hipermetropía
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" disabled {{ in_array('Presbicia', $diagnosticos) ? 'checked' : '' }}>
+                                    <label class="form-check-label">
+                                        Presbicia
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <dl class="row mb-0">
+                                <dt class="col-sm-3">DIAGNÓSTICO COMPLETO:</dt>
+                                <dd class="col-sm-9">{{ strtoupper($historialClinico->diagnostico) }}</dd>
+                            </dl>
+                        </div>
+                    @else
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            No hay diagnóstico registrado para este historial clínico.
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
         {{-- BOTÓN PARA MOSTRAR/OCULTAR SECCIONES OPCIONALES --}}
         <div class="text-center mb-4">
             <button type="button" id="btnMostrarOpcionales" class="btn btn-outline-primary">

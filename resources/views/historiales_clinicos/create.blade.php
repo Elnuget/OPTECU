@@ -252,19 +252,66 @@
                                     <textarea name="recetas[0][observaciones]" class="form-control" rows="3"></textarea>
                                 </div>
                             </div>
-                        </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- DIAGNÓSTICO --}}
+<div class="card mb-4">
+    <div class="card-header" data-toggle="collapse" data-target="#diagnostico" style="cursor: pointer">
+        <h5 class="mb-0">
+            <i class="fas fa-stethoscope mr-2"></i> Diagnóstico
+        </h5>
+    </div>
+    <div id="diagnostico" class="collapse">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Astigmatismo" id="astigmatismo">
+                        <label class="form-check-label" for="astigmatismo">
+                            Astigmatismo
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Miopía" id="miopia">
+                        <label class="form-check-label" for="miopia">
+                            Miopía
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Hipermetropía" id="hipermetropia">
+                        <label class="form-check-label" for="hipermetropia">
+                            Hipermetropía
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Presbicia" id="presbicia">
+                        <label class="form-check-label" for="presbicia">
+                            Presbicia
+                        </label>
                     </div>
                 </div>
             </div>
+            {{-- Campo oculto para enviar el diagnóstico como string --}}
+            <input type="hidden" name="diagnostico" id="diagnostico_string">
+        </div>
+    </div>
+</div>
 
-            {{-- BOTÓN PARA MOSTRAR/OCULTAR SECCIONES OPCIONALES --}}
-            <div class="text-center mb-4">
-                <button type="button" id="btnMostrarOpcionales" class="btn btn-outline-primary">
-                    <i class="fas fa-plus-circle mr-2"></i>Mostrar información adicional
-                </button>
-            </div>
-
-            {{-- SECCIONES OPCIONALES --}}
+{{-- BOTÓN PARA MOSTRAR/OCULTAR SECCIONES OPCIONALES --}}
+<div class="text-center mb-4">
+    <button type="button" id="btnMostrarOpcionales" class="btn btn-outline-primary">
+        <i class="fas fa-plus-circle mr-2"></i>Mostrar información adicional
+    </button>
+</div>            {{-- SECCIONES OPCIONALES --}}
             <div id="seccionesOpcionales" style="display: none;">
                 {{-- MOTIVO DE CONSULTA Y ENFERMEDAD ACTUAL --}}
                 <div class="card mb-4">
