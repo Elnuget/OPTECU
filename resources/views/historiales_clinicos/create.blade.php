@@ -667,6 +667,7 @@
                 })
                 .then(data => {
                     console.log('Respuesta de la API:', data); // Añadir para depuración
+                    console.log('Recetas encontradas:', data.historial?.recetas); // Debug específico de recetas
 
                     // Remover indicador de carga
                     const loadingIndicator = elemento.parentNode.querySelector('.loading-indicator');
@@ -681,38 +682,44 @@
                         // Abrir sección de receta automáticamente cuando se cargan datos
                         mostrarSeccionReceta();
                         
-                        // Indicador visual de que se cargó la receta
-                        const tieneReceta = historial.od_esfera || historial.oi_esfera;
-                        if (tieneReceta) {
-                            // Mostrar notificación temporal
-                            const notificacion = document.createElement('div');
-                            notificacion.classList.add('alert', 'alert-success', 'alert-dismissible', 'fade', 'show', 'mt-2', 'mb-0');
-                            notificacion.setAttribute('role', 'alert');
-                            notificacion.innerHTML = `
-                                <strong><i class="fas fa-check-circle mr-2"></i>Receta cargada:</strong> Se han cargado los datos de la última receta del paciente.
-                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                            `;
+                        // Esperar un momento para que la sección se abra completamente
+                        setTimeout(() => {
                             
-                            // Agregar notificación después del título de la sección Receta
-                            const seccionReceta = document.querySelector('#prescripcion .card-body');
-                            seccionReceta.insertBefore(notificacion, seccionReceta.firstChild);
+                            // Indicador visual de que se cargaron las recetas
+                            if (historial.recetas && historial.recetas.length > 0) {
+                                // Mostrar notificación temporal
+                                const notificacion = document.createElement('div');
+                                notificacion.classList.add('alert', 'alert-success', 'alert-dismissible', 'fade', 'show', 'mt-2', 'mb-0');
+                                notificacion.setAttribute('role', 'alert');
+                                const cantidadRecetas = historial.recetas.length;
+                                const textoRecetas = cantidadRecetas === 1 ? 'receta' : 'recetas';
+                                notificacion.innerHTML = `
+                                    <strong><i class="fas fa-check-circle mr-2"></i>Datos cargados:</strong> Se han cargado ${cantidadRecetas} ${textoRecetas} del historial más reciente del paciente.
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                `;
+                                
+                                // Agregar notificación después del título de la sección Receta
+                                const seccionReceta = document.querySelector('#prescripcion .card-body');
+                                if (seccionReceta) {
+                                    seccionReceta.insertBefore(notificacion, seccionReceta.firstChild);
+                                }
+                                
+                                // Auto-eliminar después de 5 segundos
+                                setTimeout(() => {
+                                    notificacion.classList.remove('show');
+                                    setTimeout(() => notificacion.remove(), 150);
+                                }, 5000);
+                            }
                             
-                            // Auto-eliminar después de 5 segundos
-                            setTimeout(() => {
-                                notificacion.classList.remove('show');
-                                setTimeout(() => notificacion.remove(), 150);
-                            }, 5000);
-                        }
-                        
-                        // Autocompletar campos excepto el que generó la búsqueda y la fecha
-                        // Datos personales
-                        if (campo !== 'nombres') document.getElementById('nombres').value = historial.nombres || '';
-                        if (campo !== 'apellidos') document.getElementById('apellidos').value = historial.apellidos || '';
-                        if (campo !== 'cedula') document.getElementById('cedula').value = historial.cedula || '';
-                        if (campo !== 'celular') document.getElementById('celular').value = historial.celular || '';
-                        document.getElementById('edad').value = historial.edad || '';
+                            // Autocompletar campos excepto el que generó la búsqueda y la fecha
+                            // Datos personales
+                            if (campo !== 'nombres') document.getElementById('nombres').value = historial.nombres || '';
+                            if (campo !== 'apellidos') document.getElementById('apellidos').value = historial.apellidos || '';
+                            if (campo !== 'cedula') document.getElementById('cedula').value = historial.cedula || '';
+                            if (campo !== 'celular') document.getElementById('celular').value = historial.celular || '';
+                            document.getElementById('edad').value = historial.edad || '';
                         
                         // Formatear y establecer la fecha de nacimiento si existe
                         if (historial.fecha_nacimiento) {
@@ -767,24 +774,137 @@
                         document.getElementsByName('filtro')[0].value = historial.filtro || '';
                         document.getElementsByName('tiempo_uso')[0].value = historial.tiempo_uso || '';
                         
-                        // Diagnóstico y tratamiento
-                        // El diagnóstico se maneja a través de checkboxes más adelante
-                        document.getElementById('proxima_consulta').value = historial.proxima_consulta ? new Date(historial.proxima_consulta).toISOString().split('T')[0] : '';
-                        
-                        // Receta - Valores OD y OI
-                        document.getElementsByName('od_esfera')[0].value = historial.od_esfera || '';
-                        document.getElementsByName('od_cilindro')[0].value = historial.od_cilindro || '';
-                        document.getElementsByName('od_eje')[0].value = historial.od_eje || '';
-                        document.getElementsByName('oi_esfera')[0].value = historial.oi_esfera || '';
-                        document.getElementsByName('oi_cilindro')[0].value = historial.oi_cilindro || '';
-                        document.getElementsByName('oi_eje')[0].value = historial.oi_eje || '';
-                        
-                        // Cargar tipo de receta
-                        document.getElementById('tipo').value = historial.tipo || '';
-                        
-                        // Poblar ADD y DP
-                        document.getElementById('add').value = historial.add || '';
-                        document.getElementById('dp').value = historial.dp || '';
+                        // Si hay recetas asociadas, cargar la más reciente en el formulario
+                        if (historial.recetas && historial.recetas.length > 0) {
+                            const ultimaReceta = historial.recetas[0]; // La primera receta es la más reciente
+                            console.log('Cargando receta:', ultimaReceta);
+                            
+                            // Verificar que los elementos existan antes de poblarlos
+                            const tipoElement = document.getElementsByName('recetas[0][tipo]')[0];
+                            const odEsferaElement = document.getElementsByName('recetas[0][od_esfera]')[0];
+                            
+                            if (tipoElement) tipoElement.value = ultimaReceta.tipo || '';
+                            if (odEsferaElement) odEsferaElement.value = ultimaReceta.od_esfera || '';
+                            
+                            // Poblar los campos de la primera receta (índice 0)
+                            const campos = [
+                                { name: 'recetas[0][od_cilindro]', value: ultimaReceta.od_cilindro },
+                                { name: 'recetas[0][od_eje]', value: ultimaReceta.od_eje },
+                                { name: 'recetas[0][oi_esfera]', value: ultimaReceta.oi_esfera },
+                                { name: 'recetas[0][oi_cilindro]', value: ultimaReceta.oi_cilindro },
+                                { name: 'recetas[0][oi_eje]', value: ultimaReceta.oi_eje },
+                                { name: 'recetas[0][od_adicion]', value: ultimaReceta.od_adicion },
+                                { name: 'recetas[0][dp]', value: ultimaReceta.dp },
+                                { name: 'recetas[0][observaciones]', value: ultimaReceta.observaciones }
+                            ];
+                            
+                            campos.forEach(campo => {
+                                const elemento = document.getElementsByName(campo.name)[0];
+                                if (elemento) {
+                                    elemento.value = campo.value || '';
+                                } else {
+                                    console.warn('Elemento no encontrado:', campo.name);
+                                }
+                            });
+                            
+                            // Si hay más recetas, crear elementos adicionales
+                            if (historial.recetas.length > 1) {
+                                // Primero limpiar cualquier receta adicional existente
+                                $('.receta-item').not(':first').remove();
+                                recetaIndex = 0; // Resetear el índice
+                                
+                                // Agregar las recetas adicionales
+                                for (let i = 1; i < historial.recetas.length; i++) {
+                                    const receta = historial.recetas[i];
+                                    recetaIndex++;
+                                    
+                                    const nuevaReceta = `
+                                        <div class="receta-item border rounded p-3 mb-3" data-receta-index="${recetaIndex}">
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <h6 class="mb-0 text-primary">
+                                                    <i class="fas fa-prescription mr-2"></i>Receta #<span class="receta-number">${recetaIndex + 1}</span>
+                                                </h6>
+                                                <button type="button" class="btn btn-danger btn-sm btn-eliminar-receta">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+
+                                            <div class="row mb-3">
+                                                <div class="col-md-4">
+                                                    <div class="form-group">
+                                                        <label><strong>Tipo de Receta</strong></label>
+                                                        <select name="recetas[${recetaIndex}][tipo]" class="form-control">
+                                                            <option value="">Seleccionar...</option>
+                                                            <option value="CERCA" ${receta.tipo === 'CERCA' ? 'selected' : ''}>CERCA</option>
+                                                            <option value="LEJOS" ${receta.tipo === 'LEJOS' ? 'selected' : ''}>LEJOS</option>
+                                                            <option value="BIFOCAL" ${receta.tipo === 'BIFOCAL' ? 'selected' : ''}>BIFOCAL</option>
+                                                            <option value="PROGRESIVO" ${receta.tipo === 'PROGRESIVO' ? 'selected' : ''}>PROGRESIVO</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="table-responsive mb-3">
+                                                <table class="table table-bordered">
+                                                    <thead class="bg-primary text-white">
+                                                        <tr>
+                                                            <th></th>
+                                                            <th class="text-center">Esfera</th>
+                                                            <th class="text-center">Cilindro</th>
+                                                            <th class="text-center">Eje</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr>
+                                                            <td class="font-weight-bold">OD</td>
+                                                            <td><input type="text" name="recetas[${recetaIndex}][od_esfera]" class="form-control" value="${receta.od_esfera || ''}"></td>
+                                                            <td><input type="text" name="recetas[${recetaIndex}][od_cilindro]" class="form-control" value="${receta.od_cilindro || ''}"></td>
+                                                            <td><input type="text" name="recetas[${recetaIndex}][od_eje]" class="form-control" value="${receta.od_eje || ''}"></td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td class="font-weight-bold">OI</td>
+                                                            <td><input type="text" name="recetas[${recetaIndex}][oi_esfera]" class="form-control" value="${receta.oi_esfera || ''}"></td>
+                                                            <td><input type="text" name="recetas[${recetaIndex}][oi_cilindro]" class="form-control" value="${receta.oi_cilindro || ''}"></td>
+                                                            <td><input type="text" name="recetas[${recetaIndex}][oi_eje]" class="form-control" value="${receta.oi_eje || ''}"></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>ADD</label>
+                                                        <input type="text" name="recetas[${recetaIndex}][od_adicion]" class="form-control" value="${receta.od_adicion || ''}">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-group">
+                                                        <label>DP pl/pc</label>
+                                                        <input type="text" name="recetas[${recetaIndex}][dp]" class="form-control" value="${receta.dp || ''}">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="form-group">
+                                                <label>Observaciones:</label>
+                                                <textarea name="recetas[${recetaIndex}][observaciones]" class="form-control" rows="3">${receta.observaciones || ''}</textarea>
+                                            </div>
+                                        </div>
+                                    `;
+                                    
+                                    $('#recetasContainer').append(nuevaReceta);
+                                }
+                                
+                                // Actualizar botones después de agregar recetas
+                                actualizarBotonesEliminar();
+                                
+                                // Aplicar el evento de mayúsculas a los nuevos inputs
+                                $('#recetasContainer input[type="text"], #recetasContainer textarea').off('input.uppercase').on('input.uppercase', function() {
+                                    $(this).val($(this).val().toUpperCase());
+                                });
+                            }
+                        }
                         
                         // Si hay diagnóstico, marcar los checkboxes correspondientes
                         if (historial.diagnostico) {
@@ -802,11 +922,10 @@
                             });
                             
                             // Actualizar el campo oculto
-                            $('#diagnostico_string').val(historial.diagnostico);
+                            actualizarDiagnosticoString();
                         }
                         
-                        // Poblar observaciones
-                        document.getElementById('observaciones').value = historial.observaciones || '';
+                        }, 100); // Fin del setTimeout
                     }
                 })
                 .catch(error => {
@@ -914,6 +1033,11 @@
             
             $('#recetasContainer').append(nuevaReceta);
             actualizarBotonesEliminar();
+            
+            // Aplicar el evento de mayúsculas a los nuevos inputs
+            $('#recetasContainer .receta-item:last input[type="text"], #recetasContainer .receta-item:last textarea').on('input', function() {
+                $(this).val($(this).val().toUpperCase());
+            });
         });
 
         // Función para eliminar receta
