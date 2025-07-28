@@ -117,7 +117,7 @@
         .receta-table th,
         .receta-table td {
             border: 1px solid #000;
-            padding: 4px;
+            padding: 3px;
             text-align: center;
             font-size: 10px;
         }
@@ -126,6 +126,7 @@
             font-weight: bold;
             text-transform: uppercase;
             color: #000;
+            background: #f5f5f5;
         }
         
         .receta-table td {
@@ -135,6 +136,29 @@
         .receta-table td:first-child {
             font-weight: bold;
             color: #000;
+            background: #f8f8f8;
+        }
+        
+        /* Estilos específicos para las tablas de prescripción */
+        .tabla-principal th:first-child,
+        .tabla-principal td:first-child {
+            width: 15%;
+        }
+        
+        .tabla-principal th:not(:first-child),
+        .tabla-principal td:not(:first-child) {
+            width: 28.33%;
+        }
+        
+        .tabla-adicional td {
+            width: 25%;
+            font-weight: bold;
+        }
+        
+        .tabla-adicional td:nth-child(2),
+        .tabla-adicional td:nth-child(4) {
+            font-weight: normal;
+            background: white;
         }
         
         .receta-info {
@@ -185,6 +209,8 @@
             body {
                 margin: 10px;
                 font-size: 10px;
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
             }
             
             .header h1 {
@@ -193,8 +219,40 @@
             
             .receta-table th,
             .receta-table td {
-                font-size: 9px;
-                padding: 3px;
+                font-size: 8px;
+                padding: 2px;
+                border: 1px solid #000 !important;
+            }
+            
+            .receta-table th {
+                background: #f5f5f5 !important;
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .receta-table td:first-child {
+                background: #f8f8f8 !important;
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .tabla-principal th:first-child,
+            .tabla-principal td:first-child {
+                width: 12% !important;
+            }
+            
+            .tabla-principal th:not(:first-child),
+            .tabla-principal td:not(:first-child) {
+                width: 29.33% !important;
+            }
+            
+            .tabla-adicional td {
+                width: 25% !important;
+                font-weight: bold;
+            }
+            
+            .tabla-adicional td:nth-child(2),
+            .tabla-adicional td:nth-child(4) {
+                font-weight: normal;
+                background: white !important;
             }
         }
     </style>
@@ -269,14 +327,13 @@
                     </div>
                     <div class="receta-content">
                         <!-- Tabla principal de prescripción -->
-                        <table class="receta-table">
+                        <table class="receta-table tabla-principal">
                             <thead>
                                 <tr>
                                     <th></th>
                                     <th>ESFERA</th>
                                     <th>CILINDRO</th>
                                     <th>EJE</th>
-                                    <th>ADICIÓN</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -285,27 +342,30 @@
                                     <td>{{ $receta->od_esfera ?: '-' }}</td>
                                     <td>{{ $receta->od_cilindro ?: '-' }}</td>
                                     <td>{{ $receta->od_eje ?: '-' }}</td>
-                                    <td>{{ $receta->od_adicion ?: '-' }}</td>
                                 </tr>
                                 <tr>
                                     <td><strong>OI</strong></td>
                                     <td>{{ $receta->oi_esfera ?: '-' }}</td>
                                     <td>{{ $receta->oi_cilindro ?: '-' }}</td>
                                     <td>{{ $receta->oi_eje ?: '-' }}</td>
-                                    <td>{{ $receta->oi_adicion ?: '-' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <!-- Tabla adicional para ADD y DP -->
+                        <table class="receta-table tabla-adicional" style="margin-top: 3px;">
+                            <tbody>
+                                <tr>
+                                    <td>ADD</td>
+                                    <td>{{ $receta->od_adicion ?: ($receta->oi_adicion ?: '-') }}</td>
+                                    <td>DP pl/pc</td>
+                                    <td>{{ $receta->dp ?: '-' }}</td>
                                 </tr>
                             </tbody>
                         </table>
                         
                         <!-- Información adicional de la receta -->
                         <div class="receta-info">
-                            @if($receta->distancia_pupilar)
-                            <span class="receta-info-item">
-                                <span class="receta-label">DIST. PUPILAR:</span>
-                                <span class="receta-value">{{ $receta->distancia_pupilar }}</span>
-                            </span>
-                            @endif
-                            
                             @if($receta->tipo_lente)
                             <span class="receta-info-item">
                                 <span class="receta-label">TIPO LENTE:</span>
@@ -335,6 +395,20 @@
                             @endif
                         </div>
                         
+                        @if($historialClinico->diagnostico)
+                            <div style="margin-top: 5px;">
+                                <span class="receta-label">DIAGNÓSTICO:</span>
+                                <span class="receta-value">{{ $historialClinico->diagnostico }}</span>
+                            </div>
+                        @endif
+                        
+                        <!-- Nota importante -->
+                        <div style="margin-top: 10px; font-size: 9px; color: #000; line-height: 1.2;">
+                            <strong>NOTA IMPORTANTE:</strong><br>
+                            El período de adaptación del lente oftícovaria de 2 a 3 semanas, puede tener molestias como: mareos, dolor de cabeza, náuseas.<br>
+                            Estas desaparecerán a medida que se adapte al lente.
+                        </div>
+                        
                         @if($receta->observaciones)
                             <div style="margin-top: 5px;">
                                 <span class="receta-label">OBSERVACIONES:</span>
@@ -345,16 +419,6 @@
                 </div>
             @endforeach
         </div>
-    @endif
-
-    <!-- DIAGNÓSTICO (solo si tiene contenido) -->
-    @if($historialClinico->diagnostico)
-    <div class="section">
-        <h4>DIAGNÓSTICO:</h4>
-        <div class="text-content">
-            {{ $historialClinico->diagnostico }}
-        </div>
-    </div>
     @endif
 
     <!-- TRATAMIENTO (solo si tiene contenido) -->
