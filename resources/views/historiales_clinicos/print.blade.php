@@ -258,6 +258,31 @@
                 background: white !important;
                 -webkit-print-color-adjust: exact;
             }
+            
+            /* Evitar páginas en blanco adicionales */
+            html, body {
+                height: auto !important;
+                overflow: hidden !important;
+            }
+            
+            * {
+                page-break-after: avoid !important;
+                page-break-before: avoid !important;
+                page-break-inside: avoid !important;
+            }
+            
+            .firma-section {
+                margin-top: 20px !important;
+                page-break-after: avoid !important;
+            }
+            
+            /* Asegurar que el contenido termine sin espacio extra */
+            body::after {
+                content: "";
+                display: block;
+                height: 0;
+                clear: both;
+            }
         }
     </style>
 </head>
