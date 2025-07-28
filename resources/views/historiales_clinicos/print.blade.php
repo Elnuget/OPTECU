@@ -8,214 +8,194 @@
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
-            line-height: 1.4;
-            color: #333;
-            font-size: 14px;
+            line-height: 1.3;
+            color: #000;
+            font-size: 12px;
+            background: #ffffff;
         }
         
         .header {
             text-align: center;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
         .header h1 {
             margin: 0;
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
             text-transform: uppercase;
+            color: #000;
         }
         
         .fecha-impresion {
-            text-align: left;
-            margin-bottom: 20px;
-            font-size: 12px;
-            color: #666;
-            text-transform: uppercase;
+            text-align: right;
+            margin-bottom: 15px;
+            font-size: 11px;
+            color: #000;
         }
         
         .empresa-info {
             text-align: center;
-            margin-bottom: 20px;
+            margin: 5px 0;
             font-size: 14px;
-            text-transform: uppercase;
-            color: #555;
+            font-weight: bold;
+            color: #000;
         }
         
         .patient-info {
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
         .info-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
+            gap: 5px;
         }
         
         .info-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
+            font-size: 11px;
         }
         
         .info-label {
             font-weight: bold;
-            min-width: 120px;
-            text-transform: uppercase;
-            font-size: 12px;
+            display: inline-block;
+            min-width: 100px;
+            color: #000;
         }
         
         .info-value {
-            margin-left: 10px;
-            text-transform: uppercase;
-            font-size: 12px;
+            color: #000;
         }
         
         .section {
-            margin-bottom: 20px;
-            page-break-inside: avoid;
+            margin-bottom: 15px;
         }
         
         .section h4 {
-            background: #333;
-            color: white;
-            padding: 8px;
-            margin: 0 0 10px 0;
+            padding: 0;
+            margin: 0 0 5px 0;
             text-transform: uppercase;
-            font-size: 14px;
-        }
-        
-        .section-content {
-            padding: 0 10px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #000;
         }
         
         .text-content {
-            background: white;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-            min-height: 30px;
-            text-transform: uppercase;
-            font-size: 12px;
+            font-size: 11px;
+            color: #000;
+            line-height: 1.3;
+            margin-bottom: 5px;
         }
         
         .recetas-section {
-            margin-top: 20px;
+            margin-top: 15px;
         }
         
         .receta-card {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            overflow: hidden;
-            page-break-inside: avoid;
+            margin-bottom: 10px;
         }
         
         .receta-header {
-            background: #007bff;
-            color: white;
-            padding: 8px;
             font-weight: bold;
             text-transform: uppercase;
-            font-size: 13px;
+            font-size: 11px;
+            color: #000;
+            margin-bottom: 5px;
         }
         
         .receta-content {
-            padding: 10px;
+            margin-bottom: 10px;
         }
         
         .receta-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         
         .receta-table th,
         .receta-table td {
-            border: 1px solid #ddd;
-            padding: 5px;
+            border: 1px solid #000;
+            padding: 4px;
             text-align: center;
-            font-size: 12px;
+            font-size: 10px;
         }
         
         .receta-table th {
-            background: #f8f9fa;
             font-weight: bold;
+            text-transform: uppercase;
+            color: #000;
         }
         
-        .receta-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 10px;
+        .receta-table td {
+            color: #000;
         }
         
-        .receta-field {
-            border-bottom: 1px solid #eee;
-            padding-bottom: 3px;
+        .receta-table td:first-child {
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .receta-info {
+            font-size: 10px;
+            margin-top: 5px;
+        }
+        
+        .receta-info-item {
+            display: inline-block;
+            margin-right: 15px;
+            margin-bottom: 2px;
         }
         
         .receta-label {
             font-weight: bold;
-            font-size: 11px;
-            color: #666;
-            text-transform: uppercase;
+            color: #000;
         }
         
         .receta-value {
-            font-size: 12px;
-            color: #333;
-            text-transform: uppercase;
+            color: #000;
         }
         
-        .footer {
-            margin-top: 30px;
+        .firma-section {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .firma-box {
+            width: 45%;
             text-align: center;
-            font-size: 11px;
-            color: #666;
-            border-top: 1px solid #ddd;
-            padding-top: 15px;
+        }
+        
+        .firma-linea {
+            border-bottom: 1px solid #000;
+            height: 40px;
+            margin-bottom: 5px;
+        }
+        
+        .firma-texto {
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 10px;
+            color: #000;
         }
         
         @media print {
             body {
-                margin: 0;
-                font-size: 12px;
+                margin: 10px;
+                font-size: 10px;
             }
             
             .header h1 {
-                font-size: 20px;
-            }
-            
-            .header h2 {
                 font-size: 16px;
             }
             
-            .section {
-                page-break-inside: avoid;
+            .receta-table th,
+            .receta-table td {
+                font-size: 9px;
+                padding: 3px;
             }
-            
-            .receta-card {
-                page-break-inside: avoid;
-            }
-            
-            .info-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-        
-        .no-content {
-            color: #999;
-            font-style: italic;
-            text-transform: uppercase;
-        }
-        
-        .essential-only {
-            display: block;
         }
     </style>
 </head>
@@ -277,48 +257,10 @@
         </div>
     </div>
 
-    <!-- MOTIVO DE CONSULTA (solo si tiene contenido) -->
-    @if($historialClinico->motivo_consulta)
-    <div class="section">
-        <h4>MOTIVO DE CONSULTA</h4>
-        <div class="section-content">
-            <div class="text-content">
-                {{ strtoupper($historialClinico->motivo_consulta) }}
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- DIAGNÓSTICO (solo si tiene contenido) -->
-    @if($historialClinico->diagnostico)
-    <div class="section">
-        <h4>DIAGNÓSTICO</h4>
-        <div class="section-content">
-            <div class="text-content">
-                {{ strtoupper($historialClinico->diagnostico) }}
-            </div>
-        </div>
-    </div>
-    @endif
-
-    <!-- TRATAMIENTO (solo si tiene contenido) -->
-    @if($historialClinico->tratamiento)
-    <div class="section">
-        <h4>TRATAMIENTO</h4>
-        <div class="section-content">
-            <div class="text-content">
-                {{ strtoupper($historialClinico->tratamiento) }}
-            </div>
-        </div>
-    </div>
-    @endif
-
     <!-- RECETAS ASOCIADAS -->
     @if($historialClinico->recetas && $historialClinico->recetas->count() > 0)
         <div class="recetas-section">
-            <h4 style="background: #28a745; color: white; padding: 10px; margin: 0 0 15px 0; text-transform: uppercase; font-size: 16px;">
-                RECETAS MÉDICAS ({{ $historialClinico->recetas->count() }})
-            </h4>
+            <h4>PRESCRIPCIÓN PARA LEJOS ({{ $historialClinico->recetas->count() }})</h4>
             
             @foreach($historialClinico->recetas as $index => $receta)
                 <div class="receta-card">
@@ -356,49 +298,47 @@
                         </table>
                         
                         <!-- Información adicional de la receta -->
-                        <div class="receta-grid">
+                        <div class="receta-info">
                             @if($receta->distancia_pupilar)
-                            <div class="receta-field">
-                                <div class="receta-label">DIST. PUPILAR:</div>
-                                <div class="receta-value">{{ $receta->distancia_pupilar }}</div>
-                            </div>
+                            <span class="receta-info-item">
+                                <span class="receta-label">DIST. PUPILAR:</span>
+                                <span class="receta-value">{{ $receta->distancia_pupilar }}</span>
+                            </span>
                             @endif
                             
                             @if($receta->tipo_lente)
-                            <div class="receta-field">
-                                <div class="receta-label">TIPO LENTE:</div>
-                                <div class="receta-value">{{ strtoupper($receta->tipo_lente) }}</div>
-                            </div>
+                            <span class="receta-info-item">
+                                <span class="receta-label">TIPO LENTE:</span>
+                                <span class="receta-value">{{ strtoupper($receta->tipo_lente) }}</span>
+                            </span>
                             @endif
                             
                             @if($receta->material)
-                            <div class="receta-field">
-                                <div class="receta-label">MATERIAL:</div>
-                                <div class="receta-value">{{ strtoupper($receta->material) }}</div>
-                            </div>
+                            <span class="receta-info-item">
+                                <span class="receta-label">MATERIAL:</span>
+                                <span class="receta-value">{{ strtoupper($receta->material) }}</span>
+                            </span>
                             @endif
                             
                             @if($receta->filtros)
-                            <div class="receta-field">
-                                <div class="receta-label">FILTROS:</div>
-                                <div class="receta-value">{{ strtoupper($receta->filtros) }}</div>
-                            </div>
+                            <span class="receta-info-item">
+                                <span class="receta-label">FILTROS:</span>
+                                <span class="receta-value">{{ strtoupper($receta->filtros) }}</span>
+                            </span>
                             @endif
                             
                             @if($receta->precio)
-                            <div class="receta-field">
-                                <div class="receta-label">PRECIO:</div>
-                                <div class="receta-value">${{ number_format($receta->precio, 2) }}</div>
-                            </div>
+                            <span class="receta-info-item">
+                                <span class="receta-label">PRECIO:</span>
+                                <span class="receta-value">${{ number_format($receta->precio, 2) }}</span>
+                            </span>
                             @endif
                         </div>
                         
                         @if($receta->observaciones)
-                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee;">
-                                <div class="receta-label">OBSERVACIONES:</div>
-                                <div class="text-content" style="margin-top: 5px; font-size: 11px;">
-                                    {{ strtoupper($receta->observaciones) }}
-                                </div>
+                            <div style="margin-top: 5px;">
+                                <span class="receta-label">OBSERVACIONES:</span>
+                                <span class="receta-value">{{ $receta->observaciones }}</span>
                             </div>
                         @endif
                     </div>
@@ -407,23 +347,46 @@
         </div>
     @endif
 
-    <!-- COTIZACIÓN (solo si tiene contenido) -->
-    @if($historialClinico->cotizacion)
+    <!-- DIAGNÓSTICO (solo si tiene contenido) -->
+    @if($historialClinico->diagnostico)
     <div class="section">
-        <h4>COTIZACIÓN</h4>
-        <div class="section-content">
-            <div class="text-content">
-                {{ strtoupper($historialClinico->cotizacion) }}
-            </div>
+        <h4>DIAGNÓSTICO:</h4>
+        <div class="text-content">
+            {{ $historialClinico->diagnostico }}
         </div>
     </div>
     @endif
 
-    <div class="footer">
-        <p>HISTORIAL CLÍNICO GENERADO EL {{ \Carbon\Carbon::now()->format('d/m/Y H:i:s') }}</p>
-        @if($historialClinico->empresa)
-            <p>{{ strtoupper($historialClinico->empresa->nombre) }}</p>
-        @endif
+    <!-- TRATAMIENTO (solo si tiene contenido) -->
+    @if($historialClinico->tratamiento)
+    <div class="section">
+        <h4>TRATAMIENTO:</h4>
+        <div class="text-content">
+            {{ $historialClinico->tratamiento }}
+        </div>
+    </div>
+    @endif
+
+    <!-- COTIZACIÓN (solo si tiene contenido) -->
+    @if($historialClinico->cotizacion)
+    <div class="section">
+        <h4>COTIZACIÓN:</h4>
+        <div class="text-content">
+            {{ $historialClinico->cotizacion }}
+        </div>
+    </div>
+    @endif
+
+    <!-- ESPACIOS PARA FIRMAS -->
+    <div class="firma-section">
+        <div class="firma-box">
+            <div class="firma-linea"></div>
+            <p class="firma-texto">FIRMA Y TIMBRE</p>
+        </div>
+        <div class="firma-box">
+            <div class="firma-linea"></div>
+            <p class="firma-texto">PACIENTE CONFORME</p>
+        </div>
     </div>
 
     <script>
