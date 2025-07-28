@@ -15,9 +15,8 @@
         
         .header {
             text-align: center;
-            border-bottom: 2px solid #333;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
         }
         
         .header h1 {
@@ -27,9 +26,10 @@
             text-transform: uppercase;
         }
         
-        .header h2 {
-            margin: 5px 0;
-            font-size: 18px;
+        .fecha-impresion {
+            text-align: left;
+            margin-bottom: 20px;
+            font-size: 12px;
             color: #666;
             text-transform: uppercase;
         }
@@ -47,15 +47,6 @@
             padding: 15px;
             border-radius: 5px;
             margin-bottom: 20px;
-        }
-        
-        .patient-info h3 {
-            margin-top: 0;
-            color: #333;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 10px;
-            text-transform: uppercase;
-            font-size: 16px;
         }
         
         .info-grid {
@@ -230,8 +221,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>HISTORIAL CLÍNICO</h1>
-        <h2>{{ strtoupper($historialClinico->nombres) }} {{ strtoupper($historialClinico->apellidos) }}</h2>
+        <h1>RECETA DE LENTES</h1>
         @if($historialClinico->empresa)
             <div class="empresa-info">
                 {{ strtoupper($historialClinico->empresa->nombre) }}
@@ -239,9 +229,12 @@
         @endif
     </div>
 
+    <div class="fecha-impresion">
+        FECHA: {{ \Carbon\Carbon::now()->format('d/m/Y') }}
+    </div>
+
     <!-- INFORMACIÓN ESENCIAL DEL PACIENTE -->
     <div class="patient-info">
-        <h3>DATOS DEL PACIENTE</h3>
         <div class="info-grid">
             <div class="info-item">
                 <span class="info-label">NOMBRES:</span>
