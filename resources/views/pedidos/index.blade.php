@@ -197,7 +197,7 @@
                 <thead>
                     <tr>
                         <th class="checkbox-cell">
-                            <input type="checkbox" id="selectAll">
+                            <input type="checkbox" id="selectAll" title="SELECCIONAR TODOS">
                         </th>
                         <th>Fecha</th>
                         <th>Sucursal</th>
@@ -1145,8 +1145,59 @@ input[type="checkbox"]:after {
             "language": {
                 "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json",
                 "search": "Buscar:"
+            },
+            "columnDefs": [
+                {
+                    "targets": [0], // Columna de checkbox
+                    "orderable": false,
+                    "searchable": false,
+                    "width": "50px"
+                },
+                {
+                    "targets": [3], // Columna de Orden
+                    "type": "num" // Asegurar que se ordene numéricamente
+                }
+            ],
+            "createdRow": function(row, data, dataIndex) {
+                // Agregar atributo data-urgente para facilitar el ordenamiento
+                if ($(row).hasClass('urgente-row')) {
+                    $(row).attr('data-urgente', '1');
+                } else {
+                    $(row).attr('data-urgente', '0');
+                }
             }
         });
+
+        // Función personalizada para ordenar con urgentes primero
+        function ordenarPorUrgenteYOrden() {
+            var rows = $('#pedidosTable tbody tr').get();
+            
+            rows.sort(function(a, b) {
+                var aUrgente = $(a).hasClass('urgente-row') ? 1 : 0;
+                var bUrgente = $(b).hasClass('urgente-row') ? 1 : 0;
+                
+                // Primero ordenar por urgente (urgentes primero)
+                if (aUrgente !== bUrgente) {
+                    return bUrgente - aUrgente; // Urgentes (1) antes que no urgentes (0)
+                }
+                
+                // Si ambos son urgentes o ambos no son urgentes, ordenar por número de orden descendente
+                var aOrden = parseInt($(a).find('td').eq(3).text()) || 0;
+                var bOrden = parseInt($(b).find('td').eq(3).text()) || 0;
+                
+                return bOrden - aOrden; // Orden descendente
+            });
+            
+            // Reordenar las filas en la tabla
+            $.each(rows, function(index, row) {
+                $('#pedidosTable tbody').append(row);
+            });
+        }
+
+        // Aplicar el ordenamiento personalizado después de que la tabla se inicialice
+        setTimeout(function() {
+            ordenarPorUrgenteYOrden();
+        }, 100);
 
         // Manejar cambios en los filtros - Filtrado automático
         $('#filtroAno, #filtroMes, #empresa_id').change(function() {
