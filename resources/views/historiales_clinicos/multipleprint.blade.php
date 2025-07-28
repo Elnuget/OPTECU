@@ -419,7 +419,7 @@
             }
         @endphp
         
-        <div class="receta-container">
+        <div class="receta-container {{ $empresaClass }}">
             <div class="header">
                 <img src="{{ asset($logoFile) }}" alt="Logo" class="logo">
                 <h1>RECETA DE LENTES</h1>
@@ -480,7 +480,7 @@
 
             <!-- RECETAS ASOCIADAS -->
             @if($historialClinico->recetas && $historialClinico->recetas->count() > 0)
-                <div class="recetas-section {{ $empresaClass }}">
+                <div class="recetas-section">
                     <h4>PRESCRIPCIONES ({{ $historialClinico->recetas->count() }})</h4>
                     
                     @foreach($historialClinico->recetas as $index => $receta)
