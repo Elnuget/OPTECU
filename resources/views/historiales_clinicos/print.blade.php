@@ -310,7 +310,18 @@
 </head>
 <body>
     <div class="header">
-        <img src="{{ asset('AdminLTELogo.png') }}" alt="Logo" class="logo">
+        @php
+            $logoFile = 'AdminLTELogo.png'; // Logo por defecto
+            if($historialClinico->empresa) {
+                $empresaNombre = strtoupper($historialClinico->empresa->nombre);
+                if(str_starts_with($empresaNombre, 'TOP')) {
+                    $logoFile = 'TOP.PNG';
+                } elseif(str_starts_with($empresaNombre, 'BAN')) {
+                    $logoFile = 'BAN.PNG';
+                }
+            }
+        @endphp
+        <img src="{{ asset($logoFile) }}" alt="Logo" class="logo">
         <h1>RECETA DE LENTES</h1>
         @if($historialClinico->empresa)
             <div class="empresa-info">
