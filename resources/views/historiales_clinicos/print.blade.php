@@ -109,7 +109,7 @@
         }
         
         .receta-table {
-            width: 100%;
+            width: 80%;
             border-collapse: collapse;
             margin-bottom: 5px;
         }
@@ -142,17 +142,18 @@
         /* Estilos específicos para las tablas de prescripción */
         .tabla-principal th:first-child,
         .tabla-principal td:first-child {
-            width: 15%;
+            width: 8%;
         }
         
         .tabla-principal th:not(:first-child),
         .tabla-principal td:not(:first-child) {
-            width: 28.33%;
+            width: 30.67%;
         }
         
         .tabla-adicional td {
             width: 25%;
             font-weight: bold;
+            background: #f8f8f8;
         }
         
         .tabla-adicional td:nth-child(2),
@@ -236,23 +237,26 @@
             
             .tabla-principal th:first-child,
             .tabla-principal td:first-child {
-                width: 12% !important;
+                width: 6% !important;
             }
             
             .tabla-principal th:not(:first-child),
             .tabla-principal td:not(:first-child) {
-                width: 29.33% !important;
+                width: 31.33% !important;
             }
             
             .tabla-adicional td {
                 width: 25% !important;
                 font-weight: bold;
+                background: #f8f8f8 !important;
+                -webkit-print-color-adjust: exact;
             }
             
             .tabla-adicional td:nth-child(2),
             .tabla-adicional td:nth-child(4) {
                 font-weight: normal;
                 background: white !important;
+                -webkit-print-color-adjust: exact;
             }
         }
     </style>
