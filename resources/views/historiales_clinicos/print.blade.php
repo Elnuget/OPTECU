@@ -17,6 +17,17 @@
         .header {
             text-align: center;
             margin-bottom: 15px;
+            position: relative;
+        }
+        
+        .logo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: auto;
+            max-height: 60px;
+            object-fit: contain;
         }
         
         .header h1 {
@@ -218,6 +229,11 @@
                 font-size: 20px;
             }
             
+            .logo {
+                width: 70px !important;
+                max-height: 50px !important;
+            }
+            
             .receta-table th,
             .receta-table td {
                 font-size: 10px;
@@ -288,6 +304,7 @@
 </head>
 <body>
     <div class="header">
+        <img src="{{ asset('AdminLTELogo.png') }}" alt="Logo" class="logo">
         <h1>RECETA DE LENTES</h1>
         @if($historialClinico->empresa)
             <div class="empresa-info">
