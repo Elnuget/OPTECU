@@ -186,6 +186,10 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         Route::get('/relacionados', [HistorialClinicoController::class, 'historialesRelacionados'])
             ->name('historiales_clinicos.relacionados');
         
+        // Ruta para impresión múltiple de recetas
+        Route::get('/multipleprint', [HistorialClinicoController::class, 'multiplePrint'])
+            ->name('historiales_clinicos.multipleprint');
+        
         // Rutas con parámetros después
         Route::get('/{historial}/edit', [HistorialClinicoController::class, 'edit'])
             ->name('historiales_clinicos.edit');

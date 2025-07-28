@@ -327,6 +327,36 @@ class HistorialClinicoController extends Controller
         return view('historiales_clinicos.print', compact('historialClinico'));
     }
 
+    public function multiplePrint(Request $request)
+    {
+        $ids = $request->get('ids');
+        
+        if (!$ids) {
+            return redirect()->route('historiales_clinicos.index')->with([
+                'tipo' => 'alert-danger',
+                'mensaje' => 'No se proporcionaron IDs de historiales para imprimir'
+            ]);
+        }
+        
+        // Convertir string de IDs separados por coma a array
+        $idsArray = explode(',', $ids);
+        
+        // Obtener los historiales clínicos con sus recetas
+        $historiales = HistorialClinico::with(['empresa', 'recetas', 'usuario'])
+            ->whereIn('id', $idsArray)
+            ->whereHas('recetas') // Solo historiales que tengan recetas
+            ->get();
+        
+        if ($historiales->isEmpty()) {
+            return redirect()->route('historiales_clinicos.index')->with([
+                'tipo' => 'alert-warning',
+                'mensaje' => 'No se encontraron historiales con recetas para los IDs proporcionados'
+            ]);
+        }
+        
+        return view('historiales_clinicos.multipleprint', compact('historiales'));
+    }
+
     public function edit($id)
     {
         $historialClinico = HistorialClinico::with('recetas')->findOrFail($id);

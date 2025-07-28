@@ -117,12 +117,18 @@
             <a type="button" class="btn btn-success" href="{{ route('historiales_clinicos.create') }}">
                 AÑADIR HISTORIAL CLÍNICO
             </a>
+            <button type="button" class="btn btn-primary" id="imprimirSeleccionados" style="display: none;">
+                <i class="fas fa-print mr-2"></i>IMPRIMIR RECETAS SELECCIONADAS
+            </button>
         </div>
 
         <div class="table-responsive">
             <table id="historialesTable" class="table table-striped table-bordered">
                 <thead>
                     <tr>
+                        <th>
+                            <input type="checkbox" id="selectAll" title="SELECCIONAR TODOS">
+                        </th>
                         <th>ID</th>
                         <th>NOMBRES</th>
                         <th>APELLIDOS</th>
@@ -137,6 +143,10 @@
                 <tbody>
                     @foreach ($historiales as $index => $historial)
                     <tr>
+                        <td>
+                            <input type="checkbox" class="historial-checkbox" value="{{ $historial->id }}" 
+                                   data-has-recetas="{{ $historial->recetas && $historial->recetas->count() > 0 ? '1' : '0' }}">
+                        </td>
                         <td>{{ $index + 1 }}</td>
                         <td>{{ strtoupper($historial->nombres) }}</td>
                         <td>{{ strtoupper($historial->apellidos) }}</td>
@@ -374,9 +384,14 @@
     $(document).ready(function() {
         // Inicializar DataTable
         $('#historialesTable').DataTable({
-            "order": [[0, "desc"]],
+            "order": [[1, "desc"]], // Cambiar el orden por la nueva columna ID
             "columnDefs": [{
-                "targets": [2],
+                "targets": [0], // Columna de checkbox
+                "orderable": false,
+                "searchable": false,
+                "width": "50px"
+            }, {
+                "targets": [3],
                 "visible": true,
                 "searchable": true,
             }],
@@ -394,7 +409,7 @@
                     "text": 'IMPRIMIR',
                     "autoPrint": true,
                     "exportOptions": {
-                        "columns": [0, 1, 2, 3]
+                        "columns": [1, 2, 3, 4] // Ajustar columnas por el nuevo checkbox
                     },
                     "customize": function(win) {
                         $(win.document.body).css('font-size', '16pt');
@@ -409,7 +424,7 @@
                     "filename": 'HISTORIALES_CLINICOS.pdf',
                     "pageSize": 'LETTER',
                     "exportOptions": {
-                        "columns": [0, 1, 2, 3]
+                        "columns": [1, 2, 3, 4] // Ajustar columnas por el nuevo checkbox
                     }
                 }
             ],
@@ -618,6 +633,57 @@
                     $('#historialesRelacionadosContent').show();
                 }
             });
+        });
+        
+        // Manejar selección de todos los checkboxes
+        $('#selectAll').change(function() {
+            const isChecked = $(this).is(':checked');
+            $('.historial-checkbox').prop('checked', isChecked);
+            actualizarBotonImprimir();
+        });
+        
+        // Manejar selección individual de checkboxes
+        $(document).on('change', '.historial-checkbox', function() {
+            const totalCheckboxes = $('.historial-checkbox').length;
+            const checkedCheckboxes = $('.historial-checkbox:checked').length;
+            
+            // Actualizar el estado del checkbox "Seleccionar todos"
+            $('#selectAll').prop('checked', checkedCheckboxes === totalCheckboxes);
+            $('#selectAll').prop('indeterminate', checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes);
+            
+            actualizarBotonImprimir();
+        });
+        
+        // Función para mostrar/ocultar el botón de imprimir
+        function actualizarBotonImprimir() {
+            const checkboxesSeleccionados = $('.historial-checkbox:checked');
+            const conRecetas = checkboxesSeleccionados.filter('[data-has-recetas="1"]');
+            
+            if (conRecetas.length > 0) {
+                $('#imprimirSeleccionados').show();
+                $('#imprimirSeleccionados').text(`IMPRIMIR RECETAS SELECCIONADAS (${conRecetas.length})`);
+            } else {
+                $('#imprimirSeleccionados').hide();
+            }
+        }
+        
+        // Manejar clic en el botón de imprimir seleccionados
+        $('#imprimirSeleccionados').click(function() {
+            const idsSeleccionados = [];
+            $('.historial-checkbox:checked').each(function() {
+                if ($(this).data('has-recetas') === 1) {
+                    idsSeleccionados.push($(this).val());
+                }
+            });
+            
+            if (idsSeleccionados.length === 0) {
+                alert('NO HAY HISTORIALES CON RECETAS SELECCIONADOS');
+                return;
+            }
+            
+            // Abrir nueva ventana para imprimir múltiples recetas
+            const url = '{{ route("historiales_clinicos.multipleprint") }}?ids=' + idsSeleccionados.join(',');
+            window.open(url, '_blank');
         });
     });
 </script>
