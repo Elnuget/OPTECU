@@ -25,9 +25,9 @@
             position: absolute;
             top: -70px;
             left: 0;
-            width: 80px;
+            width: 200px;
             height: auto;
-            max-height: 60px;
+            max-height: 100px;
             object-fit: contain;
         }
         
@@ -151,6 +151,50 @@
             background: #f8f8f8;
         }
         
+        /* Estilos específicos para empresa TOP - Rosado */
+        .empresa-top .receta-table th {
+            background: #f8d7da !important;
+            color: #721c24 !important;
+        }
+        
+        .empresa-top .receta-table td:first-child {
+            background: #f5c6cb !important;
+            color: #721c24 !important;
+        }
+        
+        .empresa-top .tabla-adicional td {
+            background: #f5c6cb !important;
+            color: #721c24 !important;
+        }
+        
+        .empresa-top .tabla-adicional td:nth-child(2),
+        .empresa-top .tabla-adicional td:nth-child(4) {
+            background: #fdf2f2 !important;
+            color: #000 !important;
+        }
+        
+        /* Estilos específicos para empresa BAN - Azul */
+        .empresa-ban .receta-table th {
+            background: #d1ecf1 !important;
+            color: #0c5460 !important;
+        }
+        
+        .empresa-ban .receta-table td:first-child {
+            background: #bee5eb !important;
+            color: #0c5460 !important;
+        }
+        
+        .empresa-ban .tabla-adicional td {
+            background: #bee5eb !important;
+            color: #0c5460 !important;
+        }
+        
+        .empresa-ban .tabla-adicional td:nth-child(2),
+        .empresa-ban .tabla-adicional td:nth-child(4) {
+            background: #e6f7ff !important;
+            color: #000 !important;
+        }
+        
         /* Estilos específicos para las tablas de prescripción */
         .tabla-principal th:first-child,
         .tabla-principal td:first-child {
@@ -231,8 +275,8 @@
             }
             
             .logo {
-                width: 70px !important;
-                max-height: 50px !important;
+                width: 200px !important;
+                max-height: 100px !important;
                 top: -60px !important;
             }
             
@@ -254,6 +298,58 @@
             
             .receta-table td:first-child {
                 background: #f8f8f8 !important;
+                -webkit-print-color-adjust: exact;
+            }
+            
+            /* Estilos de impresión para empresa TOP - Rosado */
+            .empresa-top .receta-table th {
+                background: #f8d7da !important;
+                color: #721c24 !important;
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .empresa-top .receta-table td:first-child {
+                background: #f5c6cb !important;
+                color: #721c24 !important;
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .empresa-top .tabla-adicional td {
+                background: #f5c6cb !important;
+                color: #721c24 !important;
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .empresa-top .tabla-adicional td:nth-child(2),
+            .empresa-top .tabla-adicional td:nth-child(4) {
+                background: #fdf2f2 !important;
+                color: #000 !important;
+                -webkit-print-color-adjust: exact;
+            }
+            
+            /* Estilos de impresión para empresa BAN - Azul */
+            .empresa-ban .receta-table th {
+                background: #d1ecf1 !important;
+                color: #0c5460 !important;
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .empresa-ban .receta-table td:first-child {
+                background: #bee5eb !important;
+                color: #0c5460 !important;
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .empresa-ban .tabla-adicional td {
+                background: #bee5eb !important;
+                color: #0c5460 !important;
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .empresa-ban .tabla-adicional td:nth-child(2),
+            .empresa-ban .tabla-adicional td:nth-child(4) {
+                background: #e6f7ff !important;
+                color: #000 !important;
                 -webkit-print-color-adjust: exact;
             }
             
@@ -312,12 +408,15 @@
     <div class="header">
         @php
             $logoFile = 'AdminLTELogo.png'; // Logo por defecto
+            $empresaClass = ''; // Clase CSS por defecto
             if($historialClinico->empresa) {
                 $empresaNombre = strtoupper($historialClinico->empresa->nombre);
                 if(str_starts_with($empresaNombre, 'TOP')) {
                     $logoFile = 'TOP.PNG';
+                    $empresaClass = 'empresa-top';
                 } elseif(str_starts_with($empresaNombre, 'BAN')) {
                     $logoFile = 'BAN.PNG';
+                    $empresaClass = 'empresa-ban';
                 }
             }
         @endphp
@@ -380,13 +479,13 @@
 
     <!-- RECETAS ASOCIADAS -->
     @if($historialClinico->recetas && $historialClinico->recetas->count() > 0)
-        <div class="recetas-section">
-            <h4>PRESCRIPCIÓN PARA LEJOS ({{ $historialClinico->recetas->count() }})</h4>
+        <div class="recetas-section {{ $empresaClass }}">
+            <h4>PRESCRIPCIONES ({{ $historialClinico->recetas->count() }})</h4>
             
             @foreach($historialClinico->recetas as $index => $receta)
                 <div class="receta-card">
                     <div class="receta-header">
-                        RECETA #{{ $index + 1 }} - {{ $receta->created_at ? \Carbon\Carbon::parse($receta->created_at)->format('d/m/Y') : 'FECHA NO DISPONIBLE' }}
+                        PRESCRIPCIÓN PARA {{ strtoupper($receta->tipo ?? 'LEJOS') }} #{{ $index + 1 }} - {{ $receta->created_at ? \Carbon\Carbon::parse($receta->created_at)->format('d/m/Y') : 'FECHA NO DISPONIBLE' }}
                     </div>
                     <div class="receta-content">
                         <!-- Tabla principal de prescripción -->
