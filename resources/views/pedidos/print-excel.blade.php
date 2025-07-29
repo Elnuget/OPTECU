@@ -45,13 +45,15 @@
         
         .excel-table td {
             border: 2px solid #000;
-            padding: 6px;
-            vertical-align: middle;
-            text-align: center;
+            padding: 2px; /* Reducir padding para más espacio de texto */
+            vertical-align: middle; /* Volver a centrado vertical */
+            text-align: center; /* Volver a centrado horizontal */
             word-wrap: break-word;
             position: relative;
             height: 75mm;
-            overflow: hidden;
+            overflow: visible; /* Cambiar a visible para permitir que el texto se muestre */
+            word-break: break-word; /* Forzar quiebre de palabras largas */
+            hyphens: auto; /* Activar guiones automáticos */
         }
         
         .company-column {
@@ -88,31 +90,39 @@
             writing-mode: vertical-lr;
             text-orientation: mixed;
             transform: rotate(180deg);
-            white-space: nowrap;
+            white-space: pre-wrap; /* Cambiar para mejor manejo del texto */
             font-weight: bold;
-            font-size: 10px; /* Aumentar fuente para empresa */
-            line-height: 1.3;
+            font-size: 9px; /* Reducir ligeramente la fuente */
+            line-height: 1.2;
             height: 100%;
+            width: 100%;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            align-items: center; /* Volver a centrado */
+            justify-content: center; /* Volver a centrado */
             letter-spacing: 0.5px;
+            word-wrap: break-word; /* Forzar quiebre de palabras */
+            overflow-wrap: break-word;
+            padding: 3px; /* Agregar padding pequeño */
         }
         
         .info-text {
             writing-mode: vertical-lr;
             text-orientation: mixed;
             transform: rotate(180deg);
-            font-size: 11px; /* Aumentar fuente para mejor legibilidad en celdas más grandes */
-            line-height: 1.3;
-            white-space: pre-line;
+            font-size: 10px; /* Reducir un poco la fuente para que quepa mejor */
+            line-height: 1.2;
+            white-space: pre-wrap; /* Cambiar a pre-wrap para mejor manejo del texto */
             height: 100%;
+            width: 100%;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px; /* Más padding para mejor distribución del texto */
+            align-items: center; /* Volver a centrado */
+            justify-content: center; /* Volver a centrado */
+            padding: 4px; /* Reducir padding para más espacio de texto */
             font-weight: normal;
             word-spacing: 1px;
+            word-wrap: break-word; /* Forzar quiebre de palabras largas */
+            overflow-wrap: break-word; /* Soporte adicional para quiebre de palabras */
+            hyphens: auto; /* Activar guiones automáticos */
         }
         
         .method-text {
@@ -120,13 +130,18 @@
             text-orientation: mixed;
             transform: rotate(180deg);
             font-weight: bold;
-            font-size: 10px; /* Aumentar fuente para método */
+            font-size: 9px; /* Reducir fuente */
             color: #0066cc;
             height: 100%;
+            width: 100%;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            align-items: center; /* Volver a centrado */
+            justify-content: center; /* Volver a centrado */
             letter-spacing: 0.5px;
+            white-space: pre-wrap; /* Permitir saltos de línea */
+            word-wrap: break-word; /* Forzar quiebre de palabras */
+            overflow-wrap: break-word;
+            padding: 3px; /* Agregar padding */
         }
         
         .barbosa-text {
@@ -134,13 +149,18 @@
             text-orientation: mixed;
             transform: rotate(180deg);
             font-weight: bold;
-            font-size: 9px; /* Aumentar fuente para Barbosa */
+            font-size: 8px; /* Reducir fuente */
             color: #333;
             height: 100%;
+            width: 100%;
             display: flex;
-            align-items: center;
-            justify-content: center;
+            align-items: center; /* Volver a centrado */
+            justify-content: center; /* Volver a centrado */
             letter-spacing: 0.5px;
+            white-space: pre-wrap; /* Permitir saltos de línea */
+            word-wrap: break-word; /* Forzar quiebre de palabras */
+            overflow-wrap: break-word;
+            padding: 3px; /* Agregar padding */
         }
         
         @media print {
@@ -252,8 +272,21 @@
                             $infoPedido = "CLIENTE: " . strtoupper($pedido->cliente) . "\n";
                             $infoPedido .= "CÉDULA: " . ($pedido->cedula ? $pedido->cedula : 'NO REGISTRADA') . "\n";
                             $infoPedido .= "TELÉFONO: " . $pedido->celular . "\n";
-                            $infoPedido .= "DIRECCIÓN: " . ($pedido->direccion ? $pedido->direccion : 'NO REGISTRADA') . "\n";
-                            $infoPedido .= "CORREO: " . ($pedido->correo_electronico ? $pedido->correo_electronico : 'NO REGISTRADO') . "\n";
+                            
+                            // Mejorar el manejo de direcciones largas
+                            $direccion = $pedido->direccion ? $pedido->direccion : 'NO REGISTRADA';
+                            if (strlen($direccion) > 40) {
+                                $direccion = wordwrap($direccion, 40, "\n", true);
+                            }
+                            $infoPedido .= "DIRECCIÓN: " . $direccion . "\n";
+                            
+                            // Mejorar el manejo de correos largos
+                            $correo = $pedido->correo_electronico ? $pedido->correo_electronico : 'NO REGISTRADO';
+                            if (strlen($correo) > 35) {
+                                $correo = wordwrap($correo, 35, "\n", true);
+                            }
+                            $infoPedido .= "CORREO: " . $correo . "\n";
+                            
                             $infoPedido .= "FECHA ENTREGA: " . ($pedido->fecha_entrega ? $pedido->fecha_entrega->format('d/m/Y') : 'NO REGISTRADA') . "\n";
                             
                             if ($pedido->inventarios->count() > 0) {
