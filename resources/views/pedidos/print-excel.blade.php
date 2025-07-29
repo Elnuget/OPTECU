@@ -87,7 +87,7 @@
         }
         
         .vertical-text {
-            writing-mode: vertical-lr;
+            writing-mode: vertical-rl; /* Cambiado de vertical-lr a vertical-rl */
             text-orientation: mixed;
             transform: rotate(180deg);
             white-space: pre-wrap; /* Cambiar para mejor manejo del texto */
@@ -106,7 +106,7 @@
         }
         
         .info-text {
-            writing-mode: vertical-lr;
+            writing-mode: vertical-rl; /* Cambiado de vertical-lr a vertical-rl */
             text-orientation: mixed;
             transform: rotate(180deg);
             font-size: 10px; /* Reducir un poco la fuente para que quepa mejor */
@@ -126,7 +126,7 @@
         }
         
         .method-text {
-            writing-mode: vertical-lr;
+            writing-mode: vertical-rl; /* Cambiado de vertical-lr a vertical-rl */
             text-orientation: mixed;
             transform: rotate(180deg);
             font-weight: bold;
@@ -145,7 +145,7 @@
         }
         
         .barbosa-text {
-            writing-mode: vertical-lr;
+            writing-mode: vertical-rl; /* Cambiado de vertical-lr a vertical-rl */
             text-orientation: mixed;
             transform: rotate(180deg);
             font-weight: bold;
