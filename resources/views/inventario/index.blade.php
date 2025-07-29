@@ -64,7 +64,7 @@
         <div class="card-body">
             <x-inventario.search-filters :fecha="request('fecha')" :empresas="$empresas" />
             <x-inventario.toolbar />
-            <x-inventario.table :inventario="$inventario" />
+            <x-inventario.table :inventario="$inventario" :empresas="$empresas" />
         </div>
     </div>
 @stop

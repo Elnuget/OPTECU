@@ -201,6 +201,183 @@
                 window.location.href = "{{ route('pedidos.inventario-historial') }}";
             }
 
+            // Función para actualizar el campo (definida fuera de los event handlers)
+            function updateField(inputElement, newValue, currentValue, field, id, displayText) {
+                if (newValue === currentValue) {
+                    inputElement.siblings('.display-value').show();
+                    inputElement.hide();
+                    return;
+                }
+                
+                let cell = inputElement.closest('.editable');
+                let row = cell.closest('tr');
+                let displayValue = cell.find('.display-value');
+                
+                // Obtener los valores actuales de la fila
+                let data = {};
+                
+                try {
+                    // Obtener y validar número
+                    let numeroText = row.find('[data-field="numero"] .display-value').text().trim();
+                    data.numero = parseInt(numeroText);
+                    if (isNaN(data.numero)) throw new Error('El número debe ser un valor válido');
+                    
+                    // Obtener lugar y columna directamente de la fila
+                    data.lugar = row.find('[data-field="lugar"] .display-value').text().trim();
+                    if (!data.lugar) throw new Error('El lugar no puede estar vacío');
+                    
+                    data.columna = parseInt(row.find('[data-field="columna"] .display-value').text().trim());
+                    if (isNaN(data.columna)) throw new Error('La columna debe ser un número válido');
+                    
+                    // Obtener y validar código
+                    data.codigo = row.find('[data-field="codigo"] .display-value').text().trim();
+                    if (!data.codigo) throw new Error('El código no puede estar vacío');
+                    
+                    // Obtener y validar cantidad
+                    let cantidadText = row.find('[data-field="cantidad"] .display-value').text().trim();
+                    data.cantidad = parseInt(cantidadText);
+                    if (isNaN(data.cantidad)) throw new Error('La cantidad debe ser un número válido');
+                    
+                    // Obtener empresa_id (opcional)
+                    let empresaSelect = row.find('[data-field="empresa_id"] .edit-input');
+                    if (empresaSelect.length > 0) {
+                        data.empresa_id = empresaSelect.val() || null;
+                    } else {
+                        // Si no hay select, obtener del display-value
+                        let empresaText = row.find('[data-field="empresa_id"] .display-value').text().trim();
+                        if (empresaText && empresaText !== 'N/A') {
+                            // Buscar el ID de la empresa por nombre (esto es un fallback)
+                            data.empresa_id = null; // Por ahora null, se manejará en el servidor
+                        } else {
+                            data.empresa_id = null;
+                        }
+                    }
+                    
+                    // Actualizar el campo específico con el nuevo valor
+                    if (field === 'numero') {
+                        let newNum = parseInt(newValue);
+                        if (isNaN(newNum) || newNum < 0) throw new Error('El número debe ser un valor válido y no negativo');
+                        data.numero = newNum;
+                    } else if (field === 'cantidad') {
+                        let newCant = parseInt(newValue);
+                        if (isNaN(newCant) || newCant < 0) throw new Error('La cantidad debe ser un valor válido y no negativo');
+                        data.cantidad = newCant;
+                    } else if (field === 'codigo') {
+                        if (!newValue.trim()) throw new Error('El código no puede estar vacío');
+                        data.codigo = newValue.trim();
+                    } else if (field === 'lugar') {
+                        if (!newValue.trim()) throw new Error('El lugar no puede estar vacío');
+                        data.lugar = newValue.trim();
+                    } else if (field === 'columna') {
+                        let newCol = parseInt(newValue);
+                        if (isNaN(newCol) || newCol < 0) throw new Error('La columna debe ser un valor válido y no negativo');
+                        data.columna = newCol;
+                    } else if (field === 'empresa_id') {
+                        data.empresa_id = newValue || null;
+                    }
+                    
+                    // Log para debug
+                    console.log('Datos a enviar:', data);
+                    
+                    // Mostrar indicador de carga
+                    cell.addClass('bg-light');
+                    
+                    // Realizar la petición AJAX
+                    $.ajax({
+                        url: `/inventario/${id}/update-inline`,
+                        method: 'POST',
+                        data: data,
+                        headers: {
+                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Actualizar el display value según el tipo de campo
+                                if (field === 'empresa_id') {
+                                    let selectedText = displayText || 'N/A';
+                                    if (!newValue || newValue === '') {
+                                        selectedText = 'N/A';
+                                    }
+                                    displayValue.text(selectedText).show();
+                                } else {
+                                    displayValue.text(newValue).show();
+                                }
+                                
+                                inputElement.hide();
+                                
+                                // Actualizar el valor en la fila
+                                if (field === 'empresa_id') {
+                                    row.find(`[data-field="${field}"] .display-value`).text(displayText || 'N/A');
+                                } else {
+                                    row.find(`[data-field="${field}"] .display-value`).text(newValue);
+                                }
+                                
+                                // Actualizar clase de fila si la cantidad es 0
+                                if (field === 'cantidad') {
+                                    if (parseInt(newValue) === 0) {
+                                        row.addClass('table-danger');
+                                    } else {
+                                        row.removeClass('table-danger');
+                                    }
+                                }
+                                
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Actualizado',
+                                    text: response.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    // Preservar parámetros actuales al recargar
+                                    if (response.redirect_params) {
+                                        const params = new URLSearchParams(response.redirect_params);
+                                        window.location.href = window.location.pathname + '?' + params.toString();
+                                    } else {
+                                        window.location.reload();
+                                    }
+                                });
+                            } else {
+                                displayValue.show();
+                                inputElement.hide();
+                                
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: response.message
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            displayValue.show();
+                            inputElement.hide();
+                            
+                            let errorMsg = 'No se pudo actualizar el registro';
+                            if (xhr.responseJSON && xhr.responseJSON.message) {
+                                errorMsg = xhr.responseJSON.message;
+                            }
+                            
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: errorMsg
+                            });
+                        },
+                        complete: function() {
+                            cell.removeClass('bg-light');
+                        }
+                    });
+                } catch (error) {
+                    displayValue.show();
+                    inputElement.hide();
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de validación',
+                        text: error.message
+                    });
+                }
+            }
+
             // Edición en línea
             $('.editable').on('click', function() {
                 let currentValue = $(this).find('.display-value').text().trim();
@@ -216,142 +393,15 @@
                     if (e.type === 'keypress' && e.which !== 13) return;
                     
                     let newValue = $(this).val();
-                    if (newValue === currentValue) {
-                        displayValue.show();
-                        input.hide();
-                        return;
-                    }
+                    updateField($(this), newValue, currentValue, field, id);
+                });
+
+                // También manejar el evento change para selects
+                input.on('change', function(e) {
+                    let newValue = $(this).val();
+                    let newText = $(this).find('option:selected').text();
                     
-                    let cell = $(this).closest('.editable');
-                    let row = cell.closest('tr');
-                    
-                    // Obtener los valores actuales de la fila
-                    let data = {};
-                    
-                    try {
-                        // Obtener y validar número
-                        let numeroText = row.find('[data-field="numero"] .display-value').text().trim();
-                        data.numero = parseInt(numeroText);
-                        if (isNaN(data.numero)) throw new Error('El número debe ser un valor válido');
-                        
-                        // Obtener lugar y columna directamente de la fila
-                        data.lugar = row.find('[data-field="lugar"] .display-value').text().trim();
-                        if (!data.lugar) throw new Error('El lugar no puede estar vacío');
-                        
-                        data.columna = parseInt(row.find('[data-field="columna"] .display-value').text().trim());
-                        if (isNaN(data.columna)) throw new Error('La columna debe ser un número válido');
-                        
-                        // Obtener y validar código
-                        data.codigo = row.find('[data-field="codigo"] .display-value').text().trim();
-                        if (!data.codigo) throw new Error('El código no puede estar vacío');
-                        
-                        // Obtener y validar cantidad
-                        let cantidadText = row.find('[data-field="cantidad"] .display-value').text().trim();
-                        data.cantidad = parseInt(cantidadText);
-                        if (isNaN(data.cantidad)) throw new Error('La cantidad debe ser un número válido');
-                        
-                        // Actualizar el campo específico con el nuevo valor
-                        if (field === 'numero') {
-                            let newNum = parseInt(newValue);
-                            if (isNaN(newNum) || newNum < 0) throw new Error('El número debe ser un valor válido y no negativo');
-                            data.numero = newNum;
-                        } else if (field === 'cantidad') {
-                            let newCant = parseInt(newValue);
-                            if (isNaN(newCant) || newCant < 0) throw new Error('La cantidad debe ser un valor válido y no negativo');
-                            data.cantidad = newCant;
-                        } else if (field === 'codigo') {
-                            if (!newValue.trim()) throw new Error('El código no puede estar vacío');
-                            data.codigo = newValue.trim();
-                        } else if (field === 'lugar') {
-                            if (!newValue.trim()) throw new Error('El lugar no puede estar vacío');
-                            data.lugar = newValue.trim();
-                        } else if (field === 'columna') {
-                            let newCol = parseInt(newValue);
-                            if (isNaN(newCol) || newCol < 0) throw new Error('La columna debe ser un valor válido y no negativo');
-                            data.columna = newCol;
-                        }
-                        
-                        // Log para debug
-                        console.log('Datos a enviar:', data);
-                        
-                        // Mostrar indicador de carga
-                        cell.addClass('bg-light');
-                        
-                        // Realizar la petición AJAX
-                        $.ajax({
-                            url: `/inventario/${id}/update-inline`,
-                            method: 'POST',
-                            data: data,
-                            headers: {
-                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                            },
-                            success: function(response) {
-                                if (response.success) {
-                                    displayValue.text(newValue).show();
-                                    input.hide();
-                                    
-                                    // Actualizar el valor en la fila
-                                    row.find(`[data-field="${field}"] .display-value`).text(newValue);
-                                    
-                                    // Actualizar clase de fila si la cantidad es 0
-                                    if (field === 'cantidad') {
-                                        if (parseInt(newValue) === 0) {
-                                            row.addClass('table-danger');
-                                        } else {
-                                            row.removeClass('table-danger');
-                                        }
-                                    }
-                                    
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Actualizado',
-                                        text: response.message,
-                                        timer: 1500,
-                                        showConfirmButton: false
-                                    }).then(() => {
-                                        // El estado ya se habrá guardado por el evento beforeunload
-                                        window.location.reload();
-                                    });
-                                } else {
-                                    displayValue.show();
-                                    input.hide();
-                                    
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error',
-                                        text: response.message
-                                    });
-                                }
-                            },
-                            error: function(xhr) {
-                                displayValue.show();
-                                input.hide();
-                                
-                                let errorMsg = 'No se pudo actualizar el registro';
-                                if (xhr.responseJSON && xhr.responseJSON.message) {
-                                    errorMsg = xhr.responseJSON.message;
-                                }
-                                
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error',
-                                    text: errorMsg
-                                });
-                            },
-                            complete: function() {
-                                cell.removeClass('bg-light');
-                            }
-                        });
-                    } catch (error) {
-                        displayValue.show();
-                        input.hide();
-                        
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error de validación',
-                            text: error.message
-                        });
-                    }
+                    updateField($(this), newValue, currentValue, field, id, newText);
                 });
 
                 // Cancelar edición con Escape
@@ -385,8 +435,8 @@
                 const row = cell.closest('tr');
                 const field = cell.data('field');
                 
-                // Solo permitir edición de código y cantidad en filas nuevas
-                if (row.hasClass('new-row') && (field !== 'codigo' && field !== 'cantidad')) {
+                // Solo permitir edición de código, empresa y cantidad en filas nuevas
+                if (row.hasClass('new-row') && (field !== 'codigo' && field !== 'cantidad' && field !== 'empresa_id')) {
                     return;
                 }
                 
@@ -396,6 +446,13 @@
                     let input;
                     if (field === 'cantidad') {
                         input = $('<input type="number" class="form-control" value="1">');
+                    } else if (field === 'empresa_id') {
+                        input = $('<select class="form-control"></select>');
+                        // Copiar opciones del select existente si existe
+                        let existingSelect = cell.find('.edit-input');
+                        if (existingSelect.length > 0) {
+                            input.html(existingSelect.html());
+                        }
                     } else {
                         input = $('<input type="text" class="form-control">');
                     }
@@ -437,6 +494,9 @@
                                 codigo: row.find('td[data-field="codigo"] .display-value').text().trim() === '-' ? 
                                        row.find('td[data-field="codigo"] input').val() : 
                                        row.find('td[data-field="codigo"] .display-value').text().trim(),
+                                empresa_id: row.find('td[data-field="empresa_id"] .display-value').text().trim() === 'N/A' ? 
+                                           row.find('td[data-field="empresa_id"] select').val() || null : 
+                                           null, // Se manejará en el servidor
                                 cantidad: row.find('td[data-field="cantidad"] .display-value').text().trim() === '-' ? 
                                          row.find('td[data-field="cantidad"] input').val() || 1 : 
                                          row.find('td[data-field="cantidad"] .display-value').text().trim()
@@ -468,10 +528,20 @@
                                 success: function(response) {
                                     // Actualizar las celdas editables
                                     row.find('td[data-field="codigo"] .display-value').text(articleData.codigo).show();
+                                    
+                                    // Actualizar empresa
+                                    if (articleData.empresa_id) {
+                                        let empresaSelect = row.find('td[data-field="empresa_id"] select');
+                                        let empresaText = empresaSelect.find('option:selected').text() || 'N/A';
+                                        row.find('td[data-field="empresa_id"] .display-value').text(empresaText).show();
+                                    } else {
+                                        row.find('td[data-field="empresa_id"] .display-value').text('N/A').show();
+                                    }
+                                    
                                     row.find('td[data-field="cantidad"] .display-value').text(articleData.cantidad).show();
                                     
-                                    // Remover inputs y clase new-row
-                                    row.find('input').remove();
+                                    // Remover inputs y selects, y clase new-row
+                                    row.find('input, select').remove();
                                     row.removeClass('new-row').show();
                                     
                                     // Actualizar el ID de la fila

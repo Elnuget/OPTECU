@@ -1,4 +1,4 @@
-@props(['items'])
+@props(['items', 'empresas'])
 
 @php
     // Agrupar items por número para detectar duplicados
@@ -53,8 +53,20 @@
                 <input type="text" class="form-control edit-input" style="display: none;" value="{{ $item->codigo }}">
             @endif
         </td>
-        <td class="text-center">
+        <td class="editable text-center" data-field="empresa_id">
             <span class="display-value">{{ $item && $item->empresa ? $item->empresa->nombre : 'N/A' }}</span>
+            @if($item)
+                <select class="form-control edit-input" style="display: none;">
+                    <option value="">Sin empresa</option>
+                    @if(isset($empresas))
+                        @foreach($empresas as $empresa)
+                            <option value="{{ $empresa->id }}" {{ $item->empresa_id == $empresa->id ? 'selected' : '' }}>
+                                {{ $empresa->nombre }}
+                            </option>
+                        @endforeach
+                    @endif
+                </select>
+            @endif
         </td>
         <td class="editable text-center" data-field="cantidad">
             <span class="display-value">{{ $item->cantidad ?? '-' }}</span>
@@ -89,13 +101,13 @@
 {{-- Mostrar los artículos duplicados al final --}}
 @foreach($duplicateItems->sortBy('numero') as $item)
     <tr @if($item->cantidad == 0) class="table-danger" @endif data-id="{{ $item->id }}" class="duplicate-row">
-        <x-inventario.table-row-content :item="$item" />
+        <x-inventario.table-row-content :item="$item" :empresas="$empresas" />
     </tr>
 @endforeach
 
 {{-- Mostrar artículos con número mayor a 14 que no están duplicados --}}
 @foreach($uniqueItems->filter(function($item){ return $item->numero > 14; })->sortBy('numero') as $item)
     <tr @if($item->cantidad == 0) class="table-danger" @endif data-id="{{ $item->id }}">
-        <x-inventario.table-row-content :item="$item" />
+        <x-inventario.table-row-content :item="$item" :empresas="$empresas" />
     </tr>
 @endforeach 

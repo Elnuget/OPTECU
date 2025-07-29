@@ -76,11 +76,6 @@ class InventarioController extends Controller
             // Aplicar el filtro de fecha
             $query->where('fecha', 'like', $request->fecha . '%');
             
-            // Aplicar filtro de empresa si está seleccionado
-            if ($request->filled('empresa_id')) {
-                $query->where('empresa_id', $request->empresa_id);
-            }
-            
             // Incluir relación con empresa
             $query->with('empresa');
             
@@ -169,7 +164,16 @@ class InventarioController extends Controller
         $validatedData['codigo'] = strtoupper($validatedData['codigo']);
 
         try {
-            Inventario::create($validatedData);
+            $inventario = Inventario::create($validatedData);
+
+            // Si es una petición AJAX, devolver JSON con el ID
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Artículo creado exitosamente',
+                    'id' => $inventario->id
+                ]);
+            }
 
             return redirect()->back()->with([
                 'error' => 'Exito',
@@ -177,6 +181,14 @@ class InventarioController extends Controller
                 'tipo' => 'alert-success'
             ]);
         } catch (\Exception $e) {
+            // Si es una petición AJAX, devolver JSON
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Artículo no se ha creado. Detalle: ' . $e->getMessage()
+                ], 422);
+            }
+
             return redirect()->back()->with([
                 'error' => 'Error',
                 'mensaje' => 'Artículo no se ha creado. Detalle: ' . $e->getMessage(),
@@ -419,6 +431,20 @@ class InventarioController extends Controller
             
             $inventario = Inventario::findOrFail($id);
             
+            // Verificar permisos de empresa para usuarios no administradores
+            $user = auth()->user();
+            if (!$user->is_admin) {
+                $userEmpresas = $user->todasLasEmpresas();
+                $tieneAcceso = $userEmpresas->where('id', $inventario->empresa_id)->count() > 0;
+                
+                if (!$tieneAcceso) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No tiene permisos para editar este artículo'
+                    ], 403);
+                }
+            }
+            
             try {
                 $messages = [
                     'numero.required' => 'El número es requerido',
@@ -433,15 +459,17 @@ class InventarioController extends Controller
                     'codigo.max' => 'El código no puede tener más de :max caracteres',
                     'cantidad.required' => 'La cantidad es requerida',
                     'cantidad.integer' => 'La cantidad debe ser un valor entero',
-                    'cantidad.min' => 'La cantidad no puede ser menor a :min'
+                    'cantidad.min' => 'La cantidad no puede ser menor a :min',
+                    'empresa_id.exists' => 'La empresa seleccionada no es válida'
                 ];
 
                 $validatedData = $request->validate([
                     'numero' => 'required|integer',
-                    'lugar' => 'required|string|max:50',
+                    'lugar' => 'required|string|max:255',
                     'columna' => 'required|integer',
-                    'codigo' => 'required|string|max:50',
+                    'codigo' => 'required|string|max:255',
                     'cantidad' => 'required|integer|min:0',
+                    'empresa_id' => 'nullable|exists:empresas,id',
                 ], $messages);
 
             } catch (\Illuminate\Validation\ValidationException $e) {
@@ -455,11 +483,38 @@ class InventarioController extends Controller
                 ], 422);
             }
 
+            // Convertir código a mayúsculas
+            if (isset($validatedData['codigo'])) {
+                $validatedData['codigo'] = strtoupper($validatedData['codigo']);
+            }
+
+            // Validar permisos para cambio de empresa
+            if (isset($validatedData['empresa_id']) && !$user->is_admin) {
+                $userEmpresas = $user->todasLasEmpresas();
+                $empresaSeleccionada = $userEmpresas->where('id', $validatedData['empresa_id'])->first();
+                if (!$empresaSeleccionada) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'No tiene permisos para asignar este artículo a la empresa seleccionada'
+                    ], 403);
+                }
+            }
+
             $inventario->update($validatedData);
+
+            // Preparar respuesta con parámetros actuales preservados
+            $currentParams = [];
+            if (request()->filled('fecha')) {
+                $currentParams['fecha'] = request('fecha');
+            }
+            if (request()->filled('empresa_id')) {
+                $currentParams['empresa_id'] = request('empresa_id');
+            }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Artículo actualizado correctamente'
+                'message' => 'Artículo actualizado correctamente',
+                'redirect_params' => $currentParams
             ]);
 
         } catch (\Exception $e) {

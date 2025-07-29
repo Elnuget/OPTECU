@@ -1,4 +1,4 @@
-@props(['inventario'])
+@props(['inventario', 'empresas'])
 
 <div class="row">
     @php
@@ -38,7 +38,7 @@
                             @endphp
 
                             @foreach($itemsPorColumna as $columna => $items)
-                                <x-inventario.table-column :columna="$columna" :items="$items" />
+                                <x-inventario.table-column :columna="$columna" :items="$items" :empresas="$empresas" />
                             @endforeach
                         </div>
                     </div>

@@ -18,7 +18,6 @@ class Inventario extends Model
         'columna', // renamed from fila
         'numero',
         'codigo',
-        'valor',
         'cantidad',
         'orden',
         'empresa_id'

@@ -1,4 +1,4 @@
-@props(['items'])
+@props(['items', 'empresas'])
 
 @foreach($items->sortBy('numero') as $item)
     <tr @if($item->cantidad == 0) class="table-danger" @endif data-id="{{ $item->id }}">
@@ -18,8 +18,18 @@
             <span class="display-value">{{ $item->codigo }}</span>
             <input type="text" class="form-control edit-input" style="display: none;" value="{{ $item->codigo }}">
         </td>
-        <td class="text-center">
+        <td class="editable text-center" data-field="empresa_id">
             <span class="display-value">{{ $item->empresa ? $item->empresa->nombre : 'N/A' }}</span>
+            <select class="form-control edit-input" style="display: none;">
+                <option value="">Sin empresa</option>
+                @if(isset($empresas))
+                    @foreach($empresas as $empresa)
+                        <option value="{{ $empresa->id }}" {{ $item->empresa_id == $empresa->id ? 'selected' : '' }}>
+                            {{ $empresa->nombre }}
+                        </option>
+                    @endforeach
+                @endif
+            </select>
         </td>
         <td class="editable text-center" data-field="cantidad">
             <span class="display-value">{{ $item->cantidad }}</span>

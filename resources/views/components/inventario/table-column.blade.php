@@ -1,4 +1,4 @@
-@props(['columna', 'items'])
+@props(['columna', 'items', 'empresas'])
 
 <div class="col-md-6 mb-4">
     <div class="card h-100">
@@ -36,16 +36,16 @@
                         <th style="width: 15%">Lugar</th>
                         <th style="width: 10%">Columna</th>
                         <th style="width: 25%">Código</th>
-                        <th style="width: 10%">Empresa</th>
+                        <th style="width: 15%">Empresa</th>
                         <th style="width: 10%">Cantidad</th>
-                        <th style="width: 10%">Acciones</th>
+                        <th style="width: 15%">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if(Str::startsWith(strtoupper($items->first()->lugar), 'SOPORTE'))
-                        <x-inventario.table-soporte-rows :items="$items" />
+                        <x-inventario.table-soporte-rows :items="$items" :empresas="$empresas" />
                     @else
-                        <x-inventario.table-regular-rows :items="$items" />
+                        <x-inventario.table-regular-rows :items="$items" :empresas="$empresas" />
                     @endif
                     
                     <!-- Nueva fila para agregar artículo -->
@@ -63,8 +63,14 @@
                             <span class="display-value">-</span>
                             <input type="text" class="form-control edit-input" style="display: none;">
                         </td>
-                        <td class="text-center">
+                        <td class="editable text-center" data-field="empresa_id">
                             <span class="display-value">N/A</span>
+                            <select class="form-control edit-input" style="display: none;">
+                                <option value="">Seleccionar empresa</option>
+                                @foreach($empresas ?? [] as $empresa)
+                                    <option value="{{ $empresa->id }}">{{ $empresa->nombre }}</option>
+                                @endforeach
+                            </select>
                         </td>
                         <td class="editable text-center" data-field="cantidad">
                             <span class="display-value">-</span>
@@ -77,7 +83,7 @@
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="6" class="text-center">
+                        <td colspan="7" class="text-center">
                             <button type="button" class="btn btn-sm btn-success add-row-btn" data-columna="{{ $columna }}">
                                 <i class="fas fa-plus"></i> AGREGAR ARTÍCULO
                             </button>
