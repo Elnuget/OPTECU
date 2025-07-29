@@ -552,6 +552,143 @@
                     newRow.find('td[data-field="codigo"]').trigger('click');
                 }
             });
+
+            // Manejo específico para filas nuevas (crear artículo)
+            $('.table').on('click', 'tr.new-row td.editable', function() {
+                const cell = $(this);
+                const field = cell.data('field');
+                const row = cell.closest('tr');
+                const displayValue = cell.find('.display-value');
+                const input = cell.find('.edit-input');
+                
+                // Solo permitir edición de código, empresa_id y cantidad en filas nuevas
+                if (!['codigo', 'empresa_id', 'cantidad'].includes(field)) {
+                    return;
+                }
+                
+                displayValue.hide();
+                input.show().focus();
+                
+                // Manejar eventos para crear artículo cuando se complete
+                input.off('blur.newRow keypress.newRow change.newRow');
+                
+                input.on('blur.newRow keypress.newRow', function(e) {
+                    if (e.type === 'keypress' && e.which !== 13) return;
+                    
+                    const value = $(this).val();
+                    if (!value) {
+                        displayValue.show();
+                        input.hide();
+                        return;
+                    }
+                    
+                    // Intentar crear el artículo si tenemos al menos el código
+                    createNewArticle(row);
+                });
+                
+                input.on('change.newRow', function() {
+                    const value = $(this).val();
+                    if (value) {
+                        createNewArticle(row);
+                    }
+                });
+            });
+
+            // Función para crear un nuevo artículo
+            function createNewArticle(row) {
+                const codigo = row.find('td[data-field="codigo"] .edit-input').val();
+                const empresaId = row.find('td[data-field="empresa_id"] .edit-input').val();
+                const cantidad = row.find('td[data-field="cantidad"] .edit-input').val() || 1;
+                
+                // Validar que al menos el código esté presente
+                if (!codigo || codigo.trim() === '') {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Código requerido',
+                        text: 'Debe ingresar un código para crear el artículo'
+                    });
+                    return;
+                }
+                
+                // Obtener datos de la fila
+                const numero = row.find('td[data-field="numero"] .display-value').text();
+                const lugar = row.data('lugar');
+                const columna = row.data('columna');
+                
+                // Obtener fecha del filtro o usar actual
+                let fecha;
+                const fechaFiltro = $('input[name="fecha"]').val();
+                if (fechaFiltro) {
+                    fecha = fechaFiltro + '-01';
+                } else {
+                    const today = new Date();
+                    fecha = today.getFullYear() + '-' + 
+                            String(today.getMonth() + 1).padStart(2, '0') + '-01';
+                }
+                
+                const data = {
+                    _token: '{{ csrf_token() }}',
+                    fecha: fecha,
+                    numero: numero,
+                    lugar: lugar,
+                    columna: columna,
+                    codigo: codigo.trim().toUpperCase(),
+                    empresa_id: empresaId || null,
+                    cantidad: cantidad
+                };
+                
+                console.log('Creando artículo:', data);
+                
+                // Mostrar loading
+                Swal.fire({
+                    title: 'Creando artículo...',
+                    text: 'Por favor espere',
+                    allowOutsideClick: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                $.ajax({
+                    url: '{{ route("inventario.store") }}',
+                    type: 'POST',
+                    data: data,
+                    success: function(response) {
+                        console.log('Artículo creado:', response);
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Artículo creado',
+                            text: 'El artículo se ha creado exitosamente',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    },
+                    error: function(xhr) {
+                        console.error('Error al crear artículo:', xhr);
+                        let errorMessage = 'Error al crear el artículo';
+                        
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            const errors = xhr.responseJSON.errors;
+                            errorMessage = Object.values(errors).flat().join(', ');
+                        }
+                        
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: errorMessage
+                        });
+                        
+                        // Restaurar la fila
+                        row.find('.edit-input').hide();
+                        row.find('.display-value').show();
+                    }
+                });
+            }
         });
     </script>
 @endpush 

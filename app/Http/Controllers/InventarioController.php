@@ -145,7 +145,7 @@ class InventarioController extends Controller
             'columna' => 'required|integer',
             'numero' => 'required|integer',
             'codigo' => 'required|string|max:255',
-            'cantidad' => 'required|integer',
+            'cantidad' => 'required|integer|min:0',
             'empresa_id' => 'nullable|exists:empresas,id',
         ]);
 
@@ -155,9 +155,21 @@ class InventarioController extends Controller
         
         // Restricción para usuarios no administradores
         $user = auth()->user();
-        if (!$user->is_admin && $user->empresa_id) {
-            // Forzar que el empresa_id sea el del usuario actual
-            $validatedData['empresa_id'] = $user->empresa_id;
+        if (!$user->is_admin) {
+            // Si el usuario no es admin, validar que puede usar la empresa seleccionada
+            if ($validatedData['empresa_id']) {
+                $userEmpresas = $user->todasLasEmpresas();
+                $empresaSeleccionada = $userEmpresas->where('id', $validatedData['empresa_id'])->first();
+                if (!$empresaSeleccionada) {
+                    if (request()->ajax()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'No tiene permisos para asignar este artículo a la empresa seleccionada'
+                        ], 403);
+                    }
+                    return redirect()->back()->withErrors(['empresa_id' => 'No tiene permisos para asignar este artículo a la empresa seleccionada']);
+                }
+            }
         }
 
         // Convertir código a mayúsculas
@@ -185,7 +197,7 @@ class InventarioController extends Controller
             if (request()->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Artículo no se ha creado. Detalle: ' . $e->getMessage()
+                    'message' => 'Error al crear el artículo: ' . $e->getMessage()
                 ], 422);
             }
 
