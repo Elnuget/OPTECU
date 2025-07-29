@@ -29,6 +29,9 @@
                             <option value="">Seleccionar...</option>
                             <option value="CERCA" {{ $luna->tipo == 'CERCA' ? 'selected' : '' }}>CERCA</option>
                             <option value="LEJOS" {{ $luna->tipo == 'LEJOS' ? 'selected' : '' }}>LEJOS</option>
+                            <option value="BIFOCAL" {{ $luna->tipo == 'BIFOCAL' ? 'selected' : '' }}>BIFOCAL</option>
+                            <option value="MULTIFOCAL" {{ $luna->tipo == 'MULTIFOCAL' ? 'selected' : '' }}>MULTIFOCAL</option>
+                            <option value="PROGRESIVO" {{ $luna->tipo == 'PROGRESIVO' ? 'selected' : '' }}>PROGRESIVO</option>
                         </select>
                     </div>
                 </div>

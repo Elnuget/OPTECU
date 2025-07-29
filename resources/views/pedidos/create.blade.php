@@ -368,6 +368,9 @@
                                         <option value="">Seleccionar...</option>
                                         <option value="CERCA">CERCA</option>
                                         <option value="LEJOS">LEJOS</option>
+                                        <option value="BIFOCAL">BIFOCAL</option>
+                                        <option value="MULTIFOCAL">MULTIFOCAL</option>
+                                        <option value="PROGRESIVO">PROGRESIVO</option>
                                     </select>
                                 </div>
                             </div>
@@ -1573,6 +1576,9 @@
                                     <option value="">Seleccionar...</option>
                                     <option value="CERCA">CERCA</option>
                                     <option value="LEJOS">LEJOS</option>
+                                    <option value="BIFOCAL">BIFOCAL</option>
+                                    <option value="MULTIFOCAL">MULTIFOCAL</option>
+                                    <option value="PROGRESIVO">PROGRESIVO</option>
                                 </select>
                             </div>
                         </div>

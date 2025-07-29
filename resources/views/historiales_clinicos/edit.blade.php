@@ -194,6 +194,7 @@
                                                         <option value="CERCA" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'CERCA' ? 'selected' : '' }}>CERCA</option>
                                                         <option value="LEJOS" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'LEJOS' ? 'selected' : '' }}>LEJOS</option>
                                                         <option value="BIFOCAL" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'BIFOCAL' ? 'selected' : '' }}>BIFOCAL</option>
+                                                        <option value="MULTIFOCAL" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'MULTIFOCAL' ? 'selected' : '' }}>MULTIFOCAL</option>
                                                         <option value="PROGRESIVO" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'PROGRESIVO' ? 'selected' : '' }}>PROGRESIVO</option>
                                                     </select>
                                                 </div>
@@ -270,6 +271,7 @@
                                                     <option value="CERCA">CERCA</option>
                                                     <option value="LEJOS">LEJOS</option>
                                                     <option value="BIFOCAL">BIFOCAL</option>
+                                                    <option value="MULTIFOCAL">MULTIFOCAL</option>
                                                     <option value="PROGRESIVO">PROGRESIVO</option>
                                                 </select>
                                             </div>
@@ -755,6 +757,7 @@
                                     <option value="CERCA">CERCA</option>
                                     <option value="LEJOS">LEJOS</option>
                                     <option value="BIFOCAL">BIFOCAL</option>
+                                    <option value="MULTIFOCAL">MULTIFOCAL</option>
                                     <option value="PROGRESIVO">PROGRESIVO</option>
                                 </select>
                             </div>

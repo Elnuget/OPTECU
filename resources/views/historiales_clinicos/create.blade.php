@@ -199,6 +199,7 @@
                                                 <option value="CERCA">CERCA</option>
                                                 <option value="LEJOS">LEJOS</option>
                                                 <option value="BIFOCAL">BIFOCAL</option>
+                                                <option value="MULTIFOCAL">MULTIFOCAL</option>
                                                 <option value="PROGRESIVO">PROGRESIVO</option>
                                             </select>
                                         </div>
@@ -838,6 +839,7 @@
                                                             <option value="CERCA" ${receta.tipo === 'CERCA' ? 'selected' : ''}>CERCA</option>
                                                             <option value="LEJOS" ${receta.tipo === 'LEJOS' ? 'selected' : ''}>LEJOS</option>
                                                             <option value="BIFOCAL" ${receta.tipo === 'BIFOCAL' ? 'selected' : ''}>BIFOCAL</option>
+                                                            <option value="MULTIFOCAL" ${receta.tipo === 'MULTIFOCAL' ? 'selected' : ''}>MULTIFOCAL</option>
                                                             <option value="PROGRESIVO" ${receta.tipo === 'PROGRESIVO' ? 'selected' : ''}>PROGRESIVO</option>
                                                         </select>
                                                     </div>
@@ -976,6 +978,7 @@
                                     <option value="CERCA">CERCA</option>
                                     <option value="LEJOS">LEJOS</option>
                                     <option value="BIFOCAL">BIFOCAL</option>
+                                    <option value="MULTIFOCAL">MULTIFOCAL</option>
                                     <option value="PROGRESIVO">PROGRESIVO</option>
                                 </select>
                             </div>
