@@ -859,6 +859,9 @@ input[type="checkbox"]:after {
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
 <script>
     $(document).ready(function () {
+        // Variable para controlar el estado del filtro de reclamos
+        var filtroReclamosActivo = false;
+        
         // Inicializar tooltips de Bootstrap
         $('[data-toggle="tooltip"]').tooltip({
             placement: 'top',
@@ -1155,7 +1158,12 @@ input[type="checkbox"]:after {
                 },
                 {
                     "targets": [3], // Columna de Orden
-                    "type": "num" // Asegurar que se ordene numéricamente
+                    "type": "num", // Asegurar que se ordene numéricamente
+                    "orderable": false // Deshabilitar ordenamiento por click para mantener nuestro orden personalizado
+                },
+                {
+                    "targets": '_all',
+                    "orderable": false // Deshabilitar ordenamiento automático en todas las columnas
                 }
             ],
             "createdRow": function(row, data, dataIndex) {
@@ -1165,12 +1173,22 @@ input[type="checkbox"]:after {
                 } else {
                     $(row).attr('data-urgente', '0');
                 }
+            },
+            "drawCallback": function(settings) {
+                // Ejecutar ordenamiento personalizado después de cada redibujado
+                setTimeout(function() {
+                    ordenarPorUrgenteYOrden();
+                }, 10);
             }
         });
 
         // Función personalizada para ordenar con urgentes primero
         function ordenarPorUrgenteYOrden() {
-            var rows = $('#pedidosTable tbody tr').get();
+            var rows = $('#pedidosTable tbody tr').not('#no-reclamos-message').get();
+            
+            if (rows.length === 0) {
+                return; // No hay filas para ordenar
+            }
             
             rows.sort(function(a, b) {
                 var aUrgente = $(a).hasClass('urgente-row') ? 1 : 0;
@@ -1182,22 +1200,54 @@ input[type="checkbox"]:after {
                 }
                 
                 // Si ambos son urgentes o ambos no son urgentes, ordenar por número de orden descendente
-                var aOrden = parseInt($(a).find('td').eq(3).text()) || 0;
-                var bOrden = parseInt($(b).find('td').eq(3).text()) || 0;
+                var aOrdenText = $(a).find('td').eq(3).text().trim();
+                var bOrdenText = $(b).find('td').eq(3).text().trim();
                 
-                return bOrden - aOrden; // Orden descendente
+                var aOrden = parseInt(aOrdenText.replace(/\D/g, '')) || 0; // Remover caracteres no numéricos
+                var bOrden = parseInt(bOrdenText.replace(/\D/g, '')) || 0;
+                
+                // Ordenar por número de orden de forma descendente (más alto primero)
+                return bOrden - aOrden;
             });
             
-            // Reordenar las filas en la tabla
+            // Limpiar tbody y agregar las filas ordenadas
+            var tbody = $('#pedidosTable tbody');
+            var mensajeNoReclamos = $('#no-reclamos-message').detach(); // Guardar mensaje si existe
+            
+            tbody.empty();
+            
+            // Agregar las filas ordenadas
             $.each(rows, function(index, row) {
-                $('#pedidosTable tbody').append(row);
+                tbody.append(row);
             });
+            
+            // Reagregar el mensaje de no reclamos si existía
+            if (mensajeNoReclamos.length > 0) {
+                tbody.append(mensajeNoReclamos);
+            }
+            
+            // Mensaje de debug en consola (solo en desarrollo)
+            console.log('Tabla reordenada: ' + rows.length + ' filas procesadas');
         }
 
         // Aplicar el ordenamiento personalizado después de que la tabla se inicialice
         setTimeout(function() {
             ordenarPorUrgenteYOrden();
         }, 100);
+
+        // También aplicar el ordenamiento después de búsquedas en DataTable
+        pedidosTable.on('search.dt', function() {
+            setTimeout(function() {
+                ordenarPorUrgenteYOrden();
+            }, 50);
+        });
+
+        // Función para mantener el ordenamiento después de cambios dinámicos
+        function manteneerOrdenamiento() {
+            setTimeout(function() {
+                ordenarPorUrgenteYOrden();
+            }, 100);
+        }
 
         // Manejar cambios en los filtros - Filtrado automático
         $('#filtroAno, #filtroMes, #empresa_id').change(function() {
@@ -1825,6 +1875,9 @@ Su opinión es muy importante para nosotros.
                     showConfirmButton: false
                 });
                 
+                // Mantener el ordenamiento después del filtro
+                manteneerOrdenamiento();
+                
             } else {
                 // Desactivar filtro de reclamos
                 filtroReclamosActivo = false;
@@ -1850,6 +1903,9 @@ Su opinión es muy importante para nosotros.
                     position: 'top-end',
                     showConfirmButton: false
                 });
+                
+                // Mantener el ordenamiento después de mostrar todos
+                manteneerOrdenamiento();
             }
             
             // Actualizar el contador de DataTables si existe
