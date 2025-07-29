@@ -305,14 +305,8 @@
     <script>
         // Auto-imprimir cuando se carga la página
         window.onload = function() {
-            setTimeout(function() {
-                window.print();
-                // Cerrar la ventana después de imprimir (opcional)
-                setTimeout(function() {
-                    window.close();
-                }, 1000);
-            }, 500);
-        };
+            window.print();
+        }
         
         // También permitir impresión manual con Ctrl+P
         document.addEventListener('keydown', function(e) {
