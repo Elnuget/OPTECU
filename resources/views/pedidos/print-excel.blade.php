@@ -259,12 +259,12 @@
             @foreach($filasPagina as $grupo)
             <table class="excel-table">
                 <tr>
-                    <!-- Columna Barbosa -->
-                    <td class="barbosa-column">
-                        <div class="barbosa-text">DE: L BARBOSA SPA 77.219.776-4</div>
-                    </td>
-                    
                     @foreach($grupo as $index => $pedido)
+                        <!-- Columna Barbosa -->
+                        <td class="barbosa-column">
+                            <div class="barbosa-text">DE: L BARBOSA SPA 77.219.776-4</div>
+                        </td>
+                        
                         @php
                             $empresaNombre = $pedido->empresa ? $pedido->empresa->nombre : 'Sin empresa';
                             $numeroOrden = $pedido->numero_orden;
@@ -324,6 +324,7 @@
                     
                     @for($i = 0; $i < $pedidosFaltantes; $i++)
                         <!-- Columnas vacías para completar la fila -->
+                        <td class="barbosa-column"></td>
                         <td class="company-column"></td>
                         <td class="info-column"></td>
                         <td class="empty-column"></td>
