@@ -378,8 +378,118 @@
                 }
             }
 
+        // Variables globales para prevenir duplicación de modales
+        let updatingElements = new Set();
+
+        // Función updateField para manejar las actualizaciones
+        function updateField(inputElement, newValue, currentValue, field, id, newText = null) {
+            // Crear clave única para este elemento
+            const elementKey = `${id}-${field}`;
+            
+            // Prevenir múltiples actualizaciones simultáneas del mismo elemento
+            if (updatingElements.has(elementKey)) {
+                console.log('Actualización ya en progreso para', elementKey, ', ignorando...');
+                return;
+            }
+
+            // Evitar actualización si no hay cambios
+            if (newValue == currentValue) {
+                inputElement.hide();
+                inputElement.siblings('.display-value').show();
+                return;
+            }
+
+            // Marcar como actualizando
+            updatingElements.add(elementKey);
+
+            // Preparar datos
+            let data = {
+                _token: '{{ csrf_token() }}',
+                field: field,
+                value: newValue
+            };
+
+            console.log('Enviando datos:', data, 'para elemento:', elementKey);
+
+            // Mostrar loading
+            inputElement.prop('disabled', true);
+
+            $.ajax({
+                url: `/inventario/${id}/update-inline`,
+                type: 'POST',
+                data: data,
+                success: function(response) {
+                    console.log('Respuesta exitosa:', response);
+                    if (response.success) {
+                        // Actualizar la vista
+                        let displayElement = inputElement.siblings('.display-value');
+                        
+                        if (field === 'empresa_id') {
+                            // Para empresa, usar el texto del option seleccionado
+                            let selectedText = newText || inputElement.find('option:selected').text();
+                            displayElement.text(selectedText);
+                            console.log('Empresa actualizada a:', selectedText);
+                        } else {
+                            displayElement.text(newValue);
+                        }
+                        
+                        // Ocultar input y mostrar display
+                        inputElement.hide();
+                        displayElement.show();
+                        
+                        // Mostrar mensaje de éxito y recargar página
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Actualizado',
+                            text: `${field} actualizado correctamente`,
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            // Recargar la página automáticamente después del mensaje
+                            window.location.reload();
+                        });
+                    } else {
+                        throw new Error(response.message || 'Error al actualizar');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error en AJAX:', xhr);
+                    console.error('Response text:', xhr.responseText);
+                    console.error('Response JSON:', xhr.responseJSON);
+                    
+                    let errorMessage = 'Error al actualizar el campo';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        // Mostrar errores de validación específicos
+                        let errors = xhr.responseJSON.errors;
+                        errorMessage = Object.values(errors).flat().join(', ');
+                    }
+                    
+                    // Restaurar valor original
+                    if (field === 'empresa_id') {
+                        inputElement.val(currentValue);
+                    } else {
+                        inputElement.val(currentValue);
+                    }
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de validación',
+                        text: errorMessage
+                    });
+                },
+                complete: function() {
+                    inputElement.prop('disabled', false);
+                    // Remover de elementos actualizando
+                    updatingElements.delete(elementKey);
+                }
+            });
+        }
+
             // Edición en línea
-            $('.editable').on('click', function() {
+            $('.editable').off('click.editInline').on('click.editInline', function() {
                 let currentValue = $(this).find('.display-value').text().trim();
                 let field = $(this).data('field');
                 let id = $(this).closest('tr').data('id');
@@ -387,17 +497,33 @@
                 let displayValue = $(this).find('.display-value');
                 
                 displayValue.hide();
-                input.show().focus().val(currentValue);
+                input.show().focus();
+                
+                // Para selects, no establecer val() ya que tienen las opciones preseleccionadas
+                if (input.is('select')) {
+                    // El select ya tiene el valor correcto por el atributo selected en el HTML
+                } else {
+                    input.val(currentValue);
+                }
 
-                input.on('blur keypress', function(e) {
+                // Remover eventos previos para evitar duplicados
+                input.off('blur.editInline keypress.editInline change.editInline keyup.editInline');
+
+                input.on('blur.editInline keypress.editInline', function(e) {
                     if (e.type === 'keypress' && e.which !== 13) return;
                     
                     let newValue = $(this).val();
-                    updateField($(this), newValue, currentValue, field, id);
+                    let newText = '';
+                    
+                    if ($(this).is('select')) {
+                        newText = $(this).find('option:selected').text();
+                    }
+                    
+                    updateField($(this), newValue, currentValue, field, id, newText);
                 });
 
                 // También manejar el evento change para selects
-                input.on('change', function(e) {
+                input.on('change.editInline', function(e) {
                     let newValue = $(this).val();
                     let newText = $(this).find('option:selected').text();
                     
@@ -405,7 +531,7 @@
                 });
 
                 // Cancelar edición con Escape
-                input.on('keyup', function(e) {
+                input.on('keyup.editInline', function(e) {
                     if (e.key === 'Escape') {
                         displayValue.show();
                         input.hide();
@@ -424,316 +550,6 @@
                     newRow.show();
                     // Activar la edición en la celda de código
                     newRow.find('td[data-field="codigo"]').trigger('click');
-                }
-            });
-
-            // Modificar la función de edición en línea
-            $('.table').on('click', 'td.editable', function() {
-                const cell = $(this);
-                const displayValue = cell.find('.display-value');
-                const currentValue = displayValue.text().trim();
-                const row = cell.closest('tr');
-                const field = cell.data('field');
-                
-                // Solo permitir edición de código, empresa y cantidad en filas nuevas
-                if (row.hasClass('new-row') && (field !== 'codigo' && field !== 'cantidad' && field !== 'empresa_id')) {
-                    return;
-                }
-                
-                // Si es una nueva fila o el valor es '-' o está vacío
-                if (row.hasClass('new-row') || currentValue === '-' || currentValue === '') {
-                    // Crear input según el tipo de campo
-                    let input;
-                    if (field === 'cantidad') {
-                        input = $('<input type="number" class="form-control" value="1">');
-                    } else if (field === 'empresa_id') {
-                        input = $('<select class="form-control"></select>');
-                        // Copiar opciones del select existente si existe
-                        let existingSelect = cell.find('.edit-input');
-                        if (existingSelect.length > 0) {
-                            input.html(existingSelect.html());
-                        }
-                    } else {
-                        input = $('<input type="text" class="form-control">');
-                    }
-                    
-                    // Reemplazar el contenido de la celda con el input
-                    displayValue.hide();
-                    cell.append(input);
-                    input.focus();
-                    
-                    // Manejar la pérdida de foco
-                    input.on('blur', function() {
-                        const value = $(this).val();
-                        if (!value) {
-                            displayValue.text('-').show();
-                            input.remove();
-                            return;
-                        }
-                        
-                        // Si es una fila nueva, crear el artículo
-                        if (row.hasClass('new-row')) {
-                            // Obtener la fecha del filtro o usar la fecha actual como fallback
-                            let fecha;
-                            const fechaFiltro = $('input[name="fecha"]').val();
-                            if (fechaFiltro) {
-                                fecha = fechaFiltro + '-01';
-                            } else {
-                                const today = new Date();
-                                fecha = today.getFullYear() + '-' + 
-                                        String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-                                        String(today.getDate()).padStart(2, '0');
-                            }
-                            
-                            // Recopilar datos para el nuevo artículo
-                            const articleData = {
-                                fecha: fecha,
-                                numero: row.find('td[data-field="numero"] .display-value').text().trim(),
-                                lugar: row.data('lugar'),
-                                columna: row.data('columna'),
-                                codigo: row.find('td[data-field="codigo"] .display-value').text().trim() === '-' ? 
-                                       row.find('td[data-field="codigo"] input').val() : 
-                                       row.find('td[data-field="codigo"] .display-value').text().trim(),
-                                empresa_id: row.find('td[data-field="empresa_id"] .display-value').text().trim() === 'N/A' ? 
-                                           row.find('td[data-field="empresa_id"] select').val() || null : 
-                                           null, // Se manejará en el servidor
-                                cantidad: row.find('td[data-field="cantidad"] .display-value').text().trim() === '-' ? 
-                                         row.find('td[data-field="cantidad"] input').val() || 1 : 
-                                         row.find('td[data-field="cantidad"] .display-value').text().trim()
-                            };
-
-                            // Actualizar el campo actual
-                            articleData[field] = value;
-                            
-                            // Validar que código y cantidad estén completos
-                            if (!articleData.codigo || articleData.codigo === '-') {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error de validación',
-                                    text: 'El código es requerido'
-                                });
-                                displayValue.text('-').show();
-                                input.remove();
-                                return;
-                            }
-                            
-                            // Crear el artículo
-                            $.ajax({
-                                url: '{{ route("inventario.store") }}',
-                                method: 'POST',
-                                data: {
-                                    _token: '{{ csrf_token() }}',
-                                    ...articleData
-                                },
-                                success: function(response) {
-                                    // Actualizar las celdas editables
-                                    row.find('td[data-field="codigo"] .display-value').text(articleData.codigo).show();
-                                    
-                                    // Actualizar empresa
-                                    if (articleData.empresa_id) {
-                                        let empresaSelect = row.find('td[data-field="empresa_id"] select');
-                                        let empresaText = empresaSelect.find('option:selected').text() || 'N/A';
-                                        row.find('td[data-field="empresa_id"] .display-value').text(empresaText).show();
-                                    } else {
-                                        row.find('td[data-field="empresa_id"] .display-value').text('N/A').show();
-                                    }
-                                    
-                                    row.find('td[data-field="cantidad"] .display-value').text(articleData.cantidad).show();
-                                    
-                                    // Remover inputs y selects, y clase new-row
-                                    row.find('input, select').remove();
-                                    row.removeClass('new-row').show();
-                                    
-                                    // Actualizar el ID de la fila
-                                    if (response.id) {
-                                        row.attr('data-id', response.id);
-                                    }
-                                    
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Artículo creado exitosamente',
-                                        showConfirmButton: false,
-                                        timer: 1500
-                                    }).then(() => {
-                                        window.location.reload();
-                                    });
-                                },
-                                error: function(xhr) {
-                                    console.error('Error response:', xhr.responseJSON);
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error al crear el artículo',
-                                        text: xhr.responseJSON?.message || 'Error desconocido'
-                                    });
-                                    displayValue.text('-').show();
-                                    input.remove();
-                                }
-                            });
-                        }
-                    });
-                    
-                    // Manejar la tecla Enter
-                    input.on('keypress', function(e) {
-                        if (e.which === 13) {
-                            $(this).blur();
-                        }
-                    });
-                    
-                    // Manejar la tecla Escape
-                    input.on('keyup', function(e) {
-                        if (e.key === 'Escape') {
-                            displayValue.show();
-                            input.remove();
-                            if (row.hasClass('new-row')) {
-                                row.hide();
-                            }
-                        }
-                    });
-                }
-            });
-
-            // Función para crear automáticamente un artículo en SOPORTE
-            function createSoporteArticle(row, codigo = '') {
-                // Obtener la fecha del filtro o usar la fecha actual como fallback
-                let fecha;
-                const fechaFiltro = $('input[name="fecha"]').val();
-                if (fechaFiltro) {
-                    fecha = fechaFiltro + '-01';
-                } else {
-                    const today = new Date();
-                    fecha = today.getFullYear() + '-' + 
-                            String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-                            String(today.getDate()).padStart(2, '0');
-                }
-                
-                const articleData = {
-                    fecha: fecha,
-                    numero: row.data('numero'),
-                    lugar: row.data('lugar'),
-                    columna: row.data('columna'),
-                    codigo: codigo,
-                    cantidad: 1
-                };
-
-                // Validar que el código no esté vacío
-                if (!codigo.trim()) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Validación',
-                        text: 'El código no puede estar vacío',
-                        showConfirmButton: true
-                    });
-                    return false;
-                }
-
-                // Mostrar indicador de carga
-                Swal.fire({
-                    title: 'Creando artículo...',
-                    text: 'Por favor espere',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    allowEnterKey: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                $.ajax({
-                    url: '{{ route("inventario.store") }}',
-                    method: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}',
-                        ...articleData
-                    },
-                    success: function(response) {
-                        // Actualizar las celdas con los valores
-                        row.attr('data-id', response.id || '');
-                        row.removeClass('empty-space');
-                        row.find('td[data-field="codigo"] .display-value').text(articleData.codigo);
-                        row.find('td[data-field="cantidad"] .display-value').text(articleData.cantidad);
-                        
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Éxito!',
-                            text: 'El artículo se ha creado correctamente',
-                            showConfirmButton: true,
-                            confirmButtonText: 'Aceptar'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                window.location.reload();
-                            }
-                        });
-                    },
-                    error: function(xhr) {
-                        let errorMessage = 'Hubo un error al crear el artículo';
-                        
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            errorMessage = xhr.responseJSON.message;
-                        } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-                            errorMessage = Object.values(xhr.responseJSON.errors).flat().join('\n');
-                        }
-                        
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: errorMessage,
-                            showConfirmButton: true,
-                            confirmButtonText: 'Aceptar'
-                        });
-                    }
-                });
-
-                return true;
-            }
-
-            // Modificar el manejador de clics para espacios vacíos en SOPORTE
-            $('.table').on('click', 'tr.empty-space td.editable', function() {
-                const cell = $(this);
-                const row = cell.closest('tr');
-                const field = cell.data('field');
-                
-                // Solo proceder si el campo es código o cantidad
-                if (field === 'codigo' || field === 'cantidad') {
-                    const displayValue = cell.find('.display-value');
-                    
-                    // Crear input para el código
-                    const input = $('<input type="text" class="form-control" placeholder="INGRESE EL CÓDIGO">');
-                    displayValue.hide();
-                    cell.append(input);
-                    input.focus();
-                    
-                    // Manejar la pérdida de foco
-                    input.on('blur', function() {
-                        const codigo = $(this).val().trim();
-                        if (!codigo) {
-                            displayValue.show();
-                            input.remove();
-                            return;
-                        }
-                        
-                        // Intentar crear el artículo
-                        if (createSoporteArticle(row, codigo)) {
-                            displayValue.text(codigo);
-                        }
-                        displayValue.show();
-                        input.remove();
-                    });
-                    
-                    // Manejar la tecla Enter
-                    input.on('keypress', function(e) {
-                        if (e.which === 13) {
-                            $(this).blur();
-                        }
-                    });
-                    
-                    // Manejar la tecla Escape
-                    input.on('keyup', function(e) {
-                        if (e.key === 'Escape') {
-                            displayValue.show();
-                            input.remove();
-                        }
-                    });
                 }
             });
         });

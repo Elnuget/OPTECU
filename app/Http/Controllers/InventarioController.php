@@ -445,35 +445,75 @@ class InventarioController extends Controller
                 }
             }
             
-            try {
-                $messages = [
-                    'numero.required' => 'El número es requerido',
-                    'numero.integer' => 'El número debe ser un valor entero',
-                    'lugar.required' => 'El lugar es requerido',
-                    'lugar.string' => 'El lugar debe ser texto',
-                    'lugar.max' => 'El lugar no puede tener más de :max caracteres',
-                    'columna.required' => 'La columna es requerida',
-                    'columna.integer' => 'La columna debe ser un valor entero',
-                    'codigo.required' => 'El código es requerido',
-                    'codigo.string' => 'El código debe ser texto',
-                    'codigo.max' => 'El código no puede tener más de :max caracteres',
-                    'cantidad.required' => 'La cantidad es requerida',
-                    'cantidad.integer' => 'La cantidad debe ser un valor entero',
-                    'cantidad.min' => 'La cantidad no puede ser menor a :min',
-                    'empresa_id.exists' => 'La empresa seleccionada no es válida'
-                ];
+            // Obtener solo el campo y valor que se está actualizando
+            $field = $request->input('field');
+            $value = $request->input('value');
+            
+            if (!$field) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Campo no especificado'
+                ], 400);
+            }
 
-                $validatedData = $request->validate([
-                    'numero' => 'required|integer',
-                    'lugar' => 'required|string|max:255',
-                    'columna' => 'required|integer',
-                    'codigo' => 'required|string|max:255',
-                    'cantidad' => 'required|integer|min:0',
-                    'empresa_id' => 'nullable|exists:empresas,id',
-                ], $messages);
+            // Validar según el campo específico
+            $rules = [];
+            $messages = [];
+            
+            switch ($field) {
+                case 'numero':
+                    $rules['value'] = 'required|integer';
+                    $messages['value.required'] = 'El número es requerido';
+                    $messages['value.integer'] = 'El número debe ser un valor entero';
+                    break;
+                    
+                case 'lugar':
+                    $rules['value'] = 'required|string|max:255';
+                    $messages['value.required'] = 'El lugar es requerido';
+                    $messages['value.string'] = 'El lugar debe ser texto';
+                    $messages['value.max'] = 'El lugar no puede tener más de 255 caracteres';
+                    break;
+                    
+                case 'columna':
+                    $rules['value'] = 'required|integer';
+                    $messages['value.required'] = 'La columna es requerida';
+                    $messages['value.integer'] = 'La columna debe ser un valor entero';
+                    break;
+                    
+                case 'codigo':
+                    $rules['value'] = 'required|string|max:255';
+                    $messages['value.required'] = 'El código es requerido';
+                    $messages['value.string'] = 'El código debe ser texto';
+                    $messages['value.max'] = 'El código no puede tener más de 255 caracteres';
+                    break;
+                    
+                case 'cantidad':
+                    $rules['value'] = 'required|integer|min:0';
+                    $messages['value.required'] = 'La cantidad es requerida';
+                    $messages['value.integer'] = 'La cantidad debe ser un valor entero';
+                    $messages['value.min'] = 'La cantidad no puede ser menor a 0';
+                    break;
+                    
+                case 'empresa_id':
+                    $rules['value'] = 'nullable|exists:empresas,id';
+                    $messages['value.exists'] = 'La empresa seleccionada no es válida';
+                    break;
+                    
+                default:
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Campo no válido: ' . $field
+                    ], 400);
+            }
+
+            try {
+                $validatedData = $request->validate($rules, $messages);
+                $validatedValue = $validatedData['value'];
 
             } catch (\Illuminate\Validation\ValidationException $e) {
                 \Log::error('Error de validación', [
+                    'field' => $field,
+                    'value' => $value,
                     'errors' => $e->errors()
                 ]);
                 return response()->json([
@@ -484,14 +524,14 @@ class InventarioController extends Controller
             }
 
             // Convertir código a mayúsculas
-            if (isset($validatedData['codigo'])) {
-                $validatedData['codigo'] = strtoupper($validatedData['codigo']);
+            if ($field === 'codigo') {
+                $validatedValue = strtoupper($validatedValue);
             }
 
             // Validar permisos para cambio de empresa
-            if (isset($validatedData['empresa_id']) && !$user->is_admin) {
+            if ($field === 'empresa_id' && !$user->is_admin && $validatedValue) {
                 $userEmpresas = $user->todasLasEmpresas();
-                $empresaSeleccionada = $userEmpresas->where('id', $validatedData['empresa_id'])->first();
+                $empresaSeleccionada = $userEmpresas->where('id', $validatedValue)->first();
                 if (!$empresaSeleccionada) {
                     return response()->json([
                         'success' => false,
@@ -500,7 +540,8 @@ class InventarioController extends Controller
                 }
             }
 
-            $inventario->update($validatedData);
+            // Actualizar solo el campo específico
+            $inventario->update([$field => $validatedValue]);
 
             // Preparar respuesta con parámetros actuales preservados
             $currentParams = [];
