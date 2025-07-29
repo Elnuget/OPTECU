@@ -880,7 +880,7 @@
                 });
         };
 
-        // Función para procesar respuestas del historial clínico - SIMPLIFICADA
+        // Función para procesar respuestas del historial clínico - MEJORADA CON MÚLTIPLES RECETAS
         window.procesarRespuestaHistorialClinico = function(data) {
             // Remover indicador de carga
             limpiarCamposAutocompletado();
@@ -897,6 +897,9 @@
                 if (data.historial.created_at) {
                     textoExito += ` - Fecha: ${data.historial.created_at}`;
                 }
+                if (data.historial.cantidadRecetas && data.historial.cantidadRecetas > 1) {
+                    textoExito += ` - ${data.historial.cantidadRecetas} recetas encontradas`;
+                }
                 
                 successMsg.textContent = textoExito;
                 successMsg.style.fontSize = '0.875rem';
@@ -905,7 +908,7 @@
                 
                 setTimeout(() => successMsg.remove(), 4000);
                 
-                // Autocompletar campos (solo si están vacíos)
+                // Autocompletar campos de datos personales (solo si están vacíos)
                 if (!$('#cedula').val() && data.historial.cedula) {
                     $('#cedula').val(data.historial.cedula);
                 }
@@ -922,8 +925,8 @@
                     $('#empresa_id').val(data.historial.empresa_id);
                 }
                 
-                // Cargar datos de receta en los campos individuales y el campo unificado
-                if (data.historial.od_esfera !== undefined) {
+                // Procesar recetas
+                if (data.historial.todasLasRecetas && data.historial.todasLasRecetas.length > 0) {
                     // Abrir sección de lunas
                     const lunasHeader = document.querySelector('#lunas-container .card-header');
                     const lunasCollapsed = document.querySelector('#lunas-container').classList.contains('collapsed-card');
@@ -931,39 +934,36 @@
                         lunasHeader.querySelector('.btn-tool').click();
                     }
                     
-                    // Llenar campos individuales de la tabla de prescripción
-                    const setValueIfEmpty = (selector, value) => {
-                        const element = document.querySelector(selector);
-                        if (element && !element.value && value !== null && value !== undefined && value !== '') {
-                            element.value = value;
+                    // Limpiar recetas existentes si hay más de una sección
+                    const recetasExistentes = document.querySelectorAll('#lunas-container .card-body');
+                    if (recetasExistentes.length > 1) {
+                        // Mantener solo la primera sección
+                        for (let i = 1; i < recetasExistentes.length; i++) {
+                            recetasExistentes[i].parentElement.remove();
                         }
-                    };
+                    }
                     
-                    // Formatear valores para mostrar
-                    const formatearValorParaCampo = (valor) => {
-                        if (valor === null || valor === undefined || valor === '') return '';
-                        if (!isNaN(parseFloat(valor))) {
-                            const num = parseFloat(valor);
-                            return num > 0 ? `+${num.toFixed(2)}` : `${num.toFixed(2)}`;
+                    // Cargar la primera receta en la sección existente
+                    cargarRecetaEnSeccion(data.historial.todasLasRecetas[0], 0);
+                    
+                    // Si hay más de una receta, crear secciones adicionales
+                    if (data.historial.todasLasRecetas.length > 1) {
+                        for (let i = 1; i < data.historial.todasLasRecetas.length; i++) {
+                            duplicateLunas();
+                            // Cargar la receta en la nueva sección creada después de un breve delay
+                            setTimeout(() => {
+                                cargarRecetaEnSeccion(data.historial.todasLasRecetas[i], i);
+                            }, 100 * i);
                         }
-                        return valor;
-                    };
+                    }
                     
-                    // Llenar campos individuales
-                    setValueIfEmpty('[name="od_esfera[]"]', formatearValorParaCampo(data.historial.od_esfera));
-                    setValueIfEmpty('[name="od_cilindro[]"]', formatearValorParaCampo(data.historial.od_cilindro));
-                    setValueIfEmpty('[name="od_eje[]"]', data.historial.od_eje ? `${data.historial.od_eje}°` : '');
-                    setValueIfEmpty('[name="oi_esfera[]"]', formatearValorParaCampo(data.historial.oi_esfera));
-                    setValueIfEmpty('[name="oi_cilindro[]"]', formatearValorParaCampo(data.historial.oi_cilindro));
-                    setValueIfEmpty('[name="oi_eje[]"]', data.historial.oi_eje ? `${data.historial.oi_eje}°` : '');
-                    setValueIfEmpty('[name="add[]"]', formatearValorParaCampo(data.historial.add));
-                    setValueIfEmpty('[name="dp[]"]', data.historial.dp || '');
-                    
-                    // Actualizar automáticamente el campo l_medida después de un breve delay
+                    // Cargar información adicional del historial clínico en todas las secciones
                     setTimeout(() => {
-                        formatearMedidasLunas();
-                        formatearMaterial();
-                    }, 100);
+                        cargarInformacionHistorialEnSecciones(data.historial);
+                    }, 500);
+                } else if (data.historial.od_esfera !== undefined) {
+                    // Compatibilidad con formato anterior - una sola receta
+                    cargarRecetaLegacy(data.historial);
                 }
             } else {
                 // No se encontraron datos
@@ -973,6 +973,183 @@
                 document.getElementById('buscar_historial_clinico').parentNode.appendChild(infoMsg);
                 
                 setTimeout(() => infoMsg.remove(), 2000);
+            }
+        };
+        
+        // Función para cargar una receta en una sección específica
+        window.cargarRecetaEnSeccion = function(receta, indiceSeccion) {
+            const formatearValorParaCampo = (valor) => {
+                if (valor === null || valor === undefined || valor === '') return '';
+                if (!isNaN(parseFloat(valor))) {
+                    const num = parseFloat(valor);
+                    return num > 0 ? `+${num.toFixed(2)}` : `${num.toFixed(2)}`;
+                }
+                return valor;
+            };
+            
+            const setValueByName = (name, value) => {
+                const elements = document.getElementsByName(name);
+                if (elements[indiceSeccion] && !elements[indiceSeccion].value && value !== null && value !== undefined && value !== '') {
+                    elements[indiceSeccion].value = value;
+                }
+            };
+            
+            // Cargar tipo de receta
+            if (receta.tipo) {
+                setValueByName('tipo[]', receta.tipo);
+            }
+            
+            // Cargar campos de prescripción
+            setValueByName('od_esfera[]', formatearValorParaCampo(receta.od_esfera));
+            setValueByName('od_cilindro[]', formatearValorParaCampo(receta.od_cilindro));
+            setValueByName('od_eje[]', receta.od_eje ? `${receta.od_eje}°` : '');
+            setValueByName('oi_esfera[]', formatearValorParaCampo(receta.oi_esfera));
+            setValueByName('oi_cilindro[]', formatearValorParaCampo(receta.oi_cilindro));
+            setValueByName('oi_eje[]', receta.oi_eje ? `${receta.oi_eje}°` : '');
+            setValueByName('add[]', formatearValorParaCampo(receta.od_adicion || receta.oi_adicion));
+            setValueByName('dp[]', receta.dp || '');
+            setValueByName('l_detalle[]', receta.observaciones || '');
+            
+            // Actualizar automáticamente el campo l_medida después de un breve delay
+            setTimeout(() => {
+                // Buscar la sección específica por índice
+                const secciones = document.querySelectorAll('#lunas-container .card-body, [data-lunas-section]');
+                if (secciones[indiceSeccion]) {
+                    formatearMedidasLunasSeccion(secciones[indiceSeccion]);
+                } else {
+                    // Fallback para la primera sección
+                    formatearMedidasLunas();
+                }
+                formatearMaterial();
+            }, 200);
+        };
+        
+        // Función de compatibilidad para formato anterior
+        window.cargarRecetaLegacy = function(historial) {
+            // Abrir sección de lunas
+            const lunasHeader = document.querySelector('#lunas-container .card-header');
+            const lunasCollapsed = document.querySelector('#lunas-container').classList.contains('collapsed-card');
+            if (lunasCollapsed && lunasHeader) {
+                lunasHeader.querySelector('.btn-tool').click();
+            }
+            
+            // Llenar campos individuales de la tabla de prescripción
+            const setValueIfEmpty = (selector, value) => {
+                const element = document.querySelector(selector);
+                if (element && !element.value && value !== null && value !== undefined && value !== '') {
+                    element.value = value;
+                }
+            };
+            
+            // Formatear valores para mostrar
+            const formatearValorParaCampo = (valor) => {
+                if (valor === null || valor === undefined || valor === '') return '';
+                if (!isNaN(parseFloat(valor))) {
+                    const num = parseFloat(valor);
+                    return num > 0 ? `+${num.toFixed(2)}` : `${num.toFixed(2)}`;
+                }
+                return valor;
+            };
+            
+            // Cargar tipo de receta si está disponible
+            if (historial.tipo) {
+                setValueIfEmpty('[name="tipo[]"]', historial.tipo);
+            }
+            
+            // Llenar campos individuales de prescripción
+            setValueIfEmpty('[name="od_esfera[]"]', formatearValorParaCampo(historial.od_esfera));
+            setValueIfEmpty('[name="od_cilindro[]"]', formatearValorParaCampo(historial.od_cilindro));
+            setValueIfEmpty('[name="od_eje[]"]', historial.od_eje ? `${historial.od_eje}°` : '');
+            setValueIfEmpty('[name="oi_esfera[]"]', formatearValorParaCampo(historial.oi_esfera));
+            setValueIfEmpty('[name="oi_cilindro[]"]', formatearValorParaCampo(historial.oi_cilindro));
+            setValueIfEmpty('[name="oi_eje[]"]', historial.oi_eje ? `${historial.oi_eje}°` : '');
+            setValueIfEmpty('[name="add[]"]', formatearValorParaCampo(historial.add));
+            setValueIfEmpty('[name="dp[]"]', historial.dp || '');
+            setValueIfEmpty('[name="l_detalle[]"]', historial.observaciones || '');
+            
+            // Cargar información adicional del historial clínico
+            if (historial.tipo_lente) {
+                setValueIfEmpty('[name="tipo_lente[]"]', historial.tipo_lente);
+            }
+            
+            // Cargar material del historial clínico
+            if (historial.material) {
+                // Si hay material definido en el historial, aplicarlo a ambos ojos
+                setValueIfEmpty('[name="material_od[]"]', historial.material);
+                setValueIfEmpty('[name="material_oi[]"]', historial.material);
+            }
+            
+            // Cargar filtro del historial clínico
+            if (historial.filtro) {
+                // Buscar el primer input de filtro y completarlo
+                const primerFiltro = document.querySelector('[name="filtro[]"]').parentElement.querySelector('.filtro-input');
+                if (primerFiltro && !primerFiltro.value) {
+                    primerFiltro.value = historial.filtro;
+                    // Actualizar el campo hidden
+                    actualizarFiltrosHidden(primerFiltro.closest('.filtros-container'));
+                }
+            }
+            
+            // Actualizar automáticamente el campo l_medida después de un breve delay
+            setTimeout(() => {
+                formatearMedidasLunas();
+                formatearMaterial();
+            }, 100);
+        };
+        
+        // Función para cargar información adicional del historial clínico en todas las secciones de lunas
+        window.cargarInformacionHistorialEnSecciones = function(historial) {
+            const setValueIfEmpty = (selector, value) => {
+                const element = document.querySelector(selector);
+                if (element && !element.value && value !== null && value !== undefined && value !== '') {
+                    element.value = value;
+                }
+            };
+            
+            // Cargar tipo de lente en todas las secciones donde esté vacío
+            if (historial.tipo_lente) {
+                const tipoLenteInputs = document.querySelectorAll('[name="tipo_lente[]"]');
+                tipoLenteInputs.forEach(input => {
+                    if (!input.value) {
+                        input.value = historial.tipo_lente;
+                    }
+                });
+            }
+            
+            // Cargar material en todas las secciones donde esté vacío
+            if (historial.material) {
+                const materialOdInputs = document.querySelectorAll('[name="material_od[]"]');
+                const materialOiInputs = document.querySelectorAll('[name="material_oi[]"]');
+                
+                materialOdInputs.forEach(input => {
+                    if (!input.value) {
+                        input.value = historial.material;
+                    }
+                });
+                
+                materialOiInputs.forEach(input => {
+                    if (!input.value) {
+                        input.value = historial.material;
+                    }
+                });
+                
+                // Actualizar campos material unificados
+                setTimeout(() => {
+                    formatearMaterial();
+                }, 100);
+            }
+            
+            // Cargar filtro en todas las secciones donde esté vacío
+            if (historial.filtro) {
+                const filtroContainers = document.querySelectorAll('.filtros-container');
+                filtroContainers.forEach(container => {
+                    const primerFiltro = container.querySelector('.filtro-input');
+                    if (primerFiltro && !primerFiltro.value) {
+                        primerFiltro.value = historial.filtro;
+                        // Actualizar el campo hidden correspondiente
+                        actualizarFiltrosHidden(container);
+                    }
+                });
             }
         };
 
