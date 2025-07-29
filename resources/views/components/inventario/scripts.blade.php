@@ -539,6 +539,9 @@
                 });
             });
 
+            // Variables para controlar la creación de artículos
+            let creatingArticles = new Set();
+
             // Función para manejar el botón de agregar fila
             $('.add-row-btn').on('click', function() {
                 const columna = $(this).data('columna');
@@ -549,7 +552,9 @@
                 if (newRow.is(':hidden')) {
                     newRow.show();
                     // Activar la edición en la celda de código
-                    newRow.find('td[data-field="codigo"]').trigger('click');
+                    setTimeout(() => {
+                        newRow.find('td[data-field="codigo"]').trigger('click');
+                    }, 100);
                 }
             });
 
@@ -569,9 +574,10 @@
                 displayValue.hide();
                 input.show().focus();
                 
-                // Manejar eventos para crear artículo cuando se complete
+                // Remover eventos previos para evitar duplicados
                 input.off('blur.newRow keypress.newRow change.newRow');
                 
+                // Evento para blur y enter (pero no para change)
                 input.on('blur.newRow keypress.newRow', function(e) {
                     if (e.type === 'keypress' && e.which !== 13) return;
                     
@@ -582,26 +588,48 @@
                         return;
                     }
                     
-                    // Intentar crear el artículo si tenemos al menos el código
-                    createNewArticle(row);
-                });
-                
-                input.on('change.newRow', function() {
-                    const value = $(this).val();
-                    if (value) {
+                    // Solo crear el artículo si es el campo código y tiene valor
+                    if (field === 'codigo' && value.trim()) {
                         createNewArticle(row);
+                    } else {
+                        // Para otros campos, solo actualizar la vista
+                        displayValue.text(value);
+                        displayValue.show();
+                        input.hide();
                     }
                 });
+                
+                // Solo para selects de empresa, manejar el cambio
+                if (field === 'empresa_id') {
+                    input.on('change.newRow', function() {
+                        const selectedText = $(this).find('option:selected').text();
+                        displayValue.text(selectedText);
+                        displayValue.show();
+                        input.hide();
+                    });
+                }
             });
 
-            // Función para crear un nuevo artículo
+            // Función para crear un nuevo artículo (con protección contra duplicados)
             function createNewArticle(row) {
+                const rowKey = row.data('columna') + '-' + row.find('td[data-field="numero"] .display-value').text();
+                
+                // Verificar si ya se está creando este artículo
+                if (creatingArticles.has(rowKey)) {
+                    console.log('Ya se está creando este artículo, ignorando...');
+                    return;
+                }
+                
+                // Marcar como en proceso de creación
+                creatingArticles.add(rowKey);
+                
                 const codigo = row.find('td[data-field="codigo"] .edit-input').val();
                 const empresaId = row.find('td[data-field="empresa_id"] .edit-input').val();
                 const cantidad = row.find('td[data-field="cantidad"] .edit-input').val() || 1;
                 
                 // Validar que al menos el código esté presente
                 if (!codigo || codigo.trim() === '') {
+                    creatingArticles.delete(rowKey);
                     Swal.fire({
                         icon: 'warning',
                         title: 'Código requerido',
@@ -639,6 +667,9 @@
                 
                 console.log('Creando artículo:', data);
                 
+                // Deshabilitar la fila mientras se crea
+                row.find('input, select').prop('disabled', true);
+                
                 // Mostrar loading
                 Swal.fire({
                     title: 'Creando artículo...',
@@ -655,7 +686,7 @@
                     type: 'POST',
                     data: data,
                     success: function(response) {
-                        console.log('Artículo creado:', response);
+                        console.log('Artículo creado exitosamente:', response);
                         Swal.fire({
                             icon: 'success',
                             title: 'Artículo creado',
@@ -683,9 +714,15 @@
                             text: errorMessage
                         });
                         
-                        // Restaurar la fila
+                        // Restaurar la fila y quitar del control de duplicados
+                        row.find('input, select').prop('disabled', false);
                         row.find('.edit-input').hide();
                         row.find('.display-value').show();
+                        creatingArticles.delete(rowKey);
+                    },
+                    complete: function() {
+                        // Remover del control de duplicados al completar (éxito o error)
+                        creatingArticles.delete(rowKey);
                     }
                 });
             }
