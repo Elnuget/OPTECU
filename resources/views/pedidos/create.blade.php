@@ -258,19 +258,20 @@
                                     <input type="email" class="form-control" id="correo_electronico" name="correo_electronico" placeholder="Escriba el correo electrónico" autocomplete="off">
                                 </div>
                                 <div class="col-md-3">
-                                    <label for="empresa_id" class="form-label">SUCURSAL</label>
-                                    <select name="empresa_id" id="empresa_id" class="form-control" {{ !$isUserAdmin && $empresas->count() <= 1 ? 'disabled' : '' }}>
-                                        <option value="">Seleccione una empresa...</option>
+                                    <label for="empresa_id" class="form-label">SUCURSAL <span class="text-danger">*</span></label>
+                                    <select name="empresa_id" id="empresa_id" class="form-control" {{ !$isUserAdmin && $empresas->count() <= 1 ? 'disabled' : '' }} required>
+                                        <option value="">Seleccione una sucursal...</option>
                                         @foreach($empresas as $empresa)
                                             <option value="{{ $empresa->id }}" {{ ($userEmpresaId == $empresa->id) ? 'selected' : '' }}>{{ $empresa->nombre }}</option>
                                         @endforeach
                                     </select>
                                     @if(!$isUserAdmin && $empresas->count() <= 1 && $userEmpresaId)
-                                        <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}">
-                                        <small class="form-text text-muted">Solo tiene acceso a esta empresa</small>
+                                        <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}" required>
+                                        <small class="form-text text-muted">Solo tiene acceso a esta sucursal</small>
                                     @elseif(!$isUserAdmin && $empresas->count() > 1)
-                                        <small class="form-text text-muted">Seleccione entre sus empresas asociadas</small>
+                                        <small class="form-text text-muted">Seleccione entre sus sucursales asociadas</small>
                                     @endif
+                                    <small class="form-text text-danger">La selección de sucursal es obligatoria</small>
                                 </div>
                             </div>
 
