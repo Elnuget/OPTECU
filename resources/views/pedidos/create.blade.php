@@ -395,21 +395,21 @@
                                             <tbody>
                                                 <tr>
                                                     <td class="align-middle text-center"><strong>OD</strong></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_esfera[]" placeholder="Ej: +2.00"></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_cilindro[]" placeholder="Ej: -1.50"></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_eje[]" placeholder="Ej: 90°"></td>
-                                                    <td rowspan="2" class="align-middle"><input type="text" class="form-control form-control-sm medida-input" name="add[]" placeholder="Ej: +2.00"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_esfera[]" placeholder="Ej: +2.00" value="0"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_cilindro[]" placeholder="Ej: -1.50" value="0"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_eje[]" placeholder="Ej: 90°" value="0"></td>
+                                                    <td rowspan="2" class="align-middle"><input type="text" class="form-control form-control-sm medida-input" name="add[]" placeholder="Ej: +2.00" value="0"></td>
                                                     <td rowspan="2" class="align-middle"><textarea class="form-control form-control-sm" name="l_detalle[]" rows="3" placeholder="Detalles adicionales"></textarea></td>
                                                 </tr>
                                                 <tr>
                                                     <td class="align-middle text-center"><strong>OI</strong></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_esfera[]" placeholder="Ej: +1.75"></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_cilindro[]" placeholder="Ej: -1.25"></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_eje[]" placeholder="Ej: 85°"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_esfera[]" placeholder="Ej: +1.75" value="0"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_cilindro[]" placeholder="Ej: -1.25" value="0"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_eje[]" placeholder="Ej: 85°" value="0"></td>
                                                 </tr>
                                                 <tr>
                                                     <td class="text-center"><strong>DP</strong></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="dp[]" placeholder="Ej: 62"></td>
+                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="dp[]" placeholder="Ej: 62" value="0"></td>
                                                     <td colspan="4">
                                                         <input type="hidden" id="l_medida" name="l_medida[]">
                                                         <small class="text-muted">Distancia Pupilar</small>
@@ -1602,21 +1602,21 @@
                                         <tbody>
                                             <tr>
                                                 <td class="align-middle text-center"><strong>OD</strong></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="od_esfera[]" placeholder="Ej: +2.00"></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="od_cilindro[]" placeholder="Ej: -1.50"></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="od_eje[]" placeholder="Ej: 90°"></td>
-                                                <td rowspan="2" class="align-middle"><input type="text" class="form-control form-control-sm" name="add[]" placeholder="Ej: +2.00"></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="od_esfera[]" placeholder="Ej: +2.00" value="0"></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="od_cilindro[]" placeholder="Ej: -1.50" value="0"></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="od_eje[]" placeholder="Ej: 90°" value="0"></td>
+                                                <td rowspan="2" class="align-middle"><input type="text" class="form-control form-control-sm" name="add[]" placeholder="Ej: +2.00" value="0"></td>
                                                 <td rowspan="2" class="align-middle"><textarea class="form-control form-control-sm" name="l_detalle[]" rows="3" placeholder="Detalles adicionales"></textarea></td>
                                             </tr>
                                             <tr>
                                                 <td class="align-middle text-center"><strong>OI</strong></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="oi_esfera[]" placeholder="Ej: +1.75"></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="oi_cilindro[]" placeholder="Ej: -1.25"></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="oi_eje[]" placeholder="Ej: 85°"></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="oi_esfera[]" placeholder="Ej: +1.75" value="0"></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="oi_cilindro[]" placeholder="Ej: -1.25" value="0"></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="oi_eje[]" placeholder="Ej: 85°" value="0"></td>
                                             </tr>
                                             <tr>
                                                 <td class="text-center"><strong>DP</strong></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="dp[]" placeholder="Ej: 62"></td>
+                                                <td><input type="text" class="form-control form-control-sm" name="dp[]" placeholder="Ej: 62" value="0"></td>
                                                 <td colspan="4">
                                                     <input type="hidden" name="l_medida[]">
                                                     <small class="text-muted">Distancia Pupilar</small>
