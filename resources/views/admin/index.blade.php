@@ -659,11 +659,41 @@
     const usuariosData = {!! json_encode($rankingPedidosUsuario['usuarios']) !!};
     const pedidosData = {!! json_encode($rankingPedidosUsuario['pedidos']) !!};
     
-    // Transformar los datos para gráfico de dispersión
+    // Función para generar colores únicos para cada usuario
+    function generateColors(count) {
+        const colors = [];
+        const baseColors = [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+            '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384', '#36A2EB', '#FFCE56',
+            '#E74C3C', '#3498DB', '#F39C12', '#27AE60', '#8E44AD', '#E67E22',
+            '#2ECC71', '#9B59B6', '#1ABC9C', '#34495E', '#16A085', '#F1C40F',
+            '#E74C3C', '#95A5A6', '#D35400', '#7F8C8D', '#BDC3C7', '#ECF0F1'
+        ];
+        
+        for (let i = 0; i < count; i++) {
+            if (i < baseColors.length) {
+                colors.push(baseColors[i]);
+            } else {
+                // Generar colores adicionales usando HSL
+                const hue = (i * 137.508) % 360; // Número áureo para distribución uniforme
+                const saturation = 70 + (i % 30); // Varía entre 70-100%
+                const lightness = 45 + (i % 20); // Varía entre 45-65%
+                colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+            }
+        }
+        return colors;
+    }
+    
+    // Generar colores únicos para cada usuario
+    const userColors = generateColors(usuariosData.length);
+    
+    // Transformar los datos para gráfico de dispersión con colores individuales
     const scatterData = usuariosData.map((usuario, index) => ({
         x: index + 1, // Posición del usuario (1, 2, 3, etc.)
         y: pedidosData[index], // Cantidad de pedidos
-        label: usuario // Nombre del usuario para el tooltip
+        label: usuario, // Nombre del usuario para el tooltip
+        backgroundColor: userColors[index],
+        borderColor: userColors[index]
     }));
 
     const rankingPedidosChart = new Chart(document.getElementById('rankingPedidosChart'), {
@@ -672,8 +702,14 @@
             datasets: [{
                 label: 'Pedidos por Usuario',
                 data: scatterData,
-                backgroundColor: 'rgba(54, 162, 235, 0.8)',
-                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: function(context) {
+                    const point = context.raw;
+                    return point ? point.backgroundColor : 'rgba(54, 162, 235, 0.8)';
+                },
+                borderColor: function(context) {
+                    const point = context.raw;
+                    return point ? point.borderColor : 'rgba(54, 162, 235, 1)';
+                },
                 borderWidth: 2,
                 pointRadius: 8,
                 pointHoverRadius: 12,
@@ -765,23 +801,28 @@
                         color: '#858796',
                         font: {
                             family: 'Nunito',
-                            size: 11
+                            size: 10
                         },
                         stepSize: 1,
+                        maxTicksLimit: Math.min(usuariosData.length, 20), // Limitar etiquetas si hay muchos usuarios
                         callback: function(value) {
                             if (value > 0 && value <= usuariosData.length) {
                                 const usuario = usuariosData[value - 1];
-                                if (usuario && usuario.length > 10) {
-                                    return usuario.substring(0, 8) + '...';
+                                if (usuario) {
+                                    // Ajustar longitud según cantidad de usuarios
+                                    const maxLength = usuariosData.length > 10 ? 6 : 10;
+                                    if (usuario.length > maxLength) {
+                                        return usuario.substring(0, maxLength - 2) + '..';
+                                    }
+                                    return usuario;
                                 }
-                                return usuario || '';
                             }
                             return '';
                         }
                     },
                     title: {
                         display: true,
-                        text: 'Usuarios',
+                        text: `Usuarios (${usuariosData.length} total)`,
                         font: {
                             weight: 'bold',
                             size: 12
