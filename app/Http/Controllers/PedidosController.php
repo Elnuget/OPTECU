@@ -1599,37 +1599,41 @@ class PedidosController extends Controller
     {
         // Si no se proporciona número, obtener el siguiente disponible desde el último pedido
         if (is_null($numeroSolicitado)) {
-            // Obtener el último pedido del sistema ordenado por numero_orden
-            $ultimoPedido = Pedido::orderBy('numero_orden', 'desc')->first();
+            // Obtener todos los pedidos y encontrar el mayor número de orden
+            $pedidos = Pedido::whereNotNull('numero_orden')
+                ->where('numero_orden', '!=', '')
+                ->get();
             
-            if ($ultimoPedido && !empty($ultimoPedido->numero_orden)) {
+            $mayorNumero = 0;
+            $ultimoNumeroOrden = null;
+            
+            foreach ($pedidos as $pedido) {
                 // Extraer la parte numérica del número de orden usando expresión regular
-                $numeroOrdenAnterior = $ultimoPedido->numero_orden;
-                
-                // Buscar todos los números en la cadena y tomar el más grande
-                preg_match_all('/\d+/', $numeroOrdenAnterior, $matches);
+                preg_match_all('/\d+/', $pedido->numero_orden, $matches);
                 
                 if (!empty($matches[0])) {
                     // Tomar el número más grande encontrado en la cadena
                     $parteNumerica = max(array_map('intval', $matches[0]));
-                    $numeroSolicitado = $parteNumerica + 1;
                     
-                    \Log::info('Número de orden generado automáticamente', [
-                        'ultimo_pedido' => $numeroOrdenAnterior,
-                        'parte_numerica_extraida' => $parteNumerica,
-                        'nuevo_numero' => $numeroSolicitado
-                    ]);
-                } else {
-                    // Si no se encuentran números, empezar desde 1
-                    $numeroSolicitado = 1;
-                    \Log::warning('No se encontraron números en el último pedido', [
-                        'ultimo_numero_orden' => $numeroOrdenAnterior
-                    ]);
+                    if ($parteNumerica > $mayorNumero) {
+                        $mayorNumero = $parteNumerica;
+                        $ultimoNumeroOrden = $pedido->numero_orden;
+                    }
                 }
+            }
+            
+            if ($mayorNumero > 0) {
+                $numeroSolicitado = $mayorNumero + 1;
+                
+                \Log::info('Número de orden generado automáticamente', [
+                    'ultimo_pedido_con_mayor_numero' => $ultimoNumeroOrden,
+                    'parte_numerica_extraida' => $mayorNumero,
+                    'nuevo_numero' => $numeroSolicitado
+                ]);
             } else {
-                // Si no hay pedidos, empezar desde 1
+                // Si no se encuentran números válidos, empezar desde 1
                 $numeroSolicitado = 1;
-                \Log::info('No hay pedidos anteriores, iniciando numeración desde 1');
+                \Log::info('No se encontraron números válidos en pedidos existentes, iniciando numeración desde 1');
             }
         }
 
