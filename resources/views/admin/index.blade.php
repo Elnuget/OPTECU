@@ -655,55 +655,41 @@
         }
     });
 
-    // Gráfico de Ranking de Pedidos por Usuario
+    // Gráfico de Ranking de Pedidos por Usuario (Dispersión)
+    const usuariosData = {!! json_encode($rankingPedidosUsuario['usuarios']) !!};
+    const pedidosData = {!! json_encode($rankingPedidosUsuario['pedidos']) !!};
+    
+    // Transformar los datos para gráfico de dispersión
+    const scatterData = usuariosData.map((usuario, index) => ({
+        x: index + 1, // Posición del usuario (1, 2, 3, etc.)
+        y: pedidosData[index], // Cantidad de pedidos
+        label: usuario // Nombre del usuario para el tooltip
+    }));
+
     const rankingPedidosChart = new Chart(document.getElementById('rankingPedidosChart'), {
-        type: 'bar',
+        type: 'scatter',
         data: {
-            labels: {!! json_encode($rankingPedidosUsuario['usuarios']) !!},
             datasets: [{
-                label: 'Cantidad de Pedidos',
-                data: {!! json_encode($rankingPedidosUsuario['pedidos']) !!},
-                backgroundColor: [
-                    'rgba(54, 162, 235, 0.8)',
-                    'rgba(255, 99, 132, 0.8)',
-                    'rgba(255, 205, 86, 0.8)',
-                    'rgba(75, 192, 192, 0.8)',
-                    'rgba(153, 102, 255, 0.8)',
-                    'rgba(255, 159, 64, 0.8)',
-                    'rgba(231, 74, 59, 0.8)',
-                    'rgba(28, 200, 138, 0.8)',
-                    'rgba(255, 193, 7, 0.8)',
-                    'rgba(108, 117, 125, 0.8)',
-                    'rgba(220, 53, 69, 0.8)',
-                    'rgba(0, 123, 255, 0.8)',
-                    'rgba(40, 167, 69, 0.8)',
-                    'rgba(255, 193, 7, 0.8)',
-                    'rgba(111, 66, 193, 0.8)'
-                ],
-                borderColor: [
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(255, 205, 86, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)',
-                    'rgba(255, 159, 64, 1)',
-                    'rgba(231, 74, 59, 1)',
-                    'rgba(28, 200, 138, 1)',
-                    'rgba(255, 193, 7, 1)',
-                    'rgba(108, 117, 125, 1)',
-                    'rgba(220, 53, 69, 1)',
-                    'rgba(0, 123, 255, 1)',
-                    'rgba(40, 167, 69, 1)',
-                    'rgba(255, 193, 7, 1)',
-                    'rgba(111, 66, 193, 1)'
-                ],
-                borderWidth: 1,
-                borderRadius: 4
+                label: 'Pedidos por Usuario',
+                data: scatterData,
+                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2,
+                pointRadius: 8,
+                pointHoverRadius: 12,
+                pointBorderWidth: 2,
+                pointBorderColor: '#fff',
+                pointHoverBorderWidth: 3,
+                pointHoverBorderColor: '#fff'
             }]
         },
         options: {
             maintainAspectRatio: false,
             responsive: true,
+            interaction: {
+                intersect: false,
+                mode: 'point'
+            },
             plugins: {
                 legend: {
                     display: false
@@ -724,8 +710,12 @@
                     borderColor: '#dddfeb',
                     borderWidth: 1,
                     callbacks: {
+                        title: function(context) {
+                            const point = context[0];
+                            return point.raw.label || 'Usuario';
+                        },
                         label: function(context) {
-                            return `${context.label}: ${context.parsed.y} pedidos`;
+                            return `Pedidos: ${context.parsed.y}`;
                         }
                     }
                 }
@@ -746,7 +736,10 @@
                             family: 'Nunito',
                             size: 11
                         },
-                        stepSize: 1
+                        stepSize: 1,
+                        callback: function(value) {
+                            return Math.floor(value);
+                        }
                     },
                     title: {
                         display: true,
@@ -759,26 +752,41 @@
                     }
                 },
                 x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    min: 0,
+                    max: usuariosData.length + 1,
                     grid: {
-                        display: false,
-                        drawBorder: false
+                        color: '#eaecf4',
+                        drawBorder: false,
+                        borderDash: [2]
                     },
                     ticks: {
                         color: '#858796',
                         font: {
                             family: 'Nunito',
-                            size: 10,
-                            weight: '500'
+                            size: 11
                         },
-                        maxRotation: 45,
-                        callback: function(value, index, values) {
-                            const label = this.getLabelForValue(value);
-                            // Truncar nombres largos
-                            if (typeof label === 'string' && label.length > 10) {
-                                return label.substring(0, 8) + '...';
+                        stepSize: 1,
+                        callback: function(value) {
+                            if (value > 0 && value <= usuariosData.length) {
+                                const usuario = usuariosData[value - 1];
+                                if (usuario && usuario.length > 10) {
+                                    return usuario.substring(0, 8) + '...';
+                                }
+                                return usuario || '';
                             }
-                            return label;
+                            return '';
                         }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Usuarios',
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        color: '#5a5c69'
                     }
                 }
             },
