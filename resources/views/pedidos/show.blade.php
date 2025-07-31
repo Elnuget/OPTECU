@@ -70,7 +70,7 @@
 <br>
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">Venta {{ $pedido->id }}</h3>
+        <h3 class="card-title">Orden {{ $pedido->numero_orden }}</h3>
         <div class="card-tools">
             <button type="button" class="btn btn-tool" data-card-widget="collapse" data-toggle="tooltip" title="Collapse">
                 <i class="fas fa-minus"></i>
@@ -269,7 +269,7 @@
                                                     <td class="align-middle text-center font-weight-bold">OD</td>
                                                     <td class="text-center">{{ $medidaData['od_esfera'] ?: '-' }}</td>
                                                     <td class="text-center">{{ $medidaData['od_cilindro'] ?: '-' }}</td>
-                                                    <td class="text-center">{{ $medidaData['od_eje'] ? $medidaData['od_eje'] . '°' : '-' }}</td>
+                                                    <td class="text-center">{{ $medidaData['od_eje'] ? $medidaData['od_eje'] . '°' : '0°' }}</td>
                                                     <td rowspan="3" class="align-middle">
                                                         @if($luna->l_detalle)
                                                             <strong>Detalles:</strong><br>
@@ -295,7 +295,7 @@
                                                     <td class="align-middle text-center font-weight-bold">OI</td>
                                                     <td class="text-center">{{ $medidaData['oi_esfera'] ?: '-' }}</td>
                                                     <td class="text-center">{{ $medidaData['oi_cilindro'] ?: '-' }}</td>
-                                                    <td class="text-center">{{ $medidaData['oi_eje'] ? $medidaData['oi_eje'] . '°' : '-' }}</td>
+                                                    <td class="text-center">{{ $medidaData['oi_eje'] ? $medidaData['oi_eje'] . '°' : '0°' }}</td>
                                                 </tr>
                                                 <tr>
                                                     <td colspan="4" class="text-center text-muted">
