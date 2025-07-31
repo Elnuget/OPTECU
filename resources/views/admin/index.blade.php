@@ -657,7 +657,7 @@
 
     // Gráfico de Ranking de Pedidos por Usuario
     const rankingPedidosChart = new Chart(document.getElementById('rankingPedidosChart'), {
-        type: 'doughnut',
+        type: 'bar',
         data: {
             labels: {!! json_encode($rankingPedidosUsuario['usuarios']) !!},
             datasets: [{
@@ -697,7 +697,8 @@
                     'rgba(255, 193, 7, 1)',
                     'rgba(111, 66, 193, 1)'
                 ],
-                borderWidth: 1
+                borderWidth: 1,
+                borderRadius: 4
             }]
         },
         options: {
@@ -705,9 +706,140 @@
             responsive: true,
             plugins: {
                 legend: {
-                    position: 'bottom',
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    bodyColor: '#858796',
+                    titleColor: '#5a5c69',
+                    titleMarginBottom: 10,
+                    bodyFont: {
+                        size: 12
+                    },
+                    titleFont: {
+                        size: 13,
+                        weight: 'bold'
+                    },
+                    padding: 12,
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.parsed.y} pedidos`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: '#eaecf4',
+                        zeroLineColor: '#eaecf4',
+                        drawBorder: false,
+                        borderDash: [2],
+                        zeroLineBorderDash: [2]
+                    },
+                    ticks: {
+                        color: '#858796',
+                        font: {
+                            family: 'Nunito',
+                            size: 11
+                        },
+                        stepSize: 1
+                    },
+                    title: {
+                        display: true,
+                        text: 'Cantidad de Pedidos',
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        color: '#5a5c69'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#858796',
+                        font: {
+                            family: 'Nunito',
+                            size: 10,
+                            weight: '500'
+                        },
+                        maxRotation: 45,
+                        callback: function(value, index, values) {
+                            const label = this.getLabelForValue(value);
+                            // Truncar nombres largos
+                            if (typeof label === 'string' && label.length > 10) {
+                                return label.substring(0, 8) + '...';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 10,
+                    top: 10,
+                    bottom: 10
+                }
+            }
+        }
+    });
+
+    // Gráfico de Ranking de Ventas por Empresa
+    const rankingEmpresasChart = new Chart(document.getElementById('rankingEmpresasChart'), {
+        type: 'pie',
+        data: {
+            labels: {!! json_encode($rankingVentasEmpresa['empresas']) !!},
+            datasets: [{
+                label: 'Ventas por Empresa',
+                data: {!! json_encode($rankingVentasEmpresa['ventas']) !!},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 205, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)',
+                    'rgba(255, 159, 64, 0.8)',
+                    'rgba(231, 74, 59, 0.8)',
+                    'rgba(28, 200, 138, 0.8)',
+                    'rgba(255, 193, 7, 0.8)',
+                    'rgba(108, 117, 125, 0.8)',
+                    'rgba(220, 53, 69, 0.8)',
+                    'rgba(0, 123, 255, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 205, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)',
+                    'rgba(231, 74, 59, 1)',
+                    'rgba(28, 200, 138, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(108, 117, 125, 1)',
+                    'rgba(220, 53, 69, 1)',
+                    'rgba(0, 123, 255, 1)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
                     labels: {
-                        padding: 20,
+                        padding: 15,
                         usePointStyle: true,
                         font: {
                             size: 11
@@ -716,15 +848,19 @@
                             const data = chart.data;
                             if (data.labels.length && data.datasets.length) {
                                 const dataset = data.datasets[0];
+                                const total = dataset.data.reduce((a, b) => {
+                                    return a + (isNaN(b) || b === null ? 0 : b);
+                                }, 0);
+                                
                                 return data.labels.map((label, i) => {
                                     const value = dataset.data[i];
-                                    const total = dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    const safeValue = isNaN(value) || value === null ? 0 : value;
+                                    const percentage = total > 0 ? ((safeValue / total) * 100).toFixed(1) : '0.0';
                                     
                                     // Truncar nombres largos para la leyenda
                                     let displayLabel = label;
-                                    if (label.length > 12) {
-                                        displayLabel = label.substring(0, 9) + '...';
+                                    if (label && label.length > 15) {
+                                        displayLabel = label.substring(0, 12) + '...';
                                     }
                                     
                                     return {
@@ -732,7 +868,7 @@
                                         fillStyle: dataset.backgroundColor[i],
                                         strokeStyle: dataset.borderColor[i],
                                         lineWidth: dataset.borderWidth,
-                                        hidden: isNaN(dataset.data[i]),
+                                        hidden: isNaN(dataset.data[i]) || dataset.data[i] === null,
                                         index: i
                                     };
                                 });
@@ -760,9 +896,13 @@
                         label: function(context) {
                             const label = context.label || '';
                             const value = context.parsed;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return `${label}: ${value} pedidos (${percentage}%)`;
+                            const safeValue = isNaN(value) || value === null ? 0 : value;
+                            const total = context.dataset.data.reduce((a, b) => {
+                                return a + (isNaN(b) || b === null ? 0 : b);
+                            }, 0);
+                            const percentage = total > 0 ? ((safeValue / total) * 100).toFixed(1) : '0.0';
+                            const formattedValue = '$' + safeValue.toLocaleString();
+                            return `${label}: ${formattedValue} (${percentage}%)`;
                         }
                     }
                 }
@@ -770,81 +910,11 @@
             layout: {
                 padding: {
                     left: 10,
-                    right: 10,
+                    right: 20,
                     top: 10,
                     bottom: 10
                 }
-            },
-            cutout: '50%'
-        }
-    });
-
-    // Gráfico de Ranking de Ventas por Empresa
-    const rankingEmpresasChart = new Chart(document.getElementById('rankingEmpresasChart'), {
-        type: 'doughnut',
-        data: {
-            labels: {!! json_encode($rankingVentasEmpresa['empresas']) !!},
-            datasets: [{
-                label: 'Ventas por Empresa',
-                data: {!! json_encode($rankingVentasEmpresa['ventas']) !!},
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.8)',
-                    'rgba(54, 162, 235, 0.8)',
-                    'rgba(255, 205, 86, 0.8)',
-                    'rgba(75, 192, 192, 0.8)',
-                    'rgba(153, 102, 255, 0.8)',
-                    'rgba(255, 159, 64, 0.8)',
-                    'rgba(231, 74, 59, 0.8)',
-                    'rgba(28, 200, 138, 0.8)'
-                ],
-                borderColor: [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 205, 86, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)',
-                    'rgba(255, 159, 64, 1)',
-                    'rgba(231, 74, 59, 1)',
-                    'rgba(28, 200, 138, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgb(255, 255, 255)',
-                    bodyColor: '#858796',
-                    titleMarginBottom: 10,
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = '$' + context.parsed.toLocaleString();
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                            return `${label}: ${value} (${percentage}%)`;
-                        }
-                    }
-                }
-            },
-            layout: {
-                padding: {
-                    left: 10,
-                    right: 10,
-                    top: 10,
-                    bottom: 10
-                }
-            },
-            cutout: '50%'
+            }
         }
     });
 
