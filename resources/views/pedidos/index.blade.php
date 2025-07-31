@@ -247,7 +247,7 @@
                         <td>{{ $pedido->cliente }}</td>
                         <td>
                             {{ $pedido->celular }}
-                            @if($pedido->celular)
+                            @if($pedido->celular && trim($pedido->celular) !== '' && trim($pedido->celular) !== '0')
                                 <button 
                                     class="btn {{ trim($pedido->encuesta) === 'enviado' ? 'btn-warning' : 'btn-success' }} btn-sm ml-1 btn-whatsapp-mensaje"
                                     data-pedido-id="{{ $pedido->id }}"
@@ -514,6 +514,110 @@
     </div>
 </div>
 
+{{-- Modal para previsualizar mensaje de WhatsApp --}}
+<div class="modal fade" id="whatsappModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fab fa-whatsapp me-2"></i>
+                    Enviar Mensaje de WhatsApp
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Información del cliente -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Cliente:</strong></label>
+                            <p id="whatsapp-cliente" class="form-control-plaintext text-uppercase"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Número de Celular:</strong></label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">+56</span>
+                                </div>
+                                <input type="text" id="whatsapp-celular" class="form-control" readonly>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información del pedido -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Número de Orden:</strong></label>
+                            <p id="whatsapp-orden" class="form-control-plaintext"></p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label><strong>Estado Actual:</strong></label>
+                            <p id="whatsapp-estado" class="form-control-plaintext"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mensaje editable -->
+                <div class="form-group">
+                    <label for="whatsapp-mensaje"><strong>Mensaje a Enviar:</strong></label>
+                    <textarea 
+                        id="whatsapp-mensaje" 
+                        name="whatsapp-mensaje" 
+                        class="form-control" 
+                        rows="12"
+                        placeholder="Escriba aquí el mensaje que desea enviar..."
+                        style="font-family: monospace; font-size: 14px;"></textarea>
+                    <small class="form-text text-muted">
+                        <i class="fas fa-info-circle"></i>
+                        Puede modificar el mensaje antes de enviarlo. 
+                        Caracteres: <span id="mensaje-contador">0</span>
+                    </small>
+                    <div class="keyboard-shortcut">
+                        <i class="fas fa-keyboard"></i>
+                        <strong>Tip:</strong> Presione <kbd>Ctrl + Enter</kbd> para enviar rápidamente por WhatsApp Web
+                    </div>
+                </div>
+
+                <!-- Opciones de envío -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="alert alert-info">
+                            <i class="fas fa-mobile-alt me-2"></i>
+                            <strong>Opciones de envío:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li><strong>Aplicación móvil:</strong> Se abrirá la app de WhatsApp (recomendado para móviles)</li>
+                                <li><strong>WhatsApp Web:</strong> Se abrirá en el navegador (recomendado para escritorio)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="enviarWhatsAppMovil">
+                    <i class="fab fa-whatsapp me-1"></i>
+                    Enviar por App Móvil
+                </button>
+                <button type="button" class="btn btn-success" id="enviarWhatsAppWeb">
+                    <i class="fas fa-globe me-1"></i>
+                    Enviar por WhatsApp Web
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="mb-3">
     <a href="{{ route('pedidos.inventario-historial') }}" class="btn btn-info">
         Ver Historial de Inventario
@@ -577,6 +681,169 @@
 
 .btn-whatsapp-mensaje .button-text {
     font-size: 0.875rem;
+}
+
+/* Estilos para el modal de WhatsApp */
+#whatsappModal .modal-content {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+#whatsappModal .modal-header {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    border-radius: 8px 8px 0 0;
+}
+
+#whatsappModal .modal-header .close {
+    color: white;
+    opacity: 1;
+    text-shadow: none;
+}
+
+#whatsappModal .modal-header .close:hover {
+    opacity: 0.8;
+}
+
+#whatsapp-mensaje {
+    resize: vertical;
+    min-height: 200px;
+    background-color: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    line-height: 1.6;
+}
+
+#whatsapp-mensaje:focus {
+    border-color: #25d366;
+    box-shadow: 0 0 0 0.2rem rgba(37, 211, 102, 0.25);
+}
+
+/* Contador de caracteres del mensaje */
+#mensaje-contador {
+    font-weight: bold;
+    color: #25d366;
+}
+
+/* Botones de envío de WhatsApp */
+#enviarWhatsAppMovil {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+#enviarWhatsAppMovil:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+}
+
+#enviarWhatsAppWeb {
+    background: linear-gradient(135deg, #128c7e 0%, #075e54 100%);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+#enviarWhatsAppWeb:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(18, 140, 126, 0.4);
+}
+
+/* Alert de información */
+#whatsappModal .alert-info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    border: 1px solid #bee5eb;
+    border-radius: 8px;
+}
+
+/* Información del cliente y pedido */
+#whatsappModal .form-control-plaintext {
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Input group para el teléfono */
+#whatsappModal .input-group-text {
+    background-color: #25d366;
+    color: white;
+    border-color: #25d366;
+}
+
+#whatsappModal .input-group .form-control {
+    border-left: none;
+}
+
+#whatsappModal .input-group .form-control:focus {
+    border-color: #25d366;
+    box-shadow: none;
+}
+
+/* Responsive para el modal de WhatsApp */
+@media (max-width: 768px) {
+    #whatsappModal .modal-dialog {
+        margin: 10px;
+        max-width: calc(100% - 20px);
+    }
+    
+    #whatsappModal .modal-body .row {
+        margin-bottom: 15px;
+    }
+    
+    #whatsappModal .modal-footer {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    #whatsappModal .modal-footer .btn {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    
+    #whatsapp-mensaje {
+        min-height: 150px;
+        font-size: 16px; /* Evita zoom en iOS */
+    }
+}
+
+/* Animaciones para los botones del modal */
+#whatsappModal .btn {
+    transition: all 0.3s ease;
+}
+
+#whatsappModal .btn:hover {
+    transform: translateY(-2px);
+}
+
+#whatsappModal .btn:active {
+    transform: translateY(0);
+}
+
+/* Mejoras para el textarea */
+#whatsapp-mensaje::placeholder {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Indicador de teclas de acceso rápido */
+.keyboard-shortcut {
+    font-size: 0.8em;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.keyboard-shortcut kbd {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.85em;
+    color: #495057;
+}
+
+/* Estilos para dispositivos táctiles */
+@media (hover: none) and (pointer: coarse) {
+    #whatsappModal .btn:hover {
+        transform: none;
+    }
 }
 
 /* Estilos para los checkboxes */
@@ -862,6 +1129,10 @@ input[type="checkbox"]:after {
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
 <script>
     $(document).ready(function () {
+        // Debug: Verificar que el modal existe
+        console.log('Modal WhatsApp encontrado:', $('#whatsappModal').length > 0);
+        console.log('Botones WhatsApp encontrados:', $('.btn-whatsapp-mensaje').length);
+        
         // Variable para controlar el estado del filtro de reclamos
         var filtroReclamosActivo = false;
         
@@ -1328,8 +1599,47 @@ input[type="checkbox"]:after {
             "info": false,
             "dom": 'frt', // Quitar 'p' del dom para eliminar controles de paginación y 'B' para quitar botones
             "language": {
-                "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json",
-                "search": "Buscar:"
+                "processing": "Procesando...",
+                "search": "Buscar:",
+                "lengthMenu": "Mostrar _MENU_ registros",
+                "info": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
+                "infoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
+                "infoFiltered": "(filtrado de un total de _MAX_ registros)",
+                "loadingRecords": "Cargando...",
+                "zeroRecords": "No se encontraron resultados",
+                "emptyTable": "Ningún dato disponible en esta tabla",
+                "paginate": {
+                    "first": "Primero",
+                    "previous": "Anterior",
+                    "next": "Siguiente",
+                    "last": "Último"
+                },
+                "aria": {
+                    "sortAscending": ": Activar para ordenar la columna de manera ascendente",
+                    "sortDescending": ": Activar para ordenar la columna de manera descendente"
+                },
+                "buttons": {
+                    "copy": "Copiar",
+                    "colvis": "Visibilidad",
+                    "collection": "Colección",
+                    "colvisRestore": "Restaurar visibilidad",
+                    "copyKeys": "Presione ctrl o u2318 + C para copiar los datos de la tabla al portapapeles del sistema. <br \/> <br \/> Para cancelar, haga clic en este mensaje o presione escape.",
+                    "copySuccess": {
+                        "1": "Copiada 1 fila al portapapeles",
+                        "_": "Copiadas %d filas al portapapeles"
+                    },
+                    "copyTitle": "Copiar al portapapeles",
+                    "csv": "CSV",
+                    "excel": "Excel",
+                    "pageLength": {
+                        "-1": "Mostrar todas las filas",
+                        "_": "Mostrar %d filas"
+                    },
+                    "pdf": "PDF",
+                    "print": "Imprimir"
+                },
+                "decimal": ",",
+                "thousands": "."
             },
             "columnDefs": [
                 {
@@ -1593,8 +1903,14 @@ input[type="checkbox"]:after {
 
         // Función para limpiar y formatear número de teléfono chileno
         function formatChileanPhone(phone) {
-            // Remover todos los caracteres no numéricos
-            let cleanPhone = phone.replace(/\D/g, '');
+            // Validar que phone no sea null, undefined o vacío
+            if (!phone) return '';
+            
+            // Convertir a string y remover todos los caracteres no numéricos
+            let cleanPhone = String(phone).replace(/\D/g, '');
+            
+            // Si no hay números válidos, retornar vacío
+            if (!cleanPhone) return '';
             
             // Si empieza con 56 (código de Chile), mantenerlo
             if (cleanPhone.startsWith('56')) {
@@ -1629,8 +1945,8 @@ input[type="checkbox"]:after {
             }
         }
 
-        // Manejar el envío del mensaje de WhatsApp con encuesta
-        $('.btn-whatsapp-mensaje').click(function(e) {
+        // Manejar el envío del mensaje de WhatsApp con modal de previsualización
+        $(document).on('click', '.btn-whatsapp-mensaje', function(e) {
             e.preventDefault();
             var button = $(this);
             var pedidoId = button.data('pedido-id');
@@ -1638,8 +1954,26 @@ input[type="checkbox"]:after {
             var cliente = button.data('cliente');
             var estadoActual = button.data('estado-actual');
 
-            // Validar número de teléfono
-            if (!celular || celular.trim() === '') {
+            // Debug adicional para verificar los datos del botón
+            console.log('Datos brutos del botón:', {
+                pedidoId: pedidoId,
+                celular: celular,
+                celularType: typeof celular,
+                cliente: cliente,
+                estadoActual: estadoActual,
+                buttonHTML: button[0].outerHTML.substring(0, 200) + '...'
+            });
+
+            console.log('Click en botón WhatsApp:', {
+                pedidoId: pedidoId,
+                celular: celular,
+                cliente: cliente,
+                estadoActual: estadoActual
+            });
+
+            // Validar número de teléfono - Convertir a string y validar
+            var celularStr = celular ? String(celular).trim() : '';
+            if (!celularStr || celularStr === '' || celularStr === 'null' || celularStr === 'undefined') {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
@@ -1651,7 +1985,17 @@ input[type="checkbox"]:after {
             // Deshabilitar botón temporalmente para evitar múltiples clics
             button.prop('disabled', true);
 
-            // Primero obtener la URL de la encuesta y actualizar estado
+            // Mostrar indicador de carga
+            Swal.fire({
+                title: 'Generando mensaje...',
+                text: 'Preparando mensaje y enlace de encuesta',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Primero obtener la URL de la encuesta
             $.ajax({
                 url: '/pedidos/' + pedidoId + '/enviar-encuesta',
                 method: 'POST',
@@ -1660,12 +2004,15 @@ input[type="checkbox"]:after {
                 },
                 success: function(response) {
                     if (response.success) {
+                        // Cerrar el indicador de carga
+                        Swal.close();
+
                         // Crear mensaje personalizado para Chile
                         var mensajeCompleto = `¡Hola ${cliente}! 👋
 
-¡Excelentes noticias! Sus lentes ya están listos para ser retirados en nuestra óptica. �✨
+¡Excelentes noticias! Sus lentes ya están listos para ser retirados en nuestra óptica. ✨
 
-� *Detalles del pedido:*
+📋 *Detalles del pedido:*
 • Orden: ${response.numero_orden || 'N/A'}
 • Estado: ${response.estado || 'Listo para retiro'}
 
@@ -1678,38 +2025,30 @@ Su opinión es muy importante para nosotros.
 
 ¡Que tenga un excelente día!`;
 
-                        // Generar URL de WhatsApp optimizada
-                        const whatsappURL = generateWhatsAppURL(celular, mensajeCompleto);
+                        // Configurar el modal con la información
+                        $('#whatsapp-cliente').text(cliente);
+                        $('#whatsapp-celular').val(celularStr);
+                        $('#whatsapp-orden').text(response.numero_orden || 'N/A');
+                        $('#whatsapp-estado').text(response.estado || 'Listo para retiro');
+                        $('#whatsapp-mensaje').val(mensajeCompleto);
                         
-                        // Abrir WhatsApp
-                        const whatsappWindow = window.open(whatsappURL, '_blank');
+                        // Actualizar contador de caracteres
+                        updateCharacterCounter();
                         
-                        // Verificar si se abrió correctamente y ofrecer alternativa
-                        setTimeout(() => {
-                            if (!whatsappWindow || whatsappWindow.closed) {
-                                // Si no se abrió, intentar con URL alternativa
-                                const alternativeURL = `https://web.whatsapp.com/send?phone=${formatChileanPhone(celular)}&text=${encodeURIComponent(mensajeCompleto)}`;
-                                window.open(alternativeURL, '_blank');
-                            }
-                        }, 1000);
-
-                        // Actualizar el estado visual del botón solo si fue exitoso
-                        button.removeClass('btn-success').addClass('btn-warning');
-                        button.attr('title', 'Volver a enviar mensaje y encuesta');
-                        button.find('.button-text').text('Volver a enviar');
-                        button.data('estado-actual', 'enviado');
-
-                        // Mostrar mensaje de confirmación
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡WhatsApp Abierto!',
-                            text: 'Se ha abierto WhatsApp con el mensaje y enlace de encuesta.',
-                            timer: 3000,
-                            timerProgressBar: true
+                        // Guardar datos para uso posterior
+                        $('#whatsappModal').data({
+                            'pedido-id': pedidoId,
+                            'celular': celularStr,
+                            'cliente': cliente,
+                            'button': button
                         });
+
+                        // Mostrar el modal
+                        $('#whatsappModal').modal('show');
                     }
                 },
                 error: function(xhr) {
+                    console.error('Error AJAX:', xhr);
                     let errorMessage = 'Error al generar el enlace de encuesta';
                     if (xhr.responseJSON && xhr.responseJSON.error) {
                         errorMessage = xhr.responseJSON.error;
@@ -1728,8 +2067,137 @@ Su opinión es muy importante para nosotros.
             });
         });
 
+        // Función de prueba para verificar que el modal funciona
+        window.testWhatsAppModal = function() {
+            $('#whatsapp-cliente').text('CLIENTE DE PRUEBA');
+            $('#whatsapp-celular').val('912345678');
+            $('#whatsapp-orden').text('TEST-001');
+            $('#whatsapp-estado').text('PRUEBA');
+            $('#whatsapp-mensaje').val('Mensaje de prueba para WhatsApp');
+            updateCharacterCounter();
+            $('#whatsappModal').modal('show');
+            console.log('Modal de WhatsApp mostrado en modo prueba');
+        };
+
+        // Función para actualizar el contador de caracteres del mensaje
+        function updateCharacterCounter() {
+            var messageLength = $('#whatsapp-mensaje').val().length;
+            $('#mensaje-contador').text(messageLength);
+            
+            // Cambiar color según la longitud
+            if (messageLength > 1500) {
+                $('#mensaje-contador').css('color', '#dc3545'); // Rojo
+            } else if (messageLength > 1000) {
+                $('#mensaje-contador').css('color', '#ffc107'); // Amarillo
+            } else {
+                $('#mensaje-contador').css('color', '#25d366'); // Verde WhatsApp
+            }
+        }
+
+        // Actualizar contador cuando se escriba en el textarea
+        $('#whatsapp-mensaje').on('input', updateCharacterCounter);
+
+        // Permitir envío con Ctrl+Enter en el textarea
+        $('#whatsapp-mensaje').on('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                enviarWhatsApp('web'); // Por defecto usar web con Ctrl+Enter
+            }
+        });
+
+        // Manejar envío por aplicación móvil
+        $('#enviarWhatsAppMovil').click(function() {
+            enviarWhatsApp('mobile');
+        });
+
+        // Manejar envío por WhatsApp Web
+        $('#enviarWhatsAppWeb').click(function() {
+            enviarWhatsApp('web');
+        });
+
+        // Auto-focus en el textarea cuando se abra el modal
+        $('#whatsappModal').on('shown.bs.modal', function () {
+            $('#whatsapp-mensaje').focus();
+            // Posicionar cursor al final del texto
+            var textarea = document.getElementById('whatsapp-mensaje');
+            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        });
+
+        // Función unificada para enviar WhatsApp
+        function enviarWhatsApp(type) {
+            var modal = $('#whatsappModal');
+            var celular = modal.data('celular');
+            var mensaje = $('#whatsapp-mensaje').val().trim();
+            var originalButton = modal.data('button');
+
+            // Validar que hay mensaje
+            if (!mensaje) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Mensaje Vacío',
+                    text: 'Por favor escriba un mensaje antes de enviar.'
+                });
+                return;
+            }
+
+            // Formatear número de teléfono
+            var formattedPhone = formatChileanPhone(celular);
+            var encodedMessage = encodeURIComponent(mensaje);
+            var whatsappURL;
+
+            // Generar URL según el tipo
+            if (type === 'mobile') {
+                whatsappURL = `whatsapp://send?phone=${formattedPhone}&text=${encodedMessage}`;
+            } else {
+                whatsappURL = `https://web.whatsapp.com/send?phone=${formattedPhone}&text=${encodedMessage}`;
+            }
+
+            // Cerrar modal
+            modal.modal('hide');
+
+            // Abrir WhatsApp
+            var whatsappWindow = window.open(whatsappURL, '_blank');
+
+            // Verificar si se abrió correctamente
+            setTimeout(() => {
+                if (!whatsappWindow || whatsappWindow.closed) {
+                    // Si no se abrió, intentar con URL alternativa
+                    var alternativeURL = type === 'mobile' 
+                        ? `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodedMessage}`
+                        : `whatsapp://send?phone=${formattedPhone}&text=${encodedMessage}`;
+                    window.open(alternativeURL, '_blank');
+                }
+            }, 1000);
+
+            // Actualizar el estado visual del botón
+            if (originalButton) {
+                originalButton.removeClass('btn-success').addClass('btn-warning');
+                originalButton.attr('title', 'Volver a enviar mensaje y encuesta');
+                originalButton.find('.button-text').text('Volver a enviar');
+                originalButton.data('estado-actual', 'enviado');
+            }
+
+            // Mostrar mensaje de confirmación
+            Swal.fire({
+                icon: 'success',
+                title: '¡WhatsApp Abierto!',
+                html: `Se ha abierto WhatsApp ${type === 'mobile' ? 'en la aplicación móvil' : 'en el navegador'} con el mensaje personalizado.`,
+                timer: 3000,
+                timerProgressBar: true,
+                toast: true,
+                position: 'top-end'
+            });
+        }
+
+        // Limpiar modal cuando se cierre
+        $('#whatsappModal').on('hidden.bs.modal', function () {
+            $(this).removeData();
+            $('#whatsapp-mensaje').val('');
+            $('#mensaje-contador').text('0');
+        });
+
         // Manejar el modal de reclamos
-        $('.btn-reclamo').click(function() {
+        $(document).on('click', '.btn-reclamo', function() {
             var pedidoId = $(this).data('pedido-id');
             var cliente = $(this).data('cliente');
             
@@ -1744,7 +2212,7 @@ Su opinión es muy importante para nosotros.
         });
 
         // Manejar el botón de quitar reclamo
-        $('.btn-quitar-reclamo').click(function() {
+        $(document).on('click', '.btn-quitar-reclamo', function() {
             var pedidoId = $(this).data('pedido-id');
             var cliente = $(this).data('cliente');
             

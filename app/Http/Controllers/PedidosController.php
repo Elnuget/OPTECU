@@ -1026,7 +1026,8 @@ class PedidosController extends Controller
                 'success' => true,
                 'url' => $urlEncuesta,
                 'texto_amigable' => $textoAmigable,
-                'estado' => 'enviado',
+                'estado' => $pedido->estado,
+                'numero_orden' => $pedido->numero_orden,
                 'mensaje' => 'Encuesta enviada exitosamente'
             ]);
         } catch (\Exception $e) {
