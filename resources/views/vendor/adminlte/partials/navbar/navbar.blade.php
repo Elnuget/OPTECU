@@ -339,6 +339,56 @@
     </div>
 </div>
 
+{{-- Modal Portapapeles --}}
+<div class="modal fade" id="clipboardModal" tabindex="-1" role="dialog" aria-labelledby="clipboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document" style="position: fixed; bottom: 20px; right: 20px; margin: 0; max-width: 400px;">
+        <div class="modal-content">
+            <div class="modal-header bg-primary">
+                <h5 class="modal-title text-white" id="clipboardModalLabel">
+                    <i class="fas fa-clipboard mr-2"></i>Portapapeles
+                </h5>
+                <button type="button" class="close text-white" id="clipboardClose" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                <div class="form-group">
+                    <label for="clipboardInput">Agregar nuevo elemento:</label>
+                    <div class="input-group">
+                        <textarea class="form-control" id="clipboardInput" rows="3" placeholder="Escribe o pega aquí el contenido..."></textarea>
+                        <div class="input-group-append">
+                            <button class="btn btn-primary" type="button" id="addClipboard">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Elementos guardados:</label>
+                    <div id="clipboardItems" class="border rounded p-2" style="min-height: 200px; background-color: #f8f9fa;">
+                        <div class="text-muted text-center py-3" id="emptyClipboard">
+                            <i class="fas fa-clipboard fa-2x mb-2"></i><br>
+                            No hay elementos guardados
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group text-center">
+                    <button class="btn btn-warning btn-sm" id="clearClipboard">
+                        <i class="fas fa-trash"></i> Limpiar todo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Botón flotante del portapapeles --}}
+<div id="clipboardFloatingBtn" class="clipboard-floating-btn" title="Portapapeles">
+    <i class="fas fa-clipboard"></i>
+</div>
+
 <style>
     .btn-outline-danger {
         border: 2px solid #dc3545;
@@ -427,4 +477,355 @@
         color: #2c3e50;
         font-weight: 600;
     }
+
+    /* Estilos para el portapapeles */
+    #clipboardModal .modal-dialog {
+        transition: all 0.3s ease;
+    }
+
+    /* Botón flotante del portapapeles */
+    .clipboard-floating-btn {
+        position: fixed;
+        bottom: 25px;
+        right: 25px;
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
+        transition: all 0.3s ease;
+        z-index: 1050;
+        color: white;
+        font-size: 1.5rem;
+    }
+
+    .clipboard-floating-btn:hover {
+        transform: translateY(-3px) scale(1.1);
+        box-shadow: 0 6px 20px rgba(0, 123, 255, 0.6);
+        background: linear-gradient(135deg, #0056b3, #004085);
+    }
+
+    .clipboard-floating-btn:active {
+        transform: translateY(-1px) scale(1.05);
+    }
+
+    .clipboard-floating-btn.active {
+        background: linear-gradient(135deg, #28a745, #1e7e34);
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+    }
+
+    .clipboard-floating-btn.active:hover {
+        background: linear-gradient(135deg, #1e7e34, #155724);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6);
+    }
+
+    /* Animación de pulso cuando hay elementos guardados */
+    .clipboard-floating-btn.has-items {
+        animation: clipboardPulse 2s infinite;
+    }
+
+    @keyframes clipboardPulse {
+        0% {
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
+        }
+        50% {
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.8);
+        }
+        100% {
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
+        }
+    }
+
+    /* Badge de contador en el botón flotante */
+    .clipboard-floating-btn::after {
+        content: attr(data-count);
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #dc3545;
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
+        opacity: 0;
+        transform: scale(0);
+        transition: all 0.3s ease;
+    }
+
+    .clipboard-floating-btn.has-items::after {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    /* Ajuste del modal para que no tape el botón */
+    #clipboardModal .modal-dialog {
+        position: fixed;
+        bottom: 100px;
+        right: 20px;
+        margin: 0;
+        max-width: 400px;
+    }
+
+    /* Responsivo para móviles */
+    @media (max-width: 768px) {
+        .clipboard-floating-btn {
+            width: 50px;
+            height: 50px;
+            bottom: 20px;
+            right: 20px;
+            font-size: 1.2rem;
+        }
+        
+        #clipboardModal .modal-dialog {
+            position: fixed;
+            bottom: 80px;
+            right: 10px;
+            left: 10px;
+            max-width: none;
+            margin: 0;
+        }
+    }
+
+    .clipboard-item {
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 10px;
+        margin-bottom: 10px;
+        position: relative;
+        transition: all 0.2s ease;
+    }
+
+    .clipboard-item:hover {
+        border-color: #007bff;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .clipboard-item .btn-group {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+    }
+
+    .clipboard-content {
+        margin-right: 80px;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+        font-family: monospace;
+        font-size: 0.9em;
+        max-height: 100px;
+        overflow-y: auto;
+    }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const clipboardToggle = document.getElementById('clipboardFloatingBtn');
+    const clipboardModal = document.getElementById('clipboardModal');
+    const clipboardClose = document.getElementById('clipboardClose');
+    const clipboardInput = document.getElementById('clipboardInput');
+    const addClipboard = document.getElementById('addClipboard');
+    const clipboardItems = document.getElementById('clipboardItems');
+    const emptyClipboard = document.getElementById('emptyClipboard');
+    const clearClipboard = document.getElementById('clearClipboard');
+    
+    let isModalOpen = false;
+
+    // Cargar elementos del localStorage al iniciar
+    loadClipboardItems();
+    updateFloatingButtonState();
+
+    // Toggle del modal
+    clipboardToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (isModalOpen) {
+            hideModal();
+        } else {
+            showModal();
+        }
+    });
+
+    // Cerrar modal
+    clipboardClose.addEventListener('click', function() {
+        hideModal();
+    });
+
+    // Cerrar modal al hacer clic fuera
+    clipboardModal.addEventListener('click', function(e) {
+        if (e.target === clipboardModal) {
+            hideModal();
+        }
+    });
+
+    // Agregar elemento
+    addClipboard.addEventListener('click', function() {
+        addClipboardItem();
+    });
+
+    // Agregar con Enter
+    clipboardInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            addClipboardItem();
+        }
+    });
+
+    // Limpiar todo
+    clearClipboard.addEventListener('click', function() {
+        if (confirm('¿Estás seguro de que deseas eliminar todos los elementos del portapapeles?')) {
+            localStorage.removeItem('clipboardItems');
+            loadClipboardItems();
+            updateFloatingButtonState();
+        }
+    });
+
+    function showModal() {
+        clipboardModal.style.display = 'block';
+        setTimeout(() => {
+            clipboardModal.classList.add('show');
+            clipboardModal.style.opacity = '1';
+        }, 10);
+        isModalOpen = true;
+        clipboardToggle.classList.add('active');
+    }
+
+    function hideModal() {
+        clipboardModal.classList.remove('show');
+        clipboardModal.style.opacity = '0';
+        setTimeout(() => {
+            clipboardModal.style.display = 'none';
+        }, 300);
+        isModalOpen = false;
+        clipboardToggle.classList.remove('active');
+    }
+
+    function addClipboardItem() {
+        const content = clipboardInput.value.trim();
+        if (content === '') return;
+
+        const items = getClipboardItems();
+        const newItem = {
+            id: Date.now(),
+            content: content,
+            timestamp: new Date().toLocaleString('es-ES')
+        };
+
+        items.unshift(newItem);
+        saveClipboardItems(items);
+        loadClipboardItems();
+        updateFloatingButtonState();
+        clipboardInput.value = '';
+    }
+
+    function getClipboardItems() {
+        const stored = localStorage.getItem('clipboardItems');
+        return stored ? JSON.parse(stored) : [];
+    }
+
+    function saveClipboardItems(items) {
+        localStorage.setItem('clipboardItems', JSON.stringify(items));
+    }
+
+    function updateFloatingButtonState() {
+        const items = getClipboardItems();
+        const count = items.length;
+        
+        if (count > 0) {
+            clipboardToggle.classList.add('has-items');
+            clipboardToggle.setAttribute('data-count', count > 99 ? '99+' : count);
+        } else {
+            clipboardToggle.classList.remove('has-items');
+            clipboardToggle.removeAttribute('data-count');
+        }
+    }
+
+    function loadClipboardItems() {
+        const items = getClipboardItems();
+        
+        if (items.length === 0) {
+            clipboardItems.innerHTML = '<div class="text-muted text-center py-3" id="emptyClipboard"><i class="fas fa-clipboard fa-2x mb-2"></i><br>No hay elementos guardados</div>';
+            return;
+        }
+
+        let html = '';
+        items.forEach(item => {
+            html += `
+                <div class="clipboard-item" data-id="${item.id}">
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary copy-btn" title="Copiar">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-btn" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="clipboard-content">${escapeHtml(item.content)}</div>
+                    <small class="text-muted">Guardado: ${item.timestamp}</small>
+                </div>
+            `;
+        });
+
+        clipboardItems.innerHTML = html;
+
+        // Agregar eventos a los botones
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const item = this.closest('.clipboard-item');
+                const content = item.querySelector('.clipboard-content').textContent;
+                copyToClipboard(content);
+            });
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const item = this.closest('.clipboard-item');
+                const itemId = parseInt(item.dataset.id);
+                deleteClipboardItem(itemId);
+            });
+        });
+    }
+
+    function deleteClipboardItem(id) {
+        const items = getClipboardItems();
+        const filteredItems = items.filter(item => item.id !== id);
+        saveClipboardItems(filteredItems);
+        loadClipboardItems();
+        updateFloatingButtonState();
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            // Mostrar feedback visual
+            const btn = event.target.closest('button');
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-success');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalIcon;
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-primary');
+            }, 1000);
+        }).catch(err => {
+            console.error('Error al copiar:', err);
+            alert('Error al copiar al portapapeles');
+        });
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+});
+</script>
