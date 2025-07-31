@@ -593,6 +593,27 @@
                         </div>
                     </div>
 
+                    {{-- Observación --}}
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Observación</h3>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label for="observacion" class="form-label">Observación</label>
+                                    <textarea class="form-control" id="observacion" name="observacion" rows="3" 
+                                              placeholder="Ingrese cualquier observación adicional sobre el pedido"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {{-- Total y Botones --}}
                     <div class="card">
                         <div class="card-body">

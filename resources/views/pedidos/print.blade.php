@@ -260,6 +260,12 @@
                 <span class="info-label">MOTIVO DE COMPRA:</span>
                 <span class="info-value">{{ $pedido->motivo_compra }}</span>
             </div>
+            @if(!empty($pedido->observacion))
+            <div class="info-row">
+                <span class="info-label">OBSERVACIÓN:</span>
+                <span class="info-value">{{ $pedido->observacion }}</span>
+            </div>
+            @endif
         </div>
         @endif
 

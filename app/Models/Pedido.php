@@ -45,7 +45,8 @@ class Pedido extends Model
         'metodo_envio',
         'fecha_entrega',
         'reclamo',
-        'urgente'
+        'urgente',
+        'observacion'
     ];
 
     protected $dates = ['deleted_at', 'fecha', 'fecha_entrega'];

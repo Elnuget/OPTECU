@@ -570,6 +570,18 @@
             </div>
         </div>
 
+        {{-- Observación --}}
+        @if(!empty($pedido->observacion))
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Observación</h3>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">{{ $pedido->observacion }}</p>
+            </div>
+        </div>
+        @endif
+
         {{-- Totales --}}
         <div class="card">
             <div class="card-body">
