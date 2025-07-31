@@ -1589,39 +1589,84 @@ class PedidosController extends Controller
 
     /**
      * Obtener un número de orden único
-     * Si el número solicitado ya existe, incrementa hasta encontrar uno disponible
+     * Extrae la parte numérica del último pedido y le suma 1
+     * Maneja números con letras (ej: "123A" → "124", "150B" → "151")
      * 
      * @param int|string|null $numeroSolicitado
      * @return string
      */
     private function obtenerNumeroOrdenUnico($numeroSolicitado = null)
     {
-        // Si no se proporciona número, obtener el siguiente disponible
+        // Si no se proporciona número, obtener el siguiente disponible desde el último pedido
         if (is_null($numeroSolicitado)) {
-            // Obtener el último número de orden, tratando de extraer números
-            $ultimoPedido = Pedido::orderBy('id', 'desc')->first();
+            // Obtener el último pedido del sistema ordenado por numero_orden
+            $ultimoPedido = Pedido::orderBy('numero_orden', 'desc')->first();
             
-            if ($ultimoPedido && is_numeric($ultimoPedido->numero_orden)) {
-                $numeroSolicitado = intval($ultimoPedido->numero_orden) + 1;
+            if ($ultimoPedido && !empty($ultimoPedido->numero_orden)) {
+                // Extraer la parte numérica del número de orden usando expresión regular
+                $numeroOrdenAnterior = $ultimoPedido->numero_orden;
+                
+                // Buscar todos los números en la cadena y tomar el más grande
+                preg_match_all('/\d+/', $numeroOrdenAnterior, $matches);
+                
+                if (!empty($matches[0])) {
+                    // Tomar el número más grande encontrado en la cadena
+                    $parteNumerica = max(array_map('intval', $matches[0]));
+                    $numeroSolicitado = $parteNumerica + 1;
+                    
+                    \Log::info('Número de orden generado automáticamente', [
+                        'ultimo_pedido' => $numeroOrdenAnterior,
+                        'parte_numerica_extraida' => $parteNumerica,
+                        'nuevo_numero' => $numeroSolicitado
+                    ]);
+                } else {
+                    // Si no se encuentran números, empezar desde 1
+                    $numeroSolicitado = 1;
+                    \Log::warning('No se encontraron números en el último pedido', [
+                        'ultimo_numero_orden' => $numeroOrdenAnterior
+                    ]);
+                }
             } else {
-                // Si no hay pedidos o el último no es numérico, empezar desde 1
+                // Si no hay pedidos, empezar desde 1
                 $numeroSolicitado = 1;
+                \Log::info('No hay pedidos anteriores, iniciando numeración desde 1');
             }
         }
 
-        // Convertir a string para la verificación
+        // Convertir a string para la verificación de unicidad
         $numeroSolicitado = (string) $numeroSolicitado;
+        $numeroOriginal = $numeroSolicitado;
+        $intentos = 0;
 
-        // Verificar si el número solicitado ya existe
+        // Verificar si el número solicitado ya existe y buscar uno único
         while (Pedido::where('numero_orden', $numeroSolicitado)->exists()) {
-            // Si es numérico, incrementar; si no, agregar sufijo
+            $intentos++;
+            
+            // Si es numérico, incrementar
             if (is_numeric($numeroSolicitado)) {
-                $numeroSolicitado = (string) (intval($numeroSolicitado) + 1);
+                $numeroSolicitado = (string) (intval($numeroOriginal) + $intentos);
             } else {
-                // Para strings alfanuméricos, agregar un sufijo
-                $numeroSolicitado .= '-' . time();
-                break; // Salir del bucle para evitar bucle infinito
+                // Para strings alfanuméricos, agregar sufijo temporal
+                $numeroSolicitado = $numeroOriginal . '-' . $intentos;
             }
+            
+            // Prevenir bucle infinito
+            if ($intentos > 1000) {
+                $numeroSolicitado = $numeroOriginal . '-' . time();
+                \Log::error('Se alcanzó el límite de intentos para generar número único', [
+                    'numero_original' => $numeroOriginal,
+                    'numero_final' => $numeroSolicitado
+                ]);
+                break;
+            }
+        }
+
+        if ($intentos > 0) {
+            \Log::info('Número de orden ajustado por duplicado', [
+                'numero_original' => $numeroOriginal,
+                'numero_final' => $numeroSolicitado,
+                'intentos' => $intentos
+            ]);
         }
 
         return $numeroSolicitado;
