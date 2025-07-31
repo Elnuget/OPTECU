@@ -56,7 +56,7 @@
             </div>
             <div class="collapse show" id="rankingPedidosUsuario">
                 <div class="card-body">
-                    <canvas id="rankingPedidosChart" style="height: 600px; max-height: 80vh;"></canvas>
+                    <canvas id="rankingPedidosChart" style="height: 400px;"></canvas>
                 </div>
             </div>
         </div>
@@ -352,43 +352,6 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-    }
-
-    /* Estilos específicos para el gráfico de ranking */
-    #rankingPedidosChart {
-        min-height: 600px;
-        max-height: 80vh;
-    }
-
-    /* Ajustes para gráficos con muchos datos */
-    .card-body canvas {
-        max-width: 100%;
-        height: auto !important;
-    }
-
-    /* Scrollbar personalizado para gráficos grandes */
-    .card-body {
-        overflow-x: auto;
-        overflow-y: auto;
-    }
-
-    .card-body::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-
-    .card-body::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 3px;
-    }
-
-    .card-body::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 3px;
-    }
-
-    .card-body::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8;
     }
 </style>
 @endpush
@@ -694,49 +657,87 @@
 
     // Gráfico de Ranking de Pedidos por Usuario
     const rankingPedidosChart = new Chart(document.getElementById('rankingPedidosChart'), {
-        type: 'bar',
+        type: 'doughnut',
         data: {
             labels: {!! json_encode($rankingPedidosUsuario['usuarios']) !!},
             datasets: [{
                 label: 'Cantidad de Pedidos',
                 data: {!! json_encode($rankingPedidosUsuario['pedidos']) !!},
-                backgroundColor: 'rgba(54, 162, 235, 0.8)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1,
-                borderRadius: 6,
-                yAxisID: 'y'
-            }, {
-                label: 'Total de Ventas ($)',
-                data: {!! json_encode($rankingPedidosUsuario['ventas']) !!},
-                backgroundColor: 'rgba(255, 99, 132, 0.8)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 1,
-                borderRadius: 6,
-                yAxisID: 'y1'
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(255, 205, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)',
+                    'rgba(255, 159, 64, 0.8)',
+                    'rgba(231, 74, 59, 0.8)',
+                    'rgba(28, 200, 138, 0.8)',
+                    'rgba(255, 193, 7, 0.8)',
+                    'rgba(108, 117, 125, 0.8)',
+                    'rgba(220, 53, 69, 0.8)',
+                    'rgba(0, 123, 255, 0.8)',
+                    'rgba(40, 167, 69, 0.8)',
+                    'rgba(255, 193, 7, 0.8)',
+                    'rgba(111, 66, 193, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(255, 205, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)',
+                    'rgba(231, 74, 59, 1)',
+                    'rgba(28, 200, 138, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(108, 117, 125, 1)',
+                    'rgba(220, 53, 69, 1)',
+                    'rgba(0, 123, 255, 1)',
+                    'rgba(40, 167, 69, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(111, 66, 193, 1)'
+                ],
+                borderWidth: 1
             }]
         },
         options: {
             maintainAspectRatio: false,
             responsive: true,
-            indexAxis: 'y',
-            layout: {
-                padding: {
-                    left: 10,
-                    right: 25,
-                    top: 15,
-                    bottom: 15
-                }
-            },
             plugins: {
                 legend: {
-                    display: true,
-                    position: 'top',
+                    position: 'bottom',
                     labels: {
-                        boxWidth: 12,
-                        padding: 15,
+                        padding: 20,
                         usePointStyle: true,
                         font: {
-                            size: 12
+                            size: 11
+                        },
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                                const dataset = data.datasets[0];
+                                return data.labels.map((label, i) => {
+                                    const value = dataset.data[i];
+                                    const total = dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    
+                                    // Truncar nombres largos para la leyenda
+                                    let displayLabel = label;
+                                    if (label.length > 12) {
+                                        displayLabel = label.substring(0, 9) + '...';
+                                    }
+                                    
+                                    return {
+                                        text: `${displayLabel} (${percentage}%)`,
+                                        fillStyle: dataset.backgroundColor[i],
+                                        strokeStyle: dataset.borderColor[i],
+                                        lineWidth: dataset.borderWidth,
+                                        hidden: isNaN(dataset.data[i]),
+                                        index: i
+                                    };
+                                });
+                            }
+                            return [];
                         }
                     }
                 },
@@ -757,81 +758,24 @@
                     borderWidth: 1,
                     callbacks: {
                         label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            if (context.dataset.label === 'Total de Ventas ($)') {
-                                label += '$' + context.parsed.x.toLocaleString();
-                            } else {
-                                label += context.parsed.x;
-                            }
-                            return label;
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${label}: ${value} pedidos (${percentage}%)`;
                         }
                     }
                 }
             },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    grid: {
-                        color: '#eaecf4',
-                        zeroLineColor: '#eaecf4',
-                        drawBorder: false,
-                        borderDash: [2],
-                        zeroLineBorderDash: [2]
-                    },
-                    ticks: {
-                        color: '#858796',
-                        font: {
-                            family: 'Nunito',
-                            size: 11
-                        },
-                        maxTicksLimit: 8,
-                        callback: function(value, index, values) {
-                            return value.toLocaleString();
-                        }
-                    }
-                },
-                y: {
-                    type: 'category',
-                    grid: {
-                        display: false,
-                        drawBorder: false
-                    },
-                    ticks: {
-                        color: '#858796',
-                        font: {
-                            family: 'Nunito',
-                            size: 10,
-                            weight: '500'
-                        },
-                        padding: 5,
-                        maxRotation: 0,
-                        callback: function(value, index, values) {
-                            // Truncar nombres largos
-                            if (typeof value === 'string' && value.length > 15) {
-                                return value.substring(0, 12) + '...';
-                            }
-                            return value;
-                        }
-                    }
-                },
-                y1: {
-                    type: 'linear',
-                    display: false,
-                    position: 'right',
-                    grid: {
-                        drawOnChartArea: false
-                    }
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 10,
+                    top: 10,
+                    bottom: 10
                 }
             },
-            elements: {
-                bar: {
-                    borderSkipped: false,
-                    borderRadius: 4
-                }
-            }
+            cutout: '50%'
         }
     });
 
