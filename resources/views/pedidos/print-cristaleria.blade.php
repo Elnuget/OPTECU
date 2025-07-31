@@ -103,32 +103,33 @@
         .medida-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 8px;
+            font-size: 11px;
             margin: 0;
         }
         
         .medida-table th, .medida-table td {
             border: 1px solid #666;
-            padding: 2px 4px;
+            padding: 4px 6px;
             text-align: center;
         }
         
         .medida-table th {
             background-color: #004085;
             color: white;
-            font-size: 7px;
+            font-size: 9px;
             font-weight: bold;
         }
         
         .medida-table td {
-            font-size: 8px;
+            font-size: 11px;
             background-color: white;
+            font-weight: bold;
         }
         
         .ojo-label {
             background-color: #e3f2fd;
             font-weight: bold;
-            font-size: 8px;
+            font-size: 10px;
         }
         
         .detalle-cell {
