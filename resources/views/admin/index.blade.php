@@ -43,26 +43,27 @@
 </style>
 
 <div class="row">
-    {{-- Rankings de Pedidos por Usuario y Ventas por Empresa (Dos columnas) --}}
-    <div class="col-md-6">
+    {{-- Ranking de Pedidos por Usuario (Fila completa) --}}
+    <div class="col-12">
         <div class="card shadow-sm mb-4">
             <div class="card-header border-0 bg-transparent" data-toggle="collapse" data-target="#rankingPedidosUsuario">
                 <div class="header-container">
                     <h3 class="card-title mb-0">
-                        <i class="fas fa-trophy mr-2"></i>Ranking de Pedidos por Usuario
+                        <i class="fas fa-trophy mr-2"></i>Top Usuarios por Número de Pedidos
                     </h3>
                     <i class="fas fa-chevron-down"></i>
                 </div>
             </div>
             <div class="collapse show" id="rankingPedidosUsuario">
                 <div class="card-body">
-                    <canvas id="rankingPedidosChart" style="height: 400px;"></canvas>
+                    <canvas id="rankingPedidosChart" style="height: 500px;"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-6">
+    {{-- Ranking de Ventas por Empresa (Fila completa) --}}
+    <div class="col-12">
         <div class="card shadow-sm mb-4">
             <div class="card-header border-0 bg-transparent" data-toggle="collapse" data-target="#rankingVentasEmpresa">
                 <div class="header-container">
@@ -359,6 +360,32 @@
 @push('js')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // Registrar el plugin personalizado para mostrar valores en las barras
+    Chart.register({
+        id: 'dataLabels',
+        afterDatasetsDraw: function(chart) {
+            const ctx = chart.ctx;
+            chart.data.datasets.forEach((dataset, i) => {
+                const meta = chart.getDatasetMeta(i);
+                if (!meta.hidden) {
+                    meta.data.forEach((element, index) => {
+                        // Obtener posición del elemento
+                        const position = element.tooltipPosition();
+                        const value = dataset.data[index];
+                        
+                        // Configurar texto
+                        ctx.fillStyle = '#333';
+                        ctx.font = 'bold 11px Arial';
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        
+                        // Dibujar texto
+                        ctx.fillText(value + ' pedidos', position.x + 5, position.y);
+                    });
+                }
+            });
+        }
+    });
     // Gráfico de Resumen General de Ventas
     const salesChart = new Chart(document.getElementById('salesChart'), {
         type: 'line',
@@ -655,77 +682,50 @@
         }
     });
 
-    // Gráfico de Ranking de Pedidos por Usuario (Dispersión)
+    // Gráfico de Ranking de Pedidos por Usuario (Barras Horizontales)
     const usuariosData = {!! json_encode($rankingPedidosUsuario['usuarios']) !!};
     const pedidosData = {!! json_encode($rankingPedidosUsuario['pedidos']) !!};
     
-    // Función para generar colores únicos para cada usuario
-    function generateColors(count) {
+    // Función para generar colores degradados basados en valores
+    function generateGradientColors(values) {
+        const maxValue = Math.max(...values);
         const colors = [];
-        const baseColors = [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
-            '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384', '#36A2EB', '#FFCE56',
-            '#E74C3C', '#3498DB', '#F39C12', '#27AE60', '#8E44AD', '#E67E22',
-            '#2ECC71', '#9B59B6', '#1ABC9C', '#34495E', '#16A085', '#F1C40F',
-            '#E74C3C', '#95A5A6', '#D35400', '#7F8C8D', '#BDC3C7', '#ECF0F1'
-        ];
         
-        for (let i = 0; i < count; i++) {
-            if (i < baseColors.length) {
-                colors.push(baseColors[i]);
-            } else {
-                // Generar colores adicionales usando HSL
-                const hue = (i * 137.508) % 360; // Número áureo para distribución uniforme
-                const saturation = 70 + (i % 30); // Varía entre 70-100%
-                const lightness = 45 + (i % 20); // Varía entre 45-65%
-                colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
-            }
-        }
+        values.forEach(value => {
+            // Calcular intensidad del color basado en el valor (0-1)
+            const intensity = value / maxValue;
+            
+            // Crear degradado de verde claro a verde oscuro
+            const hue = 120; // Verde
+            const saturation = 70;
+            const lightness = 85 - (intensity * 40); // De 85% (claro) a 45% (oscuro)
+            
+            colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+        });
+        
         return colors;
     }
     
-    // Generar colores únicos para cada usuario
-    const userColors = generateColors(usuariosData.length);
-    
-    // Transformar los datos para gráfico de dispersión con colores individuales
-    const scatterData = usuariosData.map((usuario, index) => ({
-        x: index + 1, // Posición del usuario (1, 2, 3, etc.)
-        y: pedidosData[index], // Cantidad de pedidos
-        label: usuario, // Nombre del usuario para el tooltip
-        backgroundColor: userColors[index],
-        borderColor: userColors[index]
-    }));
+    // Generar colores degradados
+    const gradientColors = generateGradientColors(pedidosData);
 
     const rankingPedidosChart = new Chart(document.getElementById('rankingPedidosChart'), {
-        type: 'scatter',
+        type: 'bar',
         data: {
+            labels: usuariosData,
             datasets: [{
-                label: 'Pedidos por Usuario',
-                data: scatterData,
-                backgroundColor: function(context) {
-                    const point = context.raw;
-                    return point ? point.backgroundColor : 'rgba(54, 162, 235, 0.8)';
-                },
-                borderColor: function(context) {
-                    const point = context.raw;
-                    return point ? point.borderColor : 'rgba(54, 162, 235, 1)';
-                },
-                borderWidth: 2,
-                pointRadius: 8,
-                pointHoverRadius: 12,
-                pointBorderWidth: 2,
-                pointBorderColor: '#fff',
-                pointHoverBorderWidth: 3,
-                pointHoverBorderColor: '#fff'
+                label: 'Número de Pedidos',
+                data: pedidosData,
+                backgroundColor: gradientColors,
+                borderColor: gradientColors.map(color => color.replace('hsl', 'hsla').replace(')', ', 1)')),
+                borderWidth: 1,
+                borderRadius: 4
             }]
         },
         options: {
             maintainAspectRatio: false,
             responsive: true,
-            interaction: {
-                intersect: false,
-                mode: 'point'
-            },
+            indexAxis: 'y', // Barras horizontales
             plugins: {
                 legend: {
                     display: false
@@ -747,24 +747,21 @@
                     borderWidth: 1,
                     callbacks: {
                         title: function(context) {
-                            const point = context[0];
-                            return point.raw.label || 'Usuario';
+                            return context[0].label;
                         },
                         label: function(context) {
-                            return `Pedidos: ${context.parsed.y}`;
+                            return `Pedidos: ${context.parsed.x}`;
                         }
                     }
                 }
             },
             scales: {
-                y: {
+                x: {
                     beginAtZero: true,
                     grid: {
                         color: '#eaecf4',
-                        zeroLineColor: '#eaecf4',
                         drawBorder: false,
-                        borderDash: [2],
-                        zeroLineBorderDash: [2]
+                        borderDash: [2]
                     },
                     ticks: {
                         color: '#858796',
@@ -779,7 +776,7 @@
                     },
                     title: {
                         display: true,
-                        text: 'Cantidad de Pedidos',
+                        text: 'Número de Pedidos',
                         font: {
                             weight: 'bold',
                             size: 12
@@ -787,37 +784,26 @@
                         color: '#5a5c69'
                     }
                 },
-                x: {
-                    type: 'linear',
-                    position: 'bottom',
-                    min: 0,
-                    max: usuariosData.length + 1,
+                y: {
                     grid: {
-                        color: '#eaecf4',
-                        drawBorder: false,
-                        borderDash: [2]
+                        display: false,
+                        drawBorder: false
                     },
                     ticks: {
                         color: '#858796',
                         font: {
                             family: 'Nunito',
-                            size: 10
+                            size: 10,
+                            weight: '500'
                         },
-                        stepSize: 1,
-                        maxTicksLimit: Math.min(usuariosData.length, 20), // Limitar etiquetas si hay muchos usuarios
-                        callback: function(value) {
-                            if (value > 0 && value <= usuariosData.length) {
-                                const usuario = usuariosData[value - 1];
-                                if (usuario) {
-                                    // Ajustar longitud según cantidad de usuarios
-                                    const maxLength = usuariosData.length > 10 ? 6 : 10;
-                                    if (usuario.length > maxLength) {
-                                        return usuario.substring(0, maxLength - 2) + '..';
-                                    }
-                                    return usuario;
-                                }
+                        padding: 8,
+                        callback: function(value, index, values) {
+                            const label = this.getLabelForValue(value);
+                            // Truncar nombres largos pero mantener legibilidad
+                            if (typeof label === 'string' && label.length > 15) {
+                                return label.substring(0, 12) + '...';
                             }
-                            return '';
+                            return label;
                         }
                     },
                     title: {
@@ -834,7 +820,7 @@
             layout: {
                 padding: {
                     left: 10,
-                    right: 10,
+                    right: 25,
                     top: 10,
                     bottom: 10
                 }
