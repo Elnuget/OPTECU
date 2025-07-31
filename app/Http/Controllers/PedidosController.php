@@ -1591,20 +1591,37 @@ class PedidosController extends Controller
      * Obtener un número de orden único
      * Si el número solicitado ya existe, incrementa hasta encontrar uno disponible
      * 
-     * @param int|null $numeroSolicitado
-     * @return int
+     * @param int|string|null $numeroSolicitado
+     * @return string
      */
     private function obtenerNumeroOrdenUnico($numeroSolicitado = null)
     {
         // Si no se proporciona número, obtener el siguiente disponible
         if (is_null($numeroSolicitado)) {
-            $ultimoNumero = Pedido::max('numero_orden') ?? 0;
-            $numeroSolicitado = $ultimoNumero + 1;
+            // Obtener el último número de orden, tratando de extraer números
+            $ultimoPedido = Pedido::orderBy('id', 'desc')->first();
+            
+            if ($ultimoPedido && is_numeric($ultimoPedido->numero_orden)) {
+                $numeroSolicitado = intval($ultimoPedido->numero_orden) + 1;
+            } else {
+                // Si no hay pedidos o el último no es numérico, empezar desde 1
+                $numeroSolicitado = 1;
+            }
         }
+
+        // Convertir a string para la verificación
+        $numeroSolicitado = (string) $numeroSolicitado;
 
         // Verificar si el número solicitado ya existe
         while (Pedido::where('numero_orden', $numeroSolicitado)->exists()) {
-            $numeroSolicitado++;
+            // Si es numérico, incrementar; si no, agregar sufijo
+            if (is_numeric($numeroSolicitado)) {
+                $numeroSolicitado = (string) (intval($numeroSolicitado) + 1);
+            } else {
+                // Para strings alfanuméricos, agregar un sufijo
+                $numeroSolicitado .= '-' . time();
+                break; // Salir del bucle para evitar bucle infinito
+            }
         }
 
         return $numeroSolicitado;

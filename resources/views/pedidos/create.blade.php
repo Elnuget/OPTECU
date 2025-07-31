@@ -153,7 +153,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label for="numero_orden" class="form-label">Orden</label>
-                                    <input type="number" class="form-control" id="numero_orden" name="numero_orden"
+                                    <input type="text" class="form-control" id="numero_orden" name="numero_orden"
                                            value="{{ old('numero_orden', $nextOrderNumber) }}">
                                     <small class="form-text text-muted">
                                         <i class="fas fa-sync-alt"></i> Se actualiza automáticamente cada segundo

@@ -41,3 +41,5 @@ sudo chmod -R 777 /var/www/OPTCH/public
 
 sudo chown -R www-data:www-data /var/www/OPTCH
 sudo chmod -R 755 /var/www/OPTCH
+
+dbal no funciona
