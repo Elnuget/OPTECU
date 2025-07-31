@@ -848,14 +848,18 @@
                             const data = chart.data;
                             if (data.labels.length && data.datasets.length) {
                                 const dataset = data.datasets[0];
-                                const total = dataset.data.reduce((a, b) => {
-                                    return a + (isNaN(b) || b === null ? 0 : b);
-                                }, 0);
+                                
+                                // Convertir todos los valores a números y calcular el total
+                                const numericData = dataset.data.map(value => {
+                                    const num = parseFloat(value);
+                                    return isNaN(num) || num === null ? 0 : num;
+                                });
+                                
+                                const total = numericData.reduce((a, b) => a + b, 0);
                                 
                                 return data.labels.map((label, i) => {
-                                    const value = dataset.data[i];
-                                    const safeValue = isNaN(value) || value === null ? 0 : value;
-                                    const percentage = total > 0 ? ((safeValue / total) * 100).toFixed(1) : '0.0';
+                                    const value = numericData[i];
+                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
                                     
                                     // Truncar nombres largos para la leyenda
                                     let displayLabel = label;
@@ -868,7 +872,7 @@
                                         fillStyle: dataset.backgroundColor[i],
                                         strokeStyle: dataset.borderColor[i],
                                         lineWidth: dataset.borderWidth,
-                                        hidden: isNaN(dataset.data[i]) || dataset.data[i] === null,
+                                        hidden: value === 0,
                                         index: i
                                     };
                                 });
@@ -895,11 +899,15 @@
                     callbacks: {
                         label: function(context) {
                             const label = context.label || '';
-                            const value = context.parsed;
+                            const value = parseFloat(context.parsed);
                             const safeValue = isNaN(value) || value === null ? 0 : value;
+                            
+                            // Calcular el total convirtiendo todos los valores a números
                             const total = context.dataset.data.reduce((a, b) => {
-                                return a + (isNaN(b) || b === null ? 0 : b);
+                                const num = parseFloat(b);
+                                return a + (isNaN(num) || num === null ? 0 : num);
                             }, 0);
+                            
                             const percentage = total > 0 ? ((safeValue / total) * 100).toFixed(1) : '0.0';
                             const formattedValue = '$' + safeValue.toLocaleString();
                             return `${label}: ${formattedValue} (${percentage}%)`;
