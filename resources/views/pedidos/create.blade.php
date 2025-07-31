@@ -993,8 +993,12 @@
             
             const setValueByName = (name, value) => {
                 const elements = document.getElementsByName(name);
-                if (elements[indiceSeccion] && !elements[indiceSeccion].value && value !== null && value !== undefined && value !== '') {
-                    elements[indiceSeccion].value = value;
+                if (elements[indiceSeccion] && value !== null && value !== undefined && value !== '') {
+                    // Reemplazar si el campo está vacío o tiene un valor por defecto de "0"
+                    const currentValue = elements[indiceSeccion].value.trim();
+                    if (!currentValue || currentValue === '0' || currentValue === '0.00') {
+                        elements[indiceSeccion].value = value;
+                    }
                 }
             };
             
@@ -1040,8 +1044,12 @@
             // Llenar campos individuales de la tabla de prescripción
             const setValueIfEmpty = (selector, value) => {
                 const element = document.querySelector(selector);
-                if (element && !element.value && value !== null && value !== undefined && value !== '') {
-                    element.value = value;
+                if (element && value !== null && value !== undefined && value !== '') {
+                    // Reemplazar si el campo está vacío o tiene un valor por defecto de "0"
+                    const currentValue = element.value.trim();
+                    if (!currentValue || currentValue === '0' || currentValue === '0.00') {
+                        element.value = value;
+                    }
                 }
             };
             
@@ -1105,8 +1113,12 @@
         window.cargarInformacionHistorialEnSecciones = function(historial) {
             const setValueIfEmpty = (selector, value) => {
                 const element = document.querySelector(selector);
-                if (element && !element.value && value !== null && value !== undefined && value !== '') {
-                    element.value = value;
+                if (element && value !== null && value !== undefined && value !== '') {
+                    // Reemplazar si el campo está vacío o tiene un valor por defecto de "0"
+                    const currentValue = element.value.trim();
+                    if (!currentValue || currentValue === '0' || currentValue === '0.00') {
+                        element.value = value;
+                    }
                 }
             };
             
@@ -1114,7 +1126,8 @@
             if (historial.tipo_lente) {
                 const tipoLenteInputs = document.querySelectorAll('[name="tipo_lente[]"]');
                 tipoLenteInputs.forEach(input => {
-                    if (!input.value) {
+                    const currentValue = input.value.trim();
+                    if (!currentValue || currentValue === '0' || currentValue === '0.00') {
                         input.value = historial.tipo_lente;
                     }
                 });
@@ -1126,13 +1139,15 @@
                 const materialOiInputs = document.querySelectorAll('[name="material_oi[]"]');
                 
                 materialOdInputs.forEach(input => {
-                    if (!input.value) {
+                    const currentValue = input.value.trim();
+                    if (!currentValue || currentValue === '0' || currentValue === '0.00') {
                         input.value = historial.material;
                     }
                 });
                 
                 materialOiInputs.forEach(input => {
-                    if (!input.value) {
+                    const currentValue = input.value.trim();
+                    if (!currentValue || currentValue === '0' || currentValue === '0.00') {
                         input.value = historial.material;
                     }
                 });
@@ -1148,10 +1163,13 @@
                 const filtroContainers = document.querySelectorAll('.filtros-container');
                 filtroContainers.forEach(container => {
                     const primerFiltro = container.querySelector('.filtro-input');
-                    if (primerFiltro && !primerFiltro.value) {
-                        primerFiltro.value = historial.filtro;
-                        // Actualizar el campo hidden correspondiente
-                        actualizarFiltrosHidden(container);
+                    if (primerFiltro) {
+                        const currentValue = primerFiltro.value.trim();
+                        if (!currentValue || currentValue === '0' || currentValue === '0.00') {
+                            primerFiltro.value = historial.filtro;
+                            // Actualizar el campo hidden correspondiente
+                            actualizarFiltrosHidden(container);
+                        }
                     }
                 });
             }
