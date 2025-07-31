@@ -386,7 +386,6 @@ class AdminController extends Controller
 
             $resultados = $query->groupBy('usuario')
                 ->orderBy('total_pedidos', 'desc')
-                ->take(10)
                 ->get();
 
             if ($resultados->isEmpty()) {
