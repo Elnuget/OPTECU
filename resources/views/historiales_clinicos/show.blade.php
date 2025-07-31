@@ -126,6 +126,14 @@
                                                 <span class="text-muted">Sin observaciones</span>
                                             @endif
                                         </dd>
+                                        @if($receta->foto)
+                                            <dt class="col-12 mt-2">FOTO:</dt>
+                                            <dd class="col-12">
+                                                <div class="p-2 bg-light rounded">
+                                                    <img src="{{ $receta->foto }}" alt="Foto de la receta" class="img-thumbnail" style="max-width: 200px; max-height: 200px;">
+                                                </div>
+                                            </dd>
+                                        @endif
                                     </dl>
                                 </div>
                             </div>

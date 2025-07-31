@@ -577,6 +577,15 @@
                                 <span class="receta-value">{{ $receta->observaciones }}</span>
                             </div>
                         @endif
+                        
+                        @if($receta->foto)
+                            <div style="margin-top: 5px;">
+                                <span class="receta-label">FOTO:</span>
+                                <div style="margin-top: 5px;">
+                                    <img src="{{ $receta->foto }}" alt="Foto de la receta" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd;">
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 </div>
             @endforeach

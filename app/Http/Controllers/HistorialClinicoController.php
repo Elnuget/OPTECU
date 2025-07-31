@@ -7,6 +7,7 @@ use App\Models\MensajesEnviados;
 use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class HistorialClinicoController extends Controller
 {
@@ -213,7 +214,7 @@ class HistorialClinicoController extends Controller
             'cotizacion' => 'nullable|string|max:1000',
             'usuario_id' => 'nullable|exists:users,id',
             
-            // Reglas de validación para múltiples recetas
+            // Reglas de validación para múltiples recetas (sin archivos - se validan dinámicamente)
             'recetas' => 'nullable|array',
             'recetas.*.od_esfera' => 'nullable|string|max:20',
             'recetas.*.od_cilindro' => 'nullable|string|max:20',
@@ -232,8 +233,20 @@ class HistorialClinicoController extends Controller
     public function store(Request $request)
     {
         try {
+            // Crear reglas de validación específicas para este request
+            $validationRules = $this->validationRules();
+            
+            // Validar archivos de recetas dinámicamente si existen
+            if ($request->hasFile('recetas')) {
+                foreach ($request->file('recetas') as $index => $archivos) {
+                    if (isset($archivos['foto'])) {
+                        $validationRules["recetas.$index.foto"] = 'nullable|image|mimes:jpeg,jpg,png|max:2048';
+                    }
+                }
+            }
+            
             // Validar los datos
-            $validator = \Validator::make($request->all(), $this->validationRules(), [
+            $validator = \Validator::make($request->all(), $validationRules, [
                 'required' => 'El campo :attribute es obligatorio.',
                 'string' => 'El campo :attribute debe ser texto.',
                 'max' => [
@@ -246,6 +259,8 @@ class HistorialClinicoController extends Controller
                     'numeric' => 'El campo :attribute debe ser al menos :min.',
                     'string' => 'El campo :attribute debe tener al menos :min caracteres.',
                 ],
+                'image' => 'El archivo :attribute debe ser una imagen.',
+                'mimes' => 'El archivo :attribute debe ser de tipo: :values.',
             ], [
                 'edad' => 'edad',
                 'nombres' => 'nombres',
@@ -289,6 +304,11 @@ class HistorialClinicoController extends Controller
 
             $data = $validator->validated();
             
+            // Eliminar datos de recetas del array principal para evitar conflictos
+            if (isset($data['recetas'])) {
+                unset($data['recetas']);
+            }
+            
             // Asegurarse de que el usuario_id esté establecido
             if (!isset($data['usuario_id'])) {
                 $data['usuario_id'] = auth()->id();
@@ -299,7 +319,36 @@ class HistorialClinicoController extends Controller
 
             // Guardar las recetas asociadas al historial clínico
             if ($historialClinico && $request->has('recetas')) {
-                $this->guardarMultiplesRecetas($request->input('recetas'), $historialClinico->id);
+                // Debug: verificar si hay archivos
+                Log::info('Request tiene recetas: ' . json_encode(array_keys($request->input('recetas'))));
+                Log::info('Request tiene archivos de recetas: ' . ($request->hasFile('recetas') ? 'true' : 'false'));
+                
+                // Preparar datos de recetas con archivos
+                $recetasData = $request->input('recetas');
+                $archivosRecetas = $request->file('recetas');
+                
+                // Debug: mostrar estructura de archivos recibidos
+                if ($archivosRecetas) {
+                    foreach ($archivosRecetas as $index => $archivos) {
+                        if (is_array($archivos)) {
+                            Log::info("Archivos para receta $index: " . json_encode(array_keys($archivos)));
+                        }
+                    }
+                } else {
+                    Log::info('No se recibieron archivos de recetas');
+                }
+                
+                // Combinar datos con archivos de forma segura
+                if ($archivosRecetas && is_array($archivosRecetas)) {
+                    foreach ($archivosRecetas as $index => $archivos) {
+                        if (is_array($archivos) && isset($archivos['foto']) && $archivos['foto']->isValid()) {
+                            $recetasData[$index]['foto'] = $archivos['foto'];
+                            Log::info("Archivo foto válido encontrado para receta $index: " . $archivos['foto']->getClientOriginalName());
+                        }
+                    }
+                }
+                
+                $this->guardarMultiplesRecetas($recetasData, $historialClinico->id);
             }
 
             return redirect()
@@ -893,23 +942,73 @@ class HistorialClinicoController extends Controller
      */
     private function guardarMultiplesRecetas($recetas, $historialClinicoId)
     {
-        foreach ($recetas as $recetaData) {
-            // Filtrar campos vacíos
-            $recetaData = array_filter($recetaData, function($value) {
-                return $value !== null && $value !== '';
-            });
+        foreach ($recetas as $index => $recetaData) {
+            Log::info("Procesando receta $index: " . json_encode(array_keys($recetaData)));
             
-            // Solo crear la receta si tiene al menos un campo con datos
-            if (count($recetaData) > 0) {
-                $recetaData['historial_clinico_id'] = $historialClinicoId;
+            // Inicializar array limpio para los datos de la receta
+            $recetaDataLimpia = [];
+            
+            // Manejar la subida de foto si existe
+            if (isset($recetaData['foto']) && $recetaData['foto'] instanceof \Illuminate\Http\UploadedFile) {
+                $foto = $recetaData['foto'];
                 
-                // Asegurar que oi_adicion tenga el mismo valor que od_adicion si no está definido
-                if (isset($recetaData['od_adicion']) && !isset($recetaData['oi_adicion'])) {
-                    $recetaData['oi_adicion'] = $recetaData['od_adicion'];
+                // Crear directorio si no existe
+                if (!Storage::disk('public')->exists('recetas')) {
+                    Storage::disk('public')->makeDirectory('recetas');
                 }
                 
-                \App\Models\Receta::create($recetaData);
-                Log::info('Receta creada para historial clínico ID: ' . $historialClinicoId);
+                // Generar nombre único para el archivo
+                $extension = $foto->getClientOriginalExtension();
+                $nombreArchivo = 'receta_' . $historialClinicoId . '_' . $index . '_' . time() . '.' . $extension;
+                
+                try {
+                    // Guardar el archivo en storage/app/public/recetas
+                    $rutaArchivo = $foto->storeAs('recetas', $nombreArchivo, 'public');
+                    
+                    if ($rutaArchivo) {
+                        // Guardar la ruta en la base de datos
+                        $recetaDataLimpia['foto'] = '/storage/' . $rutaArchivo;
+                        Log::info('Foto guardada en: /storage/' . $rutaArchivo);
+                    } else {
+                        Log::error('Error al guardar la foto para la receta del historial clínico ID: ' . $historialClinicoId);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Excepción al guardar foto: ' . $e->getMessage());
+                }
+            }
+            
+            // Procesar los demás campos, excluyendo archivos
+            foreach ($recetaData as $key => $value) {
+                // Saltar archivos y campos vacíos
+                if ($value instanceof \Illuminate\Http\UploadedFile) {
+                    continue;
+                }
+                
+                // Solo incluir valores no vacíos
+                if ($value !== null && $value !== '') {
+                    $recetaDataLimpia[$key] = $value;
+                }
+            }
+            
+            // Solo crear la receta si tiene al menos un campo con datos válidos (excluyendo solo historial_clinico_id)
+            $camposSignificativos = array_diff_key($recetaDataLimpia, array_flip(['historial_clinico_id']));
+            if (count($camposSignificativos) > 0) {
+                $recetaDataLimpia['historial_clinico_id'] = $historialClinicoId;
+                
+                // Asegurar que oi_adicion tenga el mismo valor que od_adicion si no está definido
+                if (isset($recetaDataLimpia['od_adicion']) && !isset($recetaDataLimpia['oi_adicion'])) {
+                    $recetaDataLimpia['oi_adicion'] = $recetaDataLimpia['od_adicion'];
+                }
+                
+                try {
+                    $recetaCreada = \App\Models\Receta::create($recetaDataLimpia);
+                    Log::info('Receta creada para historial clínico ID: ' . $historialClinicoId . ' con datos: ' . json_encode($recetaDataLimpia));
+                } catch (\Exception $e) {
+                    Log::error('Error al crear receta: ' . $e->getMessage());
+                    Log::error('Datos de receta que fallaron: ' . json_encode($recetaDataLimpia));
+                }
+            } else {
+                Log::info('Receta vacía omitida para índice: ' . $index);
             }
         }
     }
@@ -921,11 +1020,37 @@ class HistorialClinicoController extends Controller
     {
         // Si el request contiene recetas múltiples, usar ese formato
         if ($request->has('recetas')) {
+            // Obtener recetas existentes para preservar fotos si no se suben nuevas
+            $recetasExistentes = \App\Models\Receta::where('historial_clinico_id', $historialClinicoId)->get();
+            
+            // Eliminar archivos de fotos de recetas existentes que serán reemplazadas
+            foreach ($recetasExistentes as $recetaExistente) {
+                if ($recetaExistente->foto && \Storage::disk('public')->exists(str_replace('/storage/', '', $recetaExistente->foto))) {
+                    \Storage::disk('public')->delete(str_replace('/storage/', '', $recetaExistente->foto));
+                }
+            }
+            
             // Eliminar recetas existentes
             \App\Models\Receta::where('historial_clinico_id', $historialClinicoId)->delete();
             
+            // Preparar datos de recetas con archivos
+            $recetasData = $request->input('recetas');
+            $archivosRecetas = $request->file('recetas');
+            
+            // Combinar datos con archivos
+            if ($archivosRecetas) {
+                foreach ($archivosRecetas as $index => $archivos) {
+                    if (isset($archivos['foto'])) {
+                        $recetasData[$index]['foto'] = $archivos['foto'];
+                    } elseif (isset($recetasData[$index]['foto_actual']) && $recetasData[$index]['foto_actual']) {
+                        // Mantener foto actual si no se subió una nueva
+                        $recetasData[$index]['foto'] = $recetasData[$index]['foto_actual'];
+                    }
+                }
+            }
+            
             // Crear las nuevas recetas
-            $this->guardarMultiplesRecetas($request->input('recetas'), $historialClinicoId);
+            $this->guardarMultiplesRecetas($recetasData, $historialClinicoId);
         } else {
             // Mantener compatibilidad con formato antiguo
             $this->actualizarReceta($request, $historialClinicoId);

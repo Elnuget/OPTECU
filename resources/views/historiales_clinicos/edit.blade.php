@@ -49,7 +49,7 @@
             </div>
         @endif
 
-        <form action="{{ route('historiales_clinicos.update', $historialClinico->id) }}" method="POST">
+        <form action="{{ route('historiales_clinicos.update', $historialClinico->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
 
@@ -247,6 +247,19 @@
                                             <label>Observaciones:</label>
                                             <textarea name="recetas[{{ $index }}][observaciones]" class="form-control" rows="3">{{ old("recetas.{$index}.observaciones", $recetaItem->observaciones) }}</textarea>
                                         </div>
+                                        
+                                        <div class="form-group">
+                                            <label>Foto de la receta:</label>
+                                            @if($recetaItem->foto)
+                                                <div class="mb-2">
+                                                    <small class="text-muted">Foto actual:</small><br>
+                                                    <img src="{{ $recetaItem->foto }}" alt="Foto actual" class="img-thumbnail" style="max-width: 150px; max-height: 150px;">
+                                                </div>
+                                            @endif
+                                            <input type="file" name="recetas[{{ $index }}][foto]" class="form-control" accept="image/png,image/jpg,image/jpeg">
+                                            <input type="hidden" name="recetas[{{ $index }}][foto_actual]" value="{{ $recetaItem->foto }}">
+                                            <small class="text-muted">Seleccione una nueva imagen para reemplazar la actual (PNG, JPG, JPEG) - Máximo 2MB</small>
+                                        </div>
                                     </div>
                                 @endforeach
                             @else
@@ -323,6 +336,12 @@
                                     <div class="form-group">
                                         <label>Observaciones:</label>
                                         <textarea name="recetas[0][observaciones]" class="form-control" rows="3"></textarea>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Foto de la receta:</label>
+                                        <input type="file" name="recetas[0][foto]" class="form-control" accept="image/png,image/jpg,image/jpeg">
+                                        <small class="text-muted">Seleccione una imagen (PNG, JPG, JPEG) - Máximo 2MB</small>
                                     </div>
                                 </div>
                             @endif
@@ -809,6 +828,12 @@
                     <div class="form-group">
                         <label>Observaciones:</label>
                         <textarea name="recetas[${recetaIndex}][observaciones]" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Foto de la receta:</label>
+                        <input type="file" name="recetas[${recetaIndex}][foto]" class="form-control" accept="image/png,image/jpg,image/jpeg">
+                        <small class="text-muted">Seleccione una imagen (PNG, JPG, JPEG) - Máximo 2MB</small>
                     </div>
                 </div>
             `;

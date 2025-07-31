@@ -30,7 +30,8 @@ class Receta extends Model
         'oi_adicion',
         'dp',
         'observaciones',
-        'tipo'
+        'tipo',
+        'foto'
     ];
 
     /**

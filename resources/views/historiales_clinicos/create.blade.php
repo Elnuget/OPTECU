@@ -20,7 +20,7 @@
             </div>
         @endif
 
-        <form action="{{ route('historiales_clinicos.store') }}" method="POST">
+        <form action="{{ route('historiales_clinicos.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
 
             {{-- FECHA DE REGISTRO --}}
@@ -251,6 +251,12 @@
                                 <div class="form-group">
                                     <label>Observaciones:</label>
                                     <textarea name="recetas[0][observaciones]" class="form-control" rows="3"></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Foto de la receta:</label>
+                                    <input type="file" name="recetas[0][foto]" class="form-control" accept="image/png,image/jpg,image/jpeg">
+                                    <small class="text-muted">Seleccione una imagen (PNG, JPG, JPEG) - Máximo 2MB</small>
                                 </div>
                             </div>
             </div>
@@ -892,6 +898,12 @@
                                                 <label>Observaciones:</label>
                                                 <textarea name="recetas[${recetaIndex}][observaciones]" class="form-control" rows="3">${receta.observaciones || ''}</textarea>
                                             </div>
+                                            
+                                            <div class="form-group">
+                                                <label>Foto de la receta:</label>
+                                                <input type="file" name="recetas[${recetaIndex}][foto]" class="form-control" accept="image/png,image/jpg,image/jpeg">
+                                                <small class="text-muted">Seleccione una imagen (PNG, JPG, JPEG) - Máximo 2MB</small>
+                                            </div>
                                         </div>
                                     `;
                                     
@@ -1030,6 +1042,12 @@
                     <div class="form-group">
                         <label>Observaciones:</label>
                         <textarea name="recetas[${recetaIndex}][observaciones]" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Foto de la receta:</label>
+                        <input type="file" name="recetas[${recetaIndex}][foto]" class="form-control" accept="image/png,image/jpg,image/jpeg">
+                        <small class="text-muted">Seleccione una imagen (PNG, JPG, JPEG) - Máximo 2MB</small>
                     </div>
                 </div>
             `;
