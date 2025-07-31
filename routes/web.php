@@ -147,6 +147,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::put('Pedidos/{id}', [PedidosController::class, 'update'])->name('pedidos.update');
     Route::delete('Pedidos/{id}', [PedidosController::class, 'destroy'])->name('pedidos.destroy');
     Route::patch('/pedidos/{id}/update-state/{state}', [PedidosController::class, 'updateState'])->name('pedidos.update-state');
+    Route::post('/pedidos/bulk-update-state', [PedidosController::class, 'bulkUpdateState'])->name('pedidos.bulk-update-state');
     Route::patch('/pedidos/{id}/approve', [PedidosController::class, 'approve'])->name('pedidos.approve');
     Route::put('pedidos/{id}/calificar', [PedidosController::class, 'calificar'])
         ->name('pedidos.calificar');

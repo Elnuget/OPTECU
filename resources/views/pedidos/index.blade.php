@@ -144,6 +144,9 @@
                     <button type="button" class="btn btn-danger" id="filtrarReclamos">
                         <i class="fas fa-exclamation-triangle"></i> Ver Reclamos
                     </button>
+                    <button type="button" class="btn btn-primary" id="avanzarEstado" disabled>
+                        <i class="fas fa-forward"></i> Avanzar Estado
+                    </button>
                 </div>
             </div>
             <div class="col-md-4">
@@ -901,6 +904,7 @@ input[type="checkbox"]:after {
             $('#imprimirEtiquetas').prop('disabled', checkedCheckboxes === 0);
             $('#imprimirCristaleria').prop('disabled', checkedCheckboxes === 0);
             $('#imprimirInforme').prop('disabled', checkedCheckboxes === 0);
+            $('#avanzarEstado').prop('disabled', checkedCheckboxes === 0);
         }
 
         // Manejar clic en el botón de filtrar por fecha - ENVIAR AL SERVIDOR
@@ -1127,6 +1131,184 @@ input[type="checkbox"]:after {
             form.submit();
             form.remove();
         });
+
+        // Manejar clic en el botón de avanzar estado
+        $('#avanzarEstado').click(function() {
+            var selectedIds = [];
+            var pedidosData = [];
+            
+            $('.pedido-checkbox:checked').each(function() {
+                var row = $(this).closest('tr');
+                var estadoActual = row.find('td:nth-child(5) span').text().trim();
+                var cliente = row.find('td:nth-child(6)').text().trim();
+                var numeroOrden = row.find('td:nth-child(4)').text().trim();
+                
+                selectedIds.push($(this).val());
+                pedidosData.push({
+                    id: $(this).val(),
+                    estado: estadoActual,
+                    cliente: cliente,
+                    numero_orden: numeroOrden
+                });
+            });
+            
+            if (selectedIds.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sin Selección',
+                    text: 'Por favor seleccione al menos un pedido para avanzar de estado'
+                });
+                return;
+            }
+            
+            // Agrupar pedidos por estado actual
+            var estadosMap = {};
+            var resumenCambios = '';
+            
+            pedidosData.forEach(function(pedido) {
+                if (!estadosMap[pedido.estado]) {
+                    estadosMap[pedido.estado] = [];
+                }
+                estadosMap[pedido.estado].push(pedido);
+            });
+            
+            // Crear resumen de cambios
+            for (var estado in estadosMap) {
+                var siguienteEstado = obtenerSiguienteEstado(estado);
+                if (siguienteEstado) {
+                    resumenCambios += `• ${estadosMap[estado].length} pedido(s) de "${estado}" → "${siguienteEstado}"\n`;
+                } else {
+                    resumenCambios += `• ${estadosMap[estado].length} pedido(s) en "${estado}" (ya en estado final)\n`;
+                }
+            }
+            
+            // Verificar si hay pedidos que no se pueden avanzar
+            var pedidosNoAvanzables = pedidosData.filter(function(pedido) {
+                return !obtenerSiguienteEstado(pedido.estado);
+            });
+            
+            if (pedidosNoAvanzables.length === selectedIds.length) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No se puede avanzar',
+                    text: 'Todos los pedidos seleccionados ya están en estado final (ENTREGADO) o no tienen un siguiente estado válido.'
+                });
+                return;
+            }
+            
+            // Mostrar confirmación
+            Swal.fire({
+                title: '¿Avanzar Estados?',
+                html: `
+                    <p>Se cambiarán los estados de los siguientes pedidos:</p>
+                    <div style="text-align: left; margin: 10px 0;">
+                        <pre style="font-size: 12px; background: #f8f9fa; padding: 10px; border-radius: 5px;">${resumenCambios}</pre>
+                    </div>
+                    ${pedidosNoAvanzables.length > 0 ? 
+                        `<p style="color: #856404; background: #fff3cd; padding: 8px; border-radius: 5px;">
+                            <strong>Nota:</strong> ${pedidosNoAvanzables.length} pedido(s) no se procesarán por estar en estado final.
+                        </p>` : ''
+                    }
+                    <p><strong>¿Continuar con el cambio de estados?</strong></p>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#007bff',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, Avanzar Estados',
+                cancelButtonText: 'Cancelar',
+                width: '500px'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Proceder con el cambio de estados
+                    procesarCambioEstados(selectedIds);
+                }
+            });
+        });
+        
+        // Función para obtener el siguiente estado en el flujo
+        function obtenerSiguienteEstado(estadoActual) {
+            var flujoEstados = {
+                'Pendiente': 'CRISTALERIA',
+                'CRISTALERIA': 'Separado',
+                'Separado': 'LISTO EN TALLER',
+                'LISTO EN TALLER': 'Enviado',
+                'Enviado': 'ENTREGADO'
+            };
+            
+            return flujoEstados[estadoActual] || null;
+        }
+        
+        // Función para procesar el cambio de estados múltiples
+        function procesarCambioEstados(selectedIds) {
+            // Mostrar indicador de carga
+            Swal.fire({
+                title: 'Procesando cambios...',
+                text: 'Actualizando estados de los pedidos seleccionados',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Enviar petición AJAX
+            $.ajax({
+                url: '{{ route("pedidos.bulk-update-state") }}',
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    pedido_ids: selectedIds
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        // Mostrar resumen de resultados
+                        var mensaje = `
+                            <p><strong>Proceso completado:</strong></p>
+                            <ul style="text-align: left;">
+                                <li><span style="color: green;">✓ ${response.procesados} pedidos actualizados</span></li>
+                                ${response.omitidos > 0 ? `<li><span style="color: orange;">⚠ ${response.omitidos} pedidos omitidos (estado final)</span></li>` : ''}
+                                ${response.errores > 0 ? `<li><span style="color: red;">✗ ${response.errores} errores</span></li>` : ''}
+                            </ul>
+                        `;
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Estados Actualizados!',
+                            html: mensaje,
+                            timer: 3000,
+                            showConfirmButton: true,
+                            confirmButtonText: 'Cerrar'
+                        }).then(() => {
+                            // Recargar la página para mostrar los cambios
+                            window.location.reload();
+                        });
+                    } else {
+                        throw new Error(response.message || 'Error desconocido');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error:', xhr);
+                    let errorMessage = 'Error al actualizar los estados de los pedidos';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    } else if (xhr.status === 419) {
+                        errorMessage = 'Sesión expirada. Por favor, recarga la página e intenta nuevamente.';
+                    }
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: errorMessage,
+                        confirmButtonText: 'Cerrar'
+                    });
+                }
+            });
+        }
 
         // Configurar el modal antes de mostrarse
         $('#confirmarEliminarModal').on('show.bs.modal', function (event) {

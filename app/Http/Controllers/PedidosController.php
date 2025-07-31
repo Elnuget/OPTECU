@@ -846,6 +846,93 @@ class PedidosController extends Controller
         ]);
     }
 
+    /**
+     * Actualizar estado de múltiples pedidos a su siguiente estado en el flujo
+     */
+    public function bulkUpdateState(Request $request)
+    {
+        try {
+            $request->validate([
+                'pedido_ids' => 'required|array',
+                'pedido_ids.*' => 'required|integer|exists:pedidos,id'
+            ]);
+
+            $pedidoIds = $request->input('pedido_ids');
+            $procesados = 0;
+            $omitidos = 0;
+            $errores = 0;
+            
+            // Mapeo del flujo de estados
+            $flujoEstados = [
+                'Pendiente' => 'CRISTALERIA',
+                'CRISTALERIA' => 'Separado', 
+                'Separado' => 'LISTO EN TALLER',
+                'LISTO EN TALLER' => 'Enviado',
+                'Enviado' => 'ENTREGADO'
+            ];
+
+            \DB::beginTransaction();
+
+            foreach ($pedidoIds as $pedidoId) {
+                try {
+                    $pedido = Pedido::findOrFail($pedidoId);
+                    $estadoActual = $pedido->fact;
+                    
+                    // Verificar si el estado actual puede avanzar
+                    if (!isset($flujoEstados[$estadoActual])) {
+                        // Estado final o no válido - omitir
+                        $omitidos++;
+                        \Log::info("Pedido #{$pedido->id} omitido - Estado final: {$estadoActual}");
+                        continue;
+                    }
+                    
+                    // Obtener siguiente estado
+                    $siguienteEstado = $flujoEstados[$estadoActual];
+                    
+                    // Actualizar el estado
+                    $pedido->fact = $siguienteEstado;
+                    $pedido->save();
+                    
+                    $procesados++;
+                    
+                    \Log::info("Pedido #{$pedido->id} actualizado: {$estadoActual} → {$siguienteEstado}");
+                    
+                } catch (\Exception $e) {
+                    $errores++;
+                    \Log::error("Error actualizando pedido #{$pedidoId}: " . $e->getMessage());
+                }
+            }
+
+            \DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Estados actualizados correctamente',
+                'procesados' => $procesados,
+                'omitidos' => $omitidos,
+                'errores' => $errores,
+                'total' => count($pedidoIds)
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \DB::rollback();
+            return response()->json([
+                'success' => false,
+                'message' => 'Datos de entrada inválidos',
+                'errors' => $e->errors()
+            ], 422);
+            
+        } catch (\Exception $e) {
+            \DB::rollback();
+            \Log::error('Error en bulkUpdateState: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     // Método original de aprobación - se mantiene para compatibilidad
     public function approve($id)
     {
