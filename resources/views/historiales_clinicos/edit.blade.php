@@ -184,6 +184,9 @@
                                             </button>
                                         </div>
 
+                                        {{-- Campo ID oculto para recetas existentes --}}
+                                        <input type="hidden" name="recetas[{{ $index }}][id]" value="{{ $recetaItem->id }}">
+
                                         {{-- Campo Tipo de Receta --}}
                                         <div class="row mb-3">
                                             <div class="col-md-4">
