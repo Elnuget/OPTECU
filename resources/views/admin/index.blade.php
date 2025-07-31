@@ -56,7 +56,7 @@
             </div>
             <div class="collapse show" id="rankingPedidosUsuario">
                 <div class="card-body">
-                    <canvas id="rankingPedidosChart" style="height: 400px;"></canvas>
+                    <canvas id="rankingPedidosChart" style="height: 600px; max-height: 80vh;"></canvas>
                 </div>
             </div>
         </div>
@@ -352,6 +352,43 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+    }
+
+    /* Estilos específicos para el gráfico de ranking */
+    #rankingPedidosChart {
+        min-height: 600px;
+        max-height: 80vh;
+    }
+
+    /* Ajustes para gráficos con muchos datos */
+    .card-body canvas {
+        max-width: 100%;
+        height: auto !important;
+    }
+
+    /* Scrollbar personalizado para gráficos grandes */
+    .card-body {
+        overflow-x: auto;
+        overflow-y: auto;
+    }
+
+    .card-body::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .card-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .card-body::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+
+    .card-body::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
     }
 </style>
 @endpush
@@ -680,16 +717,44 @@
         },
         options: {
             maintainAspectRatio: false,
+            responsive: true,
             indexAxis: 'y',
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 25,
+                    top: 15,
+                    bottom: 15
+                }
+            },
             plugins: {
                 legend: {
                     display: true,
-                    position: 'top'
+                    position: 'top',
+                    labels: {
+                        boxWidth: 12,
+                        padding: 15,
+                        usePointStyle: true,
+                        font: {
+                            size: 12
+                        }
+                    }
                 },
                 tooltip: {
                     backgroundColor: 'rgb(255, 255, 255)',
                     bodyColor: '#858796',
+                    titleColor: '#5a5c69',
                     titleMarginBottom: 10,
+                    bodyFont: {
+                        size: 12
+                    },
+                    titleFont: {
+                        size: 13,
+                        weight: 'bold'
+                    },
+                    padding: 12,
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
                     callbacks: {
                         label: function(context) {
                             let label = context.dataset.label || '';
@@ -718,25 +783,38 @@
                     },
                     ticks: {
                         color: '#858796',
-                        fontStyle: 'normal',
-                        fontFamily: 'Nunito',
-                        fontSize: 13
+                        font: {
+                            family: 'Nunito',
+                            size: 11
+                        },
+                        maxTicksLimit: 8,
+                        callback: function(value, index, values) {
+                            return value.toLocaleString();
+                        }
                     }
                 },
                 y: {
                     type: 'category',
                     grid: {
-                        color: '#eaecf4',
-                        zeroLineColor: '#eaecf4',
-                        drawBorder: false,
-                        borderDash: [2],
-                        zeroLineBorderDash: [2]
+                        display: false,
+                        drawBorder: false
                     },
                     ticks: {
                         color: '#858796',
-                        fontStyle: 'normal',
-                        fontFamily: 'Nunito',
-                        fontSize: 13
+                        font: {
+                            family: 'Nunito',
+                            size: 10,
+                            weight: '500'
+                        },
+                        padding: 5,
+                        maxRotation: 0,
+                        callback: function(value, index, values) {
+                            // Truncar nombres largos
+                            if (typeof value === 'string' && value.length > 15) {
+                                return value.substring(0, 12) + '...';
+                            }
+                            return value;
+                        }
                     }
                 },
                 y1: {
@@ -746,6 +824,12 @@
                     grid: {
                         drawOnChartArea: false
                     }
+                }
+            },
+            elements: {
+                bar: {
+                    borderSkipped: false,
+                    borderRadius: 4
                 }
             }
         }
