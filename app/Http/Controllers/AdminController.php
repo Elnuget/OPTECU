@@ -75,18 +75,20 @@ class AdminController extends Controller
                 ->get();
 
             try {
-                // Obtener datos de ventas por usuario incluyendo cantidades
+                // Obtener datos de ventas por usuario incluyendo cantidades (excluyendo administradores)
                 $users = DB::table('pedidos')
+                    ->join('users', 'pedidos.usuario', '=', 'users.name')
                     ->select(
-                        'usuario',
-                        DB::raw('SUM(total) as total_ventas'),
+                        'pedidos.usuario',
+                        DB::raw('SUM(pedidos.total) as total_ventas'),
                         DB::raw('COUNT(*) as total_cantidad') // Usamos COUNT como alternativa si no existe columna cantidad
                     )
-                    ->whereYear('fecha', $selectedYear)
+                    ->where('users.is_admin', false) // Excluir administradores
+                    ->whereYear('pedidos.fecha', $selectedYear)
                     ->when($selectedMonth, function($query) use ($selectedMonth) {
-                        return $query->whereMonth('fecha', $selectedMonth);
+                        return $query->whereMonth('pedidos.fecha', $selectedMonth);
                     })
-                    ->groupBy('usuario')
+                    ->groupBy('pedidos.usuario')
                     ->orderBy('total_ventas', 'desc')
                     ->get();
 
@@ -261,20 +263,22 @@ class AdminController extends Controller
     private function getUserSalesData($year = null, $month = null)
     {
         $query = Pedido::select(
-            'usuario',
-            DB::raw('SUM(total) as total')
+            'pedidos.usuario',
+            DB::raw('SUM(pedidos.total) as total')
         )
-        ->whereNotNull('usuario');
+        ->join('users', 'pedidos.usuario', '=', 'users.name')
+        ->whereNotNull('pedidos.usuario')
+        ->where('users.is_admin', false); // Excluir administradores
 
         if ($year) {
-            $query->whereYear('fecha', $year);
+            $query->whereYear('pedidos.fecha', $year);
         }
         
         if ($month) {
-            $query->whereMonth('fecha', $month);
+            $query->whereMonth('pedidos.fecha', $month);
         }
 
-        $userSalesData = $query->groupBy('usuario')
+        $userSalesData = $query->groupBy('pedidos.usuario')
             ->orderBy('total', 'desc')
             ->get()
             ->pluck('total', 'usuario')
@@ -326,19 +330,21 @@ class AdminController extends Controller
     {
         try {
             $query = Pedido::select(
-                'usuario',
-                DB::raw('AVG(calificacion) as promedio_calificacion'),
-                DB::raw('COUNT(calificacion) as total_calificaciones')
+                'pedidos.usuario',
+                DB::raw('AVG(pedidos.calificacion) as promedio_calificacion'),
+                DB::raw('COUNT(pedidos.calificacion) as total_calificaciones')
             )
-            ->whereNotNull('calificacion')
-            ->whereNotNull('usuario')
-            ->whereYear('fecha', $year);
+            ->join('users', 'pedidos.usuario', '=', 'users.name')
+            ->whereNotNull('pedidos.calificacion')
+            ->whereNotNull('pedidos.usuario')
+            ->where('users.is_admin', false) // Excluir administradores
+            ->whereYear('pedidos.fecha', $year);
 
             if ($month) {
-                $query->whereMonth('fecha', $month);
+                $query->whereMonth('pedidos.fecha', $month);
             }
 
-            $resultados = $query->groupBy('usuario')
+            $resultados = $query->groupBy('pedidos.usuario')
                 ->having('total_calificaciones', '>', 0)
                 ->orderBy('promedio_calificacion', 'desc')
                 ->get();
@@ -373,18 +379,20 @@ class AdminController extends Controller
     {
         try {
             $query = Pedido::select(
-                'usuario',
+                'pedidos.usuario',
                 DB::raw('COUNT(*) as total_pedidos'),
-                DB::raw('SUM(total) as total_ventas')
+                DB::raw('SUM(pedidos.total) as total_ventas')
             )
-            ->whereNotNull('usuario')
-            ->whereYear('fecha', $year);
+            ->join('users', 'pedidos.usuario', '=', 'users.name')
+            ->whereNotNull('pedidos.usuario')
+            ->where('users.is_admin', false) // Excluir administradores
+            ->whereYear('pedidos.fecha', $year);
 
             if ($month) {
-                $query->whereMonth('fecha', $month);
+                $query->whereMonth('pedidos.fecha', $month);
             }
 
-            $resultados = $query->groupBy('usuario')
+            $resultados = $query->groupBy('pedidos.usuario')
                 ->orderBy('total_pedidos', 'desc')
                 ->get();
 
