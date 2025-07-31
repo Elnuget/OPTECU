@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\Pedido;
+use App\Models\Empresa;
+use App\Models\User;
 
 class AdminController extends Controller
 {
@@ -51,6 +53,16 @@ class AdminController extends Controller
                 'cantidad_vendida' => 0,
                 'total_ventas' => 0
             ]]);
+            $rankingPedidosUsuario = [
+                'usuarios' => ['Sin datos'],
+                'pedidos' => [0],
+                'ventas' => [0]
+            ];
+            $rankingVentasEmpresa = [
+                'empresas' => ['Sin datos'],
+                'pedidos' => [0],
+                'ventas' => [0]
+            ];
 
             // Obtener pedidos calificados
             $pedidosCalificados = Pedido::whereNotNull('calificacion')
@@ -102,6 +114,8 @@ class AdminController extends Controller
                 $salesDataMonthly = $this->getMonthlySalesData($selectedYear);
                 $ventasPorLugar = $this->getVentasPorLugar($selectedYear, $selectedMonth);
                 $datosGraficoPuntuaciones = $this->getDatosGraficoPuntuaciones($selectedYear, $selectedMonth);
+                $rankingPedidosUsuario = $this->getRankingPedidosUsuario($selectedYear, $selectedMonth);
+                $rankingVentasEmpresa = $this->getRankingVentasEmpresa($selectedYear, $selectedMonth);
 
             } catch (\Exception $e) {
                 \Log::error('Error obteniendo datos de ventas: ' . $e->getMessage());
@@ -117,7 +131,9 @@ class AdminController extends Controller
                 'selectedMonth',
                 'ventasPorLugar',
                 'datosGraficoPuntuaciones',
-                'pedidosCalificados'
+                'pedidosCalificados',
+                'rankingPedidosUsuario',
+                'rankingVentasEmpresa'
             ));
 
         } catch (\Exception $e) {
@@ -349,6 +365,93 @@ class AdminController extends Controller
                 'usuarios' => ['Error'],
                 'promedios' => [0],
                 'totales' => [0]
+            ];
+        }
+    }
+
+    private function getRankingPedidosUsuario($year, $month = null)
+    {
+        try {
+            $query = Pedido::select(
+                'usuario',
+                DB::raw('COUNT(*) as total_pedidos'),
+                DB::raw('SUM(total) as total_ventas')
+            )
+            ->whereNotNull('usuario')
+            ->whereYear('fecha', $year);
+
+            if ($month) {
+                $query->whereMonth('fecha', $month);
+            }
+
+            $resultados = $query->groupBy('usuario')
+                ->orderBy('total_pedidos', 'desc')
+                ->take(10)
+                ->get();
+
+            if ($resultados->isEmpty()) {
+                return [
+                    'usuarios' => ['Sin pedidos'],
+                    'pedidos' => [0],
+                    'ventas' => [0]
+                ];
+            }
+
+            return [
+                'usuarios' => $resultados->pluck('usuario')->toArray(),
+                'pedidos' => $resultados->pluck('total_pedidos')->toArray(),
+                'ventas' => $resultados->pluck('total_ventas')->toArray()
+            ];
+
+        } catch (\Exception $e) {
+            \Log::error('Error en getRankingPedidosUsuario: ' . $e->getMessage());
+            return [
+                'usuarios' => ['Error'],
+                'pedidos' => [0],
+                'ventas' => [0]
+            ];
+        }
+    }
+
+    private function getRankingVentasEmpresa($year, $month = null)
+    {
+        try {
+            $query = Pedido::join('empresas', 'pedidos.empresa_id', '=', 'empresas.id')
+                ->select(
+                    'empresas.nombre as empresa',
+                    DB::raw('COUNT(pedidos.id) as total_pedidos'),
+                    DB::raw('SUM(pedidos.total) as total_ventas')
+                )
+                ->whereYear('pedidos.fecha', $year);
+
+            if ($month) {
+                $query->whereMonth('pedidos.fecha', $month);
+            }
+
+            $resultados = $query->groupBy('empresas.id', 'empresas.nombre')
+                ->orderBy('total_ventas', 'desc')
+                ->get();
+
+            if ($resultados->isEmpty()) {
+                return [
+                    'empresas' => ['Sin ventas'],
+                    'pedidos' => [0],
+                    'ventas' => [0]
+                ];
+            }
+
+            return [
+                'empresas' => $resultados->pluck('empresa')->toArray(),
+                'pedidos' => $resultados->pluck('total_pedidos')->toArray(),
+                'ventas' => $resultados->pluck('total_ventas')->toArray()
+            ];
+
+        } catch (\Exception $e) {
+            \Log::error('Error en getRankingVentasEmpresa: ' . $e->getMessage());
+            return [
+                'empresas' => ['Error'],
+                'pedidos' => [0],
+                'ventas' => [0]
             ];
         }
     }

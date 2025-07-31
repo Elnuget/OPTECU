@@ -43,6 +43,43 @@
 </style>
 
 <div class="row">
+    {{-- Rankings de Pedidos por Usuario y Ventas por Empresa (Dos columnas) --}}
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header border-0 bg-transparent" data-toggle="collapse" data-target="#rankingPedidosUsuario">
+                <div class="header-container">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-trophy mr-2"></i>Ranking de Pedidos por Usuario
+                    </h3>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </div>
+            <div class="collapse show" id="rankingPedidosUsuario">
+                <div class="card-body">
+                    <canvas id="rankingPedidosChart" style="height: 400px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header border-0 bg-transparent" data-toggle="collapse" data-target="#rankingVentasEmpresa">
+                <div class="header-container">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-building mr-2"></i>Ranking de Ventas por Empresa
+                    </h3>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </div>
+            <div class="collapse show" id="rankingVentasEmpresa">
+                <div class="card-body">
+                    <canvas id="rankingEmpresasChart" style="height: 400px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Resumen General de Ventas (Ancho completo) --}}
     <div class="col-12">
         <div class="card shadow-sm mb-4">
@@ -618,24 +655,194 @@
         }
     });
 
-    // Asegurarse que todos los paneles estén colapsados al cargar
+    // Gráfico de Ranking de Pedidos por Usuario
+    const rankingPedidosChart = new Chart(document.getElementById('rankingPedidosChart'), {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($rankingPedidosUsuario['usuarios']) !!},
+            datasets: [{
+                label: 'Cantidad de Pedidos',
+                data: {!! json_encode($rankingPedidosUsuario['pedidos']) !!},
+                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                borderRadius: 6,
+                yAxisID: 'y'
+            }, {
+                label: 'Total de Ventas ($)',
+                data: {!! json_encode($rankingPedidosUsuario['ventas']) !!},
+                backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1,
+                borderRadius: 6,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    bodyColor: '#858796',
+                    titleMarginBottom: 10,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.dataset.label === 'Total de Ventas ($)') {
+                                label += '$' + context.parsed.x.toLocaleString();
+                            } else {
+                                label += context.parsed.x;
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: {
+                        color: '#eaecf4',
+                        zeroLineColor: '#eaecf4',
+                        drawBorder: false,
+                        borderDash: [2],
+                        zeroLineBorderDash: [2]
+                    },
+                    ticks: {
+                        color: '#858796',
+                        fontStyle: 'normal',
+                        fontFamily: 'Nunito',
+                        fontSize: 13
+                    }
+                },
+                y: {
+                    type: 'category',
+                    grid: {
+                        color: '#eaecf4',
+                        zeroLineColor: '#eaecf4',
+                        drawBorder: false,
+                        borderDash: [2],
+                        zeroLineBorderDash: [2]
+                    },
+                    ticks: {
+                        color: '#858796',
+                        fontStyle: 'normal',
+                        fontFamily: 'Nunito',
+                        fontSize: 13
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: false,
+                    position: 'right',
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Gráfico de Ranking de Ventas por Empresa
+    const rankingEmpresasChart = new Chart(document.getElementById('rankingEmpresasChart'), {
+        type: 'doughnut',
+        data: {
+            labels: {!! json_encode($rankingVentasEmpresa['empresas']) !!},
+            datasets: [{
+                label: 'Ventas por Empresa',
+                data: {!! json_encode($rankingVentasEmpresa['ventas']) !!},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 205, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)',
+                    'rgba(255, 159, 64, 0.8)',
+                    'rgba(231, 74, 59, 0.8)',
+                    'rgba(28, 200, 138, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 205, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)',
+                    'rgba(231, 74, 59, 1)',
+                    'rgba(28, 200, 138, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    bodyColor: '#858796',
+                    titleMarginBottom: 10,
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = '$' + context.parsed.toLocaleString();
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 10,
+                    top: 10,
+                    bottom: 10
+                }
+            },
+            cutout: '50%'
+        }
+    });
+
+    // Asegurarse que todos los paneles estén colapsados al cargar, excepto los rankings
     document.addEventListener('DOMContentLoaded', function() {
         // Obtener todos los botones de colapso
         const collapseButtons = document.querySelectorAll('[data-toggle="collapse"]');
         
-        // Agregar clase collapsed a todos los botones
+        // Agregar clase collapsed a todos los botones excepto los rankings
         collapseButtons.forEach(button => {
-            button.classList.add('collapsed');
-            const icon = button.querySelector('.fa-chevron-down');
-            if (icon) {
-                icon.style.transform = 'rotate(-90deg)';
+            const target = button.getAttribute('data-target');
+            if (target !== '#rankingPedidosUsuario' && target !== '#rankingVentasEmpresa') {
+                button.classList.add('collapsed');
+                const icon = button.querySelector('.fa-chevron-down');
+                if (icon) {
+                    icon.style.transform = 'rotate(-90deg)';
+                }
             }
         });
 
-        // Remover clase show de todos los paneles colapsables
+        // Remover clase show de todos los paneles colapsables excepto los rankings
         const collapsePanels = document.querySelectorAll('.collapse');
         collapsePanels.forEach(panel => {
-            panel.classList.remove('show');
+            if (panel.id !== 'rankingPedidosUsuario' && panel.id !== 'rankingVentasEmpresa') {
+                panel.classList.remove('show');
+            }
         });
     });
 
