@@ -1917,7 +1917,7 @@ class PedidosController extends Controller
         
         // Configurar título principal
         $sheet->setCellValue('A1', '🔬 CRISTALERÍA - ÓRDENES DE TRABAJO 🔬');
-        $sheet->mergeCells('A1:G1');
+        $sheet->mergeCells('A1:H1');
         $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
         $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
@@ -1926,33 +1926,37 @@ class PedidosController extends Controller
         
         // Subtítulo
         $sheet->setCellValue('A2', 'RESUMEN DE LUNAS PARA PROCESAR');
-        $sheet->mergeCells('A2:G2');
+        $sheet->mergeCells('A2:H2');
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
         $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         
         // Información de fecha e impresión
         $sheet->setCellValue('A3', 'FECHA DE EXPORTACIÓN: ' . date('d/m/Y H:i:s') . ' | TOTAL ÓRDENES: ' . $pedidos->count());
-        $sheet->mergeCells('A3:G3');
+        $sheet->mergeCells('A3:I3');
         $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(10);
         $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
         
-        // Encabezados de la tabla
+        // Encabezados de la tabla (fila 5)
         $headers = [
             'A5' => 'SUCURSAL',
             'B5' => 'ORDEN',
             'C5' => 'FECHA',
-            'D5' => 'MEDIDA OD',
-            'E5' => 'MEDIDA OI',
-            'F5' => 'TIPO LENTE',
-            'G5' => 'MATERIAL',
-            'H5' => 'FILTRO'
+            'D5' => 'OJO',
+            'E5' => 'ESFÉRICO',
+            'F5' => 'CILINDRO',
+            'G5' => 'EJE',
+            'H5' => 'ADD',
+            'I5' => 'DP',
+            'J5' => 'TIPO LENTE',
+            'K5' => 'MATERIAL',
+            'L5' => 'FILTRO'
         ];
         
         foreach ($headers as $cell => $header) {
             $sheet->setCellValue($cell, $header);
             $sheet->getStyle($cell)->getFont()->setBold(true);
             $sheet->getStyle($cell)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-            $sheet->getStyle($cell)->getFill()->getStartColor()->setRGB('007bff');
+            $sheet->getStyle($cell)->getFill()->getStartColor()->setRGB('2c3e50');
             $sheet->getStyle($cell)->getFont()->getColor()->setRGB('FFFFFF');
             $sheet->getStyle($cell)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle($cell)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
@@ -1960,15 +1964,49 @@ class PedidosController extends Controller
         
         // Llenar datos
         $row = 6;
-        $totalLunas = 0;
+        $totalFilas = 0;
         
         foreach ($pedidos as $pedido) {
             if ($pedido->lunas->count() > 0) {
-                foreach ($pedido->lunas as $index => $luna) {
-                    $totalLunas++;
+                foreach ($pedido->lunas as $lunaIndex => $luna) {
+                    // Parsear medidas
+                    $medidaText = $luna->l_medida ?? '';
                     
-                    // Solo mostrar datos del pedido en la primera fila de lunas
-                    if ($index == 0) {
+                    // Extraer datos de OD
+                    preg_match('/OD:\s*([+-]?\d+(?:\.\d+)?)\s*([+-]?\d+(?:\.\d+)?)\s*X\s*(\d+(?:\.\d+)?)°?/i', $medidaText, $odMatches);
+                    $od_esfera = $odMatches[1] ?? '';
+                    $od_cilindro = $odMatches[2] ?? '';
+                    $od_eje = $odMatches[3] ?? '';
+                    
+                    // Extraer datos de OI
+                    preg_match('/OI:\s*([+-]?\d+(?:\.\d+)?)\s*([+-]?\d+(?:\.\d+)?)\s*X\s*(\d+(?:\.\d+)?)°?/i', $medidaText, $oiMatches);
+                    $oi_esfera = $oiMatches[1] ?? '';
+                    $oi_cilindro = $oiMatches[2] ?? '';
+                    $oi_eje = $oiMatches[3] ?? '';
+                    
+                    // Extraer ADD
+                    preg_match('/ADD:\s*([+-]?\d+(?:\.\d+)?)/i', $medidaText, $addMatch);
+                    $add = $addMatch[1] ?? '';
+                    
+                    // Extraer DP
+                    preg_match('/DP:\s*(\d+(?:\.\d+)?)/i', $medidaText, $dpMatch);
+                    $dp = $dpMatch[1] ?? '';
+                    
+                    // Formatear material
+                    $materialText = $luna->material ?? '';
+                    if (preg_match('/OD:\s*([^|]+)\|\s*OI:\s*(.+)/i', $materialText, $materialMatches)) {
+                        $od_material = trim($materialMatches[1]);
+                        $oi_material = trim($materialMatches[2]);
+                    } else {
+                        $od_material = $materialText;
+                        $oi_material = $materialText;
+                    }
+                    
+                    // PRIMERA FILA: OJO DERECHO (OD)
+                    $totalFilas++;
+                    
+                    // Solo mostrar datos del pedido en la primera fila de la primera luna
+                    if ($lunaIndex == 0) {
                         $sheet->setCellValue('A' . $row, $pedido->empresa->nombre ?? 'N/A');
                         $sheet->setCellValue('B' . $row, $pedido->numero_orden);
                         $sheet->setCellValue('C' . $row, date('d/m/Y', strtotime($pedido->fecha)));
@@ -1979,58 +2017,60 @@ class PedidosController extends Controller
                         $sheet->setCellValue('C' . $row, '');
                     }
                     
-                    // Parsear medidas
-                    $medidaText = $luna->l_medida ?? '';
+                    $sheet->setCellValue('D' . $row, 'OD');                    // Indicador de ojo
+                    $sheet->setCellValue('E' . $row, $od_esfera);              // Esférico OD
+                    $sheet->setCellValue('F' . $row, $od_cilindro);            // Cilindro OD
+                    $sheet->setCellValue('G' . $row, $od_eje);                 // Eje OD
+                    $sheet->setCellValue('H' . $row, $add);                    // ADD
+                    $sheet->setCellValue('I' . $row, $dp);                     // DP
+                    $sheet->setCellValue('J' . $row, $luna->tipo_lente ?? ''); // Tipo de lente
+                    $sheet->setCellValue('K' . $row, $od_material);            // Material OD
+                    $sheet->setCellValue('L' . $row, $luna->filtro ?? '');     // Filtro
                     
-                    // Extraer datos de OD
-                    preg_match('/OD:\s*([+-]?\d+(?:\.\d+)?)\s*([+-]?\d+(?:\.\d+)?)\s*X\s*(\d+(?:\.\d+)?)°?/i', $medidaText, $odMatches);
-                    $od_esfera = $odMatches[1] ?? 'N/A';
-                    $od_cilindro = $odMatches[2] ?? 'N/A';
-                    $od_eje = $odMatches[3] ?? 'N/A';
+                    // Aplicar estilo especial para OD (azul claro)
+                    $sheet->getStyle('D' . $row . ':I' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
+                    $sheet->getStyle('D' . $row . ':I' . $row)->getFill()->getStartColor()->setRGB('e3f2fd');
                     
-                    // Extraer datos de OI
-                    preg_match('/OI:\s*([+-]?\d+(?:\.\d+)?)\s*([+-]?\d+(?:\.\d+)?)\s*X\s*(\d+(?:\.\d+)?)°?/i', $medidaText, $oiMatches);
-                    $oi_esfera = $oiMatches[1] ?? 'N/A';
-                    $oi_cilindro = $oiMatches[2] ?? 'N/A';
-                    $oi_eje = $oiMatches[3] ?? 'N/A';
-                    
-                    // Extraer ADD
-                    preg_match('/ADD:\s*([+-]?\d+(?:\.\d+)?)/i', $medidaText, $addMatch);
-                    $add = $addMatch[1] ?? 'N/A';
-                    
-                    // Extraer DP
-                    preg_match('/DP:\s*(\d+(?:\.\d+)?)/i', $medidaText, $dpMatch);
-                    $dp = $dpMatch[1] ?? 'N/A';
-                    
-                    // Medida OD
-                    $medidaOD = "ESF: {$od_esfera} | CIL: {$od_cilindro} | EJE: {$od_eje}°";
-                    if ($add !== 'N/A') $medidaOD .= " | ADD: {$add}";
-                    if ($dp !== 'N/A') $medidaOD .= " | DP: {$dp}";
-                    
-                    // Medida OI
-                    $medidaOI = "ESF: {$oi_esfera} | CIL: {$oi_cilindro} | EJE: {$oi_eje}°";
-                    
-                    $sheet->setCellValue('D' . $row, $medidaOD);
-                    $sheet->setCellValue('E' . $row, $medidaOI);
-                    $sheet->setCellValue('F' . $row, $luna->tipo_lente ?? '');
-                    
-                    // Formatear material
-                    $materialText = $luna->material ?? '';
-                    if (preg_match('/OD:\s*([^|]+)\|\s*OI:\s*(.+)/i', $materialText, $materialMatches)) {
-                        $od_material = trim($materialMatches[1]);
-                        $oi_material = trim($materialMatches[2]);
-                        $materialFormatted = "OD: {$od_material} | OI: {$oi_material}";
-                    } else {
-                        $materialFormatted = $materialText;
-                    }
-                    
-                    $sheet->setCellValue('G' . $row, $materialFormatted);
-                    $sheet->setCellValue('H' . $row, $luna->filtro ?? '');
+                    // Centrar texto en las columnas de medidas
+                    $sheet->getStyle('D' . $row . ':I' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                     
                     // Aplicar colores alternados
-                    if ($row % 2 == 0) {
-                        $sheet->getStyle('A' . $row . ':H' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-                        $sheet->getStyle('A' . $row . ':H' . $row)->getFill()->getStartColor()->setRGB('f8f9fa');
+                    if ($totalFilas % 4 == 1 || $totalFilas % 4 == 2) {
+                        $sheet->getStyle('A' . $row . ':L' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
+                        $sheet->getStyle('A' . $row . ':L' . $row)->getFill()->getStartColor()->setRGB('f8f9fa');
+                    }
+                    
+                    $row++;
+                    
+                    // SEGUNDA FILA: OJO IZQUIERDO (OI)
+                    $totalFilas++;
+                    
+                    // Celdas vacías para sucursal, orden y fecha en la segunda fila
+                    $sheet->setCellValue('A' . $row, '');
+                    $sheet->setCellValue('B' . $row, '');
+                    $sheet->setCellValue('C' . $row, '');
+                    
+                    $sheet->setCellValue('D' . $row, 'OI');                    // Indicador de ojo
+                    $sheet->setCellValue('E' . $row, $oi_esfera);              // Esférico OI
+                    $sheet->setCellValue('F' . $row, $oi_cilindro);            // Cilindro OI
+                    $sheet->setCellValue('G' . $row, $oi_eje);                 // Eje OI
+                    $sheet->setCellValue('H' . $row, '');                      // ADD vacío (solo se muestra en OD)
+                    $sheet->setCellValue('I' . $row, '');                      // DP vacío (solo se muestra en OD)
+                    $sheet->setCellValue('J' . $row, '');                      // Tipo de lente vacío
+                    $sheet->setCellValue('K' . $row, $oi_material);            // Material OI
+                    $sheet->setCellValue('L' . $row, '');                      // Filtro vacío
+                    
+                    // Aplicar estilo especial para OI (rosa claro)
+                    $sheet->getStyle('D' . $row . ':H' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
+                    $sheet->getStyle('D' . $row . ':H' . $row)->getFill()->getStartColor()->setRGB('f3e5f5');
+                    
+                    // Centrar texto en las columnas de medidas
+                    $sheet->getStyle('D' . $row . ':H' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                    
+                    // Aplicar colores alternados
+                    if ($totalFilas % 4 == 1 || $totalFilas % 4 == 2) {
+                        $sheet->getStyle('A' . $row . ':K' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
+                        $sheet->getStyle('A' . $row . ':K' . $row)->getFill()->getStartColor()->setRGB('f8f9fa');
                     }
                     
                     $row++;
@@ -2038,25 +2078,38 @@ class PedidosController extends Controller
             }
         }
         
+        // Calcular total de lunas
+        $totalLunas = $pedidos->sum(function($pedido) {
+            return $pedido->lunas->count();
+        });
+        
         // Fila de total
         $sheet->setCellValue('A' . $row, 'TOTAL LUNAS PARA PROCESAR:');
-        $sheet->mergeCells('A' . $row . ':G' . $row);
-        $sheet->setCellValue('H' . $row, $totalLunas);
-        $sheet->getStyle('A' . $row . ':H' . $row)->getFont()->setBold(true);
-        $sheet->getStyle('A' . $row . ':H' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-        $sheet->getStyle('A' . $row . ':H' . $row)->getFill()->getStartColor()->setRGB('28a745');
-        $sheet->getStyle('A' . $row . ':H' . $row)->getFont()->getColor()->setRGB('FFFFFF');
+        $sheet->mergeCells('A' . $row . ':K' . $row);
+        $sheet->setCellValue('L' . $row, $totalLunas);
+        $sheet->getStyle('A' . $row . ':L' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('A' . $row . ':L' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
+        $sheet->getStyle('A' . $row . ':L' . $row)->getFill()->getStartColor()->setRGB('28a745');
+        $sheet->getStyle('A' . $row . ':L' . $row)->getFont()->getColor()->setRGB('FFFFFF');
         $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $sheet->getStyle('H' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('L' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         
         // Aplicar bordes a toda la tabla
-        $tableRange = 'A5:H' . $row;
+        $tableRange = 'A5:L' . $row;
         $sheet->getStyle($tableRange)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
         
         // Ajustar ancho de columnas
-        foreach (range('A', 'H') as $col) {
+        foreach (range('A', 'L') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
+        
+        // Establecer ancho mínimo para las columnas específicas
+        $sheet->getColumnDimension('D')->setWidth(8);  // OJO
+        $sheet->getColumnDimension('E')->setWidth(12); // Esférico
+        $sheet->getColumnDimension('F')->setWidth(12); // Cilindro
+        $sheet->getColumnDimension('G')->setWidth(10); // Eje
+        $sheet->getColumnDimension('H')->setWidth(8);  // ADD
+        $sheet->getColumnDimension('I')->setWidth(8);  // DP
         
         // Ajustar altura de filas
         for ($i = 1; $i <= $row; $i++) {
