@@ -286,9 +286,6 @@
                                     data-estado-actual="{{ trim($pedido->encuesta) }}"
                                     title="{{ trim($pedido->encuesta) === 'enviado' ? 'Volver a enviar mensaje y encuesta' : 'Enviar mensaje y encuesta' }}">
                                     <i class="fab fa-whatsapp"></i>
-                                    <span class="button-text">
-                                        {{ trim($pedido->encuesta) === 'enviado' ? 'Volver a enviar' : 'Enviar' }}
-                                    </span>
                                 </button>
                             @endif
                         </td>
@@ -706,11 +703,9 @@
 .btn-whatsapp-mensaje {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-}
-
-.btn-whatsapp-mensaje .button-text {
-    font-size: 0.875rem;
+    justify-content: center;
+    min-width: 32px;
+    padding: 0.375rem;
 }
 
 /* Estilos para el modal de WhatsApp */
