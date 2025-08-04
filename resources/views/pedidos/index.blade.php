@@ -124,32 +124,59 @@
             </div>
         </form>
 
-        {{-- Botones de acción --}}
+        {{-- Botones de acción optimizados --}}
         <div class="row mb-3">
             <div class="col-md-8">
-                <div class="btn-group">
-                    <a href="{{ route('pedidos.create') }}" class="btn btn-primary">Crear Pedido</a>
-                    <button type="button" class="btn btn-success" id="generarExcel" disabled>
-                        <i class="fas fa-file-excel"></i> Generar Excel
-                    </button>
-                    <button type="button" class="btn btn-warning" id="imprimirEtiquetas" disabled>
-                        <i class="fas fa-tags"></i> Imprimir Etiquetas
-                    </button>
-                    <button type="button" class="btn btn-info" id="imprimirCristaleria" disabled>
-                        <i class="fas fa-eye"></i> Imprimir Cristalería
-                    </button>
-                    <button type="button" class="btn btn-success" id="exportarCristalariaExcel" disabled>
-                        <i class="fas fa-file-excel"></i> Exportar Cristalería Excel
-                    </button>
-                    <button type="button" class="btn btn-secondary" id="imprimirInforme" disabled>
-                        <i class="fas fa-print"></i> Imprimir Informe
-                    </button>
-                    <button type="button" class="btn btn-danger" id="filtrarReclamos">
-                        <i class="fas fa-exclamation-triangle"></i> Ver Reclamos
-                    </button>
-                    <button type="button" class="btn btn-primary" id="avanzarEstado" disabled>
-                        <i class="fas fa-forward"></i> Avanzar Estado
-                    </button>
+                <div class="btn-toolbar" role="toolbar">
+                    <!-- Botón principal -->
+                    <div class="btn-group me-2" role="group">
+                        <a href="{{ route('pedidos.create') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Crear Pedido
+                        </a>
+                    </div>
+
+                    <!-- Grupo: Exportar/Imprimir -->
+                    <div class="btn-group me-2" role="group">
+                        <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" disabled id="exportarDropdown">
+                            <i class="fas fa-download"></i> Exportar
+                        </button>
+                        <div class="dropdown-menu">
+                            <button class="dropdown-item" type="button" id="generarExcel">
+                                <i class="fas fa-file-excel"></i> Generar Excel
+                            </button>
+                            <button class="dropdown-item" type="button" id="exportarCristalariaExcel">
+                                <i class="fas fa-file-excel"></i> Exportar Cristalería Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Grupo: Imprimir -->
+                    <div class="btn-group me-2" role="group">
+                        <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" disabled id="imprimirDropdown">
+                            <i class="fas fa-print"></i> Imprimir
+                        </button>
+                        <div class="dropdown-menu">
+                            <button class="dropdown-item" type="button" id="imprimirEtiquetas">
+                                <i class="fas fa-tags"></i> Imprimir Etiquetas
+                            </button>
+                            <button class="dropdown-item" type="button" id="imprimirCristaleria">
+                                <i class="fas fa-eye"></i> Imprimir Cristalería
+                            </button>
+                            <button class="dropdown-item" type="button" id="imprimirInforme">
+                                <i class="fas fa-print"></i> Imprimir Informe
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Grupo: Acciones -->
+                    <div class="btn-group me-2" role="group">
+                        <button type="button" class="btn btn-warning" id="filtrarReclamos">
+                            <i class="fas fa-exclamation-triangle"></i> Reclamos
+                        </button>
+                        <button type="button" class="btn btn-primary" id="avanzarEstado" disabled>
+                            <i class="fas fa-forward"></i> Avanzar
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="col-md-4">
@@ -1123,6 +1150,107 @@ input[type="checkbox"]:after {
 .btn-desmarcar-urgente:focus {
     box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.5);
 }
+
+/* Estilos para la barra de herramientas optimizada */
+.btn-toolbar {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-toolbar .btn-group {
+    margin-bottom: 0.5rem;
+}
+
+/* Estilos para dropdowns de acciones */
+.dropdown-menu {
+    min-width: 200px;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 0.375rem;
+}
+
+.dropdown-item {
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+    color: #495057;
+    transform: translateX(2px);
+}
+
+.dropdown-item i {
+    width: 20px;
+    text-align: center;
+    margin-right: 8px;
+}
+
+/* Botones de dropdown deshabilitados */
+.btn.disabled,
+.btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn.disabled .dropdown-toggle::after,
+.btn[disabled] .dropdown-toggle::after {
+    opacity: 0.5;
+}
+
+/* Responsive para la barra de herramientas */
+@media (max-width: 768px) {
+    .btn-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn-toolbar .btn-group {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-toolbar .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .dropdown-menu {
+        width: 100%;
+    }
+}
+
+/* Mejoras para botones principales */
+.btn-toolbar .btn {
+    white-space: nowrap;
+    border-radius: 0.375rem;
+}
+
+/* Separación entre grupos de botones */
+.btn-toolbar .btn-group:not(:last-child) {
+    margin-right: 0.5rem;
+}
+
+@media (max-width: 576px) {
+    .btn-toolbar .btn-group:not(:last-child) {
+        margin-right: 0;
+    }
+}
+
+/* Estilos para botones compactos */
+.btn-toolbar .btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+/* Indicador visual para dropdowns con contenido */
+.dropdown-toggle::after {
+    transition: transform 0.2s ease;
+}
+
+.dropdown-toggle[aria-expanded="true"]::after {
+    transform: rotate(180deg);
+}
 </style>
 @endpush
 @stop
@@ -1171,15 +1299,29 @@ input[type="checkbox"]:after {
             toggleImprimirButton();
         });
 
-        // Función para habilitar/deshabilitar el botón de imprimir
+        // Función para habilitar/deshabilitar los botones y dropdowns
         function toggleImprimirButton() {
             var checkedCheckboxes = $('.pedido-checkbox:checked').length;
-            $('#generarExcel').prop('disabled', checkedCheckboxes === 0);
-            $('#imprimirEtiquetas').prop('disabled', checkedCheckboxes === 0);
-            $('#imprimirCristaleria').prop('disabled', checkedCheckboxes === 0);
-            $('#exportarCristalariaExcel').prop('disabled', checkedCheckboxes === 0);
-            $('#imprimirInforme').prop('disabled', checkedCheckboxes === 0);
-            $('#avanzarEstado').prop('disabled', checkedCheckboxes === 0);
+            var isDisabled = checkedCheckboxes === 0;
+            
+            // Habilitar/deshabilitar botones individuales
+            $('#generarExcel').prop('disabled', isDisabled);
+            $('#imprimirEtiquetas').prop('disabled', isDisabled);
+            $('#imprimirCristaleria').prop('disabled', isDisabled);
+            $('#exportarCristalariaExcel').prop('disabled', isDisabled);
+            $('#imprimirInforme').prop('disabled', isDisabled);
+            $('#avanzarEstado').prop('disabled', isDisabled);
+            
+            // Habilitar/deshabilitar dropdowns
+            $('#exportarDropdown').prop('disabled', isDisabled);
+            $('#imprimirDropdown').prop('disabled', isDisabled);
+            
+            // Cambiar apariencia de los dropdowns
+            if (isDisabled) {
+                $('#exportarDropdown, #imprimirDropdown').addClass('disabled').attr('aria-disabled', 'true');
+            } else {
+                $('#exportarDropdown, #imprimirDropdown').removeClass('disabled').removeAttr('aria-disabled');
+            }
         }
 
         // Manejar clic en el botón de filtrar por fecha - ENVIAR AL SERVIDOR
