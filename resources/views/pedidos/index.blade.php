@@ -138,6 +138,9 @@
                     <button type="button" class="btn btn-info" id="imprimirCristaleria" disabled>
                         <i class="fas fa-eye"></i> Imprimir Cristalería
                     </button>
+                    <button type="button" class="btn btn-success" id="exportarCristalariaExcel" disabled>
+                        <i class="fas fa-file-excel"></i> Exportar Cristalería Excel
+                    </button>
                     <button type="button" class="btn btn-secondary" id="imprimirInforme" disabled>
                         <i class="fas fa-print"></i> Imprimir Informe
                     </button>
@@ -1174,6 +1177,7 @@ input[type="checkbox"]:after {
             $('#generarExcel').prop('disabled', checkedCheckboxes === 0);
             $('#imprimirEtiquetas').prop('disabled', checkedCheckboxes === 0);
             $('#imprimirCristaleria').prop('disabled', checkedCheckboxes === 0);
+            $('#exportarCristalariaExcel').prop('disabled', checkedCheckboxes === 0);
             $('#imprimirInforme').prop('disabled', checkedCheckboxes === 0);
             $('#avanzarEstado').prop('disabled', checkedCheckboxes === 0);
         }
@@ -1286,6 +1290,85 @@ input[type="checkbox"]:after {
                 'name': 'ids',
                 'value': selectedIds.join(',')
             }));
+            
+            // Agregar al body y enviar
+            $('body').append(form);
+            form.submit();
+            form.remove();
+        });
+
+        // Manejar clic en el botón de exportar cristalería en Excel
+        $('#exportarCristalariaExcel').click(function() {
+            var selectedIds = [];
+            $('.pedido-checkbox:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+            
+            if (selectedIds.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sin Selección',
+                    text: 'Por favor seleccione al menos un pedido para exportar cristalería a Excel'
+                });
+                return;
+            }
+
+            // Mostrar loader
+            Swal.fire({
+                title: 'Generando Excel...',
+                text: 'Por favor espere mientras se genera el archivo de cristalería',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                willOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Crear formulario para envío POST
+            var form = $('<form>', {
+                'method': 'POST',
+                'action': '{{ route("pedidos.export.cristaleria") }}' // Ruta que crearemos
+            });
+            
+            // Agregar token CSRF
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': '_token',
+                'value': $('meta[name="csrf-token"]').attr('content')
+            }));
+            
+            // Agregar IDs seleccionados
+            form.append($('<input>', {
+                'type': 'hidden',
+                'name': 'ids',
+                'value': selectedIds.join(',')
+            }));
+            
+            // Crear iframe invisible para la descarga
+            var iframe = $('<iframe>', {
+                'style': 'display: none;'
+            });
+            
+            iframe.on('load', function() {
+                setTimeout(function() {
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Excel Generado!',
+                        text: 'El archivo de cristalería se ha descargado correctamente',
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                    iframe.remove();
+                }, 1000);
+            });
+            
+            // Agregar iframe al body
+            $('body').append(iframe);
+            
+            // Configurar el form para usar el iframe
+            form.attr('target', 'download-frame');
+            iframe.attr('name', 'download-frame');
             
             // Agregar al body y enviar
             $('body').append(form);
