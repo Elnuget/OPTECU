@@ -180,7 +180,10 @@ class EgresoController extends Controller
 
     public function finanzas()
     {
-        return view('egresos.finanzas');
+        // Obtener empresas para el filtro
+        $empresas = \App\Models\Empresa::all();
+        
+        return view('egresos.finanzas2', compact('empresas'));
     }
 
     public function getPedidosPorUsuario(Request $request)

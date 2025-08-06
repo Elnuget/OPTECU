@@ -361,11 +361,36 @@ return [
         ],
 
         [
-            'text' => 'Egresos',
-            'icon' => 'fas fa-file-invoice-dollar',
-            'url' => '/egresos',
-            'active' => ['egresos', 'egresos/*'],
+            'text' => 'Gestión',
+            'icon' => 'fas fa-chart-line',
+            'active' => ['egresos', 'egresos/*', 'prestamos', 'prestamos/*', 'sueldos', 'sueldos/*'],
             'can' => 'admin',
+            'submenu' => [
+                [
+                    'text' => 'Egresos',
+                    'icon' => 'fas fa-file-invoice-dollar',
+                    'url' => '/egresos',
+                    'active' => ['egresos', 'egresos/*'],
+                ],
+                [
+                    'text' => 'Finanzas',
+                    'icon' => 'fas fa-coins',
+                    'url' => '/egresos/finanzas',
+                    'active' => ['egresos/finanzas'],
+                ],
+                [
+                    'text' => 'Sueldos',
+                    'icon' => 'fas fa-money-bill-wave',
+                    'route' => 'sueldos.index',
+                    'active' => ['sueldos', 'sueldos/*'],
+                ],
+                [
+                    'text' => 'Préstamos',
+                    'icon' => 'fas fa-hand-holding-usd',
+                    'route' => 'prestamos.index',
+                    'active' => ['prestamos', 'prestamos/*'],
+                ],
+            ],
         ],
 
         [
