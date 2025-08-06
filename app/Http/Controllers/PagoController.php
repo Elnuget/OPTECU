@@ -159,7 +159,7 @@ class PagoController extends Controller
             $validatedData = $request->validate([
                 'pedido_id' => 'required|exists:pedidos,id', // Hacer pedido_id requerido
                 'mediodepago_id' => 'required|exists:mediosdepagos,id',
-                'pago' => 'required|regex:/^\d+(\.\d{1,2})?$/',
+                'pago' => 'required|numeric|min:0.01|regex:/^\d+(\.\d{1,2})?$/',
                 'created_at' => 'sometimes|nullable|date',
                 'TC' => 'sometimes|nullable|boolean',
                 'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:1048576',
@@ -327,7 +327,7 @@ class PagoController extends Controller
             $validatedData = $request->validate([
                 'pedido_id' => 'nullable|exists:pedidos,id',
                 'mediodepago_id' => 'nullable|exists:mediosdepagos,id',
-                'pago' => 'nullable|regex:/^\d+(\.\d{1,2})?$/',
+                'pago' => 'nullable|numeric|min:0.01|regex:/^\d+(\.\d{1,2})?$/',
                 'created_at' => 'sometimes|nullable|date',
                 'TC' => 'sometimes|nullable|boolean',
                 'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:1048576',

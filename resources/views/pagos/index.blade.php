@@ -74,7 +74,7 @@
                     <div class="info-box bg-success">
                         <div class="info-box-content">
                             <span class="info-box-text">TOTAL PAGOS</span>
-                            <span class="info-box-number">${{ number_format($totalPagos, 0, ',', '.') }}</span>
+                            <span class="info-box-number">${{ number_format($totalPagos, 2, ',', '.') }}</span>
                         </div>
                     </div>
                 </div>
@@ -88,7 +88,7 @@
                         <div class="info-box {{ $totalPorMedio > 0 ? 'bg-info' : 'bg-secondary' }}">
                             <div class="info-box-content">
                                 <span class="info-box-text">TOTAL {{ strtoupper($medio->medio_de_pago) }}</span>
-                                <span class="info-box-number">${{ number_format($totalPorMedio, 0, ',', '.') }}</span>
+                                <span class="info-box-number">${{ number_format($totalPorMedio, 2, ',', '.') }}</span>
                             </div>
                         </div>
                     </div>
@@ -235,8 +235,8 @@
                                 <td>{{ $pago->pedido->empresa ? $pago->pedido->empresa->nombre : 'N/A' }}</td> <!-- Empresa Asociada -->
                                 <!-- Removed Paciente data -->
                                 <td>{{ $pago->mediodepago->medio_de_pago }}</td>
-                                <td>${{ number_format($pago->pedido->saldo, 0, ',', '.') }}</td> <!-- Updated to access saldo from pedido -->
-                                <td>${{ number_format($pago->pago, 0, ',', '.') }}</td>
+                                <td>${{ number_format($pago->pedido->saldo, 2, ',', '.') }}</td> <!-- Updated to access saldo from pedido -->
+                                <td>${{ number_format($pago->pago, 2, ',', '.') }}</td>
                                 <td style="display: none;">{{ $pago->TC ? 'SÍ' : 'NO' }}</td>
                                 <td>
                                     <a href="{{ route('pagos.show', $pago->id) }}"

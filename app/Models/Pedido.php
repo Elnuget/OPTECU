@@ -54,6 +54,9 @@ class Pedido extends Model
     protected $casts = [
         'fecha' => 'datetime',
         'urgente' => 'boolean',
+        'total' => 'decimal:2',
+        'saldo' => 'decimal:2',
+        'd_precio' => 'decimal:2',
     ];
 
     // Define si tu modelo debe usar timestamps (created_at y updated_at)

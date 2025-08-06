@@ -76,7 +76,7 @@
                     <select name="pedido_id" id="pedido_id" required class="form-control">
                         <option value="">SELECCIONAR EL PEDIDO</option>
                         @foreach($pedidos as $pedido)
-                            <option value="{{ $pedido->id }}" data-saldo="{{ number_format($pedido->saldo, 0, '.', '') }}" {{ $pedido->id == $pago->pedido_id ? 'selected' : '' }}>
+                            <option value="{{ $pedido->id }}" data-saldo="{{ number_format($pedido->saldo, 2, '.', '') }}" {{ $pedido->id == $pago->pedido_id ? 'selected' : '' }}>
                                 ORDEN: {{ $pedido->numero_orden }} - CLIENTE: {{ $pedido->cliente }}
                             </option>
                         @endforeach
@@ -97,18 +97,19 @@
                 
                 <div class="form-group">
                     <label>SALDO</label>
-                    <input name="saldo" id="saldo" type="text" class="form-control" value="${{ number_format($pago->pedido->saldo + $pago->pago, 0, ',', '.') }}" readonly>
+                    <input name="saldo" id="saldo" type="text" class="form-control" value="${{ number_format($pago->pedido->saldo + $pago->pago, 2, ',', '.') }}" readonly>
                 </div>
                 
                 <div class="form-group">
                     <label>PAGO</label>
                     <input name="pago" 
                            required 
-                           type="text" 
-                           pattern="^\d+$"
+                           type="number" 
+                           step="0.01"
+                           min="0.01"
                            class="form-control" 
-                           value="{{ number_format($pago->pago, 0, '.', '') }}"
-                           onkeypress="return (event.charCode >= 48 && event.charCode <= 57)">
+                           value="{{ number_format($pago->pago, 2, '.', '') }}"
+                           placeholder="INGRESE EL MONTO DEL PAGO">
                 </div>
 
                 <div class="form-group">
