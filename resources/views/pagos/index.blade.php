@@ -63,6 +63,36 @@
         .dataTables_filter input::placeholder {
             text-transform: uppercase !important;
         }
+
+        /* Estilos específicos para filtros TC */
+        .btn-group .badge {
+            font-size: 0.7em;
+            margin-left: 5px;
+        }
+        
+        .tc-button {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .tc-status-pendiente {
+            background-color: #ffc107 !important;
+            border-color: #ffc107 !important;
+        }
+        
+        .tc-status-recibido {
+            background-color: #28a745 !important;
+            border-color: #28a745 !important;
+        }
+        
+        .btn-toolbar .btn-group {
+            margin-bottom: 0.5rem;
+        }
     </style>
 
     <div class="card">
@@ -200,8 +230,42 @@
 
             {{-- Botones de Filtro TC y Añadir Pago --}}
             <div class="btn-toolbar mb-3" role="toolbar" aria-label="Toolbar with button groups">
-                <div class="btn-group" role="group" aria-label="Grupo Añadir">
-                    <a type="button" class="btn btn-success" href="{{ route('pagos.create') }}">AÑADIR PAGO</a>
+                <div class="btn-group mr-2" role="group" aria-label="Grupo Añadir">
+                    <a type="button" class="btn btn-success" href="{{ route('pagos.create') }}">
+                        <i class="fas fa-plus"></i> AÑADIR PAGO
+                    </a>
+                </div>
+                
+                <div class="btn-group mr-2" role="group" aria-label="Grupo Filtros TC">
+                    <button type="button" class="btn btn-warning" id="filtrarTCPendientes">
+                        <i class="fas fa-credit-card"></i> TC PENDIENTES
+                        @php
+                            $tcPendientes = $pagos->filter(function($pago) {
+                                return $pago->mediodepago->medio_de_pago === 'Tarjeta Crédito' && !$pago->TC;
+                            })->count();
+                        @endphp
+                        <span class="badge badge-light">{{ $tcPendientes }}</span>
+                    </button>
+                    
+                    <button type="button" class="btn btn-info" id="filtrarTCRecibidos">
+                        <i class="fas fa-check-circle"></i> TC RECIBIDOS
+                        @php
+                            $tcRecibidos = $pagos->filter(function($pago) {
+                                return $pago->mediodepago->medio_de_pago === 'Tarjeta Crédito' && $pago->TC;
+                            })->count();
+                        @endphp
+                        <span class="badge badge-light">{{ $tcRecibidos }}</span>
+                    </button>
+                    
+                    <button type="button" class="btn btn-secondary" id="limpiarFiltroTC" style="display: none;">
+                        <i class="fas fa-times"></i> LIMPIAR FILTRO TC
+                    </button>
+                </div>
+                
+                <div class="btn-group" role="group" aria-label="Grupo Acciones Masivas TC">
+                    <button type="button" class="btn btn-outline-success" id="marcarTodosTCRecibidos" style="display: none;">
+                        <i class="fas fa-check-double"></i> MARCAR TODOS COMO RECIBIDOS
+                    </button>
                 </div>
             </div>
 
@@ -219,6 +283,7 @@
                             <td>EMPRESA</td> <!-- Nueva columna para Empresa -->
                             <!-- Removed Paciente column -->
                             <td>MÉTODO DE PAGO</td>
+                            <td>ESTADO TC</td>
                             <td>SALDO</td>
                             <td>PAGO</td>
                             <td style="display: none;">TC</td>
@@ -235,6 +300,17 @@
                                 <td>{{ $pago->pedido->empresa ? $pago->pedido->empresa->nombre : 'N/A' }}</td> <!-- Empresa Asociada -->
                                 <!-- Removed Paciente data -->
                                 <td>{{ $pago->mediodepago->medio_de_pago }}</td>
+                                <td>
+                                    @if($pago->mediodepago->medio_de_pago === 'Tarjeta Crédito')
+                                        @if($pago->TC)
+                                            <span class="badge badge-success">RECIBIDO</span>
+                                        @else
+                                            <span class="badge badge-warning">PENDIENTE</span>
+                                        @endif
+                                    @else
+                                        <span class="badge badge-secondary">N/A</span>
+                                    @endif
+                                </td>
                                 <td>${{ number_format($pago->pedido->saldo, 2, ',', '.') }}</td> <!-- Updated to access saldo from pedido -->
                                 <td>${{ number_format($pago->pago, 2, ',', '.') }}</td>
                                 <td style="display: none;">{{ $pago->TC ? 'SÍ' : 'NO' }}</td>
@@ -335,7 +411,7 @@
                         `);
                         
                         // Actualizar la celda oculta de TC
-                        $(button).closest('tr').find('td:nth-child(8)').text('SÍ');
+                        $(button).closest('tr').find('td:nth-child(9)').text('SÍ');
                     } else {
                         alert('Error al actualizar el estado');
                     }
@@ -436,7 +512,7 @@
                     "searchable": true,
                 },
                 {
-                    "targets": [7], // Índice de la columna TC
+                    "targets": [8], // Índice de la columna TC (ahora es la 8va)
                     "visible": false,
                     "searchable": false
                 }],
@@ -449,7 +525,7 @@
                         "text": 'IMPRIMIR',
                         "autoPrint": true,
                         "exportOptions": {
-                            "columns": [0, 1, 2, 3, 4, 5, 6, 7]
+                            "columns": [0, 1, 2, 3, 4, 5, 6, 7, 8]
                         },
                         "customize": function(win) {
                             $(win.document.body).css('font-size', '16pt');
@@ -464,7 +540,7 @@
                         "filename": 'Pagos.pdf',
                         "pageSize": 'LETTER',
                         "exportOptions": {
-                            "columns": [0, 1, 2, 3, 4, 5, 6, 7]
+                            "columns": [0, 1, 2, 3, 4, 5, 6, 7, 8]
                         }
                     }
                 ],
@@ -472,6 +548,137 @@
                     "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
                 }
             });
+
+            // NUEVA FUNCIONALIDAD: Filtros para Tarjetas de Crédito
+            let filtroTCActivo = false;
+
+            // Filtrar TC Pendientes
+            $('#filtrarTCPendientes').click(function() {
+                filtrarTarjetasCredito('pendientes');
+                mostrarBotonesTC(true);
+                $('#limpiarFiltroTC').show();
+            });
+
+            // Filtrar TC Recibidos
+            $('#filtrarTCRecibidos').click(function() {
+                filtrarTarjetasCredito('recibidos');
+                mostrarBotonesTC(false);
+                $('#limpiarFiltroTC').show();
+            });
+
+            // Limpiar filtro TC
+            $('#limpiarFiltroTC').click(function() {
+                pagosTable.search('').columns().search('').draw();
+                filtroTCActivo = false;
+                $('#limpiarFiltroTC').hide();
+                $('#marcarTodosTCRecibidos').hide();
+            });
+
+            // Marcar todos los TC como recibidos
+            $('#marcarTodosTCRecibidos').click(function() {
+                if (!confirm('¿Está seguro de marcar TODOS los pagos con tarjeta de crédito pendientes como recibidos?')) {
+                    return;
+                }
+
+                const botonesPendientes = $('.tc-button[data-status="pending"]');
+                let promesas = [];
+
+                botonesPendientes.each(function() {
+                    const pagoId = $(this).data('id');
+                    const button = $(this);
+                    
+                    const promesa = $.ajax({
+                        url: `/pagos/${pagoId}/update-tc`,
+                        type: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}'
+                        }
+                    }).then(function(response) {
+                        if (response.success) {
+                            // Cambiar el botón a "RECIBIDO"
+                            button.replaceWith(`
+                                <button class="btn btn-xs btn-success mx-1 shadow" disabled>
+                                    RECIBIDO
+                                </button>
+                            `);
+                            
+                            // Actualizar la celda oculta de TC
+                            button.closest('tr').find('td:nth-child(9)').text('SÍ');
+                        }
+                    });
+                    
+                    promesas.push(promesa);
+                });
+
+                Promise.all(promesas).then(function() {
+                    // Actualizar los contadores
+                    location.reload();
+                }).catch(function() {
+                    alert('Error al procesar algunos pagos');
+                });
+            });
+
+            function filtrarTarjetasCredito(tipo) {
+                // Resetear búsqueda anterior
+                pagosTable.search('').columns().search('').draw();
+                
+                if (tipo === 'pendientes') {
+                    // Mostrar solo filas con TC pendiente (botón PENDIENTE visible)
+                    pagosTable.column(5).search('TARJETA CRÉDITO', true, false).draw();
+                    
+                    // Después del filtro inicial, ocultar filas con TC recibido
+                    setTimeout(function() {
+                        pagosTable.rows().every(function() {
+                            const row = this.node();
+                            const tcButton = $(row).find('.tc-button[data-status="pending"]');
+                            const recibidoButton = $(row).find('button:contains("RECIBIDO")');
+                            
+                            if (recibidoButton.length > 0) {
+                                $(row).hide();
+                            } else if (tcButton.length === 0) {
+                                // Si no es tarjeta de crédito, también ocultar
+                                const metodoPago = $(row).find('td:eq(5)').text().trim();
+                                if (metodoPago !== 'TARJETA CRÉDITO') {
+                                    $(row).hide();
+                                }
+                            }
+                        });
+                    }, 100);
+                    
+                } else if (tipo === 'recibidos') {
+                    // Mostrar solo filas con TC recibido
+                    pagosTable.column(5).search('TARJETA CRÉDITO', true, false).draw();
+                    
+                    // Después del filtro inicial, ocultar filas con TC pendiente
+                    setTimeout(function() {
+                        pagosTable.rows().every(function() {
+                            const row = this.node();
+                            const tcButton = $(row).find('.tc-button[data-status="pending"]');
+                            const recibidoButton = $(row).find('button:contains("RECIBIDO")');
+                            
+                            if (tcButton.length > 0) {
+                                $(row).hide();
+                            } else if (recibidoButton.length === 0) {
+                                // Si no es tarjeta de crédito recibida, también ocultar
+                                const metodoPago = $(row).find('td:eq(5)').text().trim();
+                                if (metodoPago !== 'TARJETA CRÉDITO') {
+                                    $(row).hide();
+                                }
+                            }
+                        });
+                    }, 100);
+                }
+                
+                filtroTCActivo = true;
+            }
+
+            function mostrarBotonesTC(mostrarMarcarTodos) {
+                if (mostrarMarcarTodos) {
+                    $('#marcarTodosTCRecibidos').show();
+                } else {
+                    $('#marcarTodosTCRecibidos').hide();
+                }
+            }
         });
     </script>
 @stop
