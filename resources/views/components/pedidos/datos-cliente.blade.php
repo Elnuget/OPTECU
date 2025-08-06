@@ -23,13 +23,26 @@
                 </select>
             </div>
             <div class="col-md-6">
-                <label for="cliente" class="form-label">Cliente</label>
-                <input type="text" class="form-control" id="cliente" name="cliente"
-                       value="{{ $pedido->cliente }}">
+                <label for="empresa_id" class="form-label">Empresa *</label>
+                <select class="form-control" id="empresa_id" name="empresa_id" required>
+                    <option value="">Seleccione una empresa</option>
+                    @if(isset($empresas))
+                        @foreach($empresas as $empresa)
+                            <option value="{{ $empresa->id }}" {{ $pedido->empresa_id == $empresa->id ? 'selected' : '' }}>
+                                {{ $empresa->nombre }}
+                            </option>
+                        @endforeach
+                    @endif
+                </select>
             </div>
         </div>
 
         <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="cliente" class="form-label">Cliente</label>
+                <input type="text" class="form-control" id="cliente" name="cliente"
+                       value="{{ $pedido->cliente }}">
+            </div>
             <div class="col-md-6">
                 <label for="cedula" class="form-label">RUT</label>
                 <input type="text" class="form-control" id="cedula" name="cedula"

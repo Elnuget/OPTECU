@@ -25,7 +25,7 @@ class CalificacionPedido extends Mailable
 
     public function build()
     {
-        return $this->subject('Califica tu experiencia en L BARBOSA')
+        return $this->subject('Califica tu experiencia en ESCLERÓPTICA')
                     ->markdown('emails.calificacion-pedido');
     }
 } 

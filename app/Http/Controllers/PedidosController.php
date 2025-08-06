@@ -6,11 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\Pedido;
 use App\Models\Inventario;
 use App\Models\PedidoLuna; // Add this line
+use App\Models\Declarante;
+use App\Models\Factura;
 use App\Models\Empresa;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class PedidosController extends Controller
 {    public function __construct()
@@ -30,6 +28,17 @@ class PedidosController extends Controller
     public function index(Request $request)
     {
         try {
+            // Si se solicita ver todos los registros, no aplicar filtros de fecha
+            $mostrarTodos = $request->has('todos') && $request->todos == '1';
+            
+            // Si no hay fecha seleccionada y no se solicita ver todos, redirigir al mes actual
+            if (!$mostrarTodos && (!$request->filled('ano') || !$request->filled('mes'))) {
+                return redirect()->route('pedidos.index', [
+                    'ano' => now()->setTimezone('America/Guayaquil')->format('Y'),
+                    'mes' => now()->setTimezone('America/Guayaquil')->format('m')
+                ]);
+            }
+
             $query = Pedido::query()
                 ->with([
                     'aInventario:id,codigo,cantidad',
@@ -38,83 +47,32 @@ class PedidosController extends Controller
                     'empresa:id,nombre'
                 ]);
 
-            // Si no se solicitan todos los registros y no hay parámetros de fecha, redirigir al mes actual
-            if (!$request->has('todos') && !$request->filled('fecha_especifica') && (!$request->filled('ano') || !$request->filled('mes'))) {
-                $currentDate = now()->setTimezone('America/Guayaquil');
-                $redirectParams = [
-                    'ano' => $currentDate->format('Y'),
-                    'mes' => $currentDate->format('m')
-                ];
-                
-                // Mantener el filtro de empresa si se especifica
-                if ($request->filled('empresa_id')) {
-                    $redirectParams['empresa_id'] = $request->get('empresa_id');
-                }
-                
-                return redirect()->route('pedidos.index', $redirectParams);
+            // Aplicar filtros de año y mes solo si no se solicita ver todos
+            if (!$mostrarTodos) {
+                $query->whereYear('fecha', $request->ano)
+                      ->whereMonth('fecha', $request->mes);
             }
 
-            // Aplicar filtros de fecha
-            if (!$request->has('todos')) {
-                // Si hay una fecha específica, filtrar solo por esa fecha
-                if ($request->filled('fecha_especifica')) {
-                    $query->whereDate('fecha', $request->fecha_especifica);
-                } else {
-                    // Usar filtros de año y mes como antes
-                    $query->whereYear('fecha', $request->ano)
-                          ->whereMonth('fecha', $request->mes);
-                }
-            }
-            
-            // Aplicar filtro de empresa si se especifica
-            if ($request->filled('empresa_id')) {
-                $query->where('empresa_id', $request->get('empresa_id'));
-            }
-            
-            // Verificar si el usuario está asociado a una empresa y no es admin
-            $userEmpresaId = null;
-            $isUserAdmin = auth()->user()->is_admin;
-            $userEmpresas = collect(); // Para almacenar todas las empresas del usuario
-            
-            if (!$isUserAdmin) {
-                // Obtener todas las empresas del usuario (principal + adicionales)
-                $userEmpresas = auth()->user()->todasLasEmpresas();
-                $userEmpresaId = auth()->user()->empresa_id;
-                
-                // Si el usuario tiene empresas asignadas y no hay filtro específico
-                if ($userEmpresas->count() > 0 && !$request->filled('empresa_id')) {
-                    $empresaIds = $userEmpresas->pluck('id')->toArray();
-                    $query->whereIn('empresa_id', $empresaIds);
-                }
-            } else if (!$isUserAdmin && auth()->user()->empresa_id) {
-                $userEmpresaId = auth()->user()->empresa_id;
-                
-                // Si el usuario tiene empresa asignada y no es admin, filtramos por su empresa
-                // si no hay filtro de empresa específico en la solicitud
-                if (!$request->filled('empresa_id')) {
-                    $query->where('empresa_id', $userEmpresaId);
-                }
+            // Aplicar filtro por empresa si se selecciona
+            if ($request->filled('empresa_id') && $request->empresa_id != '') {
+                $query->where('empresa_id', $request->empresa_id);
             }
 
             $pedidos = $query->select([
                 'id',
-                'empresa_id',
                 'numero_orden',
                 'fecha',
-                'fecha_entrega',
                 'cliente',
                 'celular',
+                'paciente',
                 'total',
                 'saldo',
                 'fact',
                 'usuario',
-                'encuesta', // Asegurarnos de que la columna encuesta se cargue explícitamente
-                'metodo_envio',
-                'reclamo', // Agregar el campo reclamo
-                'urgente' // Agregar el campo urgente
+                'empresa_id',
+                'encuesta' // Asegurarnos de que la columna encuesta se cargue explícitamente
             ])
-            ->orderBy('urgente', 'desc') // Pedidos urgentes primero
-            ->orderBy('numero_orden', 'desc') // Luego por número de orden
+            ->orderBy('numero_orden', 'desc')
             ->get();
 
             // Log para debugging
@@ -138,15 +96,10 @@ class PedidosController extends Controller
                 })
             ];
 
-            // Obtener empresas para el filtro según el tipo de usuario
-            if ($isUserAdmin) {
-                $empresas = Empresa::orderBy('nombre')->get();
-            } else {
-                // Para usuarios no admin, mostrar solo sus empresas asignadas
-                $empresas = auth()->user()->todasLasEmpresas()->sortBy('nombre')->values();
-            }
+            // Obtener lista de empresas para el filtro
+            $empresas = Empresa::orderBy('nombre')->get();
 
-            return view('pedidos.index', compact('pedidos', 'totales', 'empresas', 'userEmpresaId', 'isUserAdmin'));
+            return view('pedidos.index', compact('pedidos', 'totales', 'empresas'));
         } catch (\Exception $e) {
             \Log::error('Error en PedidosController@index: ' . $e->getMessage());
             return back()->with('error', 'Error al cargar los pedidos: ' . $e->getMessage());
@@ -164,27 +117,11 @@ class PedidosController extends Controller
         $currentYear = date('Y');
         $currentMonth = date('m');
         
-        // Verificar si el usuario está asociado a empresas y no es admin
-        $userEmpresaId = null;
-        $userEmpresasIds = collect();
-        $isUserAdmin = auth()->user()->is_admin;
-        
-        if (!$isUserAdmin) {
-            // Obtener todas las empresas del usuario (principal + adicionales)
-            $todasLasEmpresas = auth()->user()->todasLasEmpresas();
-            $userEmpresasIds = $todasLasEmpresas->pluck('id');
-            
-            // Mantener compatibilidad con empresa_id individual
-            $userEmpresaId = auth()->user()->empresa_id;
-        }
-
         // Obtener armazones y accesorios del mes actual (solo con cantidad > 0)
-        // Quitamos restricción de empresa - todos los usuarios pueden ver todos los inventarios
-        $inventarioQuery = Inventario::where('cantidad', '>', 0)
+        $inventario = Inventario::where('cantidad', '>', 0)
             ->whereYear('fecha', $currentYear)
-            ->whereMonth('fecha', $currentMonth);
-        
-        $inventario = $inventarioQuery->with('empresa')->get();
+            ->whereMonth('fecha', $currentMonth)
+            ->get();
 
         // Separar el inventario en armazones y accesorios
         $armazones = $inventario;
@@ -203,14 +140,6 @@ class PedidosController extends Controller
             ->distinct()
             ->pluck('cedula')
             ->toArray();
-        
-        // Obtener pacientes del historial clínico
-        $pacientesHistorial = \App\Models\HistorialClinico::select(\DB::raw("CONCAT(nombres, ' ', apellidos) as nombre_completo"))
-            ->whereNotNull('nombres')
-            ->whereNotNull('apellidos')
-            ->distinct()
-            ->pluck('nombre_completo')
-            ->toArray();
             
         // Obtener lista de pacientes únicos existentes
         $pacientes = Pedido::select('paciente')
@@ -218,10 +147,6 @@ class PedidosController extends Controller
             ->distinct()
             ->pluck('paciente')
             ->toArray();
-        
-        // Combinar pacientes del historial con pacientes de pedidos
-        $pacientes = array_merge($pacientes, $pacientesHistorial);
-        $pacientes = array_unique($pacientes);
             
         // Obtener lista de celulares únicos existentes
         $celulares = Pedido::select('celular')
@@ -237,27 +162,13 @@ class PedidosController extends Controller
             ->pluck('correo_electronico')
             ->toArray();
 
-        // Obtener empresas para el select según el tipo de usuario
-        if ($isUserAdmin) {
-            // Administradores pueden ver todas las empresas
-            $empresas = Empresa::orderBy('nombre')->get();
-        } else {
-            // Usuarios no administradores solo ven sus empresas asociadas
-            $empresas = auth()->user()->todasLasEmpresas()->sortBy('nombre');
-        }
-        
-        // Obtener historiales clínicos para autocompletado
-        // Quitamos restricción de empresa - todos los usuarios pueden ver todos los historiales
-        $historialesQuery = \App\Models\HistorialClinico::select('nombres', 'apellidos', 'cedula', 'celular', 'correo', 'direccion', 'empresa_id', 'fecha')
-            ->with('empresa')
-            ->whereNotNull('nombres')
-            ->whereNotNull('apellidos');
-        
-        $historiales = $historialesQuery->orderBy('fecha', 'desc')->get();
-        
         $currentDate = date('Y-m-d');
-        $nextOrderNumber = $this->obtenerNumeroOrdenUnico();
+        $lastOrder = Pedido::orderBy('numero_orden', 'desc')->first();
+        $nextOrderNumber = $lastOrder ? $lastOrder->numero_orden + 1 : 1;
         $nextInvoiceNumber = 'Pendiente';
+
+        // Obtener lista de empresas
+        $empresas = Empresa::orderBy('nombre')->get();
 
         return view('pedidos.create', compact(
             'armazones', 
@@ -270,11 +181,7 @@ class PedidosController extends Controller
             'pacientes',
             'celulares',
             'correos',
-            'empresas',
-            'historiales',
-            'userEmpresaId',
-            'isUserAdmin',
-            'userEmpresasIds'
+            'empresas'
         ));
     }
 
@@ -286,6 +193,12 @@ class PedidosController extends Controller
      */
     public function store(Request $request)
     {
+        // Validar que la empresa sea obligatoria
+        $request->validate([
+            'empresa_id' => 'required|exists:empresas,id',
+            'cliente' => 'required|string|max:255',
+        ]);
+
         try {
             \DB::beginTransaction();
 
@@ -297,14 +210,9 @@ class PedidosController extends Controller
                 })
                 ->toArray();
 
-            // Verificar y asegurar que el número de orden sea único
-            $numeroOrdenSolicitado = $pedidoData['numero_orden'] ?? null;
-            $numeroOrdenUnico = $this->obtenerNumeroOrdenUnico($numeroOrdenSolicitado);
-
             // Create basic pedido
             $pedido = new Pedido();
             $pedido->fill($pedidoData);
-            $pedido->numero_orden = $numeroOrdenUnico; // Asignar el número de orden único
             $pedido->usuario = auth()->user()->name;
 
             // Asegurar que los campos tengan valores por defecto si están vacíos
@@ -313,7 +221,6 @@ class PedidosController extends Controller
             $pedido->examen_visual = $pedidoData['examen_visual'] ?? 0;
             $pedido->valor_compra = $pedidoData['valor_compra'] ?? 0;
             $pedido->cedula = $pedidoData['cedula'] ?? null;
-            $pedido->direccion = $pedidoData['direccion'] ?? null;
             
             $pedido->save();
 
@@ -323,29 +230,10 @@ class PedidosController extends Controller
                     if (!empty($inventarioId)) {
                         $precio = $request->a_precio[$index] ?? 0;
                         $descuento = $request->a_precio_descuento[$index] ?? 0;
-                        $foto = null;
-                        
-                        // Manejar la foto si existe
-                        if ($request->hasFile('a_foto') && isset($request->file('a_foto')[$index])) {
-                            $fotoFile = $request->file('a_foto')[$index];
-                            $fotoName = 'armazon_' . time() . '_' . $index . '_' . uniqid() . '.' . $fotoFile->getClientOriginalExtension();
-                            
-                            // Verificar que la carpeta existe
-                            $carpetaDestino = public_path('img/armazones');
-                            if (!file_exists($carpetaDestino)) {
-                                mkdir($carpetaDestino, 0755, true);
-                            }
-                            
-                            $fotoFile->move($carpetaDestino, $fotoName);
-                            $foto = 'img/armazones/' . $fotoName;
-                            
-                            \Log::info('Foto de armazón guardada: ' . $foto);
-                        }
 
                         $pedido->inventarios()->attach($inventarioId, [
                             'precio' => (float) $precio,
                             'descuento' => (float) $descuento,
-                            'foto' => $foto,
                         ]);
 
                         $inventarioItem = Inventario::find($inventarioId);
@@ -363,16 +251,6 @@ class PedidosController extends Controller
             if ($request->has('l_medida') && is_array($request->l_medida)) {
                 foreach ($request->l_medida as $key => $medida) {
                     if (!empty($medida)) {
-                        $foto = null;
-                        
-                        // Manejar la foto si existe
-                        if ($request->hasFile('l_foto') && isset($request->file('l_foto')[$key])) {
-                            $fotoFile = $request->file('l_foto')[$key];
-                            $fotoName = time() . '_luna_' . $key . '.' . $fotoFile->getClientOriginalExtension();
-                            $fotoFile->move(public_path('img/lunas'), $fotoName);
-                            $foto = 'img/lunas/' . $fotoName;
-                        }
-                        
                         $luna = new PedidoLuna([
                             'l_medida' => $medida,
                             'l_detalle' => $request->l_detalle[$key] ?? null,
@@ -380,9 +258,7 @@ class PedidosController extends Controller
                             'tipo_lente' => $request->tipo_lente[$key] ?? null,
                             'material' => $request->material[$key] ?? null,
                             'filtro' => $request->filtro[$key] ?? null,
-                            'l_precio_descuento' => (float)($request->l_precio_descuento[$key] ?? 0),
-                            'tipo' => $request->tipo[$key] ?? null,
-                            'foto' => $foto
+                            'l_precio_descuento' => (float)($request->l_precio_descuento[$key] ?? 0)
                         ]);
                         $pedido->lunas()->save($luna);
                     }
@@ -394,26 +270,8 @@ class PedidosController extends Controller
                 foreach ($request->d_inventario_id as $index => $inventarioId) {
                     $precio = $request->d_precio[$index] ?? 0;
                     $descuento = $request->d_precio_descuento[$index] ?? 0;
-                    $foto = null;
 
                     if (!empty($inventarioId)) {
-                        // Manejar la foto si existe
-                        if ($request->hasFile('d_foto') && isset($request->file('d_foto')[$index])) {
-                            $fotoFile = $request->file('d_foto')[$index];
-                            $fotoName = 'accesorio_' . time() . '_' . $index . '_' . uniqid() . '.' . $fotoFile->getClientOriginalExtension();
-                            
-                            // Verificar que la carpeta existe
-                            $carpetaDestino = public_path('img/accesorios');
-                            if (!file_exists($carpetaDestino)) {
-                                mkdir($carpetaDestino, 0755, true);
-                            }
-                            
-                            $fotoFile->move($carpetaDestino, $fotoName);
-                            $foto = 'img/accesorios/' . $fotoName;
-                            
-                            \Log::info('Foto de accesorio guardada: ' . $foto);
-                        }
-                        
                         if (!is_numeric($inventarioId)) {
                             // Crear nuevo registro en inventario
                             $inventarioItem = new Inventario();
@@ -427,7 +285,6 @@ class PedidosController extends Controller
                         $pedido->inventarios()->attach($inventarioId, [
                             'precio' => (float) $precio,
                             'descuento' => (float) $descuento,
-                            'foto' => $foto,
                         ]);
 
                         $inventarioItem = Inventario::find($inventarioId);
@@ -443,24 +300,15 @@ class PedidosController extends Controller
 
             \DB::commit();
 
-            // Verificar que el pedido se haya guardado correctamente
-            if (!$pedido->id) {
-                throw new \Exception('Error: El pedido no se pudo guardar correctamente.');
-            }
+            // Eliminar el envío de correo electrónico
+            // if ($pedido->correo_electronico) {
+            //     \Mail::to($pedido->correo_electronico)->send(new \App\Mail\CalificacionPedido($pedido));
+            // }
 
-            // Log de éxito con información del pedido creado
-            \Log::info('Pedido creado exitosamente', [
-                'pedido_id' => $pedido->id,
-                'numero_orden' => $pedido->numero_orden,
-                'cliente' => $pedido->cliente,
-                'total' => $pedido->total,
-                'usuario' => auth()->user()->name
-            ]);
-
-            // Redirigir a la vista de creación de pagos con el ID del pedido creado
+            // Redirigir a la creación de pago con el pedido recién creado preseleccionado
             return redirect()->route('pagos.create', ['pedido_id' => $pedido->id])->with([
                 'error' => 'Exito',
-                'mensaje' => "Pedido #{$pedido->numero_orden} creado exitosamente. Ahora puede registrar un pago.",
+                'mensaje' => 'Pedido creado exitosamente. Ahora puede añadir un pago.',
                 'tipo' => 'alert-success'
             ]);
 
@@ -560,36 +408,14 @@ class PedidosController extends Controller
             $totalPagado = $pedido->pagos->sum('pago'); // Suma todos los pagos realizados
             $usuarios = \App\Models\User::all(); // Obtener todos los usuarios
             
-            // Verificar si el usuario es administrador
-            $isUserAdmin = auth()->user()->is_admin;
-            
-            // Obtener empresas para el select según el tipo de usuario
-            if ($isUserAdmin) {
-                // Administradores pueden ver todas las empresas
-                $empresas = Empresa::orderBy('nombre')->get();
-            } else {
-                // Usuarios no administradores solo ven sus empresas asociadas
-                $empresas = auth()->user()->todasLasEmpresas()->sortBy('nombre');
-            }
-            
-            // Verificar si el usuario está asociado a empresas y no es admin
-            $userEmpresaId = null;
-            $userEmpresasIds = collect();
-            
-            if (!$isUserAdmin) {
-                // Obtener todas las empresas del usuario (principal + adicionales)
-                $todasLasEmpresas = auth()->user()->todasLasEmpresas();
-                $userEmpresasIds = $todasLasEmpresas->pluck('id');
-                
-                // Mantener compatibilidad con empresa_id individual
-                $userEmpresaId = auth()->user()->empresa_id;
-            }
-            
             // Pasar el mes y año de filtro a la vista
             $filtroMes = $currentMonth;
             $filtroAno = $currentYear;
 
-            return view('pedidos.edit', compact('pedido', 'inventarioItems', 'totalPagado', 'usuarios', 'filtroMes', 'filtroAno', 'empresas', 'userEmpresaId', 'isUserAdmin', 'userEmpresasIds'));
+            // Obtener lista de empresas
+            $empresas = Empresa::orderBy('nombre')->get();
+
+            return view('pedidos.edit', compact('pedido', 'inventarioItems', 'totalPagado', 'usuarios', 'filtroMes', 'filtroAno', 'empresas'));
             
         } catch (\Exception $e) {
             \Log::error('Error en PedidosController@edit: ' . $e->getMessage());
@@ -606,6 +432,11 @@ class PedidosController extends Controller
      */
     public function update(Request $request, $id)
     {
+        // Validar que la empresa sea obligatoria
+        $request->validate([
+            'empresa_id' => 'required|exists:empresas,id',
+        ]);
+
         try {
             \DB::beginTransaction();
             
@@ -619,14 +450,6 @@ class PedidosController extends Controller
             $pedido->save();
 
             // Update pedido_inventario relationships
-            // Primero guardamos las fotos existentes antes de hacer detach
-            $fotosExistentes = [];
-            foreach ($pedido->inventarios as $inventario) {
-                if ($inventario->pivot->foto) {
-                    $fotosExistentes[$inventario->id] = $inventario->pivot->foto;
-                }
-            }
-            
             $pedido->inventarios()->detach(); // Remove existing relationships
 
             // Array para almacenar los nuevos IDs de inventario
@@ -635,32 +458,9 @@ class PedidosController extends Controller
             if ($request->has('a_inventario_id')) {
                 foreach ($request->a_inventario_id as $index => $inventarioId) {
                     if (!empty($inventarioId)) {
-                        $foto = null;
-                        
-                        // Manejar la foto si existe
-                        if ($request->hasFile('a_foto') && isset($request->file('a_foto')[$index])) {
-                            $fotoFile = $request->file('a_foto')[$index];
-                            $fotoName = 'armazon_update_' . time() . '_' . $index . '_' . uniqid() . '.' . $fotoFile->getClientOriginalExtension();
-                            
-                            // Verificar que la carpeta existe
-                            $carpetaDestino = public_path('img/armazones');
-                            if (!file_exists($carpetaDestino)) {
-                                mkdir($carpetaDestino, 0755, true);
-                            }
-                            
-                            $fotoFile->move($carpetaDestino, $fotoName);
-                            $foto = 'img/armazones/' . $fotoName;
-                            
-                            \Log::info('Foto de armazón actualizada: ' . $foto);
-                        } else {
-                            // Si no se sube nueva foto, mantener la existente si había una
-                            $foto = $fotosExistentes[$inventarioId] ?? null;
-                        }
-                        
                         $pedido->inventarios()->attach($inventarioId, [
                             'precio' => $request->a_precio[$index] ?? 0,
                             'descuento' => $request->a_precio_descuento[$index] ?? 0,
-                            'foto' => $foto,
                         ]);
                         
                         $nuevosInventarioIds[] = $inventarioId;
@@ -672,32 +472,9 @@ class PedidosController extends Controller
             if ($request->has('d_inventario_id')) {
                 foreach ($request->d_inventario_id as $index => $accesorioId) {
                     if (!empty($accesorioId)) {
-                        $foto = null;
-                        
-                        // Manejar la foto si existe (los accesorios también pueden tener fotos)
-                        if ($request->hasFile('d_foto') && isset($request->file('d_foto')[$index])) {
-                            $fotoFile = $request->file('d_foto')[$index];
-                            $fotoName = 'accesorio_update_' . time() . '_' . $index . '_' . uniqid() . '.' . $fotoFile->getClientOriginalExtension();
-                            
-                            // Verificar que la carpeta existe
-                            $carpetaDestino = public_path('img/accesorios');
-                            if (!file_exists($carpetaDestino)) {
-                                mkdir($carpetaDestino, 0755, true);
-                            }
-                            
-                            $fotoFile->move($carpetaDestino, $fotoName);
-                            $foto = 'img/accesorios/' . $fotoName;
-                            
-                            \Log::info('Foto de accesorio actualizada: ' . $foto);
-                        } else {
-                            // Si no se sube nueva foto, mantener la existente si había una
-                            $foto = $fotosExistentes[$accesorioId] ?? null;
-                        }
-                        
                         $pedido->inventarios()->attach($accesorioId, [
                             'precio' => $request->d_precio[$index] ?? 0,
                             'descuento' => $request->d_precio_descuento[$index] ?? 0,
-                            'foto' => $foto,
                         ]);
                         
                         $nuevosInventarioIds[] = $accesorioId;
@@ -737,8 +514,23 @@ class PedidosController extends Controller
                 \Log::info('Omitiendo actualización de inventario en backend para pedido #' . $pedido->id . ' (ya manejado en frontend)');
             }
 
-            // Update lunas con manejo mejorado
-            $this->actualizarLunasPedido($request, $pedido);
+            // Update lunas
+            $pedido->lunas()->delete(); // Remove existing lunas
+            if ($request->has('l_medida')) {
+                foreach ($request->l_medida as $key => $medida) {
+                    if (!empty($medida)) {
+                        $pedido->lunas()->create([
+                            'l_medida' => $medida,
+                            'l_detalle' => $request->l_detalle[$key] ?? null,
+                            'l_precio' => $request->l_precio[$key] ?? 0,
+                            'tipo_lente' => $request->tipo_lente[$key] ?? null,
+                            'material' => $request->material[$key] ?? null,
+                            'filtro' => $request->filtro[$key] ?? null,
+                            'l_precio_descuento' => $request->l_precio_descuento[$key] ?? 0
+                        ]);
+                    }
+                }
+            }
 
             \DB::commit();
 
@@ -802,138 +594,6 @@ class PedidosController extends Controller
         }
     }
 
-    public function updateState($id, $state)
-    {
-        $pedido = Pedido::findOrFail($id);
-        $estadoAnterior = $pedido->fact;
-        
-        // Actualizar el estado según el parámetro recibido
-        switch ($state) {
-            case 'cristaleria':
-                $pedido->fact = 'CRISTALERIA';
-                $mensaje = 'Pedido actualizado a CRISTALERIA';
-                break;
-            case 'separado':
-                $pedido->fact = 'Separado';
-                $mensaje = 'Pedido actualizado a Separado';
-                break;
-            case 'taller':
-                $pedido->fact = 'LISTO EN TALLER';
-                $mensaje = 'Pedido actualizado a LISTO EN TALLER';
-                break;
-            case 'enviado':
-                $pedido->fact = 'Enviado';
-                $mensaje = 'Pedido actualizado a Enviado';
-                break;
-            case 'entregado':
-                $pedido->fact = 'ENTREGADO';
-                $mensaje = 'Pedido marcado como ENTREGADO';
-                break;
-            default:
-                return redirect()->route('pedidos.index')->with([
-                    'error' => 'Error',
-                    'mensaje' => 'Estado no válido',
-                    'tipo' => 'alert-danger'
-                ]);
-        }
-        
-        $pedido->save();
-        
-        return redirect()->route('pedidos.index')->with([
-            'error' => 'Exito',
-            'mensaje' => $mensaje,
-            'tipo' => 'alert-success'
-        ]);
-    }
-
-    /**
-     * Actualizar estado de múltiples pedidos a su siguiente estado en el flujo
-     */
-    public function bulkUpdateState(Request $request)
-    {
-        try {
-            $request->validate([
-                'pedido_ids' => 'required|array',
-                'pedido_ids.*' => 'required|integer|exists:pedidos,id'
-            ]);
-
-            $pedidoIds = $request->input('pedido_ids');
-            $procesados = 0;
-            $omitidos = 0;
-            $errores = 0;
-            
-            // Mapeo del flujo de estados
-            $flujoEstados = [
-                'Pendiente' => 'CRISTALERIA',
-                'CRISTALERIA' => 'Separado', 
-                'Separado' => 'LISTO EN TALLER',
-                'LISTO EN TALLER' => 'Enviado',
-                'Enviado' => 'ENTREGADO'
-            ];
-
-            \DB::beginTransaction();
-
-            foreach ($pedidoIds as $pedidoId) {
-                try {
-                    $pedido = Pedido::findOrFail($pedidoId);
-                    $estadoActual = $pedido->fact;
-                    
-                    // Verificar si el estado actual puede avanzar
-                    if (!isset($flujoEstados[$estadoActual])) {
-                        // Estado final o no válido - omitir
-                        $omitidos++;
-                        \Log::info("Pedido #{$pedido->id} omitido - Estado final: {$estadoActual}");
-                        continue;
-                    }
-                    
-                    // Obtener siguiente estado
-                    $siguienteEstado = $flujoEstados[$estadoActual];
-                    
-                    // Actualizar el estado
-                    $pedido->fact = $siguienteEstado;
-                    $pedido->save();
-                    
-                    $procesados++;
-                    
-                    \Log::info("Pedido #{$pedido->id} actualizado: {$estadoActual} → {$siguienteEstado}");
-                    
-                } catch (\Exception $e) {
-                    $errores++;
-                    \Log::error("Error actualizando pedido #{$pedidoId}: " . $e->getMessage());
-                }
-            }
-
-            \DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Estados actualizados correctamente',
-                'procesados' => $procesados,
-                'omitidos' => $omitidos,
-                'errores' => $errores,
-                'total' => count($pedidoIds)
-            ]);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            \DB::rollback();
-            return response()->json([
-                'success' => false,
-                'message' => 'Datos de entrada inválidos',
-                'errors' => $e->errors()
-            ], 422);
-            
-        } catch (\Exception $e) {
-            \DB::rollback();
-            \Log::error('Error en bulkUpdateState: ' . $e->getMessage());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Error interno del servidor: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    // Método original de aprobación - se mantiene para compatibilidad
     public function approve($id)
     {
         $pedido = Pedido::findOrFail($id);
@@ -1026,8 +686,7 @@ class PedidosController extends Controller
                 'success' => true,
                 'url' => $urlEncuesta,
                 'texto_amigable' => $textoAmigable,
-                'estado' => $pedido->estado,
-                'numero_orden' => $pedido->numero_orden,
+                'estado' => 'enviado',
                 'mensaje' => 'Encuesta enviada exitosamente'
             ]);
         } catch (\Exception $e) {
@@ -1141,400 +800,401 @@ class PedidosController extends Controller
     }
 
     /**
-     * Imprimir pedidos seleccionados
+     * Obtener todos los declarantes para mostrar en modal
      */
-    public function print(Request $request)
-    {
-        // Obtener IDs desde GET o POST
-        $ids = $request->input('ids');
-        
-        // Validar que se reciban IDs
-        if (empty($ids)) {
-            return redirect()->back()->with([
-                'tipo' => 'alert-danger',
-                'mensaje' => 'No se seleccionaron pedidos para imprimir'
-            ]);
-        }
-
-        // Convertir IDs de string a array si es necesario
-        if (is_string($ids)) {
-            $ids = explode(',', $ids);
-        }
-        
-        // Formato de impresión (tabla única o individual)
-        $format = $request->input('format', 'table');
-        
-        // Obtener los pedidos con sus relaciones
-        $pedidos = Pedido::with(['inventarios', 'lunas', 'empresa'])
-            ->whereIn('id', $ids)
-            ->orderBy('numero_orden', 'desc')
-            ->get();
-
-        if ($pedidos->isEmpty()) {
-            return redirect()->back()->with([
-                'tipo' => 'alert-danger',
-                'mensaje' => 'No se encontraron pedidos para imprimir'
-            ]);
-        }
-
-        // Decidir qué vista utilizar basado en el formato solicitado
-        if ($format === 'table') {
-            return view('pedidos.print_table', compact('pedidos'));
-        } else {
-            return view('pedidos.print', compact('pedidos'));
-        }
-    }
-
-    /**
-     * Imprimir cristalería de pedidos seleccionados
-     */
-    public function printCristaleria(Request $request)
-    {
-        // Obtener IDs desde POST
-        $ids = $request->input('ids');
-        
-        // Validar que se reciban IDs
-        if (empty($ids)) {
-            return redirect()->back()->with([
-                'tipo' => 'alert-danger',
-                'mensaje' => 'No se seleccionaron pedidos para imprimir cristalería'
-            ]);
-        }
-
-        // Convertir IDs de string a array si es necesario
-        if (is_string($ids)) {
-            $ids = explode(',', $ids);
-        }
-        
-        // Obtener los pedidos con sus lunas
-        $pedidos = Pedido::with(['lunas'])
-            ->whereIn('id', $ids)
-            ->orderBy('numero_orden', 'desc')
-            ->get();
-
-        if ($pedidos->isEmpty()) {
-            return redirect()->back()->with([
-                'tipo' => 'alert-danger',
-                'mensaje' => 'No se encontraron pedidos para imprimir cristalería'
-            ]);
-        }
-
-        // Filtrar pedidos que tengan lunas
-        $pedidosConLunas = $pedidos->filter(function($pedido) {
-            return $pedido->lunas->count() > 0;
-        });
-
-        if ($pedidosConLunas->isEmpty()) {
-            return redirect()->back()->with([
-                'tipo' => 'alert-warning',
-                'mensaje' => 'Los pedidos seleccionados no tienen lunas especificadas'
-            ]);
-        }
-
-        return view('pedidos.print-cristaleria', ['pedidos' => $pedidosConLunas]);
-    }
-
-    /**
-     * Generar vista de impresión con formato Excel de pedidos seleccionados
-     */
-    public function printExcel(Request $request)
-    {
-        // Obtener IDs desde GET o POST
-        $ids = $request->input('ids');
-        
-        // Validar que se reciban IDs
-        if (empty($ids)) {
-            return redirect()->back()->with([
-                'tipo' => 'alert-danger',
-                'mensaje' => 'No se seleccionaron pedidos para generar vista Excel'
-            ]);
-        }
-
-        // Convertir IDs de string a array si es necesario
-        if (is_string($ids)) {
-            $ids = explode(',', $ids);
-        }
-        
-        // Obtener los pedidos con sus relaciones
-        $pedidos = Pedido::with(['inventarios', 'lunas', 'empresa'])
-            ->whereIn('id', $ids)
-            ->select([
-                'id', 'numero_orden', 'cliente', 'cedula', 'celular', 'direccion', 
-                'correo_electronico', 'empresa_id', 'metodo_envio', 'fecha_entrega'
-            ])
-            ->orderBy('numero_orden', 'desc')
-            ->get();
-
-        if ($pedidos->isEmpty()) {
-            return redirect()->back()->with([
-                'tipo' => 'alert-danger',
-                'mensaje' => 'No se encontraron pedidos para generar vista Excel'
-            ]);
-        }
-
-        // Organizar los pedidos en filas de 3
-        $pedidosAgrupados = $pedidos->chunk(3);
-
-        // Generar la vista de impresión
-        return view('pedidos.print-excel', compact('pedidosAgrupados'));
-    }
-
-    /**
-     * Generar archivo Excel real de pedidos seleccionados (función auxiliar)
-     */
-    public function downloadExcel(Request $request)
-    {
-        // Obtener IDs desde GET o POST
-        $ids = $request->input('ids');
-        
-        // Validar que se reciban IDs
-        if (empty($ids)) {
-            return redirect()->back()->with([
-                'tipo' => 'alert-danger',
-                'mensaje' => 'No se seleccionaron pedidos para generar Excel'
-            ]);
-        }
-
-        // Convertir IDs de string a array si es necesario
-        if (is_string($ids)) {
-            $ids = explode(',', $ids);
-        }
-        
-        // Obtener los pedidos con sus relaciones
-        $pedidos = Pedido::with(['inventarios', 'lunas', 'empresa'])
-            ->whereIn('id', $ids)
-            ->select([
-                'id', 'numero_orden', 'cliente', 'cedula', 'celular', 'direccion', 
-                'correo_electronico', 'empresa_id', 'metodo_envio', 'fecha_entrega'
-            ])
-            ->orderBy('numero_orden', 'desc')
-            ->get();
-
-        if ($pedidos->isEmpty()) {
-            return redirect()->back()->with([
-                'tipo' => 'alert-danger',
-                'mensaje' => 'No se encontraron pedidos para generar Excel'
-            ]);
-        }
-
-        // Generar el archivo Excel
-        return $this->generateExcelFile($pedidos);
-    }
-
-    /**
-     * Generar el archivo Excel con el formato específico
-     */
-    private function generateExcelFile($pedidos)
-    {
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        
-        // Configurar la columna A con texto vertical para la primera fila
-        $sheet->setCellValue('A1', 'DE: L BARBOSA SPA 77.219.776-4');
-        $sheet->getStyle('A1')->getAlignment()->setTextRotation(90);
-        $sheet->getStyle('A1')->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('A1')->getFont()->setBold(true);
-        
-        // Ajustar ancho de columna A automáticamente y altura para el texto vertical
-        $sheet->getColumnDimension('A')->setAutoSize(true);
-        // Establecer un ancho mínimo para la columna A
-        if ($sheet->getColumnDimension('A')->getWidth() < 8) {
-            $sheet->getColumnDimension('A')->setWidth(8);
-        }
-        $sheet->getRowDimension('1')->setRowHeight(200); // Altura suficiente para el texto vertical
-        
-        // Configurar las columnas para los pedidos con sus respectivos dropdowns
-        // Pedido 1: B (empresa), C (info), D (vacía), E (dropdown)
-        // Pedido 2: H (empresa), I (info), J (vacía), K (dropdown)  
-        // Pedido 3: N (empresa), O (info), P (vacía), Q (dropdown)
-        $columnas = ['B', 'H', 'N']; // 3 pedidos por fila
-        $columnasInfo = ['C', 'I', 'O']; // Información del pedido
-        $columnasVacias = ['D', 'J', 'P']; // Columnas vacías
-        $columnasDropdown = ['E', 'K', 'Q']; // Dropdowns
-        $filaActual = 1;
-        $pedidoEnFila = 0;
-        
-        foreach ($pedidos as $index => $pedido) {
-            // Determinar posición
-            $columnaBase = $columnas[$pedidoEnFila];
-            $siguienteColumna = $columnasInfo[$pedidoEnFila];
-            $columnaCombo = $columnasDropdown[$pedidoEnFila];
-            $fila = $filaActual;
-            
-            // Colocar el texto "DE: L BARBOSA SPA 77.219.776-4" en la columna A para cada fila de pedidos
-            if ($pedidoEnFila == 0) { // Solo en la primera posición de cada fila
-                $sheet->setCellValue('A' . $fila, 'DE: L BARBOSA SPA 77.219.776-4');
-                $sheet->getStyle('A' . $fila)->getAlignment()->setTextRotation(90);
-                $sheet->getStyle('A' . $fila)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-                $sheet->getStyle('A' . $fila)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                $sheet->getStyle('A' . $fila)->getFont()->setBold(true);
-            }
-            
-            // Información del pedido
-            $empresaNombre = $pedido->empresa ? $pedido->empresa->nombre : 'Sin empresa';
-            $numeroOrden = $pedido->numero_orden;
-            
-            // Información del pedido completa
-            $infoPedido = "CLIENTE: " . strtoupper($pedido->cliente) . "\n";
-            $infoPedido .= "CÉDULA: " . ($pedido->cedula ? $pedido->cedula : 'NO REGISTRADA') . "\n";
-            $infoPedido .= "TELÉFONO: " . $pedido->celular . "\n";
-            $infoPedido .= "DIRECCIÓN: " . ($pedido->direccion ? $pedido->direccion : 'NO REGISTRADA') . "\n";
-            $infoPedido .= "CORREO: " . ($pedido->correo_electronico ? $pedido->correo_electronico : 'NO REGISTRADO') . "\n";
-            $infoPedido .= "FECHA ENTREGA: " . ($pedido->fecha_entrega ? $pedido->fecha_entrega->format('d/m/Y') : 'NO REGISTRADA') . "\n";
-            
-            // Agregar información de armazones/accesorios
-            if ($pedido->inventarios->count() > 0) {
-                $infoPedido .= "ARMAZONES/ACCESORIOS:\n";
-                foreach ($pedido->inventarios as $inventario) {
-                    $infoPedido .= "- " . $inventario->codigo . "\n";
-                }
-            }
-            
-            // Colocar empresa + número de orden en la primera columna del pedido
-            $sheet->setCellValue($columnaBase . $fila, strtoupper($empresaNombre) . " - " . $numeroOrden);
-            $sheet->getStyle($columnaBase . $fila)->getFont()->setBold(true);
-            $sheet->getStyle($columnaBase . $fila)->getAlignment()->setTextRotation(90);
-            $sheet->getStyle($columnaBase . $fila)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-            $sheet->getStyle($columnaBase . $fila)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            
-            // Colocar información del pedido en la siguiente columna
-            $sheet->setCellValue($siguienteColumna . $fila, $infoPedido);
-            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setWrapText(true);
-            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setTextRotation(90);
-            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-            $sheet->getStyle($siguienteColumna . $fila)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            
-            // Colocar método de envío en lugar del dropdown
-            $metodoEnvio = $pedido->metodo_envio ? strtoupper($pedido->metodo_envio) : 'NO ESPECIFICADO';
-            $sheet->setCellValue($columnaCombo . $fila, $metodoEnvio);
-            
-            // Aplicar estilo al método de envío
-            $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-            $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle($columnaCombo . $fila)->getAlignment()->setTextRotation(90); // Hacer el texto vertical
-            $sheet->getStyle($columnaCombo . $fila)->getFont()->setBold(true);
-            
-            // Ajustar ancho de columnas automáticamente basado en el contenido
-            $sheet->getColumnDimension($columnaBase)->setAutoSize(true);
-            $sheet->getColumnDimension($siguienteColumna)->setAutoSize(true);
-            $sheet->getColumnDimension($columnaCombo)->setAutoSize(true);
-            
-            // Establecer un ancho mínimo para las columnas
-            if ($sheet->getColumnDimension($columnaBase)->getWidth() < 8) {
-                $sheet->getColumnDimension($columnaBase)->setWidth(8);
-            }
-            if ($sheet->getColumnDimension($siguienteColumna)->getWidth() < 12) {
-                $sheet->getColumnDimension($siguienteColumna)->setWidth(12);
-            }
-            if ($sheet->getColumnDimension($columnaCombo)->getWidth() < 15) {
-                $sheet->getColumnDimension($columnaCombo)->setWidth(15);
-            }
-            
-            // Ajustar altura de la fila automáticamente basado en el contenido
-            $numeroLineas = substr_count($infoPedido, "\n") + 1;
-            $alturaCalculada = max(200, $numeroLineas * 12); // Mínimo 200 para acomodar el texto vertical
-            $sheet->getRowDimension($fila)->setRowHeight($alturaCalculada);
-            
-            // Incrementar contador de pedidos en fila
-            $pedidoEnFila++;
-            
-            // Si ya tenemos 3 pedidos en la fila, pasar a la siguiente fila
-            if ($pedidoEnFila >= 3) {
-                $pedidoEnFila = 0;
-                $filaActual += 1; // Solo aumentar una fila ya que cada fila se ajusta automáticamente
-            }
-        }
-        
-        // Aplicar bordes a todo el rango de datos generado
-        $ultimaColumna = 'Q'; // Hasta la columna Q
-        $ultimaFila = $filaActual;
-        $rangoCompleto = 'A1:' . $ultimaColumna . $ultimaFila;
-        
-        // Configurar el estilo de borde
-        $styleBorder = [
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['argb' => 'FF000000'], // Negro
-                ],
-            ],
-        ];
-        
-        // Aplicar bordes al rango completo
-        $sheet->getStyle($rangoCompleto)->applyFromArray($styleBorder);
-        
-        // No necesitamos ajustar altura manualmente ya que se hace automáticamente arriba
-        
-        // Configurar encabezados para descarga
-        $filename = 'Pedidos_' . date('Y-m-d_H-i-s') . '.xlsx';
-        
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-        
-        $writer = new Xlsx($spreadsheet);
-        $writer->save('php://output');
-        exit;
-    }
-
-    /**
-     * Obtener el próximo número de orden disponible
-     * 
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function getNextOrderNumber()
+    public function getDeclarantes()
     {
         try {
-            $nextOrderNumber = $this->obtenerNumeroOrdenUnico();
+            $declarantes = Declarante::with('facturas')->orderBy('nombre', 'asc')->get();
+            
+            // Calcular los totales fiscales para cada declarante
+            $declarantes->each(function ($declarante) {
+                $totalMonto = $declarante->facturas->sum('monto'); // Base gravable
+                $totalIva = $declarante->facturas->sum('iva'); // IVA Débito Fiscal
+                $totalFacturado = $totalMonto + $totalIva; // Total facturado (Base + IVA)
+                
+                $declarante->total_base = $totalMonto; // Base gravable
+                $declarante->total_iva = $totalIva; // IVA Débito Fiscal (solo el IVA)
+                $declarante->total_facturado = $totalFacturado; // Total facturado completo
+                $declarante->cantidad_facturas = $declarante->facturas->count();
+            });
             
             return response()->json([
                 'success' => true,
-                'next_order_number' => $nextOrderNumber
+                'data' => $declarantes
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener el próximo número de orden',
-                'error' => $e->getMessage()
+                'message' => 'Error al cargar los declarantes: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Agregar un reclamo a un pedido
-     * 
-     * @param \Illuminate\Http\Request $request
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * Crear un nuevo declarante
      */
-    public function agregarReclamo(Request $request, $id)
+    public function storeDeclarante(Request $request)
     {
         try {
-            $request->validate([
-                'reclamo' => 'required|string|min:10|max:1000'
-            ], [
-                'reclamo.required' => 'El reclamo es obligatorio',
-                'reclamo.min' => 'El reclamo debe tener al menos 10 caracteres',
-                'reclamo.max' => 'El reclamo no puede exceder 1000 caracteres'
+            $validatedData = $request->validate([
+                'nombre' => 'required|string|max:255',
+                'ruc' => 'required|string|max:20',
+                'firma' => 'nullable|file|mimes:p12,pem|max:5120' // 5MB máximo
             ]);
 
-            $pedido = Pedido::findOrFail($id);
-            
-            // Verificar si ya tiene un reclamo
-            if (!empty($pedido->reclamo)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Este pedido ya tiene un reclamo registrado'
-                ], 400);
+            // Manejar el archivo de firma si se envió
+            $firmaPath = null;
+            if ($request->hasFile('firma')) {
+                $archivo = $request->file('firma');
+                $nombreArchivo = time() . '_' . $archivo->getClientOriginalName();
+                $firmaPath = $archivo->storeAs('certificados', $nombreArchivo, 'public');
+                $validatedData['firma'] = basename($firmaPath);
             }
 
-            $pedido->reclamo = $request->reclamo;
-            $pedido->save();
+            $declarante = Declarante::create($validatedData);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Reclamo agregado exitosamente'
+                'message' => 'Declarante creado exitosamente',
+                'data' => $declarante
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Errores de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error al crear declarante: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al crear el declarante: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Actualizar un declarante existente
+     */
+    public function updateDeclarante(Request $request, $id)
+    {
+        try {
+            $validatedData = $request->validate([
+                'nombre' => 'required|string|max:255',
+                'ruc' => 'required|string|max:20',
+                'firma' => 'nullable|file|mimes:p12,pem|max:5120' // 5MB máximo
+            ]);
+
+            $declarante = Declarante::findOrFail($id);
+
+            // Manejar el archivo de firma si se envió uno nuevo
+            if ($request->hasFile('firma')) {
+                // Eliminar el archivo anterior si existe
+                if ($declarante->firma) {
+                    $rutaAnterior = storage_path('app/public/certificados/' . $declarante->firma);
+                    if (file_exists($rutaAnterior)) {
+                        unlink($rutaAnterior);
+                    }
+                }
+
+                // Guardar el nuevo archivo
+                $archivo = $request->file('firma');
+                $nombreArchivo = time() . '_' . $archivo->getClientOriginalName();
+                $firmaPath = $archivo->storeAs('certificados', $nombreArchivo, 'public');
+                $validatedData['firma'] = basename($firmaPath);
+            } else {
+                // Si no se envió archivo, mantener el actual
+                unset($validatedData['firma']);
+            }
+
+            $declarante->update($validatedData);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Declarante actualizado exitosamente',
+                'data' => $declarante
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Errores de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error al actualizar declarante: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar el declarante: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Eliminar un declarante
+     */
+    public function destroyDeclarante($id)
+    {
+        try {
+            $declarante = Declarante::findOrFail($id);
+            $declarante->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Declarante eliminado exitosamente'
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Declarante no encontrado'
+            ], 404);
+        } catch (\Exception $e) {
+            \Log::error('Error al eliminar declarante: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar el declarante: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener detalle de facturas de un declarante
+     */
+    public function getDeclaranteFacturas($id)
+    {
+        try {
+            $declarante = Declarante::with(['facturas.pedido'])->findOrFail($id);
+            
+            $facturas = $declarante->facturas->map(function ($factura) {
+                return [
+                    'id' => $factura->id,
+                    'pedido_id' => $factura->pedido_id,
+                    'numero_orden' => $factura->pedido ? $factura->pedido->numero_orden : 'N/A',
+                    'cliente' => $factura->pedido ? $factura->pedido->cliente : 'N/A',
+                    'fecha' => $factura->created_at ? $factura->created_at->format('d/m/Y') : 'N/A',
+                    'tipo' => ucfirst($factura->tipo),
+                    'monto' => $factura->monto,
+                    'iva' => $factura->iva,
+                    'total' => $factura->monto + $factura->iva,
+                    'xml' => $factura->xml
+                ];
+            });
+
+            $totales = [
+                'total_base' => $facturas->sum('monto'),
+                'total_iva' => $facturas->sum('iva'),
+                'total_facturado' => $facturas->sum('total'),
+                'cantidad_facturas' => $facturas->count()
+            ];
+
+            return response()->json([
+                'success' => true,
+                'declarante' => [
+                    'id' => $declarante->id,
+                    'nombre' => $declarante->nombre,
+                    'ruc' => $declarante->ruc
+                ],
+                'facturas' => $facturas,
+                'totales' => $totales
+            ]);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Declarante no encontrado'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener las facturas: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener detalles del pedido para la factura
+     */
+    public function obtenerDetallesPedido($id)
+    {
+        try {
+            $pedido = Pedido::with(['inventarios', 'lunas'])->findOrFail($id);
+            
+            $detalles = [
+                'inventarios' => [],
+                'lunas' => [],
+                'totales' => [
+                    'base_total' => 0,
+                    'iva_total' => 0,
+                    'monto_total' => 0
+                ]
+            ];
+
+            $totalBase = 0;
+            $totalIva = 0;
+            $totalMonto = 0;
+
+            // Procesar inventarios (accesorios/armazones)
+            foreach ($pedido->inventarios as $inventario) {
+                $precioConDescuento = $inventario->pivot->precio * (1 - ($inventario->pivot->descuento / 100));
+                $base = round($precioConDescuento / 1.15, 2);
+                $iva = round($precioConDescuento - $base, 2);
+                
+                $detalles['inventarios'][] = [
+                    'codigo' => $inventario->codigo,
+                    'precio_original' => $inventario->pivot->precio,
+                    'descuento' => $inventario->pivot->descuento,
+                    'precio_con_descuento' => $precioConDescuento,
+                    'base' => $base,
+                    'iva' => $iva
+                ];
+                
+                $totalBase += $base;
+                $totalIva += $iva;
+                $totalMonto += $precioConDescuento;
+            }
+
+            // Procesar lunas
+            foreach ($pedido->lunas as $luna) {
+                $precioConDescuento = $luna->l_precio * (1 - ($luna->l_precio_descuento / 100));
+                $base = round($precioConDescuento / 1.15, 2);
+                $iva = round($precioConDescuento - $base, 2);
+                
+                $detalles['lunas'][] = [
+                    'medida' => $luna->l_medida,
+                    'detalle' => $luna->l_detalle,
+                    'tipo_lente' => $luna->tipo_lente,
+                    'material' => $luna->material,
+                    'filtro' => $luna->filtro,
+                    'precio_original' => $luna->l_precio,
+                    'descuento' => $luna->l_precio_descuento,
+                    'precio_con_descuento' => $precioConDescuento,
+                    'base' => $base,
+                    'iva' => $iva
+                ];
+                
+                $totalBase += $base;
+                $totalIva += $iva;
+                $totalMonto += $precioConDescuento;
+            }
+
+            // Redondear totales
+            $detalles['totales']['base_total'] = round($totalBase, 2);
+            $detalles['totales']['iva_total'] = round($totalIva, 2);
+            $detalles['totales']['monto_total'] = round($totalMonto, 2);
+
+            return response()->json([
+                'success' => true,
+                'pedido' => [
+                    'id' => $pedido->id,
+                    'cliente' => $pedido->cliente,
+                    'total_original' => $pedido->total
+                ],
+                'detalles' => $detalles
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener los detalles del pedido: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Crear factura para un pedido
+     */
+    public function crearFactura(Request $request)
+    {
+        try {
+            // Validar datos de entrada
+            $request->validate([
+                'pedido_id' => 'required|integer|exists:pedidos,id',
+                'declarante_id' => 'required|integer|exists:declarante,id',
+                'tipo' => 'required|string|in:factura,nota_venta',
+                'monto' => 'required|numeric|min:0',
+                'iva' => 'required|numeric|min:0',
+                'xml' => 'nullable|string|max:255'
+            ]);
+
+            // Buscar el pedido con sus relaciones
+            $pedido = Pedido::with(['inventarios', 'lunas'])->findOrFail($request->pedido_id);
+            
+            // Verificar que el pedido esté pendiente
+            if (strtoupper($pedido->fact) !== 'PENDIENTE') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Este pedido ya ha sido procesado'
+                ], 400);
+            }
+
+            // Calcular monto total e IVA basado en inventarios y lunas
+            $totalBase = 0;
+            $totalIva = 0;
+            $totalMonto = 0;
+
+            // Calcular base e IVA de inventarios (accesorios)
+            foreach ($pedido->inventarios as $inventario) {
+                $precioConDescuento = $inventario->pivot->precio * (1 - ($inventario->pivot->descuento / 100));
+                $base = round($precioConDescuento / 1.15, 2);
+                $iva = round($precioConDescuento - $base, 2);
+                
+                $totalBase += $base;
+                $totalIva += $iva;
+                $totalMonto += $precioConDescuento;
+            }
+
+            // Calcular base e IVA de lunas
+            foreach ($pedido->lunas as $luna) {
+                $precioConDescuento = $luna->l_precio * (1 - ($luna->l_precio_descuento / 100));
+                $base = round($precioConDescuento / 1.15, 2);
+                $iva = round($precioConDescuento - $base, 2);
+                
+                $totalBase += $base;
+                $totalIva += $iva;
+                $totalMonto += $precioConDescuento;
+            }
+
+            // Redondear los totales finales
+            $totalBase = round($totalBase, 2);
+            $totalIva = round($totalIva, 2);
+            $totalMonto = round($totalMonto, 2);
+
+            // El monto final será la suma de la base + IVA (que debería ser igual al total calculado)
+            $montoFinal = $totalBase + $totalIva;
+            $ivaFinal = $totalIva;
+
+            // Generar nombre del archivo XML
+            $xmlPath = $request->xml;
+            if (empty($xmlPath)) {
+                $xmlPath = 'facturas/' . $request->tipo . '_' . $pedido->id . '_' . date('YmdHis') . '.xml';
+            }
+
+            // Crear la factura
+            $factura = Factura::create([
+                'pedido_id' => $request->pedido_id,
+                'declarante_id' => $request->declarante_id,
+                'tipo' => $request->tipo,
+                'monto' => $montoFinal,
+                'iva' => $ivaFinal,
+                'xml' => $xmlPath
+            ]);
+
+            // Generar el XML de la factura
+            $this->generarXMLFactura($factura, $pedido);
+
+            // Actualizar el estado del pedido a 'Aprobado'
+            $pedido->update(['fact' => 'Aprobado']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Factura creada exitosamente',
+                'data' => [
+                    'factura_id' => $factura->id,
+                    'xml_path' => $xmlPath,
+                    'tipo' => $request->tipo,
+                    'monto' => $montoFinal,
+                    'iva' => $ivaFinal
+                ]
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1544,596 +1204,94 @@ class PedidosController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
+            \Log::error('Error al crear factura: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error al agregar el reclamo',
-                'error' => $e->getMessage()
+                'message' => 'Error al crear la factura: ' . $e->getMessage()
             ], 500);
         }
     }
 
     /**
-     * Quitar un reclamo de un pedido
-     * 
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * Generar XML de la factura
      */
-    public function quitarReclamo($id)
+    private function generarXMLFactura($factura, $pedido)
     {
         try {
-            $pedido = Pedido::findOrFail($id);
+            // Obtener datos del declarante
+            $declarante = $factura->declarante;
             
-            // Verificar si tiene un reclamo
-            if (empty($pedido->reclamo)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Este pedido no tiene un reclamo registrado'
-                ], 400);
-            }
-
-            $pedido->reclamo = null;
-            $pedido->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Reclamo eliminado exitosamente'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al eliminar el reclamo',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Obtener un número de orden único
-     * Extrae la parte numérica del último pedido y le suma 1
-     * Maneja números con letras (ej: "123A" → "124", "150B" → "151")
-     * 
-     * @param int|string|null $numeroSolicitado
-     * @return string
-     */
-    private function obtenerNumeroOrdenUnico($numeroSolicitado = null)
-    {
-        // Si no se proporciona número, obtener el siguiente disponible desde el último pedido
-        if (is_null($numeroSolicitado)) {
-            // Obtener todos los pedidos y encontrar el mayor número de orden
-            $pedidos = Pedido::whereNotNull('numero_orden')
-                ->where('numero_orden', '!=', '')
-                ->get();
+            // Crear estructura XML
+            $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><factura></factura>');
             
-            $mayorNumero = 0;
-            $ultimoNumeroOrden = null;
+            // Información del declarante
+            $emisor = $xml->addChild('emisor');
+            $emisor->addChild('nombre', htmlspecialchars($declarante->nombre));
+            $emisor->addChild('ruc', htmlspecialchars($declarante->ruc));
             
-            foreach ($pedidos as $pedido) {
-                // Extraer la parte numérica del número de orden usando expresión regular
-                preg_match_all('/\d+/', $pedido->numero_orden, $matches);
+            // Información del cliente
+            $receptor = $xml->addChild('receptor');
+            $receptor->addChild('nombre', htmlspecialchars($pedido->cliente));
+            $receptor->addChild('cedula', htmlspecialchars($pedido->cedula ?? 'N/A'));
+            
+            // Información de la factura
+            $infoFactura = $xml->addChild('infoFactura');
+            $infoFactura->addChild('tipo', htmlspecialchars($factura->tipo));
+            $infoFactura->addChild('numero', $pedido->numero_orden);
+            $infoFactura->addChild('fecha', date('d/m/Y'));
+            
+            // Detalles de productos/servicios
+            $detalles = $xml->addChild('detalles');
+            
+            // Añadir inventarios
+            foreach ($pedido->inventarios as $inventario) {
+                $detalle = $detalles->addChild('detalle');
+                $detalle->addChild('codigo', htmlspecialchars($inventario->codigo));
+                $detalle->addChild('descripcion', htmlspecialchars($inventario->codigo));
+                $detalle->addChild('cantidad', 1);
+                $detalle->addChild('precio', number_format($inventario->pivot->precio, 2));
+                $detalle->addChild('descuento', $inventario->pivot->descuento);
                 
-                if (!empty($matches[0])) {
-                    // Tomar el número más grande encontrado en la cadena
-                    $parteNumerica = max(array_map('intval', $matches[0]));
-                    
-                    if ($parteNumerica > $mayorNumero) {
-                        $mayorNumero = $parteNumerica;
-                        $ultimoNumeroOrden = $pedido->numero_orden;
-                    }
-                }
+                $precioConDescuento = $inventario->pivot->precio * (1 - ($inventario->pivot->descuento / 100));
+                $detalle->addChild('total', number_format($precioConDescuento, 2));
             }
             
-            if ($mayorNumero > 0) {
-                $numeroSolicitado = $mayorNumero + 1;
+            // Añadir lunas
+            foreach ($pedido->lunas as $luna) {
+                $detalle = $detalles->addChild('detalle');
+                $detalle->addChild('codigo', 'LUNA');
+                $detalle->addChild('descripcion', htmlspecialchars($luna->l_detalle . ' - ' . $luna->tipo_lente));
+                $detalle->addChild('cantidad', 1);
+                $detalle->addChild('precio', number_format($luna->l_precio, 2));
+                $detalle->addChild('descuento', $luna->l_precio_descuento);
                 
-                \Log::info('Número de orden generado automáticamente', [
-                    'ultimo_pedido_con_mayor_numero' => $ultimoNumeroOrden,
-                    'parte_numerica_extraida' => $mayorNumero,
-                    'nuevo_numero' => $numeroSolicitado
-                ]);
-            } else {
-                // Si no se encuentran números válidos, empezar desde 1
-                $numeroSolicitado = 1;
-                \Log::info('No se encontraron números válidos en pedidos existentes, iniciando numeración desde 1');
-            }
-        }
-
-        // Convertir a string para la verificación de unicidad
-        $numeroSolicitado = (string) $numeroSolicitado;
-        $numeroOriginal = $numeroSolicitado;
-        $intentos = 0;
-
-        // Verificar si el número solicitado ya existe y buscar uno único
-        while (Pedido::where('numero_orden', $numeroSolicitado)->exists()) {
-            $intentos++;
-            
-            // Si es numérico, incrementar
-            if (is_numeric($numeroSolicitado)) {
-                $numeroSolicitado = (string) (intval($numeroOriginal) + $intentos);
-            } else {
-                // Para strings alfanuméricos, agregar sufijo temporal
-                $numeroSolicitado = $numeroOriginal . '-' . $intentos;
+                $precioConDescuento = $luna->l_precio * (1 - ($luna->l_precio_descuento / 100));
+                $detalle->addChild('total', number_format($precioConDescuento, 2));
             }
             
-            // Prevenir bucle infinito
-            if ($intentos > 1000) {
-                $numeroSolicitado = $numeroOriginal . '-' . time();
-                \Log::error('Se alcanzó el límite de intentos para generar número único', [
-                    'numero_original' => $numeroOriginal,
-                    'numero_final' => $numeroSolicitado
-                ]);
-                break;
-            }
-        }
-
-        if ($intentos > 0) {
-            \Log::info('Número de orden ajustado por duplicado', [
-                'numero_original' => $numeroOriginal,
-                'numero_final' => $numeroSolicitado,
-                'intentos' => $intentos
-            ]);
-        }
-
-        return $numeroSolicitado;
-    }
-
-    /**
-     * Actualizar las lunas de un pedido con manejo mejorado
-     * 
-     * @param \Illuminate\Http\Request $request
-     * @param \App\Models\Pedido $pedido
-     * @return void
-     */
-    private function actualizarLunasPedido($request, $pedido)
-    {
-        // Primero guardamos las fotos existentes antes de hacer delete
-        $fotosLunasExistentes = [];
-        foreach ($pedido->lunas as $index => $luna) {
-            if ($luna->foto) {
-                $fotosLunasExistentes[$index] = $luna->foto;
-            }
-        }
-        
-        // Eliminar lunas existentes
-        $pedido->lunas()->delete();
-        
-        // Verificar si hay datos de lunas para agregar
-        if (!$request->has('l_medida') || !is_array($request->l_medida)) {
-            return;
-        }
-        
-        foreach ($request->l_medida as $key => $medida) {
-            if (!empty($medida)) {
-                $foto = null;
-                
-                // Manejar la foto si existe
-                if ($request->hasFile('l_foto') && isset($request->file('l_foto')[$key])) {
-                    try {
-                        $fotoFile = $request->file('l_foto')[$key];
-                        $fotoName = time() . '_luna_update_' . $key . '.' . $fotoFile->getClientOriginalExtension();
-                        
-                        // Verificar que la carpeta existe
-                        $carpetaDestino = public_path('img/lunas');
-                        if (!file_exists($carpetaDestino)) {
-                            mkdir($carpetaDestino, 0755, true);
-                        }
-                        
-                        $fotoFile->move($carpetaDestino, $fotoName);
-                        $foto = 'img/lunas/' . $fotoName;
-                        
-                        \Log::info('Foto de luna actualizada: ' . $foto);
-                    } catch (\Exception $e) {
-                        \Log::error('Error al subir foto de luna: ' . $e->getMessage());
-                        // Si hay error con la foto, mantener la existente si había una
-                        $foto = $fotosLunasExistentes[$key] ?? null;
-                    }
-                } else {
-                    // Si no se sube nueva foto, mantener la existente si había una
-                    $foto = $fotosLunasExistentes[$key] ?? null;
-                }
-                
-                try {
-                    $pedido->lunas()->create([
-                        'l_medida' => $medida,
-                        'l_detalle' => $request->l_detalle[$key] ?? null,
-                        'l_precio' => $request->l_precio[$key] ?? 0,
-                        'tipo_lente' => $request->tipo_lente[$key] ?? null,
-                        'material' => $request->material[$key] ?? null,
-                        'filtro' => $request->filtro[$key] ?? null,
-                        'l_precio_descuento' => $request->l_precio_descuento[$key] ?? 0,
-                        'tipo' => $request->tipo[$key] ?? null,
-                        'foto' => $foto
-                    ]);
-                    
-                    \Log::info('Luna actualizada exitosamente para pedido ' . $pedido->numero_orden);
-                } catch (\Exception $e) {
-                    \Log::error('Error al crear luna: ' . $e->getMessage());
-                    throw $e;
-                }
-            }
-        }
-    }
-
-    /**
-     * Marcar un pedido como urgente
-     * 
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function marcarUrgente($id)
-    {
-        try {
-            $pedido = Pedido::findOrFail($id);
+            // Totales
+            $totales = $xml->addChild('totales');
+            $totales->addChild('subtotal', number_format($factura->monto - $factura->iva, 2));
+            $totales->addChild('iva', number_format($factura->iva, 2));
+            $totales->addChild('total', number_format($factura->monto, 2));
             
-            // Verificar que no esté ya marcado como urgente
-            if ($pedido->urgente) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'El pedido ya está marcado como urgente'
-                ], 400);
+            // Crear directorio si no existe
+            $xmlFullPath = storage_path('app/public/' . $factura->xml);
+            $xmlDirectory = dirname($xmlFullPath);
+            
+            if (!file_exists($xmlDirectory)) {
+                mkdir($xmlDirectory, 0755, true);
             }
             
-            $pedido->urgente = true;
-            $pedido->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Pedido marcado como urgente exitosamente',
-                'pedido' => [
-                    'id' => $pedido->id,
-                    'numero_orden' => $pedido->numero_orden,
-                    'cliente' => $pedido->cliente,
-                    'urgente' => $pedido->urgente
-                ]
-            ]);
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pedido no encontrado'
-            ], 404);
+            // Guardar el archivo XML
+            $xml->asXML($xmlFullPath);
+            
+            \Log::info('XML generado exitosamente: ' . $xmlFullPath);
+            
         } catch (\Exception $e) {
-            \Log::error('Error al marcar pedido como urgente: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error interno del servidor al marcar como urgente'
-            ], 500);
+            \Log::error('Error al generar XML: ' . $e->getMessage());
+            // No lanzar excepción para no interrumpir el proceso de creación de factura
         }
-    }
-
-    /**
-     * Desmarcar un pedido como urgente
-     * 
-     * @param int $id
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function desmarcarUrgente($id)
-    {
-        try {
-            $pedido = Pedido::findOrFail($id);
-            
-            // Verificar que esté marcado como urgente
-            if (!$pedido->urgente) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'El pedido no está marcado como urgente'
-                ], 400);
-            }
-            
-            $pedido->urgente = false;
-            $pedido->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Marca de urgente removida exitosamente',
-                'pedido' => [
-                    'id' => $pedido->id,
-                    'numero_orden' => $pedido->numero_orden,
-                    'cliente' => $pedido->cliente,
-                    'urgente' => $pedido->urgente
-                ]
-            ]);
-
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Pedido no encontrado'
-            ], 404);
-        } catch (\Exception $e) {
-            \Log::error('Error al desmarcar pedido como urgente: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error interno del servidor al quitar marca de urgente'
-            ], 500);
-        }
-    }
-
-    /**
-     * Exportar cristalería seleccionada a archivo Excel
-     */
-    public function exportCristalariaExcel(Request $request)
-    {
-        try {
-            // Obtener IDs desde POST
-            $ids = $request->input('ids');
-            
-            // Validar que se reciban IDs
-            if (empty($ids)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se seleccionaron pedidos para exportar cristalería'
-                ], 400);
-            }
-
-            // Convertir IDs de string a array si es necesario
-            if (is_string($ids)) {
-                $ids = explode(',', $ids);
-            }
-            
-            // Obtener los pedidos con sus lunas y empresa
-            $pedidos = Pedido::with(['lunas', 'empresa'])
-                ->whereIn('id', $ids)
-                ->orderBy('numero_orden', 'desc')
-                ->get();
-
-            if ($pedidos->isEmpty()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se encontraron pedidos para exportar cristalería'
-                ], 404);
-            }
-
-            // Filtrar pedidos que tengan lunas
-            $pedidosConLunas = $pedidos->filter(function($pedido) {
-                return $pedido->lunas->count() > 0;
-            });
-
-            if ($pedidosConLunas->isEmpty()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Los pedidos seleccionados no tienen lunas especificadas'
-                ], 400);
-            }
-
-            // Generar el archivo Excel
-            return $this->generateCristalariaExcelFile($pedidosConLunas);
-
-        } catch (\Exception $e) {
-            \Log::error('Error al exportar cristalería a Excel: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Error interno del servidor al generar el archivo Excel'
-            ], 500);
-        }
-    }
-
-    /**
-     * Generar el archivo Excel con el formato específico para cristalería
-     */
-    private function generateCristalariaExcelFile($pedidos)
-    {
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        
-        // Configurar título principal
-        $sheet->setCellValue('A1', '🔬 CRISTALERÍA - ÓRDENES DE TRABAJO 🔬');
-        $sheet->mergeCells('A1:H1');
-        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
-        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('A1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-        $sheet->getStyle('A1')->getFill()->getStartColor()->setRGB('000000');
-        $sheet->getStyle('A1')->getFont()->getColor()->setRGB('FFFFFF');
-        
-        // Subtítulo
-        $sheet->setCellValue('A2', 'RESUMEN DE LUNAS PARA PROCESAR');
-        $sheet->mergeCells('A2:H2');
-        $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
-        $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        
-        // Información de fecha e impresión
-        $sheet->setCellValue('A3', 'FECHA DE EXPORTACIÓN: ' . date('d/m/Y H:i:s') . ' | TOTAL ÓRDENES: ' . $pedidos->count());
-        $sheet->mergeCells('A3:I3');
-        $sheet->getStyle('A3')->getFont()->setBold(true)->setSize(10);
-        $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        
-        // Encabezados de la tabla (fila 5)
-        $headers = [
-            'A5' => 'SUCURSAL',
-            'B5' => 'ORDEN',
-            'C5' => 'FECHA',
-            'D5' => 'OJO',
-            'E5' => 'ESFÉRICO',
-            'F5' => 'CILINDRO',
-            'G5' => 'EJE',
-            'H5' => 'ADD',
-            'I5' => 'DP',
-            'J5' => 'TIPO LENTE',
-            'K5' => 'MATERIAL',
-            'L5' => 'FILTRO'
-        ];
-        
-        foreach ($headers as $cell => $header) {
-            $sheet->setCellValue($cell, $header);
-            $sheet->getStyle($cell)->getFont()->setBold(true);
-            $sheet->getStyle($cell)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-            $sheet->getStyle($cell)->getFill()->getStartColor()->setRGB('2c3e50');
-            $sheet->getStyle($cell)->getFont()->getColor()->setRGB('FFFFFF');
-            $sheet->getStyle($cell)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle($cell)->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
-        }
-        
-        // Llenar datos
-        $row = 6;
-        $totalFilas = 0;
-        
-        foreach ($pedidos as $pedido) {
-            if ($pedido->lunas->count() > 0) {
-                foreach ($pedido->lunas as $lunaIndex => $luna) {
-                    // Parsear medidas
-                    $medidaText = $luna->l_medida ?? '';
-                    
-                    // Extraer datos de OD
-                    preg_match('/OD:\s*([+-]?\d+(?:\.\d+)?)\s*([+-]?\d+(?:\.\d+)?)\s*X\s*(\d+(?:\.\d+)?)°?/i', $medidaText, $odMatches);
-                    $od_esfera = $odMatches[1] ?? '';
-                    $od_cilindro = $odMatches[2] ?? '';
-                    $od_eje = $odMatches[3] ?? '';
-                    
-                    // Extraer datos de OI
-                    preg_match('/OI:\s*([+-]?\d+(?:\.\d+)?)\s*([+-]?\d+(?:\.\d+)?)\s*X\s*(\d+(?:\.\d+)?)°?/i', $medidaText, $oiMatches);
-                    $oi_esfera = $oiMatches[1] ?? '';
-                    $oi_cilindro = $oiMatches[2] ?? '';
-                    $oi_eje = $oiMatches[3] ?? '';
-                    
-                    // Extraer ADD
-                    preg_match('/ADD:\s*([+-]?\d+(?:\.\d+)?)/i', $medidaText, $addMatch);
-                    $add = $addMatch[1] ?? '';
-                    
-                    // Extraer DP
-                    preg_match('/DP:\s*(\d+(?:\.\d+)?)/i', $medidaText, $dpMatch);
-                    $dp = $dpMatch[1] ?? '';
-                    
-                    // Formatear material
-                    $materialText = $luna->material ?? '';
-                    if (preg_match('/OD:\s*([^|]+)\|\s*OI:\s*(.+)/i', $materialText, $materialMatches)) {
-                        $od_material = trim($materialMatches[1]);
-                        $oi_material = trim($materialMatches[2]);
-                    } else {
-                        $od_material = $materialText;
-                        $oi_material = $materialText;
-                    }
-                    
-                    // PRIMERA FILA: OJO DERECHO (OD)
-                    $totalFilas++;
-                    
-                    // Solo mostrar datos del pedido en la primera fila de la primera luna
-                    if ($lunaIndex == 0) {
-                        $sheet->setCellValue('A' . $row, $pedido->empresa->nombre ?? 'N/A');
-                        $sheet->setCellValue('B' . $row, $pedido->numero_orden);
-                        $sheet->setCellValue('C' . $row, date('d/m/Y', strtotime($pedido->fecha)));
-                    } else {
-                        // Celdas vacías para las filas adicionales de lunas del mismo pedido
-                        $sheet->setCellValue('A' . $row, '');
-                        $sheet->setCellValue('B' . $row, '');
-                        $sheet->setCellValue('C' . $row, '');
-                    }
-                    
-                    $sheet->setCellValue('D' . $row, 'OD');                    // Indicador de ojo
-                    $sheet->setCellValue('E' . $row, $od_esfera);              // Esférico OD
-                    $sheet->setCellValue('F' . $row, $od_cilindro);            // Cilindro OD
-                    $sheet->setCellValue('G' . $row, $od_eje);                 // Eje OD
-                    $sheet->setCellValue('H' . $row, $add);                    // ADD
-                    $sheet->setCellValue('I' . $row, $dp);                     // DP
-                    $sheet->setCellValue('J' . $row, $luna->tipo_lente ?? ''); // Tipo de lente
-                    $sheet->setCellValue('K' . $row, $od_material);            // Material OD
-                    $sheet->setCellValue('L' . $row, $luna->filtro ?? '');     // Filtro
-                    
-                    // Aplicar estilo especial para OD (azul claro)
-                    $sheet->getStyle('D' . $row . ':I' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-                    $sheet->getStyle('D' . $row . ':I' . $row)->getFill()->getStartColor()->setRGB('e3f2fd');
-                    
-                    // Centrar texto en las columnas de medidas
-                    $sheet->getStyle('D' . $row . ':I' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                    
-                    // Aplicar colores alternados
-                    if ($totalFilas % 4 == 1 || $totalFilas % 4 == 2) {
-                        $sheet->getStyle('A' . $row . ':L' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-                        $sheet->getStyle('A' . $row . ':L' . $row)->getFill()->getStartColor()->setRGB('f8f9fa');
-                    }
-                    
-                    $row++;
-                    
-                    // SEGUNDA FILA: OJO IZQUIERDO (OI)
-                    $totalFilas++;
-                    
-                    // Celdas vacías para sucursal, orden y fecha en la segunda fila
-                    $sheet->setCellValue('A' . $row, '');
-                    $sheet->setCellValue('B' . $row, '');
-                    $sheet->setCellValue('C' . $row, '');
-                    
-                    $sheet->setCellValue('D' . $row, 'OI');                    // Indicador de ojo
-                    $sheet->setCellValue('E' . $row, $oi_esfera);              // Esférico OI
-                    $sheet->setCellValue('F' . $row, $oi_cilindro);            // Cilindro OI
-                    $sheet->setCellValue('G' . $row, $oi_eje);                 // Eje OI
-                    $sheet->setCellValue('H' . $row, '');                      // ADD vacío (solo se muestra en OD)
-                    $sheet->setCellValue('I' . $row, '');                      // DP vacío (solo se muestra en OD)
-                    $sheet->setCellValue('J' . $row, '');                      // Tipo de lente vacío
-                    $sheet->setCellValue('K' . $row, $oi_material);            // Material OI
-                    $sheet->setCellValue('L' . $row, '');                      // Filtro vacío
-                    
-                    // Aplicar estilo especial para OI (rosa claro)
-                    $sheet->getStyle('D' . $row . ':H' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-                    $sheet->getStyle('D' . $row . ':H' . $row)->getFill()->getStartColor()->setRGB('f3e5f5');
-                    
-                    // Centrar texto en las columnas de medidas
-                    $sheet->getStyle('D' . $row . ':H' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-                    
-                    // Aplicar colores alternados
-                    if ($totalFilas % 4 == 1 || $totalFilas % 4 == 2) {
-                        $sheet->getStyle('A' . $row . ':K' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-                        $sheet->getStyle('A' . $row . ':K' . $row)->getFill()->getStartColor()->setRGB('f8f9fa');
-                    }
-                    
-                    $row++;
-                }
-            }
-        }
-        
-        // Calcular total de lunas
-        $totalLunas = $pedidos->sum(function($pedido) {
-            return $pedido->lunas->count();
-        });
-        
-        // Fila de total
-        $sheet->setCellValue('A' . $row, 'TOTAL LUNAS PARA PROCESAR:');
-        $sheet->mergeCells('A' . $row . ':K' . $row);
-        $sheet->setCellValue('L' . $row, $totalLunas);
-        $sheet->getStyle('A' . $row . ':L' . $row)->getFont()->setBold(true);
-        $sheet->getStyle('A' . $row . ':L' . $row)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID);
-        $sheet->getStyle('A' . $row . ':L' . $row)->getFill()->getStartColor()->setRGB('28a745');
-        $sheet->getStyle('A' . $row . ':L' . $row)->getFont()->getColor()->setRGB('FFFFFF');
-        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-        $sheet->getStyle('L' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        
-        // Aplicar bordes a toda la tabla
-        $tableRange = 'A5:L' . $row;
-        $sheet->getStyle($tableRange)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-        
-        // Ajustar ancho de columnas
-        foreach (range('A', 'L') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-        }
-        
-        // Establecer ancho mínimo para las columnas específicas
-        $sheet->getColumnDimension('D')->setWidth(8);  // OJO
-        $sheet->getColumnDimension('E')->setWidth(12); // Esférico
-        $sheet->getColumnDimension('F')->setWidth(12); // Cilindro
-        $sheet->getColumnDimension('G')->setWidth(10); // Eje
-        $sheet->getColumnDimension('H')->setWidth(8);  // ADD
-        $sheet->getColumnDimension('I')->setWidth(8);  // DP
-        
-        // Ajustar altura de filas
-        for ($i = 1; $i <= $row; $i++) {
-            $sheet->getRowDimension($i)->setRowHeight(-1); // Auto height
-        }
-        
-        // Crear el writer y generar el archivo
-        $writer = new Xlsx($spreadsheet);
-        
-        // Configurar headers para descarga
-        $filename = 'cristaleria_' . date('Y-m-d_H-i-s') . '.xlsx';
-        
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-        
-        // Limpiar cualquier salida previa
-        if (ob_get_level()) {
-            ob_end_clean();
-        }
-        
-        // Guardar el archivo en la salida
-        $writer->save('php://output');
-        exit;
     }
 
 }

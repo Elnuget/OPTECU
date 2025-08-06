@@ -67,29 +67,30 @@
             text-transform: uppercase !important;
         }
 
-        /* Mejorar la experiencia de los datalist - SIMPLIFICADO */
+        /* Mejorar el estilo de los datalist */
+        input[list]::-webkit-calendar-picker-indicator {
+            display: none !important;
+        }
+        
+        input[list] {
+            position: relative;
+        }
+        
+        /* Agregar un indicador visual para campos con autocompletado */
+        input[list]::after {
+            content: '▼';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #6c757d;
+        }
+        
+        /* Estilos para el foco en inputs con datalist */
         input[list]:focus {
-            outline: 2px solid #007bff;
-            outline-offset: 2px;
-            border-color: #007bff !important;
-        }
-
-        /* Estilos para múltiples filtros */
-        .filtros-container {
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        
-        .filtro-item {
-            margin-bottom: 0.5rem;
-        }
-        
-        .filtro-item:last-child {
-            margin-bottom: 0;
-        }
-        
-        .agregar-filtro, .eliminar-filtro {
-            min-width: 35px;
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
         }
     </style>
 
@@ -130,7 +131,7 @@
 
         <div class="card-body">
             <div class="col-md-12">
-                <form action="{{ route('pedidos.store') }}" method="POST" id="pedidoForm" enctype="multipart/form-data">
+                <form action="{{ route('pedidos.store') }}" method="POST" id="pedidoForm">
                     @csrf
 
                     {{-- Información Básica --}}
@@ -153,11 +154,8 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label for="numero_orden" class="form-label">Orden</label>
-                                    <input type="text" class="form-control" id="numero_orden" name="numero_orden"
+                                    <input type="number" class="form-control" id="numero_orden" name="numero_orden"
                                            value="{{ old('numero_orden', $nextOrderNumber) }}">
-                                    <small class="form-text text-muted">
-                                        <i class="fas fa-sync-alt"></i> Se actualiza automáticamente cada segundo
-                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -177,49 +175,37 @@
                             {{-- Fila 2 --}}
                             <div class="row mb-3">
                                 <div class="col-md-12 mb-3">
-                                    <label for="buscar_historial_clinico" class="form-label">Buscar Historial Clínico</label>
-                                    <select class="form-control selectpicker" data-live-search="true" id="buscar_historial_clinico" data-size="10">
-                                        <option value="">Seleccione un paciente del historial clínico</option>
-                                        {{-- Solo Historial Clínico - Últimos registros únicos --}}
-                                        @if(isset($historiales))
-                                            @php
-                                                $historialesUnicos = collect($historiales)->groupBy(function($historial) {
-                                                    return strtolower(trim($historial->nombres . ' ' . $historial->apellidos));
-                                                })->map(function($group) {
-                                                    return $group->sortByDesc('fecha')->first(); // Último registro por fecha
-                                                });
-                                            @endphp
-                                            
-                                            @foreach($historialesUnicos as $historial)
-                                                <option value="{{ $historial->nombres }} {{ $historial->apellidos }}" 
-                                                        data-cedula="{{ $historial->cedula }}"
-                                                        data-celular="{{ $historial->celular }}"
-                                                        data-correo="{{ $historial->correo }}"
-                                                        data-direccion="{{ $historial->direccion }}"
-                                                        data-sucursal="{{ $historial->empresa ? strtoupper($historial->empresa->nombre) : 'SIN EMPRESA' }}"
-                                                        data-fecha="{{ $historial->fecha ? $historial->fecha->format('d/m/Y') : 'Sin fecha' }}">
-                                                    {{ $historial->nombres }} {{ $historial->apellidos }} 
-                                                    ({{ $historial->empresa ? strtoupper($historial->empresa->nombre) : 'SIN EMPRESA' }} - {{ $historial->fecha ? $historial->fecha->format('d/m/Y') : 'Sin fecha' }})
-                                                </option>
-                                            @endforeach
-                                        @endif
-                                    </select>
-                                    <small class="form-text text-muted">
-                                        Busque en el historial clínico. Se muestran solo los últimos registros únicos.
-                                        <br><strong>Formato:</strong> Nombre (Empresa - Fecha del historial)
-                                    </small>
+                                    <label for="buscar_cliente_paciente" class="form-label">Buscar Cliente/Paciente</label>
+                                    <input type="text" class="form-control" id="buscar_cliente_paciente" 
+                                           placeholder="Escriba para buscar un cliente o paciente existente" 
+                                           list="clientes_pacientes_list">
+                                    <datalist id="clientes_pacientes_list">
+                                        @foreach($clientes as $cliente)
+                                            <option value="{{ $cliente }}" data-tipo="cliente">
+                                        @endforeach
+                                        @foreach($pacientes as $paciente)
+                                            <option value="{{ $paciente }}" data-tipo="paciente">
+                                        @endforeach
+                                    </datalist>
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="fact" class="form-label">ESTADO</label>
-                                    <select class="form-control" id="fact" name="fact">
-                                        <option value="Pendiente" selected>Pendiente</option>
-                                        <option value="CRISTALERIA">Cristalería</option>
-                                        <option value="Separado">Separado</option>
-                                        <option value="LISTO EN TALLER">Listo en Taller</option>
-                                        <option value="Enviado">Enviado</option>
-                                        <option value="ENTREGADO">Entregado</option>
+                                    <label for="fact" class="form-label">Factura</label>
+                                    <input type="text" class="form-control" id="fact" name="fact"
+                                           value="Pendiente">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="empresa_id" class="form-label">Empresa *</label>
+                                    <select class="form-control" id="empresa_id" name="empresa_id" required>
+                                        <option value="">Seleccione una empresa</option>
+                                        @foreach($empresas as $empresa)
+                                            <option value="{{ $empresa->id }}">{{ $empresa->nombre }}</option>
+                                        @endforeach
                                     </select>
                                 </div>
+                            </div>
+
+                            {{-- Fila para Cliente --}}
+                            <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label for="cliente" class="form-label">Cliente</label>
                                     <input type="text" class="form-control" id="cliente" name="cliente" required>
@@ -228,16 +214,13 @@
 
                             {{-- Nueva fila para cédula --}}
                             <div class="row mb-3">                                <div class="col-md-6">
-                                    <label for="cedula" class="form-label">RUT</label>
-                                    <input type="text" class="form-control" id="cedula" name="cedula" list="cedulas_existentes" placeholder="Seleccione o escriba un RUT" autocomplete="off">
+                                    <label for="cedula" class="form-label">Cédula</label>
+                                    <input type="text" class="form-control" id="cedula" name="cedula" list="cedulas_existentes" placeholder="Seleccione o escriba una cédula" autocomplete="off">
                                     <datalist id="cedulas_existentes">
                                         @foreach($cedulas as $cedula)
                                             <option value="{{ $cedula }}">
                                         @endforeach
                                     </datalist>
-                                    <small class="form-text text-muted">
-                                        <i class="fas fa-magic"></i> Se buscará automáticamente información del historial clínico y pedidos anteriores
-                                    </small>
                                 </div>
                                 <div class="col-md-6">
                                     <label for="paciente" class="form-label">Paciente</label>
@@ -248,55 +231,14 @@
                             {{-- Fila 3 --}}
                             <div class="row mb-3">
                                 <div class="col-md-3">
-                                    <label for="examen_visual" class="form-label">Costo Examen Visual</label>
+                                    <label for="examen_visual" class="form-label">Examen Visual</label>
                                     <input type="number" class="form-control form-control-sm" id="examen_visual" name="examen_visual" step="0.01" oninput="calculateTotal()">
                                 </div>                                <div class="col-md-3">
                                     <label for="celular" class="form-label">Celular</label>
                                     <input type="text" class="form-control" id="celular" name="celular" placeholder="Escriba el número de celular" autocomplete="off">
-                                </div>                                <div class="col-md-3">
+                                </div>                                <div class="col-md-6">
                                     <label for="correo_electronico" class="form-label">Correo Electrónico</label>
                                     <input type="email" class="form-control" id="correo_electronico" name="correo_electronico" placeholder="Escriba el correo electrónico" autocomplete="off">
-                                </div>
-                                <div class="col-md-3">
-                                    <label for="empresa_id" class="form-label">SUCURSAL <span class="text-danger">*</span></label>
-                                    <select name="empresa_id" id="empresa_id" class="form-control" {{ !$isUserAdmin && $empresas->count() <= 1 ? 'disabled' : '' }} required>
-                                        <option value="">Seleccione una sucursal...</option>
-                                        @foreach($empresas as $empresa)
-                                            <option value="{{ $empresa->id }}" {{ ($userEmpresaId == $empresa->id) ? 'selected' : '' }}>{{ $empresa->nombre }}</option>
-                                        @endforeach
-                                    </select>
-                                    @if(!$isUserAdmin && $empresas->count() <= 1 && $userEmpresaId)
-                                        <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}" required>
-                                        <small class="form-text text-muted">Solo tiene acceso a esta sucursal</small>
-                                    @elseif(!$isUserAdmin && $empresas->count() > 1)
-                                        <small class="form-text text-muted">Seleccione entre sus sucursales asociadas</small>
-                                    @endif
-                                    <small class="form-text text-danger">La selección de sucursal es obligatoria</small>
-                                </div>
-                            </div>
-
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="direccion" class="form-label">Dirección</label>
-                                    <input type="text" class="form-control" id="direccion" name="direccion" placeholder="Escriba la dirección" autocomplete="off">
-                                </div>
-                            </div>
-
-                            {{-- Nuevos campos: Método de envío y Fecha de entrega --}}
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="metodo_envio" class="form-label">Método de Envío</label>
-                                    <select class="form-control" id="metodo_envio" name="metodo_envio">
-                                        <option value="">Seleccione método de envío...</option>
-                                        <option value="TIENDA">TIENDA</option>
-                                        <option value="CORREOS DE CHILE">CORREOS DE CHILE</option>
-                                        <option value="CHILEXPRESS">CHILEXPRESS</option>
-                                        <option value="STARKEN">STARKEN</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="fecha_entrega" class="form-label">Fecha de Entrega</label>
-                                    <input type="date" class="form-control" id="fecha_entrega" name="fecha_entrega">
                                 </div>
                             </div>
                         </div>
@@ -320,7 +262,7 @@
                                         <option value="">Seleccione un armazón</option>
                                         @foreach($armazones as $armazon)
                                             <option value="{{ $armazon->id }}">
-                                                {{ $armazon->codigo }} - {{ $armazon->lugar }} - {{ $armazon->fecha ? \Carbon\Carbon::parse($armazon->fecha)->format('d/m/Y') : 'Sin fecha' }} - {{ $armazon->empresa ? $armazon->empresa->nombre : 'Sin empresa' }}
+                                                {{ $armazon->codigo }} - {{ $armazon->lugar }} - N°{{ $armazon->numero }} - {{ $armazon->fecha ? \Carbon\Carbon::parse($armazon->fecha)->format('d/m/Y') : 'Sin fecha' }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -338,11 +280,6 @@
                                     <input type="number" class="form-control form-control-sm descuento-armazon" id="a_precio_descuento"
                                            name="a_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
                                 </div>
-                                <div class="col-md-6">
-                                    <label for="a_foto" class="form-label">Foto Armazón (Opcional)</label>
-                                    <input type="file" class="form-control form-control-sm" id="a_foto" name="a_foto[]" accept="image/*">
-                                    <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
-                                </div>
                             </div>
                         </div>
                         <div class="card-footer">
@@ -353,7 +290,7 @@
                     {{-- Lunas --}}
                     <div id="lunas-container" class="card collapsed-card">
                         <div class="card-header">
-                            <h3 class="card-title">RECETA</h3>
+                            <h3 class="card-title">Lunas</h3>
                             <div class="card-tools">
                                 <button type="button" class="btn btn-tool" data-card-widget="collapse">
                                     <i class="fas fa-plus"></i>
@@ -361,72 +298,20 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            {{-- Campo Tipo de Receta --}}
+                            {{-- Fila 6 --}}
                             <div class="row mb-3">
-                                <div class="col-md-4">
-                                    <label for="tipo" class="form-label"><strong>Tipo de Receta</strong></label>
-                                    <select class="form-control" name="tipo[]">
-                                        <option value="">Seleccionar...</option>
-                                        <option value="CERCA">CERCA</option>
-                                        <option value="LEJOS">LEJOS</option>
-                                        <option value="BIFOCAL">BIFOCAL</option>
-                                        <option value="MULTIFOCAL">MULTIFOCAL</option>
-                                        <option value="PROGRESIVO">PROGRESIVO</option>
-                                    </select>
+                                <div class="col-md-6">
+                                    <label for="l_medida" class="form-label">Lunas Medidas</label>
+                                    <input type="text" class="form-control" id="l_medida" name="l_medida[]">
                                 </div>
-                            </div>
-                            
-                            {{-- Fila 6 - Prescripción/Medidas --}}
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label class="form-label">Prescripción/Medidas</label>
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered table-sm">
-                                            <thead class="thead-light">
-                                                <tr>
-                                                    <th width="10%">Ojo</th>
-                                                    <th width="20%">Esfera</th>
-                                                    <th width="20%">Cilindro</th>
-                                                    <th width="15%">Eje</th>
-                                                    <th width="15%">ADD</th>
-                                                    <th width="20%">Observaciones</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td class="align-middle text-center"><strong>OD</strong></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_esfera[]" placeholder="Ej: +2.00" value="0"></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_cilindro[]" placeholder="Ej: -1.50" value="0"></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_eje[]" placeholder="Ej: 90°" value="0"></td>
-                                                    <td rowspan="2" class="align-middle"><input type="text" class="form-control form-control-sm medida-input" name="add[]" placeholder="Ej: +2.00" value="0"></td>
-                                                    <td rowspan="2" class="align-middle"><textarea class="form-control form-control-sm" name="l_detalle[]" rows="3" placeholder="Detalles adicionales"></textarea></td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="align-middle text-center"><strong>OI</strong></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_esfera[]" placeholder="Ej: +1.75" value="0"></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_cilindro[]" placeholder="Ej: -1.25" value="0"></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_eje[]" placeholder="Ej: 85°" value="0"></td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="text-center"><strong>DP</strong></td>
-                                                    <td><input type="text" class="form-control form-control-sm medida-input" name="dp[]" placeholder="Ej: 62" value="0"></td>
-                                                    <td colspan="4">
-                                                        <input type="hidden" id="l_medida" name="l_medida[]">
-                                                        <small class="text-muted">Distancia Pupilar</small>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <small class="form-text text-muted">
-                                        <i class="fas fa-info-circle mr-1"></i>
-                                        <strong>Formato de ejemplo:</strong> OD: +2.00 -1.50 X90° / OI: +1.75 -1.25 X85° ADD: +2.00 DP: 62
-                                    </small>
+                                <div class="col-md-6">
+                                    <label for="l_detalle" class="form-label">Lunas Detalle</label>
+                                    <input type="text" class="form-control" id="l_detalle" name="l_detalle[]">
                                 </div>
                             </div>
                             {{-- Fila nueva para tipo de lente, material y filtro --}}
                             <div class="row mb-3">
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <label for="tipo_lente" class="form-label">Tipo de Lente</label>
                                     <input type="text" class="form-control" id="tipo_lente" name="tipo_lente[]" list="tipo_lente_options" placeholder="Seleccione o escriba un tipo de lente">
                                     <datalist id="tipo_lente_options">
@@ -437,19 +322,9 @@
                                         <option value="Contacto">
                                     </datalist>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Material</label>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <label for="material_od" class="form-label text-sm">OD (Ojo Derecho)</label>
-                                            <input type="text" class="form-control form-control-sm material-input" id="material_od" name="material_od[]" list="material_options" placeholder="Material OD">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="material_oi" class="form-label text-sm">OI (Ojo Izquierdo)</label>
-                                            <input type="text" class="form-control form-control-sm material-input" id="material_oi" name="material_oi[]" list="material_options" placeholder="Material OI">
-                                        </div>
-                                    </div>
-                                    <input type="hidden" id="material" name="material[]">
+                                <div class="col-md-4">
+                                    <label for="material" class="form-label">Material</label>
+                                    <input type="text" class="form-control" id="material" name="material[]" list="material_options" placeholder="Seleccione o escriba un material">
                                     <datalist id="material_options">
                                         <option value="Policarbonato">
                                         <option value="CR-39">
@@ -462,21 +337,9 @@
                                         <option value="Crizal">
                                     </datalist>
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label">Filtros</label>
-                                    <div id="filtros-container-0" class="filtros-container">
-                                        <div class="filtro-item mb-2">
-                                            <div class="input-group input-group-sm">
-                                                <input type="text" class="form-control filtro-input" list="filtro_options" placeholder="Filtro 1">
-                                                <div class="input-group-append">
-                                                    <button type="button" class="btn btn-success btn-sm agregar-filtro" onclick="agregarFiltro(0)">
-                                                        <i class="fas fa-plus"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <input type="hidden" name="filtro[]" class="filtros-hidden">
+                                <div class="col-md-4">
+                                    <label for="filtro" class="form-label">Filtro</label>
+                                    <input type="text" class="form-control" id="filtro" name="filtro[]" list="filtro_options" placeholder="Seleccione o escriba un filtro">
                                     <datalist id="filtro_options">
                                         <option value="Antireflejo">
                                         <option value="UV">
@@ -503,15 +366,10 @@
                                     <label class="form-label">Desc. Lunas (%)</label>
                                     <input type="number" class="form-control input-sm" name="l_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">Foto Lunas (Opcional)</label>
-                                    <input type="file" class="form-control form-control-sm" name="l_foto[]" accept="image/*">
-                                    <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
-                                </div>
                             </div>
                         </div>
                         <div class="card-footer">
-                            <button type="button" class="btn btn-success" onclick="duplicateLunas()">Agregar Receta</button>
+                            <button type="button" class="btn btn-success" onclick="duplicateLunas()">Agregar más Lunas</button>
                         </div>
                     </div>
 
@@ -534,7 +392,7 @@
                                         <option value="">Seleccione un Item del Inventario</option>
                                         @foreach ($accesorios as $item)
                                             <option value="{{ $item->id }}">
-                                                {{ $item->codigo }} - {{ $item->lugar }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }} - {{ $item->empresa ? $item->empresa->nombre : 'Sin empresa' }}
+                                                {{ $item->codigo }} - {{ $item->lugar }} - N°{{ $item->numero }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -546,13 +404,6 @@
                                 <div class="col-md-3">
                                     <label for="d_precio_descuento[]" class="form-label">Desc. Accesorio (%)</label>
                                     <input type="number" class="form-control input-sm" id="d_precio_descuento[]" name="d_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
-                                </div>
-                            </div>
-                            <div class="row mb-3">
-                                <div class="col-md-12">
-                                    <label for="d_foto[]" class="form-label">Foto Accesorio (Opcional)</label>
-                                    <input type="file" class="form-control form-control-sm" id="d_foto[]" name="d_foto[]" accept="image/*">
-                                    <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
                                 </div>
                             </div>
                         </div>
@@ -588,27 +439,6 @@
                                         <option value="Estuches">
                                         <option value="Otros">
                                     </datalist>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Observación --}}
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">Observación</h3>
-                            <div class="card-tools">
-                                <button type="button" class="btn btn-tool" data-card-widget="collapse">
-                                    <i class="fas fa-minus"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-12">
-                                    <label for="observacion" class="form-label">Observación</label>
-                                    <textarea class="form-control" id="observacion" name="observacion" rows="3" 
-                                              placeholder="Ingrese cualquier observación adicional sobre el pedido"></textarea>
                                 </div>
                             </div>
                         </div>
@@ -702,723 +532,96 @@
                 });
             });
 
-            // Búsqueda simplificada solo para historial clínico con selectpicker
-            $('#buscar_historial_clinico').on('changed.bs.select', function() {
-                const valor = $(this).val();
-                
-                if (!valor) {
-                    limpiarCamposAutocompletado();
-                    return;
-                }
-                
-                // Obtener datos del option seleccionado
-                const selectedOption = $(this).find('option:selected');
-                const cedula = selectedOption.data('cedula');
-                const celular = selectedOption.data('celular');
-                const correo = selectedOption.data('correo');
-                const direccion = selectedOption.data('direccion');
-                const empresa = selectedOption.data('sucursal');
-                const fecha = selectedOption.data('fecha');
-                
-                // Mostrar información del registro seleccionado
-                mostrarInformacionHistorial(empresa, fecha);
-                
-                // Llenar campos básicos
-                $('#cliente').val(extraerNombreLimpio(valor));
-                $('#paciente').val(extraerNombreLimpio(valor));
-                
-                // Llenar campos adicionales si existen
-                if (celular) $('#celular').val(celular);
-                if (correo) $('#correo_electronico').val(correo);
-                if (direccion) $('#direccion').val(direccion);
-                
-                // Buscar datos completos del historial clínico
-                if (cedula) {
-                    buscarHistorialClinicoPorCedula(cedula);
-                } else {
-                    buscarHistorialClinicoPorNombreCompleto(extraerNombreLimpio(valor));
-                }
-            });
+            // Manejar la búsqueda unificada de cliente/paciente
+            document.getElementById('buscar_cliente_paciente').addEventListener('change', function() {
+                const selectedOption = document.querySelector(`#clientes_pacientes_list option[value="${this.value}"]`);
+                if (selectedOption) {
+                    const tipo = selectedOption.dataset.tipo;
+                    const valor = this.value;
 
-            // Manejar cédula - buscar en historial clínico y pedidos anteriores
-            $('#cedula').on('input', function() {
-                const valor = this.value.trim();
-                if (valor.length >= 3) {
-                    setTimeout(() => {
-                        const valorActual = $('#cedula').val();
-                        if (valorActual === valor) {
-                            // Buscar en historial clínico
-                            buscarHistorialClinicoPorCedula(valor);
-                            // Buscar información de pedidos anteriores
-                            buscarPedidoAnteriorPorRut(valor);
+                    if (tipo === 'cliente') {
+                        document.getElementById('cliente').value = valor;
+                        cargarDatosPersonales('cliente', valor);
+                    } else if (tipo === 'paciente') {
+                        document.getElementById('paciente').value = valor;
+                        cargarDatosPersonales('paciente', valor);
+                    }
+                }
+            });            // Autocompletado eliminado para cédula, celular y correo_electronico
+            // document.getElementById('cedula').addEventListener('change', function() {
+            //     if (this.value.trim()) {
+            //         cargarDatosPersonales('cedula', this.value);
+            //     }
+            // });
+
+            // Los campos celular y correo_electronico ya NO tendrán autocompletado automático
+            // document.getElementById('celular').addEventListener('change', function() {
+            //     if (this.value.trim()) {
+            //         cargarDatosPersonales('celular', this.value);
+            //     }
+            // });
+
+            // document.getElementById('correo_electronico').addEventListener('change', function() {
+            //     if (this.value.trim()) {
+            //         cargarDatosPersonales('correo', this.value);
+            //     }
+            // });
+
+            // Función para cargar datos personales según el campo proporcionado
+            function cargarDatosPersonales(campo, valor) {
+                if (!valor) return;
+
+                // Mostrar indicador de carga
+                const elemento = document.getElementById(campo === 'correo' ? 'correo_electronico' : campo);
+                if (!elemento.nextElementSibling || !elemento.nextElementSibling.classList.contains('loading-indicator')) {
+                    const loadingIndicator = document.createElement('small');
+                    loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
+                    loadingIndicator.textContent = 'Cargando datos...';
+                    elemento.parentNode.appendChild(loadingIndicator);
+                }
+
+                // Hacer petición AJAX para obtener datos del último pedido
+                fetch(`/api/pedidos/buscar-por/${campo}/${encodeURIComponent(valor)}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Error al obtener datos');
                         }
-                    }, 300);
-                }
-            });
-
-            // Agregar event listeners para campos de medidas de la primera sección
-            const camposMedidas = document.querySelectorAll('.medida-input');
-            camposMedidas.forEach(campo => {
-                campo.addEventListener('input', formatearMedidasLunas);
-                campo.addEventListener('blur', formatearMedidasLunas);
-            });
-
-            // Agregar event listeners para campos de material de la primera sección
-            const materialOD = document.querySelector('#material_od');
-            const materialOI = document.querySelector('#material_oi');
-            
-            if (materialOD) {
-                materialOD.addEventListener('input', formatearMaterial);
-            }
-            if (materialOI) {
-                materialOI.addEventListener('input', formatearMaterial);
-            }
-
-            // Agregar event listeners para campos de filtros de la primera sección
-            const filtroInputs = document.querySelectorAll('#filtros-container-0 .filtro-input');
-            filtroInputs.forEach(input => {
-                input.addEventListener('input', function() {
-                    actualizarFiltrosHidden(this.closest('.col-md-3'));
-                });
-                input.addEventListener('blur', function() {
-                    actualizarFiltrosHidden(this.closest('.col-md-3'));
-                });
-            });
-
-            // Inicializar actualización automática del número de orden
-            inicializarActualizacionNumeroOrden();
-
-        });
-
-        // Funciones simplificadas para historial clínico únicamente
-        
-        // Función para extraer solo el nombre limpio sin información adicional
-        window.extraerNombreLimpio = function(valorCompleto) {
-            return valorCompleto.replace(/\s*\([^)]*\)\s*/g, '').trim();
-        };
-        
-        // Función para limpiar campos de autocompletado
-        window.limpiarCamposAutocompletado = function() {
-            const mensajesPrevios = document.querySelectorAll(
-                '.loading-indicator-historial, .info-historial, .error-historial, .alert-success, .info-historial-registro, .loading-indicator-pedido, .info-pedido-anterior'
-            );
-            mensajesPrevios.forEach(msg => msg.remove());
-        };
-        
-        // Función para mostrar información del historial seleccionado
-        window.mostrarInformacionHistorial = function(empresa, fecha) {
-            limpiarCamposAutocompletado();
-            
-            const infoMsg = document.createElement('div');
-            infoMsg.classList.add('alert', 'alert-info', 'mt-2', 'alert-sm', 'info-historial-registro');
-            infoMsg.style.fontSize = '0.875rem';
-            infoMsg.style.padding = '0.5rem';
-            
-            let textoInfo = 'Registro del <strong>HISTORIAL CLÍNICO</strong>';
-            if (empresa && empresa !== 'SIN EMPRESA') {
-                textoInfo += ` - Empresa: <strong>${empresa}</strong>`;
-            }
-            if (fecha && fecha !== 'Sin fecha') {
-                textoInfo += ` - Fecha: <strong>${fecha}</strong>`;
-            }
-            
-            infoMsg.innerHTML = textoInfo;
-            document.getElementById('buscar_historial_clinico').parentNode.appendChild(infoMsg);
-            
-            setTimeout(() => {
-                infoMsg.remove();
-            }, 4000);
-        };
-
-        // Funciones de búsqueda en historial clínico - SIMPLIFICADAS
-        window.buscarHistorialClinico = function(nombreCompleto) {
-            if (!nombreCompleto) return;
-            buscarHistorialClinicoPorNombreCompleto(nombreCompleto);
-        };
-        
-        window.buscarHistorialClinicoPorCedula = function(cedula) {
-            if (!cedula) return;
-            buscarHistorialClinicoPorCampo('cedula', cedula);
-        };
-
-        window.buscarHistorialClinicoPorNombreCompleto = function(nombreCompleto) {
-            if (!nombreCompleto) return;
-            
-            // Remover indicadores de carga previos
-            limpiarCamposAutocompletado();
-            
-            // Mostrar indicador de carga
-            const loadingIndicator = document.createElement('small');
-            loadingIndicator.classList.add('loading-indicator-historial', 'text-muted', 'ml-2');
-            loadingIndicator.textContent = 'Buscando en historial clínico...';
-            document.getElementById('buscar_historial_clinico').parentNode.appendChild(loadingIndicator);
-            
-            // Petición AJAX
-            const url = `/api/historiales-clinicos/buscar-nombre-completo/${encodeURIComponent(nombreCompleto)}`;
-            
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => {
-                            throw new Error(err.message || 'Error al obtener datos del historial');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    procesarRespuestaHistorialClinico(data);
-                })
-                .catch(error => {
-                    procesarErrorHistorialClinico(error);
-                });
-        };
-        
-        window.buscarHistorialClinicoPorCampo = function(campo, valor) {
-            if (!valor) return;
-            
-            // Remover indicadores de carga previos
-            limpiarCamposAutocompletado();
-            
-            // Mostrar indicador de carga
-            const loadingIndicator = document.createElement('small');
-            loadingIndicator.classList.add('loading-indicator-historial', 'text-muted', 'ml-2');
-            loadingIndicator.textContent = 'Buscando en historial clínico...';
-            document.getElementById('buscar_historial_clinico').parentNode.appendChild(loadingIndicator);
-            
-            // Petición AJAX
-            const url = `/api/historiales-clinicos/buscar-por/${campo}/${encodeURIComponent(valor)}`;
-            
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => {
-                            throw new Error(err.message || 'Error al obtener datos del historial');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    procesarRespuestaHistorialClinico(data);
-                })
-                .catch(error => {
-                    procesarErrorHistorialClinico(error);
-                });
-        };
-
-        // Función para procesar respuestas del historial clínico - MEJORADA CON MÚLTIPLES RECETAS
-        window.procesarRespuestaHistorialClinico = function(data) {
-            // Remover indicador de carga
-            limpiarCamposAutocompletado();
-            
-            if (data.success && data.historial) {
-                // Mostrar notificación de éxito
-                const successMsg = document.createElement('div');
-                successMsg.classList.add('alert', 'alert-success', 'mt-2', 'alert-sm');
-                
-                let textoExito = 'Historial clínico cargado correctamente';
-                if (data.historial.empresa && data.historial.empresa.nombre) {
-                    textoExito += ` - Empresa: ${data.historial.empresa.nombre.toUpperCase()}`;
-                }
-                if (data.historial.created_at) {
-                    textoExito += ` - Fecha: ${data.historial.created_at}`;
-                }
-                if (data.historial.cantidadRecetas && data.historial.cantidadRecetas > 1) {
-                    textoExito += ` - ${data.historial.cantidadRecetas} recetas encontradas`;
-                }
-                
-                successMsg.textContent = textoExito;
-                successMsg.style.fontSize = '0.875rem';
-                successMsg.style.padding = '0.5rem';
-                document.getElementById('buscar_historial_clinico').parentNode.appendChild(successMsg);
-                
-                setTimeout(() => successMsg.remove(), 4000);
-                
-                // Autocompletar campos de datos personales (solo si están vacíos)
-                if (!$('#cedula').val() && data.historial.cedula) {
-                    $('#cedula').val(data.historial.cedula);
-                }
-                if (!$('#celular').val() && data.historial.celular) {
-                    $('#celular').val(data.historial.celular);
-                }
-                if (!$('#correo_electronico').val() && data.historial.correo) {
-                    $('#correo_electronico').val(data.historial.correo);
-                }
-                if (!$('#direccion').val() && data.historial.direccion) {
-                    $('#direccion').val(data.historial.direccion);
-                }
-                if (!$('#empresa_id').val() && data.historial.empresa_id) {
-                    $('#empresa_id').val(data.historial.empresa_id);
-                }
-                
-                // Procesar recetas
-                if (data.historial.todasLasRecetas && data.historial.todasLasRecetas.length > 0) {
-                    // Abrir sección de lunas
-                    const lunasHeader = document.querySelector('#lunas-container .card-header');
-                    const lunasCollapsed = document.querySelector('#lunas-container').classList.contains('collapsed-card');
-                    if (lunasCollapsed && lunasHeader) {
-                        lunasHeader.querySelector('.btn-tool').click();
-                    }
-                    
-                    // Limpiar recetas existentes si hay más de una sección
-                    const recetasExistentes = document.querySelectorAll('#lunas-container .card-body');
-                    if (recetasExistentes.length > 1) {
-                        // Mantener solo la primera sección
-                        for (let i = 1; i < recetasExistentes.length; i++) {
-                            recetasExistentes[i].parentElement.remove();
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Remover indicador de carga
+                        const loadingIndicator = elemento.parentNode.querySelector('.loading-indicator');
+                        if (loadingIndicator) {
+                            loadingIndicator.remove();
                         }
-                    }
-                    
-                    // Cargar la primera receta en la sección existente
-                    cargarRecetaEnSeccion(data.historial.todasLasRecetas[0], 0);
-                    
-                    // Si hay más de una receta, crear secciones adicionales
-                    if (data.historial.todasLasRecetas.length > 1) {
-                        for (let i = 1; i < data.historial.todasLasRecetas.length; i++) {
-                            duplicateLunas();
-                            // Cargar la receta en la nueva sección creada después de un breve delay
-                            setTimeout(() => {
-                                cargarRecetaEnSeccion(data.historial.todasLasRecetas[i], i);
-                            }, 100 * i);
-                        }
-                    }
-                    
-                    // Cargar información adicional del historial clínico en todas las secciones
-                    setTimeout(() => {
-                        cargarInformacionHistorialEnSecciones(data.historial);
-                    }, 500);
-                } else if (data.historial.od_esfera !== undefined) {
-                    // Compatibilidad con formato anterior - una sola receta
-                    cargarRecetaLegacy(data.historial);
-                }
-            } else {
-                // No se encontraron datos
-                const infoMsg = document.createElement('small');
-                infoMsg.classList.add('text-muted', 'ml-2', 'info-historial');
-                infoMsg.textContent = 'No se encontraron datos en el historial clínico';
-                document.getElementById('buscar_historial_clinico').parentNode.appendChild(infoMsg);
-                
-                setTimeout(() => infoMsg.remove(), 2000);
-            }
-        };
-        
-        // Función para cargar una receta en una sección específica
-        window.cargarRecetaEnSeccion = function(receta, indiceSeccion) {
-            const formatearValorParaCampo = (valor) => {
-                if (valor === null || valor === undefined || valor === '') return '';
-                if (!isNaN(parseFloat(valor))) {
-                    const num = parseFloat(valor);
-                    return num > 0 ? `+${num.toFixed(2)}` : `${num.toFixed(2)}`;
-                }
-                return valor;
-            };
-            
-            const setValueByName = (name, value) => {
-                const elements = document.getElementsByName(name);
-                if (elements[indiceSeccion] && value !== null && value !== undefined && value !== '') {
-                    // Reemplazar si el campo está vacío o tiene un valor por defecto de "0"
-                    const currentValue = elements[indiceSeccion].value.trim();
-                    if (!currentValue || currentValue === '0' || currentValue === '0.00') {
-                        elements[indiceSeccion].value = value;
-                    }
-                }
-            };
-            
-            // Cargar tipo de receta
-            if (receta.tipo) {
-                setValueByName('tipo[]', receta.tipo);
-            }
-            
-            // Cargar campos de prescripción
-            setValueByName('od_esfera[]', formatearValorParaCampo(receta.od_esfera));
-            setValueByName('od_cilindro[]', formatearValorParaCampo(receta.od_cilindro));
-            setValueByName('od_eje[]', receta.od_eje ? `${receta.od_eje}°` : '');
-            setValueByName('oi_esfera[]', formatearValorParaCampo(receta.oi_esfera));
-            setValueByName('oi_cilindro[]', formatearValorParaCampo(receta.oi_cilindro));
-            setValueByName('oi_eje[]', receta.oi_eje ? `${receta.oi_eje}°` : '');
-            setValueByName('add[]', formatearValorParaCampo(receta.od_adicion || receta.oi_adicion));
-            setValueByName('dp[]', receta.dp || '');
-            setValueByName('l_detalle[]', receta.observaciones || '');
-            
-            // Actualizar automáticamente el campo l_medida después de un breve delay
-            setTimeout(() => {
-                // Buscar la sección específica por índice
-                const secciones = document.querySelectorAll('#lunas-container .card-body, [data-lunas-section]');
-                if (secciones[indiceSeccion]) {
-                    formatearMedidasLunasSeccion(secciones[indiceSeccion]);
-                } else {
-                    // Fallback para la primera sección
-                    formatearMedidasLunas();
-                }
-                formatearMaterial();
-            }, 200);
-        };
-        
-        // Función de compatibilidad para formato anterior
-        window.cargarRecetaLegacy = function(historial) {
-            // Abrir sección de lunas
-            const lunasHeader = document.querySelector('#lunas-container .card-header');
-            const lunasCollapsed = document.querySelector('#lunas-container').classList.contains('collapsed-card');
-            if (lunasCollapsed && lunasHeader) {
-                lunasHeader.querySelector('.btn-tool').click();
-            }
-            
-            // Llenar campos individuales de la tabla de prescripción
-            const setValueIfEmpty = (selector, value) => {
-                const element = document.querySelector(selector);
-                if (element && value !== null && value !== undefined && value !== '') {
-                    // Reemplazar si el campo está vacío o tiene un valor por defecto de "0"
-                    const currentValue = element.value.trim();
-                    if (!currentValue || currentValue === '0' || currentValue === '0.00') {
-                        element.value = value;
-                    }
-                }
-            };
-            
-            // Formatear valores para mostrar
-            const formatearValorParaCampo = (valor) => {
-                if (valor === null || valor === undefined || valor === '') return '';
-                if (!isNaN(parseFloat(valor))) {
-                    const num = parseFloat(valor);
-                    return num > 0 ? `+${num.toFixed(2)}` : `${num.toFixed(2)}`;
-                }
-                return valor;
-            };
-            
-            // Cargar tipo de receta si está disponible
-            if (historial.tipo) {
-                setValueIfEmpty('[name="tipo[]"]', historial.tipo);
-            }
-            
-            // Llenar campos individuales de prescripción
-            setValueIfEmpty('[name="od_esfera[]"]', formatearValorParaCampo(historial.od_esfera));
-            setValueIfEmpty('[name="od_cilindro[]"]', formatearValorParaCampo(historial.od_cilindro));
-            setValueIfEmpty('[name="od_eje[]"]', historial.od_eje ? `${historial.od_eje}°` : '');
-            setValueIfEmpty('[name="oi_esfera[]"]', formatearValorParaCampo(historial.oi_esfera));
-            setValueIfEmpty('[name="oi_cilindro[]"]', formatearValorParaCampo(historial.oi_cilindro));
-            setValueIfEmpty('[name="oi_eje[]"]', historial.oi_eje ? `${historial.oi_eje}°` : '');
-            setValueIfEmpty('[name="add[]"]', formatearValorParaCampo(historial.add));
-            setValueIfEmpty('[name="dp[]"]', historial.dp || '');
-            setValueIfEmpty('[name="l_detalle[]"]', historial.observaciones || '');
-            
-            // Cargar información adicional del historial clínico
-            if (historial.tipo_lente) {
-                setValueIfEmpty('[name="tipo_lente[]"]', historial.tipo_lente);
-            }
-            
-            // Cargar material del historial clínico
-            if (historial.material) {
-                // Si hay material definido en el historial, aplicarlo a ambos ojos
-                setValueIfEmpty('[name="material_od[]"]', historial.material);
-                setValueIfEmpty('[name="material_oi[]"]', historial.material);
-            }
-            
-            // Cargar filtro del historial clínico
-            if (historial.filtro) {
-                // Buscar el primer input de filtro y completarlo
-                const primerFiltro = document.querySelector('[name="filtro[]"]').parentElement.querySelector('.filtro-input');
-                if (primerFiltro && !primerFiltro.value) {
-                    primerFiltro.value = historial.filtro;
-                    // Actualizar el campo hidden
-                    actualizarFiltrosHidden(primerFiltro.closest('.filtros-container'));
-                }
-            }
-            
-            // Actualizar automáticamente el campo l_medida después de un breve delay
-            setTimeout(() => {
-                formatearMedidasLunas();
-                formatearMaterial();
-            }, 100);
-        };
-        
-        // Función para cargar información adicional del historial clínico en todas las secciones de lunas
-        window.cargarInformacionHistorialEnSecciones = function(historial) {
-            const setValueIfEmpty = (selector, value) => {
-                const element = document.querySelector(selector);
-                if (element && value !== null && value !== undefined && value !== '') {
-                    // Reemplazar si el campo está vacío o tiene un valor por defecto de "0"
-                    const currentValue = element.value.trim();
-                    if (!currentValue || currentValue === '0' || currentValue === '0.00') {
-                        element.value = value;
-                    }
-                }
-            };
-            
-            // Cargar tipo de lente en todas las secciones donde esté vacío
-            if (historial.tipo_lente) {
-                const tipoLenteInputs = document.querySelectorAll('[name="tipo_lente[]"]');
-                tipoLenteInputs.forEach(input => {
-                    const currentValue = input.value.trim();
-                    if (!currentValue || currentValue === '0' || currentValue === '0.00') {
-                        input.value = historial.tipo_lente;
-                    }
-                });
-            }
-            
-            // Cargar material en todas las secciones donde esté vacío
-            if (historial.material) {
-                const materialOdInputs = document.querySelectorAll('[name="material_od[]"]');
-                const materialOiInputs = document.querySelectorAll('[name="material_oi[]"]');
-                
-                materialOdInputs.forEach(input => {
-                    const currentValue = input.value.trim();
-                    if (!currentValue || currentValue === '0' || currentValue === '0.00') {
-                        input.value = historial.material;
-                    }
-                });
-                
-                materialOiInputs.forEach(input => {
-                    const currentValue = input.value.trim();
-                    if (!currentValue || currentValue === '0' || currentValue === '0.00') {
-                        input.value = historial.material;
-                    }
-                });
-                
-                // Actualizar campos material unificados
-                setTimeout(() => {
-                    formatearMaterial();
-                }, 100);
-            }
-            
-            // Cargar filtro en todas las secciones donde esté vacío
-            if (historial.filtro) {
-                const filtroContainers = document.querySelectorAll('.filtros-container');
-                filtroContainers.forEach(container => {
-                    const primerFiltro = container.querySelector('.filtro-input');
-                    if (primerFiltro) {
-                        const currentValue = primerFiltro.value.trim();
-                        if (!currentValue || currentValue === '0' || currentValue === '0.00') {
-                            primerFiltro.value = historial.filtro;
-                            // Actualizar el campo hidden correspondiente
-                            actualizarFiltrosHidden(container);
-                        }
-                    }
-                });
-            }
-        };
 
-        // Función para procesar errores del historial clínico - SIMPLIFICADA
-        window.procesarErrorHistorialClinico = function(error) {
-            limpiarCamposAutocompletado();
-            
-            const errorMsg = document.createElement('small');
-            errorMsg.classList.add('text-warning', 'ml-2', 'error-historial');
-            errorMsg.textContent = 'No se encontraron datos del historial clínico';
-            document.getElementById('buscar_historial_clinico').parentNode.appendChild(errorMsg);
-            
-            setTimeout(() => errorMsg.remove(), 3000);
-        };
-
-        // Función para buscar información de pedidos anteriores por RUT
-        window.buscarPedidoAnteriorPorRut = function(rut) {
-            if (!rut || rut.length < 3) return;
-            
-            // Mostrar indicador de carga para pedidos anteriores
-            const loadingIndicator = document.createElement('small');
-            loadingIndicator.classList.add('loading-indicator-pedido', 'text-primary', 'ml-2');
-            loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando pedidos anteriores...';
-            document.getElementById('cedula').parentNode.appendChild(loadingIndicator);
-            
-            // Petición AJAX para buscar pedidos anteriores
-            const url = `/api/pedidos/buscar-rut/${encodeURIComponent(rut)}`;
-            
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) {
-                        if (response.status === 404) {
-                            return null; // No hay pedidos anteriores, no es un error
-                        }
-                        return response.json().then(err => {
-                            throw new Error(err.message || 'Error al buscar pedidos anteriores');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // Remover indicador de carga
-                    document.querySelectorAll('.loading-indicator-pedido').forEach(el => el.remove());
-                    
-                    if (data && data.success && data.pedido) {
-                        procesarRespuestaPedidoAnterior(data);
-                    } else {
-                        mostrarInfoPedidoAnterior('No se encontraron pedidos anteriores para este RUT');
-                    }
-                })
-                .catch(error => {
-                    // Remover indicador de carga
-                    document.querySelectorAll('.loading-indicator-pedido').forEach(el => el.remove());
-                    
-                    // No mostrar error si no hay pedidos anteriores
-                    console.log('No se encontraron pedidos anteriores:', error.message);
-                });
-        };
-
-        // Función para procesar la respuesta de pedidos anteriores
-        window.procesarRespuestaPedidoAnterior = function(data) {
-            const pedido = data.pedido;
-            const receta = data.receta;
-            
-            // Autocompletar información del cliente si los campos están vacíos
-            if (!$('#cliente').val() && pedido.cliente) {
-                $('#cliente').val(pedido.cliente);
-            }
-            if (!$('#paciente').val() && pedido.paciente) {
-                $('#paciente').val(pedido.paciente);
-            }
-            if (!$('#celular').val() && pedido.celular) {
-                $('#celular').val(pedido.celular);
-            }
-            if (!$('#correo_electronico').val() && pedido.correo_electronico) {
-                $('#correo_electronico').val(pedido.correo_electronico);
-            }
-            if (!$('#direccion').val() && pedido.direccion) {
-                $('#direccion').val(pedido.direccion);
-            }
-            if (!$('#empresa_id').val() && pedido.empresa_id) {
-                $('#empresa_id').val(pedido.empresa_id);
-            }
-            if (!$('#metodo_envio').val() && pedido.metodo_envio) {
-                $('#metodo_envio').val(pedido.metodo_envio);
-            }
-            
-            // Autocompletar información de la receta si existe
-            if (receta && Object.keys(receta).length > 0) {
-                // Expandir la sección de lunas si está colapsada
-                const lunasContainer = document.querySelector('#lunas-container');
-                if (lunasContainer && lunasContainer.classList.contains('collapsed-card')) {
-                    const collapseButton = lunasContainer.querySelector('.btn-tool');
-                    if (collapseButton) {
-                        collapseButton.click();
-                    }
-                }
-                
-                // Llenar campos de receta
-                setTimeout(() => {
-                    if (receta.tipo && !$('[name="tipo[]"]').first().val()) {
-                        $('[name="tipo[]"]').first().val(receta.tipo);
-                    }
-                    if (receta.tipo_lente && !$('[name="tipo_lente[]"]').first().val()) {
-                        $('[name="tipo_lente[]"]').first().val(receta.tipo_lente);
-                    }
-                    if (receta.material && !$('[name="material[]"]').first().val()) {
-                        $('[name="material[]"]').first().val(receta.material);
-                    }
-                    if (receta.filtro && !$('.filtros-hidden').first().val()) {
-                        $('.filtros-hidden').first().val(receta.filtro);
-                        // Actualizar display de filtros
-                        const filtroContainer = document.querySelector('.filtros-container');
-                        if (filtroContainer) {
-                            filtroContainer.innerHTML = `<div class="filtro-item mb-2">
-                                <span class="badge badge-info">${receta.filtro}</span>
-                            </div>`;
-                        }
-                    }
-                    if (receta.l_medida && !$('[name="l_medida[]"]').first().val()) {
-                        $('[name="l_medida[]"]').first().val(receta.l_medida);
-                    }
-                    if (receta.l_detalle && !$('[name="l_detalle[]"]').first().val()) {
-                        $('[name="l_detalle[]"]').first().val(receta.l_detalle);
-                    }
-                }, 100);
-            }
-            
-            // Mostrar mensaje de éxito
-            mostrarInfoPedidoAnterior(`Información cargada del último pedido (${pedido.cliente})`, 'success');
-        };
-
-        // Función para mostrar información sobre pedidos anteriores
-        window.mostrarInfoPedidoAnterior = function(mensaje, tipo = 'info') {
-            // Remover mensajes previos
-            document.querySelectorAll('.info-pedido-anterior').forEach(el => el.remove());
-            
-            const infoMsg = document.createElement('small');
-            infoMsg.classList.add('info-pedido-anterior', 'ml-2');
-            
-            if (tipo === 'success') {
-                infoMsg.classList.add('text-success');
-                infoMsg.innerHTML = `<i class="fas fa-check-circle"></i> ${mensaje}`;
-            } else {
-                infoMsg.classList.add('text-muted');
-                infoMsg.innerHTML = `<i class="fas fa-info-circle"></i> ${mensaje}`;
-            }
-            
-            document.getElementById('cedula').parentNode.appendChild(infoMsg);
-            
-            setTimeout(() => infoMsg.remove(), 4000);
-        };
-
-        // Funciones para actualización automática del número de orden
-        let numeroOrdenInterval;
-        let actualizacionActiva = true;
-
-        window.inicializarActualizacionNumeroOrden = function() {
-            // Actualizar inmediatamente
-            actualizarNumeroOrden();
-            
-            // Configurar intervalo para actualizar cada segundo
-            numeroOrdenInterval = setInterval(() => {
-                if (actualizacionActiva) {
-                    actualizarNumeroOrden();
-                }
-            }, 1000);
-        };
-
-        window.actualizarNumeroOrden = function() {
-            if (!actualizacionActiva) return;
-            
-            fetch('/api/pedidos/next-order-number')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Error al obtener número de orden');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success && actualizacionActiva) {
-                        const numeroOrdenField = document.getElementById('numero_orden');
-                        if (numeroOrdenField) {
-                            // Solo actualizar si el campo está vacío o tiene un valor menor
-                            const valorActual = parseInt(numeroOrdenField.value) || 0;
-                            if (valorActual < data.next_order_number) {
-                                numeroOrdenField.value = data.next_order_number;
-                                
-                                // Mostrar brevemente que se actualizó (opcional)
-                                numeroOrdenField.style.backgroundColor = '#d4edda';
-                                setTimeout(() => {
-                                    numeroOrdenField.style.backgroundColor = '';
-                                }, 500);
+                        if (data.success && data.pedido) {
+                            // Autocompletar campos excepto el que generó la búsqueda
+                            if (campo !== 'cliente') {
+                                document.getElementById('cliente').value = data.pedido.cliente || '';
+                            }
+                            if (campo !== 'cedula') {
+                                document.getElementById('cedula').value = data.pedido.cedula || '';
+                            }
+                            if (campo !== 'paciente') {
+                                document.getElementById('paciente').value = data.pedido.paciente || '';
+                            }
+                            if (campo !== 'celular') {
+                                document.getElementById('celular').value = data.pedido.celular || '';
+                            }
+                            if (campo !== 'correo') {
+                                document.getElementById('correo_electronico').value = data.pedido.correo_electronico || '';
                             }
                         }
-                    }
-                })
-                .catch(error => {
-                    console.warn('Error al actualizar número de orden:', error);
-                    // No mostrar error al usuario para no interferir con la experiencia
-                });
-        };
-
-        // Detener la actualización automática cuando se envíe el formulario
-        window.detenerActualizacionNumeroOrden = function() {
-            actualizacionActiva = false;
-            if (numeroOrdenInterval) {
-                clearInterval(numeroOrdenInterval);
-                numeroOrdenInterval = null;
-            }
-        };
-
-        // Agregar event listener al formulario para detener actualización al enviar
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('pedidoForm');
-            if (form) {
-                form.addEventListener('submit', detenerActualizacionNumeroOrden);
-            }
-            
-            // Detener actualización automática si el usuario modifica manualmente el número de orden
-            const numeroOrdenField = document.getElementById('numero_orden');
-            if (numeroOrdenField) {
-                numeroOrdenField.addEventListener('input', function() {
-                    // Detener actualizaciones automáticas si el usuario modifica el campo
-                    detenerActualizacionNumeroOrden();
-                });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // Remover indicador de carga en caso de error
+                        const loadingIndicator = elemento.parentNode.querySelector('.loading-indicator');
+                        if (loadingIndicator) {
+                            loadingIndicator.remove();
+                        }
+                    });
             }
         });
 
@@ -1460,9 +663,9 @@
             const valorCompra = parseFloat(document.getElementById('valor_compra').value) || 0;
             total += valorCompra;
 
-            // Actualizar campos - sin decimales para Chile
-            document.getElementById('total').value = Math.round(total);
-            document.getElementById('saldo').value = Math.round(total);
+            // Actualizar campos
+            document.getElementById('total').value = total.toFixed(2);
+            document.getElementById('saldo').value = total.toFixed(2);
         }
 
         // Event listeners para precios
@@ -1481,78 +684,52 @@
             }
         });
 
-        // Mostrar todas las opciones del datalist al hacer clic en el input - MÉTODO SIMPLE
-        $('input[list]').on('click', function() {
-            // Forzar que se muestren todas las opciones
-            if (this.value === '') {
-                this.value = ' ';
+        // Mejorar el comportamiento de los inputs con datalist
+        document.querySelectorAll('input[list]').forEach(input => {
+            // Mostrar opciones al hacer clic
+            input.addEventListener('click', function() {
                 this.value = '';
-            }
-        });
-
-        // Aplicar el estilo de mayúsculas como en historial clínico
-        $('input[type="text"], input[type="email"], textarea').on('input', function() {
-            $(this).val($(this).val().toUpperCase());
-        });
-
-        // Función para formatear material OD/OI en campo unificado
-        window.formatearMaterial = function() {
-            // Buscar en todas las secciones de lunas
-            document.querySelectorAll('.luna-section, .card-body').forEach(seccion => {
-                const materialOD = seccion.querySelector('[name="material_od[]"]')?.value?.trim() || '';
-                const materialOI = seccion.querySelector('[name="material_oi[]"]')?.value?.trim() || '';
-                const materialUnificado = seccion.querySelector('[name="material[]"]');
-                
-                if (materialUnificado && (materialOD || materialOI)) {
-                    let materialTexto = '';
-                    const partes = [];
-                    if (materialOD) partes.push(`OD: ${materialOD}`);
-                    if (materialOI) partes.push(`OI: ${materialOI}`);
-                    materialTexto = partes.join(' | ');
-                    materialUnificado.value = materialTexto;
+                this.focus();
+                // Simular tecla hacia abajo para abrir el datalist
+                const event = new KeyboardEvent('keydown', {
+                    key: 'ArrowDown',
+                    code: 'ArrowDown',
+                    keyCode: 40,
+                    which: 40
+                });
+                this.dispatchEvent(event);
+            });
+            
+            // Mantener el foco por más tiempo
+            input.addEventListener('focus', function() {
+                setTimeout(() => {
+                    if (this.value === '') {
+                        const event = new KeyboardEvent('keydown', {
+                            key: 'ArrowDown',
+                            code: 'ArrowDown',
+                            keyCode: 40,
+                            which: 40
+                        });
+                        this.dispatchEvent(event);
+                    }
+                }, 100);
+            });
+            
+            // Filtrar opciones mientras se escribe
+            input.addEventListener('input', function() {
+                if (this.value.length > 0) {
+                    // El datalist se filtrará automáticamente
+                    setTimeout(() => {
+                        const event = new KeyboardEvent('keydown', {
+                            key: 'ArrowDown',
+                            code: 'ArrowDown',
+                            keyCode: 40,
+                            which: 40
+                        });
+                        this.dispatchEvent(event);
+                    }, 50);
                 }
             });
-        };
-
-        // Event listeners para formateo automático de material
-        document.addEventListener('DOMContentLoaded', function() {
-            // Agregar listeners para campos de material
-            const addMaterialListeners = (container) => {
-                const materialOD = container.querySelector('[name="material_od[]"]');
-                const materialOI = container.querySelector('[name="material_oi[]"]');
-                
-                if (materialOD) {
-                    materialOD.addEventListener('input', function() {
-                        formatearMaterialSeccion(container);
-                    });
-                }
-                if (materialOI) {
-                    materialOI.addEventListener('input', function() {
-                        formatearMaterialSeccion(container);
-                    });
-                }
-            };
-
-            // Función para formatear material en una sección específica
-            window.formatearMaterialSeccion = function(seccion) {
-                const materialOD = seccion.querySelector('[name="material_od[]"]')?.value?.trim() || '';
-                const materialOI = seccion.querySelector('[name="material_oi[]"]')?.value?.trim() || '';
-                const materialUnificado = seccion.querySelector('[name="material[]"]');
-                
-                if (materialUnificado) {
-                    let materialTexto = '';
-                    if (materialOD || materialOI) {
-                        const partes = [];
-                        if (materialOD) partes.push(`OD: ${materialOD}`);
-                        if (materialOI) partes.push(`OI: ${materialOI}`);
-                        materialTexto = partes.join(' | ');
-                    }
-                    materialUnificado.value = materialTexto;
-                }
-            };
-
-            // Agregar a la primera sección
-            addMaterialListeners(document);
         });
 
         function createNewFields(type) {
@@ -1575,7 +752,7 @@
                                     <option value="">Seleccione un armazón</option>
                                     @foreach($armazones as $armazon)
                                         <option value="{{ $armazon->id }}">
-                                            {{ $armazon->codigo }} - {{ $armazon->lugar }} - {{ $armazon->fecha ? \Carbon\Carbon::parse($armazon->fecha)->format('d/m/Y') : 'Sin fecha' }}
+                                            {{ $armazon->codigo }} - {{ $armazon->lugar }} - N°{{ $armazon->numero }} - {{ $armazon->fecha ? \Carbon\Carbon::parse($armazon->fecha)->format('d/m/Y') : 'Sin fecha' }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -1590,11 +767,6 @@
                                 <label class="form-label">Desc. Armazón (%)</label>
                                 <input type="number" class="form-control form-control-sm descuento-armazon" name="a_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Foto Armazón (Opcional)</label>
-                                <input type="file" class="form-control form-control-sm" name="a_foto[]" accept="image/*">
-                                <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
-                            </div>
                         </div>
                     </div>
                 `;
@@ -1608,103 +780,31 @@
                                 <i class="fas fa-times"></i> Eliminar
                             </button>
                         </div>
-                        {{-- Campo Tipo de Receta --}}
                         <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label"><strong>Tipo de Receta</strong></label>
-                                <select class="form-control" name="tipo[]">
-                                    <option value="">Seleccionar...</option>
-                                    <option value="CERCA">CERCA</option>
-                                    <option value="LEJOS">LEJOS</option>
-                                    <option value="BIFOCAL">BIFOCAL</option>
-                                    <option value="MULTIFOCAL">MULTIFOCAL</option>
-                                    <option value="PROGRESIVO">PROGRESIVO</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <label class="form-label">Prescripción/Medidas</label>
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-sm">
-                                        <thead class="thead-light">
-                                            <tr>
-                                                <th width="10%">Ojo</th>
-                                                <th width="20%">Esfera</th>
-                                                <th width="20%">Cilindro</th>
-                                                <th width="15%">Eje</th>
-                                                <th width="15%">ADD</th>
-                                                <th width="20%">Observaciones</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td class="align-middle text-center"><strong>OD</strong></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="od_esfera[]" placeholder="Ej: +2.00" value="0"></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="od_cilindro[]" placeholder="Ej: -1.50" value="0"></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="od_eje[]" placeholder="Ej: 90°" value="0"></td>
-                                                <td rowspan="2" class="align-middle"><input type="text" class="form-control form-control-sm" name="add[]" placeholder="Ej: +2.00" value="0"></td>
-                                                <td rowspan="2" class="align-middle"><textarea class="form-control form-control-sm" name="l_detalle[]" rows="3" placeholder="Detalles adicionales"></textarea></td>
-                                            </tr>
-                                            <tr>
-                                                <td class="align-middle text-center"><strong>OI</strong></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="oi_esfera[]" placeholder="Ej: +1.75" value="0"></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="oi_cilindro[]" placeholder="Ej: -1.25" value="0"></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="oi_eje[]" placeholder="Ej: 85°" value="0"></td>
-                                            </tr>
-                                            <tr>
-                                                <td class="text-center"><strong>DP</strong></td>
-                                                <td><input type="text" class="form-control form-control-sm" name="dp[]" placeholder="Ej: 62" value="0"></td>
-                                                <td colspan="4">
-                                                    <input type="hidden" name="l_medida[]">
-                                                    <small class="text-muted">Distancia Pupilar</small>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <small class="form-text text-muted">
-                                    <i class="fas fa-info-circle mr-1"></i>
-                                    <strong>Formato de ejemplo:</strong> OD: +2.00 -1.50 X90° / OI: +1.75 -1.25 X85° ADD: +2.00 DP: 62
-                                </small>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-3">
-                                <label for="tipo_lente" class="form-label">Tipo de Lente</label>
-                                <input type="text" class="form-control" name="tipo_lente[]" list="tipo_lente_options" 
-                                       placeholder="Seleccione o escriba un tipo de lente">
+                            <div class="col-md-6">
+                                <label class="form-label">Lunas Medidas</label>
+                                <input type="text" class="form-control" name="l_medida[]" oninput="calculateTotal()">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Material</label>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label class="form-label text-sm">OD (Ojo Derecho)</label>
-                                        <input type="text" class="form-control form-control-sm material-input" name="material_od[]" list="material_options" placeholder="Material OD">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label text-sm">OI (Ojo Izquierdo)</label>
-                                        <input type="text" class="form-control form-control-sm material-input" name="material_oi[]" list="material_options" placeholder="Material OI">
-                                    </div>
-                                </div>
-                                <input type="hidden" name="material[]" class="material-hidden">
+                                <label class="form-label">Lunas Detalle</label>
+                                <input type="text" class="form-control" name="l_detalle[]" oninput="calculateTotal()">
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Filtros</label>
-                                <div class="filtros-container" id="filtros-container-${index + 1}">
-                                    <div class="filtro-item mb-2">
-                                        <div class="input-group input-group-sm">
-                                            <input type="text" class="form-control filtro-input" list="filtro_options" placeholder="Filtro 1">
-                                            <div class="input-group-append">
-                                                <button type="button" class="btn btn-success btn-sm agregar-filtro" onclick="agregarFiltroSeccion(this)">
-                                                    <i class="fas fa-plus"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <input type="hidden" name="filtro[]" class="filtros-hidden">
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo de Lente</label>
+                                <input type="text" class="form-control" name="tipo_lente[]" list="tipo_lente_options" 
+                                       placeholder="Seleccione o escriba un tipo de lente" oninput="calculateTotal()">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Material</label>
+                                <input type="text" class="form-control" name="material[]" list="material_options"
+                                       placeholder="Seleccione o escriba un material" oninput="calculateTotal()">
+                            </div>
+                            <div class="col-md.4">
+                                <label class="form-label">Filtro</label>
+                                <input type="text" class="form-control" name="filtro[]" list="filtro_options"
+                                       placeholder="Seleccione o escriba un filtro" oninput="calculateTotal()">
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -1716,11 +816,6 @@
                                 <label class="form-label">Desc. Lunas (%)</label>
                                 <input type="number" class="form-control input-sm" name="l_precio_descuento[]" 
                                        min="0" max="100" value="0" oninput="calculateTotal()">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Foto Lunas (Opcional)</label>
-                                <input type="file" class="form-control form-control-sm" name="l_foto[]" accept="image/*">
-                                <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
                             </div>
                         </div>
                     </div>
@@ -1742,7 +837,7 @@
                                     <option value="" selected>Seleccione un Item del Inventario</option>
                                     @foreach ($accesorios as $item)
                                         <option value="{{ $item->id }}">
-                                            {{ $item->codigo }} - {{ $item->lugar }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}
+                                            {{ $item->codigo }} - {{ $item->lugar }} - N°{{ $item->numero }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -1754,13 +849,6 @@
                             <div class="col-md-3">
                                 <label class="form-label">Desc. Accesorio (%)</label>
                                 <input type="number" class="form-control input-sm" name="d_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <label class="form-label">Foto Accesorio (Opcional)</label>
-                                <input type="file" class="form-control form-control-sm" name="d_foto[]" accept="image/*">
-                                <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
                             </div>
                         </div>
                     </div>
@@ -1779,69 +867,6 @@
                 newPrecioInput.addEventListener('input', calculateTotal);
                 newDescuentoInput.addEventListener('input', calculateTotal);
             }
-            
-            // Agregar event listeners para los campos de medidas en secciones duplicadas de lunas
-            if (type === 'lunas') {
-                const newSection = container.lastElementChild;
-                const camposMedidas = [
-                    '[name="od_esfera[]"]',
-                    '[name="od_cilindro[]"]', 
-                    '[name="od_eje[]"]',
-                    '[name="oi_esfera[]"]',
-                    '[name="oi_cilindro[]"]',
-                    '[name="oi_eje[]"]',
-                    '[name="add[]"]',
-                    '[name="dp[]"]'
-                ];
-                
-                camposMedidas.forEach(selector => {
-                    const campo = newSection.querySelector(selector);
-                    if (campo) {
-                        campo.addEventListener('input', function() {
-                            // Formatear medidas para esta sección específica
-                            formatearMedidasLunasSeccion(newSection);
-                        });
-                        campo.addEventListener('blur', function() {
-                            formatearMedidasLunasSeccion(newSection);
-                        });
-                    }
-                });
-
-                // Agregar event listeners para los campos de material OD/OI
-                const materialOD = newSection.querySelector('[name="material_od[]"]');
-                const materialOI = newSection.querySelector('[name="material_oi[]"]');
-                
-                if (materialOD) {
-                    materialOD.addEventListener('input', function() {
-                        formatearMaterialSeccion(newSection);
-                    });
-                }
-                if (materialOI) {
-                    materialOI.addEventListener('input', function() {
-                        formatearMaterialSeccion(newSection);
-                    });
-                }
-
-                // Agregar event listeners para los campos de filtros
-                const filtroInputs = newSection.querySelectorAll('.filtro-input');
-                filtroInputs.forEach(input => {
-                    input.addEventListener('input', function() {
-                        actualizarFiltrosHidden(this.closest('.col-md-3'));
-                    });
-                    input.addEventListener('blur', function() {
-                        actualizarFiltrosHidden(this.closest('.col-md-3'));
-                    });
-                });
-            }
-            
-            // Aplicar el comportamiento simple de datalist a los nuevos campos también
-            $('input[list]').off('click').on('click', function() {
-                if (this.value === '') {
-                    this.value = ' ';
-                    this.value = '';
-                }
-            });
-            
             $('.selectpicker').selectpicker('refresh'); // Reevaluar el nuevo select
         }
 
@@ -1858,263 +883,6 @@
             createNewFields('accesorios');
             calculateTotal(); // recalcular total con el nuevo accesorio
         }
-
-        // Función para formatear las medidas de lunas automáticamente
-        function formatearMedidasLunas() {
-            // Obtener valores de los campos de la primera sección de lunas
-            const odEsfera = document.querySelector('[name="od_esfera[]"]')?.value?.trim() || '';
-            const odCilindro = document.querySelector('[name="od_cilindro[]"]')?.value?.trim() || '';
-            const odEje = document.querySelector('[name="od_eje[]"]')?.value?.trim() || '';
-            const oiEsfera = document.querySelector('[name="oi_esfera[]"]')?.value?.trim() || '';
-            const oiCilindro = document.querySelector('[name="oi_cilindro[]"]')?.value?.trim() || '';
-            const oiEje = document.querySelector('[name="oi_eje[]"]')?.value?.trim() || '';
-            const add = document.querySelector('[name="add[]"]')?.value?.trim() || '';
-            const dp = document.querySelector('[name="dp[]"]')?.value?.trim() || '';
-            
-            // Formatear valores con signos apropiados
-            const formatearValor = (valor) => {
-                if (!valor) return '';
-                const num = parseFloat(valor.replace(/[+\-]/g, ''));
-                if (isNaN(num)) return valor;
-                if (valor.includes('-') || num < 0) return `-${Math.abs(num).toFixed(2)}`;
-                return `+${num.toFixed(2)}`;
-            };
-            
-            // Construir la cadena de medidas
-            let medidaCompleta = '';
-            
-            // OD
-            if (odEsfera || odCilindro || odEje) {
-                medidaCompleta += 'OD: ';
-                if (odEsfera) medidaCompleta += formatearValor(odEsfera) + ' ';
-                if (odCilindro) medidaCompleta += formatearValor(odCilindro) + ' ';
-                if (odEje) medidaCompleta += (odEje.includes('X') ? odEje : `X${odEje}`) + (odEje.includes('°') ? '' : '°') + ' ';
-            }
-            
-            // OI
-            if (oiEsfera || oiCilindro || oiEje) {
-                if (medidaCompleta) medidaCompleta += '/ ';
-                medidaCompleta += 'OI: ';
-                if (oiEsfera) medidaCompleta += formatearValor(oiEsfera) + ' ';
-                if (oiCilindro) medidaCompleta += formatearValor(oiCilindro) + ' ';
-                if (oiEje) medidaCompleta += (oiEje.includes('X') ? oiEje : `X${oiEje}`) + (oiEje.includes('°') ? '' : '°') + ' ';
-            }
-            
-            // ADD
-            if (add) {
-                if (medidaCompleta) medidaCompleta += ' ';
-                medidaCompleta += `ADD: ${formatearValor(add)}`;
-            }
-            
-            // DP
-            if (dp) {
-                if (medidaCompleta) medidaCompleta += ' ';
-                medidaCompleta += `DP: ${dp}`;
-            }
-            
-            // Actualizar el campo oculto
-            const campoMedida = document.querySelector('#l_medida');
-            if (campoMedida) {
-                campoMedida.value = medidaCompleta.trim();
-            }
-        }
-
-        // Función para formatear las medidas de lunas en una sección específica
-        function formatearMedidasLunasSeccion(seccion) {
-            // Obtener valores de los campos de esta sección específica
-            const odEsfera = seccion.querySelector('[name="od_esfera[]"]')?.value?.trim() || '';
-            const odCilindro = seccion.querySelector('[name="od_cilindro[]"]')?.value?.trim() || '';
-            const odEje = seccion.querySelector('[name="od_eje[]"]')?.value?.trim() || '';
-            const oiEsfera = seccion.querySelector('[name="oi_esfera[]"]')?.value?.trim() || '';
-            const oiCilindro = seccion.querySelector('[name="oi_cilindro[]"]')?.value?.trim() || '';
-            const oiEje = seccion.querySelector('[name="oi_eje[]"]')?.value?.trim() || '';
-            const add = seccion.querySelector('[name="add[]"]')?.value?.trim() || '';
-            const dp = seccion.querySelector('[name="dp[]"]')?.value?.trim() || '';
-            
-            // Formatear valores con signos apropiados
-            const formatearValor = (valor) => {
-                if (!valor) return '';
-                const num = parseFloat(valor.replace(/[+\-]/g, ''));
-                if (isNaN(num)) return valor;
-                if (valor.includes('-') || num < 0) return `-${Math.abs(num).toFixed(2)}`;
-                return `+${num.toFixed(2)}`;
-            };
-            
-            // Construir la cadena de medidas
-            let medidaCompleta = '';
-            
-            // OD
-            if (odEsfera || odCilindro || odEje) {
-                medidaCompleta += 'OD: ';
-                if (odEsfera) medidaCompleta += formatearValor(odEsfera) + ' ';
-                if (odCilindro) medidaCompleta += formatearValor(odCilindro) + ' ';
-                if (odEje) medidaCompleta += (odEje.includes('X') ? odEje : `X${odEje}`) + (odEje.includes('°') ? '' : '°') + ' ';
-            }
-            
-            // OI
-            if (oiEsfera || oiCilindro || oiEje) {
-                if (medidaCompleta) medidaCompleta += '/ ';
-                medidaCompleta += 'OI: ';
-                if (oiEsfera) medidaCompleta += formatearValor(oiEsfera) + ' ';
-                if (oiCilindro) medidaCompleta += formatearValor(oiCilindro) + ' ';
-                if (oiEje) medidaCompleta += (oiEje.includes('X') ? oiEje : `X${oiEje}`) + (oiEje.includes('°') ? '' : '°') + ' ';
-            }
-            
-            // ADD
-            if (add) {
-                if (medidaCompleta) medidaCompleta += ' ';
-                medidaCompleta += `ADD: ${formatearValor(add)}`;
-            }
-            
-            // DP
-            if (dp) {
-                if (medidaCompleta) medidaCompleta += ' ';
-                medidaCompleta += `DP: ${dp}`;
-            }
-            
-            // Actualizar el campo oculto de esta sección
-            const campoMedida = seccion.querySelector('[name="l_medida[]"]');
-            if (campoMedida) {
-                campoMedida.value = medidaCompleta.trim();
-            }
-        }
-
-        // Event listeners para los campos de medidas de lunas
-        document.addEventListener('DOMContentLoaded', function() {
-            // ...existing code...
-            
-            // Agregar event listeners para formateo automático de medidas
-            const camposMedidas = [
-                '[name="od_esfera[]"]',
-                '[name="od_cilindro[]"]', 
-                '[name="od_eje[]"]',
-                '[name="oi_esfera[]"]',
-                '[name="oi_cilindro[]"]',
-                '[name="oi_eje[]"]',
-                '[name="add[]"]',
-                '[name="dp[]"]'
-            ];
-            
-            camposMedidas.forEach(selector => {
-                const campo = document.querySelector(selector);
-                if (campo) {
-                    campo.addEventListener('input', formatearMedidasLunas);
-                    campo.addEventListener('blur', formatearMedidasLunas);
-                }
-            });
-        });
-
-        // Funciones para manejar múltiples filtros
-        window.agregarFiltro = function(seccionIndex) {
-            const container = document.getElementById(`filtros-container-${seccionIndex}`);
-            const filtroCount = container.querySelectorAll('.filtro-item').length + 1;
-            
-            const newFiltroItem = document.createElement('div');
-            newFiltroItem.className = 'filtro-item mb-2';
-            newFiltroItem.innerHTML = `
-                <div class="input-group input-group-sm">
-                    <input type="text" class="form-control filtro-input" list="filtro_options" placeholder="Filtro ${filtroCount}">
-                    <div class="input-group-append">
-                        <button type="button" class="btn btn-danger btn-sm eliminar-filtro" onclick="eliminarFiltro(this)">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            container.appendChild(newFiltroItem);
-            
-            // Actualizar campo oculto
-            actualizarFiltrosHidden(container.closest('.col-md-3'));
-            
-            // Agregar event listener al nuevo input
-            const newInput = newFiltroItem.querySelector('.filtro-input');
-            newInput.addEventListener('input', function() {
-                actualizarFiltrosHidden(this.closest('.col-md-3'));
-            });
-            newInput.addEventListener('blur', function() {
-                actualizarFiltrosHidden(this.closest('.col-md-3'));
-            });
-        };
-
-        window.agregarFiltroSeccion = function(button) {
-            const container = button.closest('.col-md-3').querySelector('.filtros-container');
-            const filtroCount = container.querySelectorAll('.filtro-item').length + 1;
-            
-            const newFiltroItem = document.createElement('div');
-            newFiltroItem.className = 'filtro-item mb-2';
-            newFiltroItem.innerHTML = `
-                <div class="input-group input-group-sm">
-                    <input type="text" class="form-control filtro-input" list="filtro_options" placeholder="Filtro ${filtroCount}">
-                    <div class="input-group-append">
-                        <button type="button" class="btn btn-danger btn-sm eliminar-filtro" onclick="eliminarFiltro(this)">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-            
-            container.appendChild(newFiltroItem);
-            
-            // Actualizar campo oculto
-            actualizarFiltrosHidden(container.closest('.col-md-3'));
-            
-            // Agregar event listener al nuevo input
-            const newInput = newFiltroItem.querySelector('.filtro-input');
-            newInput.addEventListener('input', function() {
-                actualizarFiltrosHidden(this.closest('.col-md-3'));
-            });
-            newInput.addEventListener('blur', function() {
-                actualizarFiltrosHidden(this.closest('.col-md-3'));
-            });
-        };
-
-        window.eliminarFiltro = function(button) {
-            const filtroItem = button.closest('.filtro-item');
-            const container = filtroItem.closest('.col-md-3');
-            
-            // No permitir eliminar si es el único filtro
-            const filtrosContainer = container.querySelector('.filtros-container');
-            if (filtrosContainer.querySelectorAll('.filtro-item').length <= 1) {
-                return;
-            }
-            
-            filtroItem.remove();
-            
-            // Actualizar numeración de placeholders
-            const filtroItems = filtrosContainer.querySelectorAll('.filtro-item');
-            filtroItems.forEach((item, index) => {
-                const input = item.querySelector('.filtro-input');
-                input.placeholder = `Filtro ${index + 1}`;
-            });
-            
-            // Actualizar campo oculto
-            actualizarFiltrosHidden(container);
-        };
-
-        window.actualizarFiltrosHidden = function(container) {
-            const filtroInputs = container.querySelectorAll('.filtro-input');
-            const hiddenInput = container.querySelector('.filtros-hidden');
-            
-            const filtros = [];
-            filtroInputs.forEach(input => {
-                const valor = input.value.trim();
-                if (valor) {
-                    filtros.push(valor);
-                }
-            });
-            
-            hiddenInput.value = filtros.join(' | ');
-        };
-
-        // Debug para múltiples filtros
-        window.debugFiltros = function() {
-            const hiddenInputs = document.querySelectorAll('.filtros-hidden');
-            hiddenInputs.forEach((input, index) => {
-                console.log(`Sección ${index + 1} - Filtros:`, input.value);
-            });
-        };
-
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/css/bootstrap-select.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/js/bootstrap-select.min.js"></script>

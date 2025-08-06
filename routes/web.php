@@ -7,6 +7,7 @@ use App\Http\Controllers\PagoController;
 use App\Http\Controllers\UsuariosController;
 use App\Http\Controllers\PagonuevosController; 
 use App\Http\Controllers\HistorialClinicoController;
+use App\Http\Controllers\DeclaranteController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CashHistoryController;
 use App\Http\Controllers\DashboardController;
@@ -152,6 +153,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::patch('/pedidos/{id}/approve', [PedidosController::class, 'approve'])->name('pedidos.approve');
     Route::put('pedidos/{id}/calificar', [PedidosController::class, 'calificar'])
         ->name('pedidos.calificar');
+    Route::post('/pedidos/crear-factura', [PedidosController::class, 'crearFactura'])->name('pedidos.crear-factura');
     Route::post('/pedidos/{id}/enviar-encuesta', [PedidosController::class, 'enviarEncuesta'])
         ->name('pedidos.enviar-encuesta')
         ->middleware('web');
@@ -167,6 +169,15 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Rutas para marcar/desmarcar urgente
     Route::post('/pedidos/{id}/marcar-urgente', [PedidosController::class, 'marcarUrgente'])->name('pedidos.marcar-urgente');
     Route::delete('/pedidos/{id}/desmarcar-urgente', [PedidosController::class, 'desmarcarUrgente'])->name('pedidos.desmarcar-urgente');
+
+    // Rutas para Declarantes
+    Route::get('/pedidos/declarantes/listar', [DeclaranteController::class, 'listar'])->name('pedidos.declarantes.listar');
+    Route::post('/pedidos/declarantes', [DeclaranteController::class, 'store'])->name('pedidos.declarantes.store');
+    Route::put('/pedidos/declarantes/{id}', [DeclaranteController::class, 'update'])->name('pedidos.declarantes.update');
+    Route::delete('/pedidos/declarantes/{id}', [DeclaranteController::class, 'destroy'])->name('pedidos.declarantes.destroy');
+    
+    // Rutas para el recurso completo de declarantes (estas son las rutas estándar)
+    Route::resource('declarantes', DeclaranteController::class);
 
     // Historiales Clinicos
     Route::prefix('historiales_clinicos')->group(function () {

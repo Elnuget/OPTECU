@@ -262,7 +262,7 @@
                     @foreach($grupo as $index => $pedido)
                         <!-- Columna Barbosa -->
                         <td class="barbosa-column">
-                            <div class="barbosa-text">DE: L BARBOSA SPA 77.219.776-4</div>
+                            <div class="barbosa-text">DE: ESCLERÓPTICA SPA 77.219.776-4</div>
                         </td>
                         
                         @php

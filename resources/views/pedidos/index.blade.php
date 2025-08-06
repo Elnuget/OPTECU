@@ -4,7 +4,6 @@
 @section('content_header')
 <h1>Pedidos</h1>
 <p>Administracion de ventas</p>
-<meta name="csrf-token" content="{{ csrf_token() }}">
 @if (session('error'))
     <div class="alert {{ session('tipo') }} alert-dismissible fade show" role="alert">
         <strong>{{ session('mensaje') }}</strong>
@@ -28,27 +27,6 @@
         .btn {
             text-transform: uppercase !important;
         }
-
-        /* Estilos para filas con reclamos */
-        .reclamo-row {
-            background-color: #f8d7da !important; /* Fondo rojo claro */
-        }
-
-        /* Estilos para filas urgentes */
-        .urgente-row {
-            background-color: #fff3cd !important; /* Fondo amarillo claro */
-            border-left: 4px solid #ffc107 !important; /* Borde izquierdo amarillo */
-        }
-
-        /* Estilos para filas urgentes con reclamo (prioridad a urgente) */
-        .urgente-con-reclamo {
-            background: linear-gradient(90deg, #fff3cd 50%, #f8d7da 50%) !important;
-            border-left: 4px solid #ffc107 !important;
-        }
-
-        .bg-warning-light {
-            background-color: #fff3cd !important;
-        }
     </style>
 
 <div class="card">
@@ -60,7 +38,7 @@
                 <div class="info-box bg-info">
                     <div class="info-box-content">
                         <span class="info-box-text">Total Ventas</span>
-                        <span class="info-box-number">${{ number_format($totales['ventas'], 0, ',', '.') }}</span>
+                        <span class="info-box-number">${{ number_format($totales['ventas'], 2, ',', '.') }}</span>
                     </div>
                 </div>
             </div>
@@ -68,7 +46,7 @@
                 <div class="info-box bg-warning">
                     <div class="info-box-content">
                         <span class="info-box-text">Total Saldos</span>
-                        <span class="info-box-number">${{ number_format($totales['saldos'], 0, ',', '.') }}</span>
+                        <span class="info-box-number">${{ number_format($totales['saldos'], 2, ',', '.') }}</span>
                     </div>
                 </div>
             </div>
@@ -76,7 +54,7 @@
                 <div class="info-box bg-success">
                     <div class="info-box-content">
                         <span class="info-box-text">Total Cobrado</span>
-                        <span class="info-box-number">${{ number_format($totales['cobrado'], 0, ',', '.') }}</span>
+                        <span class="info-box-number">${{ number_format($totales['cobrado'], 2, ',', '.') }}</span>
                     </div>
                 </div>
             </div>
@@ -86,140 +64,48 @@
         {{-- Agregar formulario de filtro --}}
         <form method="GET" class="form-row mb-3" id="filterForm">
             <div class="col-md-2">
-                <label for="filtroAno">SELECCIONAR AÑO:</label>
+                <label for="filtroAno">Seleccionar Año:</label>
                 <select name="ano" class="form-control" id="filtroAno">
-                    <option value="">SELECCIONE AÑO</option>
+                    <option value="">Seleccione Año</option>
                     @for ($year = date('Y'); $year >= 2000; $year--)
                         <option value="{{ $year }}" {{ request('ano', date('Y')) == $year ? 'selected' : '' }}>{{ $year }}</option>
                     @endfor
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="filtroMes">SELECCIONAR MES:</label>
+                <label for="filtroMes">Seleccionar Mes:</label>
                 <select name="mes" class="form-control custom-select" id="filtroMes">
-                    <option value="">SELECCIONE MES</option>
+                    <option value="">Seleccione Mes</option>
                     @foreach (['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] as $index => $month)
-                        <option value="{{ $index + 1 }}" {{ request('mes') == ($index + 1) ? 'selected' : '' }}>{{ strtoupper($month) }}</option>
+                        <option value="{{ $index + 1 }}" {{ request('mes') == ($index + 1) ? 'selected' : '' }}>{{ $month }}</option>
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-3">
-                <label for="empresa_id">SUCURSAL:</label>
-                <select name="empresa_id" class="form-control" id="empresa_id">
-                    @if($isUserAdmin)
-                        <option value="">TODAS LAS SUCURSALES</option>
-                    @else
-                        <option value="">MIS SUCURSALES</option>
-                    @endif
-                    @foreach($empresas ?? [] as $empresa)
+            <div class="col-md-2">
+                <label for="filtroEmpresa">Seleccionar Empresa:</label>
+                <select name="empresa_id" class="form-control" id="filtroEmpresa">
+                    <option value="">Todas las Empresas</option>
+                    @foreach($empresas as $empresa)
                         <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
-                            {{ strtoupper($empresa->nombre) }}
+                            {{ $empresa->nombre }}
                         </option>
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-5 align-self-end">
-                <button type="button" class="btn btn-info" id="actualButton">ACTUAL</button>
-                <button type="button" class="btn btn-success" id="mostrarTodosButton">MOSTRAR TODOS</button>
+            <div class="col-md-4 align-self-end">
+                <button type="button" class="btn btn-primary" id="actualButton">Actual</button>
+                <button type="button" class="btn btn-success" id="mostrarTodosButton">Mostrar Todos los Pedidos</button>
             </div>
         </form>
 
-        {{-- Botones de acción optimizados --}}
-        <div class="row mb-3">
-            <div class="col-md-8">
-                <div class="btn-toolbar" role="toolbar">
-                    <!-- Botón principal -->
-                    <div class="btn-group me-2" role="group">
-                        <a href="{{ route('pedidos.create') }}" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Crear Pedido
-                        </a>
-                    </div>
-
-                    <!-- Grupo: Exportar/Imprimir -->
-                    <div class="btn-group me-2" role="group">
-                        <button type="button" class="btn btn-success dropdown-toggle" data-toggle="dropdown" disabled id="exportarDropdown">
-                            <i class="fas fa-download"></i> Exportar
-                        </button>
-                        <div class="dropdown-menu">
-                            <button class="dropdown-item" type="button" id="generarExcel">
-                                <i class="fas fa-file-excel"></i> Generar Excel
-                            </button>
-                            <button class="dropdown-item" type="button" id="exportarCristalariaExcel">
-                                <i class="fas fa-file-excel"></i> Exportar Cristalería Excel
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Grupo: Imprimir -->
-                    <div class="btn-group me-2" role="group">
-                        <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" disabled id="imprimirDropdown">
-                            <i class="fas fa-print"></i> Imprimir
-                        </button>
-                        <div class="dropdown-menu">
-                            <button class="dropdown-item" type="button" id="imprimirEtiquetas">
-                                <i class="fas fa-tags"></i> Imprimir Etiquetas
-                            </button>
-                            <button class="dropdown-item" type="button" id="imprimirCristaleria">
-                                <i class="fas fa-eye"></i> Imprimir Cristalería
-                            </button>
-                            <button class="dropdown-item" type="button" id="imprimirInforme">
-                                <i class="fas fa-print"></i> Imprimir Informe
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Grupo: Acciones -->
-                    <div class="btn-group me-2" role="group">
-                        <button type="button" class="btn btn-warning" id="filtrarReclamos">
-                            <i class="fas fa-exclamation-triangle"></i> Reclamos
-                        </button>
-                        <button type="button" class="btn btn-primary" id="avanzarEstado" disabled>
-                            <i class="fas fa-forward"></i> Avanzar
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="input-group">
-                    <input type="date" class="form-control" id="fechaSeleccion" value="{{ request('fecha_especifica', date('Y-m-d')) }}">
-                    <div class="input-group-append">
-                        @if(request()->filled('fecha_especifica'))
-                            <button type="button" class="btn btn-danger" id="seleccionarDiarios">
-                                <i class="fas fa-filter"></i> 
-                                @if(request()->filled('empresa_id'))
-                                    Filtros Activos ({{ $pedidos->count() }})
-                                @else
-                                    Filtro Fecha ({{ $pedidos->count() }})
-                                @endif
-                            </button>
-                            <button type="button" class="btn btn-secondary" id="limpiarFiltroFecha">
-                                <i class="fas fa-times"></i> Limpiar Filtro Fecha
-                            </button>
-                        @else
-                            <button type="button" class="btn btn-warning" id="seleccionarDiarios">
-                                <i class="fas fa-calendar-day"></i> Filtrar por Fecha
-                            </button>
-                            <button type="button" class="btn btn-secondary" id="limpiarFiltroFecha" style="display: none;">
-                                <i class="fas fa-times"></i> Limpiar Filtro
-                            </button>
-                        @endif
-                    </div>
-                </div>
-                @if(request()->filled('fecha_especifica'))
-                    <small class="text-info">
-                        <i class="fas fa-info-circle"></i> 
-                        Mostrando pedidos del {{ \Carbon\Carbon::parse(request('fecha_especifica'))->format('d/m/Y') }}
-                        @if(request()->filled('empresa_id'))
-                            @php
-                                $empresaSeleccionada = $empresas->firstWhere('id', request('empresa_id'));
-                            @endphp
-                            @if($empresaSeleccionada)
-                                en <strong>{{ strtoupper($empresaSeleccionada->nombre) }}</strong>
-                            @endif
-                        @endif
-                    </small>
-                @endif
-            </div>
+        {{-- Botones de acción --}}
+        <div class="btn-group mb-3">
+            <a href="{{ route('pedidos.create') }}" class="btn btn-primary">Crear Pedido</a>
+            @can('admin')
+                <button type="button" class="btn btn-info" id="declarantesButton">
+                    <i class="fas fa-file-alt"></i> Declaraciones
+                </button>
+            @endcan
         </div>
 
         {{-- Filtro por mes (removed) --}}
@@ -229,55 +115,33 @@
             <table id="pedidosTable" class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <th class="checkbox-cell">
-                            <input type="checkbox" id="selectAll" title="SELECCIONAR TODOS">
-                        </th>
                         <th>Fecha</th>
-                        <th>Sucursal</th>
                         <th>Orden</th>
-                        <th>Estado</th>
+                        <th>Factura</th>
                         <th>Cliente</th>
                         <th>Celular</th>
-                        <th>Usuario</th>
-                        <th>Tipo de Lente</th>
+                        <th>Paciente</th>
+                        <th>Empresa</th>
                         <th>Total</th>
                         <th>Saldo</th>
                         <th>Acciones</th>
+                        <th>Usuario</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($pedidos as $pedido)
-                    <tr class="{{ 
-                        $pedido->urgente && (!is_null($pedido->reclamo) && trim($pedido->reclamo) !== '') ? 'bg-warning-light urgente-row reclamo-row urgente-con-reclamo' : 
-                        ($pedido->urgente ? 'bg-warning-light urgente-row' : 
-                        (!is_null($pedido->reclamo) && trim($pedido->reclamo) !== '' ? 'bg-danger-light reclamo-row' : ''))
-                    }}">
-                        <td class="checkbox-cell">
-                            <input type="checkbox" name="pedidos_selected[]" value="{{ $pedido->id }}" class="pedido-checkbox">
-                        </td>
-                        <td>
-                            <div>{{ $pedido->fecha ? $pedido->fecha->format('Y-m-d') : 'Sin fecha' }}</div>
-                            @if($pedido->fecha_entrega)
-                                <small class="text-info"><strong>Entrega:</strong><br>{{ $pedido->fecha_entrega->format('Y-m-d') }}</small>
-                            @endif
-                        </td>
-                        <td>{{ $pedido->empresa ? strtoupper($pedido->empresa->nombre) : 'SIN EMPRESA' }}</td>
+                    <tr>
+                        <td>{{ $pedido->fecha ? $pedido->fecha->format('Y-m-d') : 'Sin fecha' }}</td>
                         <td>{{ $pedido->numero_orden }}</td>
                         <td>
-                            <span style="color: 
-                                {{ $pedido->fact == 'Pendiente' ? 'orange' : 
-                                  ($pedido->fact == 'CRISTALERIA' ? 'darkblue' : 
-                                   ($pedido->fact == 'Separado' ? 'brown' : 
-                                    ($pedido->fact == 'LISTO EN TALLER' ? 'blue' : 
-                                     ($pedido->fact == 'Enviado' ? 'purple' : 
-                                      ($pedido->fact == 'ENTREGADO' ? 'green' : 'black'))))) }}">
+                            <span style="color: {{ $pedido->fact == 'Pendiente' ? 'orange' : ($pedido->fact == 'Aprobado' ? 'green' : 'black') }}">
                                 {{ $pedido->fact }}
                             </span>
                         </td>
                         <td>{{ $pedido->cliente }}</td>
                         <td>
                             {{ $pedido->celular }}
-                            @if($pedido->celular && trim($pedido->celular) !== '' && trim($pedido->celular) !== '0')
+                            @if($pedido->celular)
                                 <button 
                                     class="btn {{ trim($pedido->encuesta) === 'enviado' ? 'btn-warning' : 'btn-success' }} btn-sm ml-1 btn-whatsapp-mensaje"
                                     data-pedido-id="{{ $pedido->id }}"
@@ -286,185 +150,56 @@
                                     data-estado-actual="{{ trim($pedido->encuesta) }}"
                                     title="{{ trim($pedido->encuesta) === 'enviado' ? 'Volver a enviar mensaje y encuesta' : 'Enviar mensaje y encuesta' }}">
                                     <i class="fab fa-whatsapp"></i>
+                                    <span class="button-text">
+                                        {{ trim($pedido->encuesta) === 'enviado' ? 'Volver a enviar' : 'Enviar' }}
+                                    </span>
                                 </button>
                             @endif
                         </td>
-                        <td>{{ $pedido->usuario ? strtoupper($pedido->usuario) : 'SIN USUARIO' }}</td>
-                        <td>
-                            @if($pedido->lunas->count() > 0)
-                                {{ strtoupper($pedido->lunas->first()->tipo_lente ?: 'NO ESPECIFICADO') }}
-                                @if($pedido->lunas->count() > 1)
-                                    <small class="text-info"><br>(+{{ $pedido->lunas->count() - 1 }} más)</small>
-                                @endif
-                            @else
-                                <span class="text-muted">SIN LUNAS</span>
-                            @endif
-                        </td>
-                        <td>${{ number_format($pedido->total, 0, ',', '.') }}</td>
+                        <td>{{ $pedido->paciente }}</td>
+                        <td>{{ $pedido->empresa ? $pedido->empresa->nombre : 'Sin empresa' }}</td>
+                        <td>{{ $pedido->total }}</td>
                         <td>
                             <span style="color: {{ $pedido->saldo == 0 ? 'green' : 'red' }}">
-                                ${{ number_format($pedido->saldo, 0, ',', '.') }}
+                                {{ $pedido->saldo }}
                             </span>
-                        </td>
-                        <td>
-                            <div class="d-flex flex-wrap gap-1 align-items-center">
-                                <!-- Grupo de acciones principales -->
-                                <div class="btn-group me-1" role="group">
-                                    <a href="{{ route('pedidos.show', $pedido->id) }}"
-                                        class="btn btn-outline-info btn-sm" 
-                                        title="Ver Detalles del Pedido"
-                                        data-toggle="tooltip">
-                                        <i class="fas fa-eye me-1"></i>
-                                        <span class="d-none d-md-inline">Ver</span>
-                                    </a>
-                                    <a href="{{ route('pedidos.edit', $pedido->id) }}"
-                                        class="btn btn-outline-primary btn-sm" 
-                                        title="Editar Pedido"
-                                        data-toggle="tooltip">
-                                        <i class="fas fa-edit me-1"></i>
-                                        <span class="d-none d-md-inline">Editar</span>
-                                    </a>
-                                </div>
-
-                                <!-- Grupo de acciones financieras -->
-                                <div class="btn-group me-1" role="group">
-                                    <a href="{{ route('pagos.create', ['pedido_id' => $pedido->id]) }}"
-                                        class="btn btn-success btn-sm" 
-                                        title="Registrar Pago"
-                                        data-toggle="tooltip">
-                                        <i class="fas fa-dollar-sign me-1"></i>
-                                        <span class="d-none d-lg-inline">Pago</span>
-                                    </a>
-                                </div>
-                                
-                                <!-- Botones de cambio de estado -->
-                                <div class="me-1">
-                                    @if($pedido->fact == 'Pendiente')
-                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'cristaleria']) }}" method="POST"
-                                            style="display:inline;">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="btn btn-outline-secondary btn-sm estado-btn" 
-                                                title="Cambiar a Estado: Cristalería"
-                                                data-toggle="tooltip">
-                                                <i class="fas fa-glasses me-1"></i>
-                                                <span class="d-none d-xl-inline">Cristalería</span>
-                                            </button>
-                                        </form>
-                                    @elseif($pedido->fact == 'CRISTALERIA')
-                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'separado']) }}" method="POST"
-                                            style="display:inline;">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="btn btn-outline-secondary btn-sm estado-btn" 
-                                                title="Cambiar a Estado: Separado"
-                                                data-toggle="tooltip">
-                                                <i class="fas fa-hand-paper me-1"></i>
-                                                <span class="d-none d-xl-inline">Separar</span>
-                                            </button>
-                                        </form>
-                                    @elseif($pedido->fact == 'Separado')
-                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'taller']) }}" method="POST"
-                                            style="display:inline;">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="btn btn-outline-primary btn-sm estado-btn" 
-                                                title="Cambiar a Estado: Listo en Taller"
-                                                data-toggle="tooltip">
-                                                <i class="fas fa-tools me-1"></i>
-                                                <span class="d-none d-xl-inline">Taller</span>
-                                            </button>
-                                        </form>
-                                    @elseif($pedido->fact == 'LISTO EN TALLER')
-                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'enviado']) }}" method="POST"
-                                            style="display:inline;">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="btn btn-outline-info btn-sm estado-btn" 
-                                                title="Cambiar a Estado: Enviado"
-                                                data-toggle="tooltip">
-                                                <i class="fas fa-shipping-fast me-1"></i>
-                                                <span class="d-none d-xl-inline">Enviar</span>
-                                            </button>
-                                        </form>
-                                    @elseif($pedido->fact == 'Enviado')
-                                        <form action="{{ route('pedidos.update-state', ['id' => $pedido->id, 'state' => 'entregado']) }}" method="POST"
-                                            style="display:inline;">
-                                            @csrf
-                                            @method('PATCH')
-                                            <button type="submit" class="btn btn-outline-success btn-sm estado-btn" 
-                                                title="Cambiar a Estado: Entregado"
-                                                data-toggle="tooltip">
-                                                <i class="fas fa-check-double me-1"></i>
-                                                <span class="d-none d-xl-inline">Entregar</span>
-                                            </button>
-                                        </form>
-                                    @endif
-                                </div>
-
-                                <!-- Botón de eliminar (solo admin) -->
+                        </td>                        <td>
+                            <div class="btn-group">
+                                <a href="{{ route('pedidos.show', $pedido->id) }}"
+                                    class="btn btn-xs btn-default text-primary mx-1 shadow" title="Ver">
+                                    <i class="fa fa-lg fa-fw fa-eye"></i>
+                                </a>
+                                <a href="{{ route('pedidos.edit', $pedido->id) }}"
+                                    class="btn btn-xs btn-default text-primary mx-1 shadow" title="Editar">
+                                    <i class="fa fa-lg fa-fw fa-pen"></i>
+                                </a>
                                 @can('admin')
-                                    <div class="me-1">
-                                        <button type="button" 
-                                            class="btn btn-outline-danger btn-sm" 
-                                            data-toggle="modal"
-                                            data-target="#confirmarEliminarModal" 
-                                            data-id="{{ $pedido->id }}"
-                                            data-url="{{ route('pedidos.destroy', $pedido->id) }}"
-                                            title="Eliminar Pedido"
-                                            data-toggle="tooltip">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </div>
+                                    <a class="btn btn-xs btn-default text-danger mx-1 shadow" href="#" data-toggle="modal"
+                                        data-target="#confirmarEliminarModal" data-id="{{ $pedido->id }}"
+                                        data-url="{{ route('pedidos.destroy', $pedido->id) }}">
+                                        <i class="fa fa-lg fa-fw fa-trash"></i>
+                                    </a>
                                 @endcan
-
-                                <!-- Botón de Reclamo -->
-                                <div class="me-1">
-                                    @if(is_null($pedido->reclamo) || trim($pedido->reclamo) === '')
-                                        <button type="button" class="btn btn-outline-danger btn-sm btn-reclamo" 
-                                            title="Agregar Reclamo del Cliente" 
-                                            data-pedido-id="{{ $pedido->id }}"
-                                            data-cliente="{{ $pedido->cliente }}"
-                                            data-toggle="tooltip">
-                                            <i class="fas fa-exclamation-triangle me-1"></i>
-                                            <span class="d-none d-lg-inline">Reclamo</span>
-                                        </button>
-                                    @else
-                                        <button type="button" class="btn btn-warning btn-sm btn-quitar-reclamo" 
-                                            title="Quitar Reclamo Existente" 
-                                            data-pedido-id="{{ $pedido->id }}"
-                                            data-cliente="{{ $pedido->cliente }}"
-                                            data-toggle="tooltip">
-                                            <i class="fas fa-times-circle me-1"></i>
-                                            <span class="d-none d-lg-inline">Quitar</span>
+                                <!-- Botón de Pago -->
+                                <a href="{{ route('pagos.create', ['pedido_id' => $pedido->id]) }}"
+                                    class="btn btn-success btn-sm" title="Añadir Pago">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                </a>
+                                <!-- Botón de Aprobar -->
+                                @can('admin')
+                                    @if(strtoupper($pedido->fact) == 'PENDIENTE')
+                                        <button type="button" class="btn btn-warning btn-sm btn-crear-factura" 
+                                                data-pedido-id="{{ $pedido->id }}"
+                                                data-cliente="{{ $pedido->cliente }}"
+                                                data-total="{{ $pedido->total }}"
+                                                title="Crear Factura">
+                                            <i class="fas fa-file-invoice"></i>
                                         </button>
                                     @endif
-                                </div>
-
-                                <!-- Botón de marcar/desmarcar URGENTE -->
-                                <div class="me-1">
-                                    @if($pedido->urgente)
-                                        <button type="button" class="btn btn-warning btn-sm btn-desmarcar-urgente" 
-                                            title="Desmarcar como Urgente" 
-                                            data-pedido-id="{{ $pedido->id }}"
-                                            data-cliente="{{ $pedido->cliente }}"
-                                            data-toggle="tooltip">
-                                            <i class="fas fa-exclamation-circle me-1"></i>
-                                            <span class="d-none d-lg-inline">Desmarcar</span>
-                                        </button>
-                                    @else
-                                        <button type="button" class="btn btn-outline-warning btn-sm btn-marcar-urgente" 
-                                            title="Marcar como Urgente" 
-                                            data-pedido-id="{{ $pedido->id }}"
-                                            data-cliente="{{ $pedido->cliente }}"
-                                            data-toggle="tooltip">
-                                            <i class="fas fa-clock me-1"></i>
-                                            <span class="d-none d-lg-inline">Marcar</span>
-                                        </button>
-                                    @endif
-                                </div>
+                                @endcan
                             </div>
                         </td>
+                        <td>{{ $pedido->usuario }}</td>
                     </tr>
                     @endforeach
                 </tbody>
@@ -474,7 +209,7 @@
     </div>
 </div>
 
-{{-- Modal de confirmación de eliminación --}}
+{{-- Agregar el modal de confirmación después de la tabla --}}
 <div class="modal fade" id="confirmarEliminarModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -499,146 +234,483 @@
     </div>
 </div>
 
-{{-- Modal para agregar reclamo --}}
-<div class="modal fade" id="reclamoModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+{{-- Modal para mostrar Declarantes --}}
+<div class="modal fade" id="declarantesModal" tabindex="-1" role="dialog" aria-labelledby="declarantesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Agregar Reclamo</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <form id="reclamoForm">
-                @csrf
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="cliente-reclamo"><strong>Cliente:</strong></label>
-                        <p id="cliente-reclamo" class="form-control-plaintext"></p>
-                    </div>
-                    <div class="form-group">
-                        <label for="reclamo"><strong>Descripción del Reclamo:</strong></label>
-                        <textarea 
-                            id="reclamo" 
-                            name="reclamo" 
-                            class="form-control" 
-                            rows="5" 
-                            placeholder="Describa detalladamente el reclamo del cliente..."
-                            maxlength="1000"
-                            required></textarea>
-                        <small class="form-text text-muted">
-                            Mínimo 10 caracteres, máximo 1000 caracteres. 
-                            <span id="contador-caracteres">0/1000</span>
-                        </small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Guardar Reclamo</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-{{-- Modal para previsualizar mensaje de WhatsApp --}}
-<div class="modal fade" id="whatsappModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">
-                    <i class="fab fa-whatsapp me-2"></i>
-                    Enviar Mensaje de WhatsApp
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="declarantesModalLabel">
+                    <i class="fas fa-file-alt"></i> Gestión de Declarantes
                 </h5>
                 <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
-                <!-- Información del cliente -->
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label><strong>Cliente:</strong></label>
-                            <p id="whatsapp-cliente" class="form-control-plaintext text-uppercase"></p>
-                        </div>
+                <!-- Formulario para crear/editar declarante -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-plus-circle"></i> 
+                            <span id="formTitle">Agregar Nuevo Declarante</span>
+                        </h6>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label><strong>Número de Celular:</strong></label>
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text">+56</span>
+                    <div class="card-body">
+                        <form id="declaranteForm" enctype="multipart/form-data">
+                            <input type="hidden" id="declaranteId" name="id">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="nombre">Nombre <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="nombre" name="nombre" required>
+                                        <div class="invalid-feedback"></div>
+                                    </div>
                                 </div>
-                                <input type="text" id="whatsapp-celular" class="form-control" readonly>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="ruc">RUC <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="ruc" name="ruc" required>
+                                        <div class="invalid-feedback"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label for="firma">Certificado Digital de Firma</label>
+                                        <div class="custom-file">
+                                            <input type="file" class="custom-file-input" id="firma" name="firma" accept=".p12,.pem">
+                                            <label class="custom-file-label" for="firma">Seleccionar certificado...</label>
+                                        </div>
+                                        <small class="form-text text-muted">Formatos permitidos: P12, PEM (certificados digitales)</small>
+                                        <div class="invalid-feedback"></div>
+                                        <!-- Vista previa del archivo -->
+                                        <div id="firmaPreview" class="mt-2" style="display: none;">
+                                            <div class="border rounded p-2" style="max-width: 200px;">
+                                                <div class="text-center">
+                                                    <i class="fas fa-certificate fa-3x text-primary mb-2"></i>
+                                                    <div id="firmaFileName" class="text-center small text-muted"></div>
+                                                    <div class="text-center small text-info">Certificado Digital</div>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-danger mt-1 btn-block" id="removeFirma">
+                                                    <i class="fas fa-times"></i> Eliminar
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <!-- Mostrar firma actual al editar -->
+                                        <div id="firmaActual" class="mt-2" style="display: none;">
+                                            <label class="small text-muted">Certificado actual:</label>
+                                            <div class="border rounded p-2" style="max-width: 200px;">
+                                                <div class="text-center">
+                                                    <i class="fas fa-certificate fa-3x text-success mb-2"></i>
+                                                    <div id="firmaActualName" class="text-center small text-muted"></div>
+                                                    <div class="text-center small text-success">Certificado Digital</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-success" id="submitButton">
+                                        <i class="fas fa-save"></i> Guardar
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" id="cancelEditButton" style="display: none;">
+                                        <i class="fas fa-times"></i> Cancelar Edición
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Lista de declarantes -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-list"></i> Lista de Declarantes
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="declarantesLoading" class="text-center p-4">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p>Cargando declarantes...</p>
+                        </div>
+                        
+                        <div id="declarantesContent" style="display: none;">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover mb-0" id="declarantesTable">
+                                    <thead class="thead-dark">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Nombre</th>
+                                            <th>RUC</th>
+                                            <th>Firma</th>
+                                            <th>Base Gravable</th>
+                                            <th>IVA Débito Fiscal</th>
+                                            <th>Total Facturado</th>
+                                            <th>Cant. Facturas</th>
+                                            <th>Fecha Creación</th>
+                                            <th width="140">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="declarantesTableBody">
+                                        <!-- Los datos se cargarán aquí dinámicamente -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Información del pedido -->
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label><strong>Número de Orden:</strong></label>
-                            <p id="whatsapp-orden" class="form-control-plaintext"></p>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label><strong>Estado Actual:</strong></label>
-                            <p id="whatsapp-estado" class="form-control-plaintext"></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mensaje editable -->
-                <div class="form-group">
-                    <label for="whatsapp-mensaje"><strong>Mensaje a Enviar:</strong></label>
-                    <textarea 
-                        id="whatsapp-mensaje" 
-                        name="whatsapp-mensaje" 
-                        class="form-control" 
-                        rows="12"
-                        placeholder="Escriba aquí el mensaje que desea enviar..."
-                        style="font-family: monospace; font-size: 14px;"></textarea>
-                    <small class="form-text text-muted">
-                        <i class="fas fa-info-circle"></i>
-                        Puede modificar el mensaje antes de enviarlo. 
-                        Caracteres: <span id="mensaje-contador">0</span>
-                    </small>
-                    <div class="keyboard-shortcut">
-                        <i class="fas fa-keyboard"></i>
-                        <strong>Tip:</strong> Presione <kbd>Ctrl + Enter</kbd> para enviar rápidamente por WhatsApp Web
-                    </div>
-                </div>
-
-                <!-- Opciones de envío -->
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="alert alert-info">
-                            <i class="fas fa-mobile-alt me-2"></i>
-                            <strong>Opciones de envío:</strong>
-                            <ul class="mb-0 mt-2">
-                                <li><strong>Aplicación móvil:</strong> Se abrirá la app de WhatsApp (recomendado para móviles)</li>
-                                <li><strong>WhatsApp Web:</strong> Se abrirá en el navegador (recomendado para escritorio)</li>
-                            </ul>
+                        
+                        <div id="declarantesError" style="display: none;" class="alert alert-danger m-3">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span id="errorMessage">Error al cargar los declarantes.</span>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times me-1"></i>
-                    Cancelar
+                    <i class="fas fa-times"></i> Cerrar
                 </button>
-                <button type="button" class="btn btn-success" id="enviarWhatsAppMovil">
-                    <i class="fab fa-whatsapp me-1"></i>
-                    Enviar por App Móvil
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal para crear factura --}}
+<div class="modal fade" id="crearFacturaModal" tabindex="-1" role="dialog" aria-labelledby="crearFacturaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-white">
+                <h5 class="modal-title" id="crearFacturaModalLabel">
+                    <i class="fas fa-file-invoice"></i> Crear Factura
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
                 </button>
-                <button type="button" class="btn btn-success" id="enviarWhatsAppWeb">
-                    <i class="fas fa-globe me-1"></i>
-                    Enviar por WhatsApp Web
+            </div>
+            <div class="modal-body">
+                <form id="crearFacturaForm">
+                    <input type="hidden" id="factPedidoId" name="pedido_id">
+                    
+                    <!-- Información del pedido -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-info-circle"></i> Información del Pedido
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <p><strong>Cliente:</strong> <span id="factCliente"></span></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <p><strong>Total Original:</strong> $<span id="factTotal"></span></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <div id="detallesLoading" class="text-center" style="display: none;">
+                                        <i class="fas fa-spinner fa-spin"></i> Cargando detalles...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Desglose de productos -->
+                    <div id="detallesProductos" style="display: none;">
+                        <!-- Inventarios/Accesorios -->
+                        <div class="card mb-3" id="cardInventarios" style="display: none;">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="card-title mb-0">
+                                    <i class="fas fa-box"></i> Armazones y Accesorios
+                                </h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-sm mb-0">
+                                        <thead class="thead-dark">
+                                            <tr>
+                                                <th>Código</th>
+                                                <th>Precio Base</th>
+                                                <th>Descuento</th>
+                                                <th>Precio Final</th>
+                                                <th>Base</th>
+                                                <th>IVA</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tablaInventarios">
+                                        </tbody>
+                                        <tfoot class="bg-light">
+                                            <tr class="font-weight-bold">
+                                                <td colspan="4">SUBTOTAL ARMAZONES:</td>
+                                                <td id="subtotalBaseInventarios">$0.00</td>
+                                                <td id="subtotalIvaInventarios">$0.00</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lunas -->
+                        <div class="card mb-3" id="cardLunas" style="display: none;">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="card-title mb-0">
+                                    <i class="fas fa-eye"></i> Lunas
+                                </h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-sm mb-0">
+                                        <thead class="thead-dark">
+                                            <tr>
+                                                <th>Medida</th>
+                                                <th>Tipo</th>
+                                                <th>Material</th>
+                                                <th>Precio</th>
+                                                <th>Desc.</th>
+                                                <th>Final</th>
+                                                <th>Base</th>
+                                                <th>IVA</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tablaLunas">
+                                        </tbody>
+                                        <tfoot class="bg-light">
+                                            <tr class="font-weight-bold">
+                                                <td colspan="6">SUBTOTAL LUNAS:</td>
+                                                <td id="subtotalBaseLunas">$0.00</td>
+                                                <td id="subtotalIvaLunas">$0.00</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Totales -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="card-title mb-0">
+                                    <i class="fas fa-calculator"></i> Totales de la Factura
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="bg-light p-3 rounded text-center">
+                                            <strong>Base Total:</strong><br>
+                                            <span class="h4 text-primary" id="totalBaseCalculado">$0.00</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="bg-light p-3 rounded text-center">
+                                            <strong>IVA Total:</strong><br>
+                                            <span class="h4 text-warning" id="totalIvaCalculado">$0.00</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="bg-light p-3 rounded text-center">
+                                            <strong>Monto Total:</strong><br>
+                                            <span class="h4 text-success" id="montoTotalCalculado">$0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formulario de factura -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="declaranteSelect">Declarante <span class="text-danger">*</span></label>
+                                <select class="form-control" id="declaranteSelect" name="declarante_id" required>
+                                    <option value="">Seleccione un declarante...</option>
+                                </select>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="tipoFactura">Tipo de Documento <span class="text-danger">*</span></label>
+                                <select class="form-control" id="tipoFactura" name="tipo" required>
+                                    <option value="">Seleccione el tipo...</option>
+                                    <option value="factura">Factura</option>
+                                    <option value="nota_venta">Nota de Venta</option>
+                                </select>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="montoFactura">Monto (Base) <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" class="form-control" id="montoFactura" name="monto" required readonly>
+                                <small class="text-muted">Este campo se calcula automáticamente</small>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="ivaFactura">IVA <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" class="form-control" id="ivaFactura" name="iva" required readonly>
+                                <small class="text-muted">Este campo se calcula automáticamente</small>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label for="xmlRuta">Ruta del XML (opcional)</label>
+                                <input type="text" class="form-control" id="xmlRuta" name="xml" placeholder="Ej: facturas/factura_123.xml">
+                                <small class="form-text text-muted">Ruta donde se almacenará el archivo XML de la factura</small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-success" id="guardarFacturaBtn">
+                    <i class="fas fa-save"></i> Crear Factura
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Modal para mostrar facturas del declarante --}}
+<div class="modal fade" id="facturasDeclaranteModal" tabindex="-1" role="dialog" aria-labelledby="facturasDeclaranteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="facturasDeclaranteModalLabel">
+                    <i class="fas fa-file-invoice-dollar"></i> Declaraciones - <span id="nombreDeclarante"></span>
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Información del declarante -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-user-tie"></i> Información del Declarante
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <p><strong>Nombre:</strong> <span id="infoNombreDeclarante"></span></p>
+                            </div>
+                            <div class="col-md-3">
+                                <p><strong>RUC:</strong> <span id="infoRucDeclarante"></span></p>
+                            </div>
+                            <div class="col-md-3">
+                                <p><strong>Total Facturas:</strong> <span id="infoCantidadFacturas" class="badge badge-info"></span></p>
+                            </div>
+                            <div class="col-md-3">
+                                <div id="facturasLoading" class="text-center" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin text-primary"></i> Cargando...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resumen de totales -->
+                <div id="totalesFacturas" class="card mb-3" style="display: none;">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-calculator"></i> Resumen Fiscal
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-2">
+                                <div class="bg-light p-3 rounded text-center">
+                                    <strong>Base Gravable:</strong><br>
+                                    <span class="h6 text-info" id="totalBaseFacturas">$0.00</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="bg-light p-3 rounded text-center">
+                                    <strong>IVA Débito Fiscal:</strong><br>
+                                    <span class="h5 text-success" id="totalDebitoFiscal">$0.00</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="bg-light p-3 rounded text-center">
+                                    <strong>Total Facturado:</strong><br>
+                                    <span class="h5 text-primary" id="totalFacturadoFacturas">$0.00</span>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="bg-light p-3 rounded text-center">
+                                    <strong>Cantidad:</strong><br>
+                                    <span class="h6 text-secondary" id="cantidadTotalFacturas">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de facturas -->
+                <div id="tablaFacturasContainer" style="display: none;">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-list"></i> Detalle de Facturas
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover mb-0" id="tablaFacturasDeclarante">
+                                    <thead class="thead-dark">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Fecha</th>
+                                            <th>Orden</th>
+                                            <th>Cliente</th>
+                                            <th>Tipo</th>
+                                            <th>Base</th>
+                                            <th>IVA</th>
+                                            <th>Total</th>
+                                            <th>XML</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="facturasTbody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mensaje si no hay facturas -->
+                <div id="noFacturasMessage" class="alert alert-info text-center" style="display: none;">
+                    <i class="fas fa-info-circle fa-2x mb-2"></i><br>
+                    <strong>Sin facturas</strong><br>
+                    Este declarante no tiene facturas registradas.
+                </div>
+
+                <!-- Error message -->
+                <div id="errorFacturas" class="alert alert-danger" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="errorFacturasMessage">Error al cargar las facturas.</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Cerrar
                 </button>
             </div>
         </div>
@@ -652,7 +724,6 @@
 </div>
 
 @push('css')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
 <style>
 .rating {
     display: flex;
@@ -680,1127 +751,315 @@
     color: #ffd700;
 }
 
-/* Estilos para filas con reclamos */
-.reclamo-row {
-    background-color: #f8d7da !important; /* Fondo rojo claro */
-    border-left: 4px solid #dc3545 !important; /* Borde izquierdo rojo más fuerte */
-}
-
-.reclamo-row:hover {
-    background-color: #f5c6cb !important; /* Fondo un poco más oscuro al hacer hover */
-}
-
-.bg-danger-light {
-    background-color: #f8d7da !important;
-}
-
-/* Asegurar que el texto sea legible en las filas con reclamo */
-.reclamo-row td {
-    color: #721c24 !important;
-}
-
 /* Estilos para el botón de WhatsApp */
 .btn-whatsapp-mensaje {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 32px;
-    padding: 0.375rem;
+    gap: 5px;
 }
 
-/* Estilos para el modal de WhatsApp */
-#whatsappModal .modal-content {
-    border-radius: 8px;
-    border: none;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+.btn-whatsapp-mensaje .button-text {
+    font-size: 0.875rem;
 }
 
-#whatsappModal .modal-header {
-    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
-    border-radius: 8px 8px 0 0;
+/* Estilos para el modal de declarantes */
+#declarantesModal .modal-header {
+    border-bottom: 2px solid #17a2b8;
 }
 
-#whatsappModal .modal-header .close {
+#declarantesModal .table thead th {
+    background-color: #343a40;
     color: white;
-    opacity: 1;
-    text-shadow: none;
+    border: none;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
 }
 
-#whatsappModal .modal-header .close:hover {
-    opacity: 0.8;
-}
-
-#whatsapp-mensaje {
-    resize: vertical;
-    min-height: 200px;
+#declarantesModal .table tbody tr:hover {
     background-color: #f8f9fa;
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
-    line-height: 1.6;
+    transition: background-color 0.3s ease;
 }
 
-#whatsapp-mensaje:focus {
-    border-color: #25d366;
-    box-shadow: 0 0 0 0.2rem rgba(37, 211, 102, 0.25);
+#declarantesModal .table td {
+    vertical-align: middle;
+    border-color: #dee2e6;
+    font-size: 0.9rem;
 }
 
-/* Contador de caracteres del mensaje */
-#mensaje-contador {
-    font-weight: bold;
-    color: #25d366;
+#declarantesLoading {
+    padding: 40px 0;
+    color: #6c757d;
 }
 
-/* Botones de envío de WhatsApp */
-#enviarWhatsAppMovil {
-    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
-    border: none;
-    transition: all 0.3s ease;
+#declarantesLoading i {
+    color: #17a2b8;
+    margin-bottom: 15px;
 }
 
-#enviarWhatsAppMovil:hover {
+.modal-xl {
+    max-width: 1200px;
+}
+
+/* Estilos para el formulario de declarantes */
+#declaranteForm .card {
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+#declaranteForm .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+}
+
+#declaranteForm .form-control {
+    border-radius: 0.375rem;
+    font-size: 0.9rem;
+}
+
+#declaranteForm .form-control.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+#declaranteForm .invalid-feedback {
+    display: block;
+    font-size: 0.875em;
+    color: #dc3545;
+}
+
+/* Botones de acción en la tabla */
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0.2rem;
+}
+
+.btn-editar-declarante:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-#enviarWhatsAppWeb {
-    background: linear-gradient(135deg, #128c7e 0%, #075e54 100%);
-    border: none;
-    transition: all 0.3s ease;
-}
-
-#enviarWhatsAppWeb:hover {
+.btn-eliminar-declarante:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(18, 140, 126, 0.4);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-/* Alert de información */
-#whatsappModal .alert-info {
-    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-    border: 1px solid #bee5eb;
-    border-radius: 8px;
+/* Estilos para certificados digitales */
+.custom-file-label::after {
+    content: "Examinar";
 }
 
-/* Información del cliente y pedido */
-#whatsappModal .form-control-plaintext {
+.cert-type {
     font-weight: 600;
     color: #495057;
 }
 
-/* Input group para el teléfono */
-#whatsappModal .input-group-text {
-    background-color: #25d366;
-    color: white;
-    border-color: #25d366;
+.firma-thumbnail {
+    max-width: 50px;
+    max-height: 50px;
+    border-radius: 0.25rem;
+    border: 1px solid #dee2e6;
+    object-fit: cover;
 }
 
-#whatsappModal .input-group .form-control {
-    border-left: none;
+.firma-preview-large {
+    max-width: 200px;
+    max-height: 150px;
+    border-radius: 0.25rem;
+    border: 1px solid #dee2e6;
+    object-fit: contain;
 }
 
-#whatsappModal .input-group .form-control:focus {
-    border-color: #25d366;
-    box-shadow: none;
+/* Estilos para la tabla de declarantes con certificados */
+#declarantesTable .firma-cell {
+    text-align: center;
+    vertical-align: middle;
 }
 
-/* Responsive para el modal de WhatsApp */
-@media (max-width: 768px) {
-    #whatsappModal .modal-dialog {
-        margin: 10px;
-        max-width: calc(100% - 20px);
-    }
-    
-    #whatsappModal .modal-body .row {
-        margin-bottom: 15px;
-    }
-    
-    #whatsappModal .modal-footer {
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    #whatsappModal .modal-footer .btn {
-        width: 100%;
-        margin-bottom: 5px;
-    }
-    
-    #whatsapp-mensaje {
-        min-height: 150px;
-        font-size: 16px; /* Evita zoom en iOS */
-    }
+.archivo-info {
+    font-size: 0.8em;
+    color: #6c757d;
+    word-break: break-all;
 }
 
-/* Animaciones para los botones del modal */
-#whatsappModal .btn {
-    transition: all 0.3s ease;
-}
-
-#whatsappModal .btn:hover {
-    transform: translateY(-2px);
-}
-
-#whatsappModal .btn:active {
-    transform: translateY(0);
-}
-
-/* Mejoras para el textarea */
-#whatsapp-mensaje::placeholder {
+.sin-archivo {
     color: #6c757d;
     font-style: italic;
+    font-size: 0.9em;
 }
 
-/* Indicador de teclas de acceso rápido */
-.keyboard-shortcut {
-    font-size: 0.8em;
-    color: #6c757d;
-    margin-top: 5px;
+/* Iconos para certificados */
+.fa-certificate, .fa-key {
+    margin-bottom: 5px;
 }
 
-.keyboard-shortcut kbd {
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 3px;
-    padding: 2px 6px;
-    font-size: 0.85em;
-    color: #495057;
-}
-
-/* Estilos para dispositivos táctiles */
-@media (hover: none) and (pointer: coarse) {
-    #whatsappModal .btn:hover {
-        transform: none;
-    }
-}
-
-/* Estilos para los checkboxes */
-input[type="checkbox"] {
-    width: 16px !important;
-    height: 16px !important;
-    margin: 0 !important;
-    cursor: pointer !important;
-    position: relative !important;
-    display: inline-block !important;
-}
-
-input[type="checkbox"]:before,
-input[type="checkbox"]:after {
-    display: none !important;
-}
-
-.checkbox-cell {
-    text-align: center !important;
-    vertical-align: middle !important;
-    width: 50px !important;
-}
-
-/* Estilos adicionales para el botón de reclamo */
-.btn-reclamo {
-    transition: all 0.2s ease;
-}
-
-.btn-reclamo:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-/* Estilos para el botón de quitar reclamo */
-.btn-quitar-reclamo {
-    transition: all 0.2s ease;
-}
-
-.btn-quitar-reclamo:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-/* Estilos para el modal de reclamo */
-#reclamoModal .modal-content {
+.cert-icon-container {
+    padding: 10px;
     border-radius: 8px;
+    background-color: #f8f9fa;
 }
 
-#reclamoModal .modal-header {
-    background-color: #dc3545;
-    color: white;
+/* Estilos para el modal de crear factura */
+#crearFacturaModal .modal-header {
+    border-bottom: 2px solid #ffc107;
 }
 
-#reclamoModal .modal-header .close {
-    color: white;
-    opacity: 1;
-}
-
-#reclamoModal .modal-header .close:hover {
-    opacity: 0.8;
-}
-
-#reclamo {
-    resize: vertical;
-    min-height: 120px;
-}
-
-/* Estilos para el contador de caracteres del reclamo */
-#contador-caracteres {
-    font-weight: bold;
-}
-
-/* Estilos mejorados para los botones de acciones */
-.btn-group .btn {
-    border-radius: 0.25rem !important;
-    margin-right: 2px;
-    transition: all 0.2s ease-in-out;
-}
-
-.btn-group .btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-}
-
-/* Botones de estado con animación */
-.estado-btn {
-    position: relative;
-    transition: all 0.3s ease;
-}
-
-.estado-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
-.estado-btn:active {
-    transform: translateY(0);
-}
-
-/* Mejoras para botones outline */
-.btn-outline-info:hover {
-    background-color: #17a2b8;
-    border-color: #17a2b8;
-    color: white;
-}
-
-.btn-outline-primary:hover {
-    background-color: #007bff;
-    border-color: #007bff;
-    color: white;
-}
-
-.btn-outline-danger:hover {
-    background-color: #dc3545;
+#crearFacturaModal .form-control.is-invalid {
     border-color: #dc3545;
-    color: white;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
 }
 
-.btn-outline-secondary:hover {
-    background-color: #6c757d;
-    border-color: #6c757d;
-    color: white;
+#crearFacturaModal .invalid-feedback {
+    display: block;
+    font-size: 0.875em;
+    color: #dc3545;
 }
 
-.btn-outline-success:hover {
-    background-color: #28a745;
-    border-color: #28a745;
-    color: white;
+#crearFacturaModal .card {
+    border: 1px solid #dee2e6;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 
-/* Responsive para botones de acciones */
-@media (max-width: 768px) {
-    .btn-group {
-        flex-direction: column;
-        width: 100%;
-    }
-    
-    .btn-group .btn {
-        margin-bottom: 2px;
-        border-radius: 0.25rem !important;
-    }
-    
-    .d-flex.flex-wrap {
-        flex-direction: column !important;
-        gap: 5px !important;
-    }
+#crearFacturaModal .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
 }
 
-/* Estilos para tooltips */
-.tooltip {
+/* Estilos para las tablas de detalles de factura */
+#crearFacturaModal .table-sm td,
+#crearFacturaModal .table-sm th {
+    padding: 0.5rem;
     font-size: 0.875rem;
 }
 
-/* Espaciado mejorado para acciones */
-.gap-1 {
-    gap: 0.25rem !important;
+#crearFacturaModal .table thead th {
+    border-top: none;
+    font-weight: 600;
 }
 
-/* Iconos con mejor espaciado */
-.me-1 {
-    margin-right: 0.25rem !important;
+#crearFacturaModal .table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0,0,0,.02);
 }
 
-/* Botones con tamaño consistente */
-.btn-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    border-radius: 0.2rem;
+#crearFacturaModal .bg-light {
+    background-color: #f8f9fa !important;
 }
 
-/* Mejora para el contenedor de acciones */
-.d-flex.flex-wrap {
-    min-height: 40px;
-    align-items: center;
+#crearFacturaModal .font-weight-bold {
+    font-weight: 700 !important;
 }
 
-/* Estilo especial para botones de estado activos */
-.estado-btn.loading {
-    pointer-events: none;
-    opacity: 0.7;
+#crearFacturaModal .text-primary {
+    color: #007bff !important;
 }
 
-.estado-btn.loading i {
-    animation: spin 1s linear infinite;
+#crearFacturaModal .text-warning {
+    color: #ffc107 !important;
 }
 
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+#crearFacturaModal .text-success {
+    color: #28a745 !important;
 }
 
-/* Estilos para el botón de filtrar reclamos */
-#filtrarReclamos {
-    transition: all 0.3s ease;
-    position: relative;
+/* Loading state */
+#detallesLoading i {
+    color: #ffc107;
 }
 
-#filtrarReclamos.active {
-    background-color: #dc3545 !important;
-    border-color: #dc3545 !important;
-    color: white !important;
-    box-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
-}
-
-#filtrarReclamos:hover {
+/* Botón de crear factura en la tabla */
+.btn-crear-factura:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-#filtrarReclamos.active::after {
-    content: " (Activo)";
-    font-size: 0.8em;
+/* Estilos para el modal de facturas del declarante */
+#facturasDeclaranteModal .modal-header {
+    border-bottom: 2px solid #007bff;
 }
 
-/* Mejora visual para botones agrupados */
-.btn-group .btn:not(:last-child) {
-    border-right: 1px solid rgba(0,0,0,0.1);
+#facturasDeclaranteModal .table-sm td,
+#facturasDeclaranteModal .table-sm th {
+    padding: 0.5rem;
+    font-size: 0.875rem;
 }
 
-/* Colores específicos para cada tipo de acción */
-.btn-outline-info {
-    border-color: #17a2b8;
-    color: #17a2b8;
+#facturasDeclaranteModal .table thead th {
+    border-top: none;
+    font-weight: 600;
+    font-size: 0.85rem;
 }
 
-.btn-outline-primary {
-    border-color: #007bff;
+#facturasDeclaranteModal .badge {
+    font-size: 0.75em;
+}
+
+/* Loading para facturas */
+#facturasLoading i {
     color: #007bff;
 }
 
-/* Estilos para el botón de pago */
-.btn-success {
-    background-color: #28a745;
-    border-color: #28a745;
-    transition: all 0.2s ease;
-}
-
-.btn-success:hover {
-    background-color: #218838;
-    border-color: #1e7e34;
+/* Botones de acción en tabla de declarantes */
+.btn-mostrar-facturas:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
-}
-
-/* Estilos para botones de urgente */
-.btn-marcar-urgente {
-    transition: all 0.2s ease;
-}
-
-.btn-marcar-urgente:hover {
-    background-color: #ffc107;
-    border-color: #ffc107;
-    color: #212529;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(255, 193, 7, 0.3);
-}
-
-.btn-desmarcar-urgente {
-    background-color: #ffc107;
-    border-color: #ffc107;
-    color: #212529;
-    transition: all 0.2s ease;
-}
-
-.btn-desmarcar-urgente:hover {
-    background-color: #e0a800;
-    border-color: #d39e00;
-    color: #212529;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(255, 193, 7, 0.4);
-}
-
-.btn-desmarcar-urgente:focus {
-    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.5);
-}
-
-/* Estilos para la barra de herramientas optimizada */
-.btn-toolbar {
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.btn-toolbar .btn-group {
-    margin-bottom: 0.5rem;
-}
-
-/* Estilos para dropdowns de acciones */
-.dropdown-menu {
-    min-width: 200px;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    border-radius: 0.375rem;
-}
-
-.dropdown-item {
-    padding: 0.5rem 1rem;
-    transition: all 0.2s ease;
-}
-
-.dropdown-item:hover {
-    background-color: #f8f9fa;
-    color: #495057;
-    transform: translateX(2px);
-}
-
-.dropdown-item i {
-    width: 20px;
-    text-align: center;
-    margin-right: 8px;
-}
-
-/* Botones de dropdown deshabilitados */
-.btn.disabled,
-.btn[disabled] {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.btn.disabled .dropdown-toggle::after,
-.btn[disabled] .dropdown-toggle::after {
-    opacity: 0.5;
-}
-
-/* Responsive para la barra de herramientas */
-@media (max-width: 768px) {
-    .btn-toolbar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .btn-toolbar .btn-group {
-        width: 100%;
-        margin-bottom: 0.5rem;
-    }
-    
-    .btn-toolbar .btn {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .dropdown-menu {
-        width: 100%;
-    }
-}
-
-/* Mejoras para botones principales */
-.btn-toolbar .btn {
-    white-space: nowrap;
-    border-radius: 0.375rem;
-}
-
-/* Separación entre grupos de botones */
-.btn-toolbar .btn-group:not(:last-child) {
-    margin-right: 0.5rem;
-}
-
-@media (max-width: 576px) {
-    .btn-toolbar .btn-group:not(:last-child) {
-        margin-right: 0;
-    }
-}
-
-/* Estilos para botones compactos */
-.btn-toolbar .btn-sm {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.875rem;
-}
-
-/* Indicador visual para dropdowns con contenido */
-.dropdown-toggle::after {
-    transition: transform 0.2s ease;
-}
-
-.dropdown-toggle[aria-expanded="true"]::after {
-    transform: rotate(180deg);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 </style>
+
+<!-- SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
 @endpush
 @stop
 @section('js')
 @include('atajos')
 @parent
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function () {
-        // Debug: Verificar que el modal existe
-        console.log('Modal WhatsApp encontrado:', $('#whatsappModal').length > 0);
-        console.log('Botones WhatsApp encontrados:', $('.btn-whatsapp-mensaje').length);
-        
-        // Variable para controlar el estado del filtro de reclamos
-        var filtroReclamosActivo = false;
-        
-        // Inicializar tooltips de Bootstrap
-        $('[data-toggle="tooltip"]').tooltip({
-            placement: 'top',
-            trigger: 'hover'
-        });
-
-        // Verificar si hay filtro de fecha activo y mostrar/ocultar botón de limpiar filtro
-        @if(request()->filled('fecha_especifica'))
-            $('#limpiarFiltroFecha').show();
-        @else
-            $('#limpiarFiltroFecha').hide();
-        @endif
-
-        // Manejar el checkbox "Seleccionar todos"
-        $('#selectAll').change(function() {
-            $('.pedido-checkbox').prop('checked', this.checked);
-            toggleImprimirButton();
-        });
-
-        // Si se deselecciona algún checkbox individual, deseleccionar el "Seleccionar todos"
-        $(document).on('change', '.pedido-checkbox', function() {
-            if (!this.checked) {
-                $('#selectAll').prop('checked', false);
-            } else {
-                // Si todos están seleccionados, marcar el "Seleccionar todos"
-                var totalCheckboxes = $('.pedido-checkbox').length;
-                var checkedCheckboxes = $('.pedido-checkbox:checked').length;
-                $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
-            }
-            toggleImprimirButton();
-        });
-
-        // Función para habilitar/deshabilitar los botones y dropdowns
-        function toggleImprimirButton() {
-            var checkedCheckboxes = $('.pedido-checkbox:checked').length;
-            var isDisabled = checkedCheckboxes === 0;
-            
-            // Habilitar/deshabilitar botones individuales
-            $('#generarExcel').prop('disabled', isDisabled);
-            $('#imprimirEtiquetas').prop('disabled', isDisabled);
-            $('#imprimirCristaleria').prop('disabled', isDisabled);
-            $('#exportarCristalariaExcel').prop('disabled', isDisabled);
-            $('#imprimirInforme').prop('disabled', isDisabled);
-            $('#avanzarEstado').prop('disabled', isDisabled);
-            
-            // Habilitar/deshabilitar dropdowns
-            $('#exportarDropdown').prop('disabled', isDisabled);
-            $('#imprimirDropdown').prop('disabled', isDisabled);
-            
-            // Cambiar apariencia de los dropdowns
-            if (isDisabled) {
-                $('#exportarDropdown, #imprimirDropdown').addClass('disabled').attr('aria-disabled', 'true');
-            } else {
-                $('#exportarDropdown, #imprimirDropdown').removeClass('disabled').removeAttr('aria-disabled');
-            }
+        // Verificar que SweetAlert2 esté disponible
+        if (typeof Swal === 'undefined') {
+            console.error('SweetAlert2 no está cargado');
+            alert('Error: SweetAlert2 no está disponible. Por favor, recargue la página.');
+            return;
         }
 
-        // Manejar clic en el botón de filtrar por fecha - ENVIAR AL SERVIDOR
-        $('#seleccionarDiarios').click(function() {
-            var fechaSeleccionada = $('#fechaSeleccion').val();
-            
-            if (!fechaSeleccionada) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Fecha Requerida',
-                    text: 'Por favor seleccione una fecha para filtrar'
-                });
-                return;
-            }
-            
-            // Mostrar indicador de carga
-            Swal.fire({
-                title: 'Filtrando pedidos...',
-                text: 'Cargando pedidos del ' + fechaSeleccionada,
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            // Construir URL con filtro de fecha y mantener filtro de sucursal si existe
-            const params = new URLSearchParams();
-            params.set('fecha_especifica', fechaSeleccionada);
-            
-            // Mantener el filtro de empresa/sucursal si está seleccionado
-            if ($('#empresa_id').val()) {
-                params.set('empresa_id', $('#empresa_id').val());
-            }
-            
-            // Redirigir al servidor con los filtros combinados
-            window.location.href = '{{ route("pedidos.index") }}?' + params.toString();
-        });
-
-        // Manejar clic en el botón de limpiar filtro de fecha - REDIRIGIR AL SERVIDOR
-        $('#limpiarFiltroFecha').click(function() {
-            // Mostrar indicador de carga
-            Swal.fire({
-                title: 'Limpiando filtro...',
-                text: 'Volviendo a mostrar pedidos por mes',
-                allowOutsideClick: false,
-                timer: 1000,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            // Obtener parámetros actuales y remover solo la fecha específica
-            var currentParams = new URLSearchParams(window.location.search);
-            currentParams.delete('fecha_especifica'); // Remover el filtro de fecha específica
-            
-            var newUrl = '{{ route("pedidos.index") }}';
-            
-            // Si hay otros parámetros (como sucursal), mantenerlos
-            if (currentParams.toString()) {
-                newUrl += '?' + currentParams.toString();
+        // Función de fallback para mostrar alertas
+        function mostrarAlerta(config) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire(config);
             } else {
-                // Si no hay otros parámetros, ir al mes actual pero mantener sucursal si existe
-                const params = new URLSearchParams();
-                const now = new Date();
-                params.set('ano', now.getFullYear());
-                params.set('mes', now.getMonth() + 1);
-                
-                // Mantener el filtro de empresa/sucursal si está seleccionado
-                if ($('#empresa_id').val()) {
-                    params.set('empresa_id', $('#empresa_id').val());
-                }
-                
-                newUrl += '?' + params.toString();
-            }
-            
-            window.location.href = newUrl;
-        });
-
-        // Manejar clic en el botón de imprimir cristalería
-        $('#imprimirCristaleria').click(function() {
-            var selectedIds = [];
-            $('.pedido-checkbox:checked').each(function() {
-                selectedIds.push($(this).val());
-            });
-            
-            if (selectedIds.length === 0) {
-                alert('Por favor seleccione al menos un pedido para imprimir cristalería');
-                return;
-            }
-            
-            // Crear formulario para envío POST
-            var form = $('<form>', {
-                'method': 'POST',
-                'action': '{{ route("pedidos.print.cristaleria") }}',
-                'target': '_blank'
-            });
-            
-            // Agregar token CSRF
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': '_token',
-                'value': $('meta[name="csrf-token"]').attr('content')
-            }));
-            
-            // Agregar IDs seleccionados
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': 'ids',
-                'value': selectedIds.join(',')
-            }));
-            
-            // Agregar al body y enviar
-            $('body').append(form);
-            form.submit();
-            form.remove();
-        });
-
-        // Manejar clic en el botón de exportar cristalería en Excel
-        $('#exportarCristalariaExcel').click(function() {
-            var selectedIds = [];
-            $('.pedido-checkbox:checked').each(function() {
-                selectedIds.push($(this).val());
-            });
-            
-            if (selectedIds.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Sin Selección',
-                    text: 'Por favor seleccione al menos un pedido para exportar cristalería a Excel'
-                });
-                return;
-            }
-
-            // Mostrar loader
-            Swal.fire({
-                title: 'Generando Excel...',
-                text: 'Por favor espere mientras se genera el archivo de cristalería',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                willOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            // Crear formulario para envío POST
-            var form = $('<form>', {
-                'method': 'POST',
-                'action': '{{ route("pedidos.export.cristaleria") }}' // Ruta que crearemos
-            });
-            
-            // Agregar token CSRF
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': '_token',
-                'value': $('meta[name="csrf-token"]').attr('content')
-            }));
-            
-            // Agregar IDs seleccionados
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': 'ids',
-                'value': selectedIds.join(',')
-            }));
-            
-            // Crear iframe invisible para la descarga
-            var iframe = $('<iframe>', {
-                'style': 'display: none;'
-            });
-            
-            iframe.on('load', function() {
-                setTimeout(function() {
-                    Swal.close();
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Excel Generado!',
-                        text: 'El archivo de cristalería se ha descargado correctamente',
-                        timer: 3000,
-                        timerProgressBar: true
-                    });
-                    iframe.remove();
-                }, 1000);
-            });
-            
-            // Agregar iframe al body
-            $('body').append(iframe);
-            
-            // Configurar el form para usar el iframe
-            form.attr('target', 'download-frame');
-            iframe.attr('name', 'download-frame');
-            
-            // Agregar al body y enviar
-            $('body').append(form);
-            form.submit();
-            form.remove();
-        });
-
-        // Manejar clic en el botón de imprimir informe
-        $('#imprimirInforme').click(function() {
-            var selectedIds = [];
-            $('.pedido-checkbox:checked').each(function() {
-                selectedIds.push($(this).val());
-            });
-            
-            if (selectedIds.length === 0) {
-                alert('Por favor seleccione al menos un pedido para imprimir el informe');
-                return;
-            }
-            
-            // Crear formulario para envío GET (usar la ruta existente)
-            var form = $('<form>', {
-                'method': 'GET',
-                'action': '{{ route("pedidos.print") }}',
-                'target': '_blank'
-            });
-            
-            // Agregar IDs seleccionados
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': 'ids',
-                'value': selectedIds.join(',')
-            }));
-            
-            // Agregar al body y enviar
-            $('body').append(form);
-            form.submit();
-            form.remove();
-        });
-
-        // Manejar clic en el botón de imprimir etiquetas (antigua funcionalidad de generar excel)
-        $('#imprimirEtiquetas').click(function() {
-            var selectedIds = [];
-            $('.pedido-checkbox:checked').each(function() {
-                selectedIds.push($(this).val());
-            });
-            
-            if (selectedIds.length === 0) {
-                alert('Por favor seleccione al menos un pedido para imprimir etiquetas');
-                return;
-            }
-            
-            // Crear formulario para envío POST
-            var form = $('<form>', {
-                'method': 'POST',
-                'action': '{{ route("pedidos.print.etiquetas") }}',
-                'target': '_blank'
-            });
-            
-            // Agregar token CSRF
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': '_token',
-                'value': $('meta[name="csrf-token"]').attr('content')
-            }));
-            
-            // Agregar IDs seleccionados
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': 'ids',
-                'value': selectedIds.join(',')
-            }));
-            
-            // Agregar al body y enviar
-            $('body').append(form);
-            form.submit();
-            form.remove();
-        });
-
-        // Manejar clic en el botón de generar Excel (usar la función del PedidosController)
-        $('#generarExcel').click(function() {
-            var selectedIds = [];
-            $('.pedido-checkbox:checked').each(function() {
-                selectedIds.push($(this).val());
-            });
-            
-            if (selectedIds.length === 0) {
-                alert('Por favor seleccione al menos un pedido para generar Excel');
-                return;
-            }
-            
-            // Crear formulario para envío POST usando la ruta downloadExcel del PedidosController
-            var form = $('<form>', {
-                'method': 'POST',
-                'action': '{{ route("pedidos.download.excel") }}',
-                'target': '_blank'
-            });
-            
-            // Agregar token CSRF
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': '_token',
-                'value': $('meta[name="csrf-token"]').attr('content')
-            }));
-            
-            // Agregar IDs seleccionados
-            form.append($('<input>', {
-                'type': 'hidden',
-                'name': 'ids',
-                'value': selectedIds.join(',')
-            }));
-            
-            // Agregar al body y enviar
-            $('body').append(form);
-            form.submit();
-            form.remove();
-        });
-
-        // Manejar clic en el botón de avanzar estado
-        $('#avanzarEstado').click(function() {
-            var selectedIds = [];
-            var pedidosData = [];
-            
-            $('.pedido-checkbox:checked').each(function() {
-                var row = $(this).closest('tr');
-                var estadoActual = row.find('td:nth-child(5) span').text().trim();
-                var cliente = row.find('td:nth-child(6)').text().trim();
-                var numeroOrden = row.find('td:nth-child(4)').text().trim();
-                
-                selectedIds.push($(this).val());
-                pedidosData.push({
-                    id: $(this).val(),
-                    estado: estadoActual,
-                    cliente: cliente,
-                    numero_orden: numeroOrden
-                });
-            });
-            
-            if (selectedIds.length === 0) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Sin Selección',
-                    text: 'Por favor seleccione al menos un pedido para avanzar de estado'
-                });
-                return;
-            }
-            
-            // Agrupar pedidos por estado actual
-            var estadosMap = {};
-            var resumenCambios = '';
-            
-            pedidosData.forEach(function(pedido) {
-                if (!estadosMap[pedido.estado]) {
-                    estadosMap[pedido.estado] = [];
-                }
-                estadosMap[pedido.estado].push(pedido);
-            });
-            
-            // Crear resumen de cambios
-            for (var estado in estadosMap) {
-                var siguienteEstado = obtenerSiguienteEstado(estado);
-                if (siguienteEstado) {
-                    resumenCambios += `• ${estadosMap[estado].length} pedido(s) de "${estado}" → "${siguienteEstado}"\n`;
+                // Fallback a alert nativo si SweetAlert2 no está disponible
+                var mensaje = config.text || config.title || 'Operación completada';
+                if (config.icon === 'success') {
+                    alert('✓ ' + mensaje);
+                } else if (config.icon === 'error') {
+                    alert('✗ ' + mensaje);
+                } else if (config.icon === 'warning') {
+                    alert('⚠ ' + mensaje);
                 } else {
-                    resumenCambios += `• ${estadosMap[estado].length} pedido(s) en "${estado}" (ya en estado final)\n`;
+                    alert(mensaje);
                 }
             }
-            
-            // Verificar si hay pedidos que no se pueden avanzar
-            var pedidosNoAvanzables = pedidosData.filter(function(pedido) {
-                return !obtenerSiguienteEstado(pedido.estado);
-            });
-            
-            if (pedidosNoAvanzables.length === selectedIds.length) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'No se puede avanzar',
-                    text: 'Todos los pedidos seleccionados ya están en estado final (ENTREGADO) o no tienen un siguiente estado válido.'
-                });
-                return;
-            }
-            
-            // Mostrar confirmación
-            Swal.fire({
-                title: '¿Avanzar Estados?',
-                html: `
-                    <p>Se cambiarán los estados de los siguientes pedidos:</p>
-                    <div style="text-align: left; margin: 10px 0;">
-                        <pre style="font-size: 12px; background: #f8f9fa; padding: 10px; border-radius: 5px;">${resumenCambios}</pre>
-                    </div>
-                    ${pedidosNoAvanzables.length > 0 ? 
-                        `<p style="color: #856404; background: #fff3cd; padding: 8px; border-radius: 5px;">
-                            <strong>Nota:</strong> ${pedidosNoAvanzables.length} pedido(s) no se procesarán por estar en estado final.
-                        </p>` : ''
-                    }
-                    <p><strong>¿Continuar con el cambio de estados?</strong></p>
-                `,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#007bff',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sí, Avanzar Estados',
-                cancelButtonText: 'Cancelar',
-                width: '500px'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Proceder con el cambio de estados
-                    procesarCambioEstados(selectedIds);
-                }
-            });
-        });
-        
-        // Función para obtener el siguiente estado en el flujo
-        function obtenerSiguienteEstado(estadoActual) {
-            var flujoEstados = {
-                'Pendiente': 'CRISTALERIA',
-                'CRISTALERIA': 'Separado',
-                'Separado': 'LISTO EN TALLER',
-                'LISTO EN TALLER': 'Enviado',
-                'Enviado': 'ENTREGADO'
-            };
-            
-            return flujoEstados[estadoActual] || null;
-        }
-        
-        // Función para procesar el cambio de estados múltiples
-        function procesarCambioEstados(selectedIds) {
-            // Mostrar indicador de carga
-            Swal.fire({
-                title: 'Procesando cambios...',
-                text: 'Actualizando estados de los pedidos seleccionados',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            
-            // Enviar petición AJAX
-            $.ajax({
-                url: '{{ route("pedidos.bulk-update-state") }}',
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
-                    'Content-Type': 'application/json'
-                },
-                data: JSON.stringify({
-                    pedido_ids: selectedIds
-                }),
-                success: function(response) {
-                    if (response.success) {
-                        // Mostrar resumen de resultados
-                        var mensaje = `
-                            <p><strong>Proceso completado:</strong></p>
-                            <ul style="text-align: left;">
-                                <li><span style="color: green;">✓ ${response.procesados} pedidos actualizados</span></li>
-                                ${response.omitidos > 0 ? `<li><span style="color: orange;">⚠ ${response.omitidos} pedidos omitidos (estado final)</span></li>` : ''}
-                                ${response.errores > 0 ? `<li><span style="color: red;">✗ ${response.errores} errores</span></li>` : ''}
-                            </ul>
-                        `;
-                        
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Estados Actualizados!',
-                            html: mensaje,
-                            timer: 3000,
-                            showConfirmButton: true,
-                            confirmButtonText: 'Cerrar'
-                        }).then(() => {
-                            // Recargar la página para mostrar los cambios
-                            window.location.reload();
-                        });
-                    } else {
-                        throw new Error(response.message || 'Error desconocido');
-                    }
-                },
-                error: function(xhr) {
-                    console.error('Error:', xhr);
-                    let errorMessage = 'Error al actualizar los estados de los pedidos';
-                    
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    } else if (xhr.status === 419) {
-                        errorMessage = 'Sesión expirada. Por favor, recarga la página e intenta nuevamente.';
-                    }
-                    
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: errorMessage,
-                        confirmButtonText: 'Cerrar'
-                    });
-                }
-            });
         }
 
+        // Función de confirmación con fallback
+        function mostrarConfirmacion(config) {
+            return new Promise((resolve) => {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire(config).then((result) => {
+                        resolve(result);
+                    });
+                } else {
+                    // Fallback a confirm nativo
+                    var mensaje = config.text || config.title || '¿Está seguro?';
+                    var resultado = confirm(mensaje);
+                    resolve({ isConfirmed: resultado });
+                }
+            });
+        }
         // Configurar el modal antes de mostrarse
         $('#confirmarEliminarModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget); // Botón que activó el modal
@@ -1813,207 +1072,63 @@ input[type="checkbox"]:after {
         var pedidosTable = $('#pedidosTable').DataTable({
             "processing": true,
             "scrollX": true,
-            "order": [], // Sin ordenamiento inicial para mantener el orden del servidor (urgentes primero)
+            "order": [[1, "desc"]], // Ordenar por número de orden descendente
             "paging": false, // Deshabilitar paginación
             "lengthChange": false,
             "info": false,
-            "dom": 'frt', // Quitar 'p' del dom para eliminar controles de paginación y 'B' para quitar botones
-            "language": {
-                "processing": "Procesando...",
-                "search": "Buscar:",
-                "lengthMenu": "Mostrar _MENU_ registros",
-                "info": "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
-                "infoEmpty": "Mostrando registros del 0 al 0 de un total de 0 registros",
-                "infoFiltered": "(filtrado de un total de _MAX_ registros)",
-                "loadingRecords": "Cargando...",
-                "zeroRecords": "No se encontraron resultados",
-                "emptyTable": "Ningún dato disponible en esta tabla",
-                "paginate": {
-                    "first": "Primero",
-                    "previous": "Anterior",
-                    "next": "Siguiente",
-                    "last": "Último"
-                },
-                "aria": {
-                    "sortAscending": ": Activar para ordenar la columna de manera ascendente",
-                    "sortDescending": ": Activar para ordenar la columna de manera descendente"
-                },
-                "buttons": {
-                    "copy": "Copiar",
-                    "colvis": "Visibilidad",
-                    "collection": "Colección",
-                    "colvisRestore": "Restaurar visibilidad",
-                    "copyKeys": "Presione ctrl o u2318 + C para copiar los datos de la tabla al portapapeles del sistema. <br \/> <br \/> Para cancelar, haga clic en este mensaje o presione escape.",
-                    "copySuccess": {
-                        "1": "Copiada 1 fila al portapapeles",
-                        "_": "Copiadas %d filas al portapapeles"
+            "dom": 'Bfrt', // Quitar 'p' del dom para eliminar controles de paginación
+            "buttons": [
+                {
+                    extend: 'excel',
+                    text: 'Excel',
+                    exportOptions: {
+                        columns: [0,1,2,3,4,5,6,7,9]
                     },
-                    "copyTitle": "Copiar al portapapeles",
-                    "csv": "CSV",
-                    "excel": "Excel",
-                    "pageLength": {
-                        "-1": "Mostrar todas las filas",
-                        "_": "Mostrar %d filas"
+                    filename: 'Pedidos_' + new Date().toISOString().split('T')[0]
+                },
+                {
+                    extend: 'pdf',
+                    text: 'PDF',
+                    exportOptions: {
+                        columns: [0,1,2,3,4,5,6,7,9]
                     },
-                    "pdf": "PDF",
-                    "print": "Imprimir"
-                },
-                "decimal": ",",
-                "thousands": "."
-            },
-            "columnDefs": [
-                {
-                    "targets": [0], // Columna de checkbox
-                    "orderable": false,
-                    "searchable": false,
-                    "width": "50px"
-                },
-                {
-                    "targets": [3], // Columna de Orden
-                    "type": "num", // Asegurar que se ordene numéricamente
-                    "orderable": false // Deshabilitar ordenamiento por click para mantener nuestro orden personalizado
-                },
-                {
-                    "targets": '_all',
-                    "orderable": false // Deshabilitar ordenamiento automático en todas las columnas
+                    filename: 'Pedidos_' + new Date().toISOString().split('T')[0],
+                    orientation: 'landscape',
+                    pageSize: 'LEGAL'
                 }
             ],
-            "createdRow": function(row, data, dataIndex) {
-                // Agregar atributo data-urgente para facilitar el ordenamiento
-                if ($(row).hasClass('urgente-row')) {
-                    $(row).attr('data-urgente', '1');
-                } else {
-                    $(row).attr('data-urgente', '0');
-                }
-            },
-            "drawCallback": function(settings) {
-                // Ejecutar ordenamiento personalizado después de cada redibujado
-                setTimeout(function() {
-                    ordenarPorUrgenteYOrden();
-                }, 10);
+            "language": {
+                "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json",
+                "search": "Buscar:"
             }
         });
 
-        // Función personalizada para ordenar con urgentes primero
-        function ordenarPorUrgenteYOrden() {
-            var rows = $('#pedidosTable tbody tr').not('#no-reclamos-message').get();
-            
-            if (rows.length === 0) {
-                return; // No hay filas para ordenar
-            }
-            
-            rows.sort(function(a, b) {
-                var aUrgente = $(a).hasClass('urgente-row') ? 1 : 0;
-                var bUrgente = $(b).hasClass('urgente-row') ? 1 : 0;
-                
-                // Primero ordenar por urgente (urgentes primero)
-                if (aUrgente !== bUrgente) {
-                    return bUrgente - aUrgente; // Urgentes (1) antes que no urgentes (0)
-                }
-                
-                // Si ambos son urgentes o ambos no son urgentes, ordenar por número de orden descendente
-                var aOrdenText = $(a).find('td').eq(3).text().trim();
-                var bOrdenText = $(b).find('td').eq(3).text().trim();
-                
-                var aOrden = parseInt(aOrdenText.replace(/\D/g, '')) || 0; // Remover caracteres no numéricos
-                var bOrden = parseInt(bOrdenText.replace(/\D/g, '')) || 0;
-                
-                // Ordenar por número de orden de forma descendente (más alto primero)
-                return bOrden - aOrden;
-            });
-            
-            // Limpiar tbody y agregar las filas ordenadas
-            var tbody = $('#pedidosTable tbody');
-            var mensajeNoReclamos = $('#no-reclamos-message').detach(); // Guardar mensaje si existe
-            
-            tbody.empty();
-            
-            // Agregar las filas ordenadas
-            $.each(rows, function(index, row) {
-                tbody.append(row);
-            });
-            
-            // Reagregar el mensaje de no reclamos si existía
-            if (mensajeNoReclamos.length > 0) {
-                tbody.append(mensajeNoReclamos);
-            }
-            
-            // Mensaje de debug en consola (solo en desarrollo)
-            console.log('Tabla reordenada: ' + rows.length + ' filas procesadas');
-        }
-
-        // Aplicar el ordenamiento personalizado después de que la tabla se inicialice
-        setTimeout(function() {
-            ordenarPorUrgenteYOrden();
-        }, 100);
-
-        // También aplicar el ordenamiento después de búsquedas en DataTable
-        pedidosTable.on('search.dt', function() {
-            setTimeout(function() {
-                ordenarPorUrgenteYOrden();
-            }, 50);
-        });
-
-        // Función para mantener el ordenamiento después de cambios dinámicos
-        function manteneerOrdenamiento() {
-            setTimeout(function() {
-                ordenarPorUrgenteYOrden();
-            }, 100);
-        }
-
-        // Manejar cambios en los filtros - Filtrado automático
-        $('#filtroAno, #filtroMes, #empresa_id').change(function() {
-            const params = new URLSearchParams();
-            
-            // Mantener el filtro de fecha específica si está activo
-            var currentParams = new URLSearchParams(window.location.search);
-            if (currentParams.has('fecha_especifica')) {
-                params.set('fecha_especifica', currentParams.get('fecha_especifica'));
-            } else {
-                // Solo aplicar filtros de año y mes si no hay fecha específica
-                if ($('#filtroAno').val()) params.set('ano', $('#filtroAno').val());
-                if ($('#filtroMes').val()) params.set('mes', $('#filtroMes').val());
-                
-                // Si no hay año ni mes, agregar parámetro "todos"
-                if (!$('#filtroAno').val() && !$('#filtroMes').val()) {
-                    params.set('todos', '1');
-                }
-            }
-            
-            // Siempre agregar el filtro de empresa si está seleccionado
-            if ($('#empresa_id').val()) {
-                params.set('empresa_id', $('#empresa_id').val());
-            }
-            
-            window.location.href = '{{ route("pedidos.index") }}?' + params.toString();
+        // Manejar cambios en los filtros
+        $('#filtroAno, #filtroMes').change(function() {
+            $('#filterForm').submit();
         });
 
         // Botón "Actual"
         $('#actualButton').click(function() {
             const now = new Date();
-            const params = new URLSearchParams();
-            params.set('ano', now.getFullYear());
-            params.set('mes', now.getMonth() + 1);
-            
-            // Mantener el filtro de empresa si existe
-            if ($('#empresa_id').val()) {
-                params.set('empresa_id', $('#empresa_id').val());
-            }
-            
-            window.location.href = '{{ route("pedidos.index") }}?' + params.toString();
+            $('#filtroAno').val(now.getFullYear());
+            $('#filtroMes').val(now.getMonth() + 1);
+            $('#filterForm').submit();
         });
 
         // Botón "Mostrar Todos los Pedidos"
         $('#mostrarTodosButton').click(function() {
-            const params = new URLSearchParams();
-            params.set('todos', '1');
-            
-            // Mantener el filtro de empresa si existe
-            if ($('#empresa_id').val()) {
-                params.set('empresa_id', $('#empresa_id').val());
-            }
-            
-            window.location.href = '{{ route("pedidos.index") }}?' + params.toString();
+            window.location.href = '{{ route("pedidos.index", ["todos" => "1"]) }}';
+        });
+
+        // Auto-submit cuando cambie el filtro de empresa
+        $('#filtroEmpresa').change(function() {
+            $('#filterForm').submit();
+        });
+
+        // Auto-submit cuando cambien los filtros de año y mes
+        $('#filtroAno, #filtroMes').change(function() {
+            $('#filterForm').submit();
         });
 
         // Configurar el modal de eliminación
@@ -2044,129 +1159,146 @@ input[type="checkbox"]:after {
             });
         });
 
-        // Manejar el cambio de estado de pedidos
-        $(document).on('submit', 'form[action*="update-state"]', function(e) {
-            e.preventDefault();
-            var form = $(this);
-            var button = form.find('button[type="submit"]');
-            var originalText = button.html();
-            var originalTitle = button.attr('title');
+        // Función mejorada para envío seguro de WhatsApp
+        function enviarWhatsAppSeguro(telefono, mensaje, callback) {
+            // Limpiar el número de teléfono
+            var numeroLimpio = telefono.toString().replace(/[^\d]/g, '');
             
-            // Agregar clase de loading y deshabilitar el botón
-            button.addClass('loading')
-                  .prop('disabled', true)
-                  .html('<i class="fas fa-spinner fa-spin me-1"></i><span class="d-none d-xl-inline">Procesando...</span>')
-                  .attr('title', 'Procesando cambio de estado...');
-            
-            $.ajax({
-                url: form.attr('action'),
-                method: 'POST',
-                data: form.serialize(),
-                success: function(response) {
-                    // Cambiar a estado de éxito temporalmente
-                    button.removeClass('loading')
-                          .html('<i class="fas fa-check me-1"></i><span class="d-none d-xl-inline">¡Éxito!</span>')
-                          .attr('title', 'Estado actualizado correctamente');
-                    
-                    // Mostrar mensaje de éxito
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Estado Actualizado!',
-                        text: 'El estado del pedido se ha actualizado correctamente.',
-                        timer: 2000,
-                        showConfirmButton: false,
-                        toast: true,
-                        position: 'top-end'
-                    }).then(() => {
-                        // Recargar la página para mostrar los cambios
-                        window.location.reload();
-                    });
-                },
-                error: function(xhr) {
-                    console.error('Error:', xhr);
-                    let errorMessage = 'Error al actualizar el estado del pedido';
-                    
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    } else if (xhr.status === 419) {
-                        errorMessage = 'Sesión expirada. Por favor, recarga la página e intenta nuevamente.';
-                    }
-                    
-                    // Mostrar estado de error temporalmente
-                    button.removeClass('loading')
-                          .html('<i class="fas fa-exclamation-triangle me-1"></i><span class="d-none d-xl-inline">Error</span>')
-                          .attr('title', 'Error al procesar');
-                    
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: errorMessage,
-                        toast: true,
-                        position: 'top-end',
-                        timer: 4000
-                    });
-                    
-                    // Restaurar el botón después de un breve delay
-                    setTimeout(() => {
-                        button.prop('disabled', false)
-                              .html(originalText)
-                              .attr('title', originalTitle);
-                    }, 2000);
+            // Asegurar que tenga el código de país (Ecuador: 593)
+            if (!numeroLimpio.startsWith('593')) {
+                // Si empieza con 0, quitarlo y agregar 593
+                if (numeroLimpio.startsWith('0')) {
+                    numeroLimpio = '593' + numeroLimpio.substring(1);
+                } else {
+                    numeroLimpio = '593' + numeroLimpio;
                 }
-            });
-        });
-
-        // Función para detectar si es dispositivo móvil
-        function isMobileDevice() {
-            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            }
+            
+            // Codificar el mensaje de forma segura
+            var mensajeCodificado = encodeURIComponent(mensaje);
+            
+            // Crear URLs para diferentes casos
+            var urlWeb = `https://web.whatsapp.com/send?phone=${numeroLimpio}&text=${mensajeCodificado}`;
+            var urlApi = `https://api.whatsapp.com/send?phone=${numeroLimpio}&text=${mensajeCodificado}`;
+            var urlWa = `https://wa.me/${numeroLimpio}?text=${mensajeCodificado}`;
+            
+            // Mostrar modal de selección de método de envío
+            var modalHtml = `
+                <div class="modal fade" id="whatsappModal" tabindex="-1" role="dialog">
+                    <div class="modal-dialog modal-lg" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">ENVIAR MENSAJE DE WHATSAPP</h5>
+                                <button type="button" class="close" data-dismiss="modal">
+                                    <span>&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <p><strong>Número:</strong> +${numeroLimpio}</p>
+                                <p><strong>Vista previa del mensaje:</strong></p>
+                                <div class="alert alert-info" style="max-height: 200px; overflow-y: auto; white-space: pre-wrap; font-size: 0.9em;">${mensaje}</div>
+                                <p>Seleccione cómo desea enviar el mensaje:</p>
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <button type="button" class="btn btn-success btn-block" onclick="abrirWhatsApp('${urlWa}')">
+                                            <i class="fab fa-whatsapp"></i> WhatsApp Oficial
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <button type="button" class="btn btn-info btn-block" onclick="abrirWhatsApp('${urlWeb}')">
+                                            <i class="fab fa-whatsapp"></i> WhatsApp Web
+                                        </button>
+                                    </div>
+                                    <div class="col-md-12 mb-2">
+                                        <button type="button" class="btn btn-secondary btn-block" onclick="copiarMensaje('${numeroLimpio}', \`${mensaje.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">
+                                            <i class="fas fa-copy"></i> Copiar Mensaje y Número
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remover modal anterior si existe
+            $('#whatsappModal').remove();
+            
+            // Agregar modal al DOM
+            $('body').append(modalHtml);
+            
+            // Mostrar modal
+            $('#whatsappModal').modal('show');
+            
+            // Ejecutar callback si se proporciona
+            if (callback) callback();
         }
-
-        // Función para limpiar y formatear número de teléfono chileno
-        function formatChileanPhone(phone) {
-            // Validar que phone no sea null, undefined o vacío
-            if (!phone) return '';
+        
+        // Función para abrir WhatsApp
+        window.abrirWhatsApp = function(url) {
+            $('#whatsappModal').modal('hide');
             
-            // Convertir a string y remover todos los caracteres no numéricos
-            let cleanPhone = String(phone).replace(/\D/g, '');
+            // Intentar abrir la URL
+            var ventana = window.open(url, '_blank');
             
-            // Si no hay números válidos, retornar vacío
-            if (!cleanPhone) return '';
-            
-            // Si empieza con 56 (código de Chile), mantenerlo
-            if (cleanPhone.startsWith('56')) {
-                return cleanPhone;
-            }
-            
-            // Si empieza con 9 (celular chileno), agregar código de país
-            if (cleanPhone.startsWith('9') && cleanPhone.length === 9) {
-                return '56' + cleanPhone;
-            }
-            
-            // Si tiene 8 dígitos, asumir que falta el 9 inicial
-            if (cleanPhone.length === 8) {
-                return '569' + cleanPhone;
-            }
-            
-            // Si no cumple ningún patrón, devolver tal como está para validación posterior
-            return cleanPhone;
+            // Verificar si se abrió correctamente
+            setTimeout(function() {
+                if (!ventana || ventana.closed || typeof ventana.closed == 'undefined') {
+                    // Si no se pudo abrir, mostrar alerta
+                    mostrarAlerta({
+                        icon: 'warning',
+                        title: 'Bloqueador de Ventanas',
+                        html: `
+                            <p>No se pudo abrir WhatsApp automáticamente.</p>
+                            <p>Por favor, haga clic en el siguiente enlace:</p>
+                            <a href="${url}" target="_blank" class="btn btn-success">
+                                <i class="fab fa-whatsapp"></i> Abrir WhatsApp
+                            </a>
+                        `,
+                        showConfirmButton: false,
+                        showCloseButton: true
+                    });
+                }
+            }, 1000);
         }
-
-        // Función para generar URL de WhatsApp más segura
-        function generateWhatsAppURL(phoneNumber, message) {
-            const formattedPhone = formatChileanPhone(phoneNumber);
-            const encodedMessage = encodeURIComponent(message);
+        
+        // Función para copiar mensaje y número
+        window.copiarMensaje = function(numero, mensaje) {
+            var textoCompleto = `Número: +${numero}\n\nMensaje:\n${mensaje}`;
             
-            if (isMobileDevice()) {
-                // Para móviles, usar el esquema whatsapp://
-                return `whatsapp://send?phone=${formattedPhone}&text=${encodedMessage}`;
+            // Intentar copiar al portapapeles
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(textoCompleto).then(() => {
+                    $('#whatsappModal').modal('hide');
+                    mostrarAlerta({
+                        icon: 'success',
+                        title: '¡Copiado!',
+                        text: 'El número y mensaje han sido copiados al portapapeles.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }).catch(() => {
+                    mostrarTextoParaCopiar(textoCompleto);
+                });
             } else {
-                // Para escritorio, usar WhatsApp Web con api.whatsapp.com (más confiable)
-                return `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodedMessage}`;
+                mostrarTextoParaCopiar(textoCompleto);
             }
         }
+        
+        // Función para mostrar texto para copiar manualmente
+        function mostrarTextoParaCopiar(texto) {
+            $('#whatsappModal').modal('hide');
+            mostrarAlerta({
+                title: 'Copiar Manualmente',
+                html: `<textarea class="form-control" rows="8" readonly style="width: 100%;">${texto}</textarea>`,
+                showConfirmButton: true,
+                confirmButtonText: 'Cerrar',
+                width: '600px'
+            });
+        }
 
-        // Manejar el envío del mensaje de WhatsApp con modal de previsualización
-        $(document).on('click', '.btn-whatsapp-mensaje', function(e) {
+        // Manejar el envío del mensaje de WhatsApp con encuesta
+        $('.btn-whatsapp-mensaje').click(function(e) {
             e.preventDefault();
             var button = $(this);
             var pedidoId = button.data('pedido-id');
@@ -2174,48 +1306,7 @@ input[type="checkbox"]:after {
             var cliente = button.data('cliente');
             var estadoActual = button.data('estado-actual');
 
-            // Debug adicional para verificar los datos del botón
-            console.log('Datos brutos del botón:', {
-                pedidoId: pedidoId,
-                celular: celular,
-                celularType: typeof celular,
-                cliente: cliente,
-                estadoActual: estadoActual,
-                buttonHTML: button[0].outerHTML.substring(0, 200) + '...'
-            });
-
-            console.log('Click en botón WhatsApp:', {
-                pedidoId: pedidoId,
-                celular: celular,
-                cliente: cliente,
-                estadoActual: estadoActual
-            });
-
-            // Validar número de teléfono - Convertir a string y validar
-            var celularStr = celular ? String(celular).trim() : '';
-            if (!celularStr || celularStr === '' || celularStr === 'null' || celularStr === 'undefined') {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'No se encontró un número de teléfono válido para este cliente.'
-                });
-                return;
-            }
-
-            // Deshabilitar botón temporalmente para evitar múltiples clics
-            button.prop('disabled', true);
-
-            // Mostrar indicador de carga
-            Swal.fire({
-                title: 'Generando mensaje...',
-                text: 'Preparando mensaje y enlace de encuesta',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            // Primero obtener la URL de la encuesta
+            // Primero obtener la URL de la encuesta y actualizar estado
             $.ajax({
                 url: '/pedidos/' + pedidoId + '/enviar-encuesta',
                 method: 'POST',
@@ -2224,652 +1315,952 @@ input[type="checkbox"]:after {
                 },
                 success: function(response) {
                     if (response.success) {
-                        // Cerrar el indicador de carga
-                        Swal.close();
-
-                        // Crear mensaje personalizado para Chile
-                        var mensajeCompleto = `¡Hola ${cliente}! 👋
-
-¡Excelentes noticias! Sus lentes ya están listos para ser retirados en nuestra óptica. ✨
-
-📋 *Detalles del pedido:*
-• Orden: ${response.numero_orden || 'N/A'}
-• Estado: ${response.estado || 'Listo para retiro'}
-
-🏪 Puede pasar a recogerlos en el horario que más le convenga.
-
-🔗 *Califica nuestro servicio:*
-${response.url}
-
-Su opinión es muy importante para nosotros. 
-
-¡Que tenga un excelente día!`;
-
-                        // Configurar el modal con la información
-                        $('#whatsapp-cliente').text(cliente);
-                        $('#whatsapp-celular').val(celularStr);
-                        $('#whatsapp-orden').text(response.numero_orden || 'N/A');
-                        $('#whatsapp-estado').text(response.estado || 'Listo para retiro');
-                        $('#whatsapp-mensaje').val(mensajeCompleto);
+                        // Construir mensaje con saludo personalizado al cliente
+                        var mensajeSaludo = "Estimado(a) paciente " + cliente + ",";
+                        var mensajeLentes = "Le informamos que sus lentes recetados ya están listos para ser recogidos en ESCLERÓPTICA 👀👁. Puede pasar a retirarlos cuando le sea más conveniente. ¡Lo esperamos pronto! Muchas gracias por confiar en nosotros. 🤓👓😊";
                         
-                        // Actualizar contador de caracteres
-                        updateCharacterCounter();
+                        // Verificar si hay URL de encuesta en la respuesta
+                        var mensajeEncuesta = "";
+                        if (response.url && response.url.trim() !== '') {
+                            // La URL viene en el campo 'url' según el controlador
+                            var textoEnlace = response.texto_amigable || "➡️ *CLICK AQUÍ PARA COMPLETAR LA ENCUESTA* ⬅️";
+                            mensajeEncuesta = "\n\nNos gustaría conocer su opinión. Por favor, complete nuestra breve encuesta de satisfacción:\n\n" + textoEnlace + "\n" + response.url;
+                        } else if (response.encuesta_url && response.encuesta_url.trim() !== '') {
+                            // Fallback por si cambia en el futuro
+                            mensajeEncuesta = "\n\nNos gustaría conocer su opinión. Por favor, complete nuestra breve encuesta de satisfacción:\n" + response.encuesta_url;
+                        } else {
+                            // Si no hay URL, generar mensaje alternativo
+                            console.warn('No se encontró URL de encuesta en la respuesta:', response);
+                            mensajeEncuesta = "\n\nNos gustaría conocer su opinión sobre nuestro servicio. ¡Gracias por confiar en ESCLERÓPTICA!";
+                        }
                         
-                        // Guardar datos para uso posterior
-                        $('#whatsappModal').data({
-                            'pedido-id': pedidoId,
-                            'celular': celularStr,
-                            'cliente': cliente,
-                            'button': button
+                        // Crear el mensaje completo
+                        var mensajeCompleto = mensajeSaludo + "\n\n" + mensajeLentes + mensajeEncuesta;
+                        
+                        // Debug: mostrar en consola para verificar
+                        console.log('Respuesta del servidor:', response);
+                        console.log('Mensaje completo:', mensajeCompleto);
+                        
+                        // Usar la función mejorada de WhatsApp
+                        enviarWhatsAppSeguro(celular, mensajeCompleto, function() {
+                            // Actualizar el estado visual del botón
+                            button.removeClass('btn-success').addClass('btn-warning');
+                            button.attr('title', 'Volver a enviar mensaje y encuesta');
+                            button.find('.button-text').text('Volver a enviar');
+                            button.data('estado-actual', 'enviado');
                         });
-
-                        // Mostrar el modal
-                        $('#whatsappModal').modal('show');
                     }
                 },
                 error: function(xhr) {
-                    console.error('Error AJAX:', xhr);
-                    let errorMessage = 'Error al generar el enlace de encuesta';
-                    if (xhr.responseJSON && xhr.responseJSON.error) {
-                        errorMessage = xhr.responseJSON.error;
+                    console.error('Error en la petición:', xhr);
+                    
+                    var mensajeError = 'Error al generar el enlace de la encuesta';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        mensajeError = xhr.responseJSON.message;
+                    } else if (xhr.responseJSON && xhr.responseJSON.error) {
+                        mensajeError = xhr.responseJSON.error;
+                    } else if (xhr.status === 0) {
+                        mensajeError = 'No se pudo conectar con el servidor. Verifique su conexión a internet.';
+                    } else if (xhr.status === 404) {
+                        mensajeError = 'La ruta para generar la encuesta no fue encontrada.';
+                    } else if (xhr.status === 500) {
+                        mensajeError = 'Error interno del servidor al generar la encuesta.';
                     }
                     
-                    Swal.fire({
+                    mostrarAlerta({
                         icon: 'error',
                         title: 'Error',
-                        text: errorMessage
+                        text: mensajeError,
+                        footer: 'Código de error: ' + (xhr.status || 'desconocido')
                     });
+                }
+            });
+        });
+
+        // Manejar el botón de Declarantes
+        $('#declarantesButton').click(function() {
+            cargarDeclarantes();
+        });
+
+        // Función para cargar los declarantes
+        function cargarDeclarantes() {
+            // Mostrar modal
+            $('#declarantesModal').modal('show');
+            
+            // Mostrar loading y ocultar contenido
+            $('#declarantesLoading').show();
+            $('#declarantesContent').hide();
+            $('#declarantesError').hide();
+            
+            // Realizar petición AJAX
+            $.ajax({
+                url: '{{ route("pedidos.declarantes.listar") }}',
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        mostrarDeclarantes(response.data);
+                    } else {
+                        mostrarError(response.message || 'Error al cargar los declarantes');
+                    }
+                },
+                error: function(xhr) {
+                    var mensajeError = 'Error al cargar los declarantes';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        mensajeError = xhr.responseJSON.message;
+                    }
+                    mostrarError(mensajeError);
+                }
+            });
+        }
+
+        // Función para mostrar los declarantes en la tabla
+        function mostrarDeclarantes(declarantes) {
+            var tbody = $('#declarantesTableBody');
+            tbody.empty();
+            
+            if (declarantes.length === 0) {
+                tbody.html('<tr><td colspan="10" class="text-center">No hay declarantes registrados</td></tr>');
+            } else {
+                $.each(declarantes, function(index, declarante) {
+                    var fechaCreacion = declarante.created_at ? 
+                        new Date(declarante.created_at).toLocaleDateString('es-ES') : 
+                        'No disponible';
+                    
+                    // Manejar la celda de firma
+                    var firmaCell = '';
+                    if (declarante.firma) {
+                        var firmaUrl = declarante.firma.startsWith('http') ? 
+                            declarante.firma : 
+                            `/storage/certificados/${declarante.firma}`;
+                        
+                        var extension = declarante.firma.split('.').pop().toLowerCase();
+                        if (['p12', 'pem'].includes(extension)) {
+                            var iconClass = extension === 'p12' ? 'fa-certificate text-primary' : 'fa-key text-success';
+                            var certType = extension === 'p12' ? 'P12' : 'PEM';
+                            firmaCell = `
+                                <div class="firma-cell">
+                                    <i class="fas ${iconClass} fa-lg"></i>
+                                    <br><small class="cert-type">${certType}</small>
+                                </div>
+                            `;
+                        } else {
+                            firmaCell = `
+                                <div class="firma-cell">
+                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                    <br><small class="text-warning">No válido</small>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        firmaCell = '<div class="firma-cell"><span class="sin-archivo">Sin certificado</span></div>';
+                    }
+
+                    // Formatear los valores fiscales
+                    var baseGravable = declarante.total_base || 0;
+                    var ivaDebitoFiscal = declarante.total_iva || 0; // Solo el IVA
+                    var totalFacturado = declarante.total_facturado || 0;
+                    var cantidadFacturas = declarante.cantidad_facturas || 0;
+                    
+                    var baseFormatted = baseGravable > 0 ? 
+                        `<span class="text-primary font-weight-bold">$${parseFloat(baseGravable).toFixed(2)}</span>` : 
+                        `<span class="text-muted">$0.00</span>`;
+                    
+                    var ivaFormatted = ivaDebitoFiscal > 0 ? 
+                        `<span class="text-warning font-weight-bold">$${parseFloat(ivaDebitoFiscal).toFixed(2)}</span>` : 
+                        `<span class="text-muted">$0.00</span>`;
+                    
+                    var totalFormatted = totalFacturado > 0 ? 
+                        `<span class="text-success font-weight-bold">$${parseFloat(totalFacturado).toFixed(2)}</span>` : 
+                        `<span class="text-muted">$0.00</span>`;
+                    
+                    var cantidadFormatted = cantidadFacturas > 0 ? 
+                        `<span class="badge badge-info">${cantidadFacturas}</span>` : 
+                        `<span class="badge badge-secondary">0</span>`;
+                    
+                    var fila = `
+                        <tr>
+                            <td>${declarante.id}</td>
+                            <td>${declarante.nombre || 'N/A'}</td>
+                            <td>${declarante.ruc || 'N/A'}</td>
+                            <td>${firmaCell}</td>
+                            <td class="text-center">${baseFormatted}</td>
+                            <td class="text-center">${ivaFormatted}</td>
+                            <td class="text-center">${totalFormatted}</td>
+                            <td class="text-center">${cantidadFormatted}</td>
+                            <td>${fechaCreacion}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-info btn-mostrar-facturas" 
+                                            data-id="${declarante.id}"
+                                            data-nombre="${declarante.nombre || ''}"
+                                            title="Ver Facturas"
+                                            ${cantidadFacturas == 0 ? 'disabled' : ''}>
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-warning btn-editar-declarante" 
+                                            data-id="${declarante.id}"
+                                            data-nombre="${declarante.nombre || ''}"
+                                            data-ruc="${declarante.ruc || ''}"
+                                            data-firma="${declarante.firma || ''}"
+                                            title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-eliminar-declarante" 
+                                            data-id="${declarante.id}"
+                                            data-nombre="${declarante.nombre || ''}"
+                                            title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.append(fila);
+                });
+            }
+            
+            // Ocultar loading y mostrar contenido
+            $('#declarantesLoading').hide();
+            $('#declarantesContent').show();
+        }
+
+        // Función para mostrar errores
+        function mostrarError(mensaje) {
+            $('#errorMessage').text(mensaje);
+            $('#declarantesLoading').hide();
+            $('#declarantesError').show();
+        }
+
+        // Limpiar el modal cuando se cierre
+        $('#declarantesModal').on('hidden.bs.modal', function () {
+            $('#declarantesLoading').hide();
+            $('#declarantesContent').hide();
+            $('#declarantesError').hide();
+            $('#declarantesTableBody').empty();
+            limpiarFormulario();
+        });
+
+        // Manejar el envío del formulario de declarante
+        $('#declaranteForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            // Crear FormData para manejar archivos
+            var formData = new FormData();
+            formData.append('nombre', $('#nombre').val().trim());
+            formData.append('ruc', $('#ruc').val().trim());
+            
+            // Agregar archivo si existe
+            var archivoFirma = $('#firma')[0].files[0];
+            if (archivoFirma) {
+                formData.append('firma', archivoFirma);
+            }
+
+            var declaranteId = $('#declaranteId').val();
+            var url = declaranteId ? 
+                '{{ route("pedidos.declarantes.update", ":id") }}'.replace(':id', declaranteId) : 
+                '{{ route("pedidos.declarantes.store") }}';
+            
+            // Para PUT requests, necesitamos usar _method
+            if (declaranteId) {
+                formData.append('_method', 'PUT');
+            }
+
+            // Limpiar errores previos
+            $('.form-control, .custom-file-input').removeClass('is-invalid');
+            $('.invalid-feedback').text('');
+
+            $('#submitButton').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+
+            $.ajax({
+                url: url,
+                method: 'POST', // Siempre POST para FormData
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        mostrarAlerta({
+                            icon: 'success',
+                            title: '¡Éxito!',
+                            text: response.message,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                        
+                        limpiarFormulario();
+                        cargarDeclarantes();
+                    } else {
+                        mostrarErroresFormulario(response.errors || {});
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        mostrarErroresFormulario(xhr.responseJSON.errors || {});
+                    } else {
+                        mostrarAlerta({
+                            icon: 'error',
+                            title: 'Error',
+                            text: xhr.responseJSON?.message || 'Error al procesar la solicitud'
+                        });
+                    }
                 },
                 complete: function() {
-                    // Rehabilitar botón
-                    button.prop('disabled', false);
+                    $('#submitButton').prop('disabled', false).html('<i class="fas fa-save"></i> Guardar');
                 }
             });
         });
 
-        // Función de prueba para verificar que el modal funciona
-        window.testWhatsAppModal = function() {
-            $('#whatsapp-cliente').text('CLIENTE DE PRUEBA');
-            $('#whatsapp-celular').val('912345678');
-            $('#whatsapp-orden').text('TEST-001');
-            $('#whatsapp-estado').text('PRUEBA');
-            $('#whatsapp-mensaje').val('Mensaje de prueba para WhatsApp');
-            updateCharacterCounter();
-            $('#whatsappModal').modal('show');
-            console.log('Modal de WhatsApp mostrado en modo prueba');
-        };
-
-        // Función para actualizar el contador de caracteres del mensaje
-        function updateCharacterCounter() {
-            var messageLength = $('#whatsapp-mensaje').val().length;
-            $('#mensaje-contador').text(messageLength);
-            
-            // Cambiar color según la longitud
-            if (messageLength > 1500) {
-                $('#mensaje-contador').css('color', '#dc3545'); // Rojo
-            } else if (messageLength > 1000) {
-                $('#mensaje-contador').css('color', '#ffc107'); // Amarillo
-            } else {
-                $('#mensaje-contador').css('color', '#25d366'); // Verde WhatsApp
-            }
-        }
-
-        // Actualizar contador cuando se escriba en el textarea
-        $('#whatsapp-mensaje').on('input', updateCharacterCounter);
-
-        // Permitir envío con Ctrl+Enter en el textarea
-        $('#whatsapp-mensaje').on('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'Enter') {
-                e.preventDefault();
-                enviarWhatsApp('web'); // Por defecto usar web con Ctrl+Enter
-            }
+        // Manejar cancelar edición
+        $('#cancelEditButton').on('click', function() {
+            limpiarFormulario();
         });
 
-        // Manejar envío por aplicación móvil
-        $('#enviarWhatsAppMovil').click(function() {
-            enviarWhatsApp('mobile');
-        });
+        // Manejar eliminación de declarantes (usando delegación de eventos)
+        $(document).on('click', '.btn-eliminar-declarante', function() {
+            var button = $(this);
+            var id = button.data('id');
+            var nombre = button.data('nombre');
 
-        // Manejar envío por WhatsApp Web
-        $('#enviarWhatsAppWeb').click(function() {
-            enviarWhatsApp('web');
-        });
-
-        // Auto-focus en el textarea cuando se abra el modal
-        $('#whatsappModal').on('shown.bs.modal', function () {
-            $('#whatsapp-mensaje').focus();
-            // Posicionar cursor al final del texto
-            var textarea = document.getElementById('whatsapp-mensaje');
-            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-        });
-
-        // Función unificada para enviar WhatsApp
-        function enviarWhatsApp(type) {
-            var modal = $('#whatsappModal');
-            var celular = modal.data('celular');
-            var mensaje = $('#whatsapp-mensaje').val().trim();
-            var originalButton = modal.data('button');
-
-            // Validar que hay mensaje
-            if (!mensaje) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Mensaje Vacío',
-                    text: 'Por favor escriba un mensaje antes de enviar.'
-                });
-                return;
-            }
-
-            // Formatear número de teléfono
-            var formattedPhone = formatChileanPhone(celular);
-            var encodedMessage = encodeURIComponent(mensaje);
-            var whatsappURL;
-
-            // Generar URL según el tipo
-            if (type === 'mobile') {
-                whatsappURL = `whatsapp://send?phone=${formattedPhone}&text=${encodedMessage}`;
-            } else {
-                whatsappURL = `https://web.whatsapp.com/send?phone=${formattedPhone}&text=${encodedMessage}`;
-            }
-
-            // Cerrar modal
-            modal.modal('hide');
-
-            // Abrir WhatsApp
-            var whatsappWindow = window.open(whatsappURL, '_blank');
-
-            // Verificar si se abrió correctamente
-            setTimeout(() => {
-                if (!whatsappWindow || whatsappWindow.closed) {
-                    // Si no se abrió, intentar con URL alternativa
-                    var alternativeURL = type === 'mobile' 
-                        ? `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodedMessage}`
-                        : `whatsapp://send?phone=${formattedPhone}&text=${encodedMessage}`;
-                    window.open(alternativeURL, '_blank');
-                }
-            }, 1000);
-
-            // Actualizar el estado visual del botón
-            if (originalButton) {
-                originalButton.removeClass('btn-success').addClass('btn-warning');
-                originalButton.attr('title', 'Volver a enviar mensaje y encuesta');
-                originalButton.find('.button-text').text('Volver a enviar');
-                originalButton.data('estado-actual', 'enviado');
-            }
-
-            // Mostrar mensaje de confirmación
-            Swal.fire({
-                icon: 'success',
-                title: '¡WhatsApp Abierto!',
-                html: `Se ha abierto WhatsApp ${type === 'mobile' ? 'en la aplicación móvil' : 'en el navegador'} con el mensaje personalizado.`,
-                timer: 3000,
-                timerProgressBar: true,
-                toast: true,
-                position: 'top-end'
-            });
-        }
-
-        // Limpiar modal cuando se cierre
-        $('#whatsappModal').on('hidden.bs.modal', function () {
-            $(this).removeData();
-            $('#whatsapp-mensaje').val('');
-            $('#mensaje-contador').text('0');
-        });
-
-        // Manejar el modal de reclamos
-        $(document).on('click', '.btn-reclamo', function() {
-            var pedidoId = $(this).data('pedido-id');
-            var cliente = $(this).data('cliente');
-            
-            // Configurar el modal
-            $('#cliente-reclamo').text(cliente);
-            $('#reclamoForm').data('pedido-id', pedidoId);
-            $('#reclamo').val('');
-            $('#contador-caracteres').text('0/1000');
-            
-            // Mostrar el modal
-            $('#reclamoModal').modal('show');
-        });
-
-        // Manejar el botón de quitar reclamo
-        $(document).on('click', '.btn-quitar-reclamo', function() {
-            var pedidoId = $(this).data('pedido-id');
-            var cliente = $(this).data('cliente');
-            
-            // Confirmar la eliminación del reclamo
-            Swal.fire({
-                title: '¿Quitar Reclamo?',
-                html: `¿Está seguro que desea quitar el reclamo del pedido de <strong>${cliente}</strong>?<br><br><small class="text-warning">Esta acción no se puede deshacer.</small>`,
+            mostrarConfirmacion({
+                title: '¿Está seguro?',
+                text: `¿Desea eliminar al declarante "${nombre}"?`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
                 cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Sí, quitar reclamo',
+                confirmButtonText: 'Sí, eliminar',
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Proceder a eliminar el reclamo
-                    $.ajax({
-                        url: '/pedidos/' + pedidoId + '/quitar-reclamo',
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: '¡Reclamo Eliminado!',
-                                    text: 'El reclamo se ha eliminado correctamente.',
-                                    timer: 2000,
-                                    showConfirmButton: false
-                                }).then(() => {
-                                    // Recargar la página para actualizar la vista
-                                    window.location.reload();
-                                });
-                            }
-                        },
-                        error: function(xhr) {
-                            let errorMessage = 'Error al eliminar el reclamo';
-                            
-                            if (xhr.responseJSON) {
-                                if (xhr.responseJSON.message) {
-                                    errorMessage = xhr.responseJSON.message;
-                                }
-                            }
-                            
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: errorMessage
-                            });
-                        }
-                    });
+                    eliminarDeclarante(id);
                 }
             });
         });
 
-        // Manejar el botón de marcar como urgente (usando delegación de eventos)
-        $(document).on('click', '.btn-marcar-urgente', function() {
-            var button = $(this);
-            var pedidoId = button.data('pedido-id');
-            var cliente = button.data('cliente');
-            
-            // Confirmar la acción
-            Swal.fire({
-                title: '¿Marcar como Urgente?',
-                html: `¿Está seguro que desea marcar como <strong>URGENTE</strong> el pedido de <strong>${cliente}</strong>?<br><br><small class="text-info">El pedido se destacará con fondo amarillo en la lista.</small>`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#ffc107',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sí, marcar como urgente',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Deshabilitar botón temporalmente
-                    button.prop('disabled', true);
-                    
-                    // Proceder a marcar como urgente
-                    $.ajax({
-                        url: '/pedidos/' + pedidoId + '/marcar-urgente',
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: '¡Marcado como Urgente!',
-                                    text: 'El pedido se ha marcado como urgente correctamente.',
-                                    timer: 2000,
-                                    showConfirmButton: false
-                                }).then(() => {
-                                    // Recargar la página para actualizar la vista
-                                    window.location.reload();
-                                });
-                            }
-                        },
-                        error: function(xhr) {
-                            let errorMessage = 'Error al marcar como urgente';
-                            
-                            if (xhr.responseJSON) {
-                                if (xhr.responseJSON.message) {
-                                    errorMessage = xhr.responseJSON.message;
-                                }
-                            }
-                            
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: errorMessage
-                            });
-                            
-                            // Rehabilitar botón
-                            button.prop('disabled', false);
-                        }
-                    });
-                }
-            });
-        });
-
-        // Manejar el botón de desmarcar urgente (usando delegación de eventos)
-        $(document).on('click', '.btn-desmarcar-urgente', function() {
-            var button = $(this);
-            var pedidoId = button.data('pedido-id');
-            var cliente = button.data('cliente');
-            
-            // Confirmar la acción
-            Swal.fire({
-                title: '¿Quitar marca de Urgente?',
-                html: `¿Está seguro que desea quitar la marca de <strong>URGENTE</strong> del pedido de <strong>${cliente}</strong>?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#6c757d',
-                cancelButtonColor: '#ffc107',
-                confirmButtonText: 'Sí, quitar urgente',
-                cancelButtonText: 'Mantener urgente'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Deshabilitar botón temporalmente
-                    button.prop('disabled', true);
-                    
-                    // Proceder a desmarcar como urgente
-                    $.ajax({
-                        url: '/pedidos/' + pedidoId + '/desmarcar-urgente',
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: '¡Urgente Removido!',
-                                    text: 'La marca de urgente se ha removido correctamente.',
-                                    timer: 2000,
-                                    showConfirmButton: false
-                                }).then(() => {
-                                    // Recargar la página para actualizar la vista
-                                    window.location.reload();
-                                });
-                            }
-                        },
-                        error: function(xhr) {
-                            let errorMessage = 'Error al quitar marca de urgente';
-                            
-                            if (xhr.responseJSON) {
-                                if (xhr.responseJSON.message) {
-                                    errorMessage = xhr.responseJSON.message;
-                                }
-                            }
-                            
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: errorMessage
-                            });
-                            
-                            // Rehabilitar botón
-                            button.prop('disabled', false);
-                        }
-                    });
-                }
-            });
-        });
-
-        // Contador de caracteres para el textarea del reclamo
-        $('#reclamo').on('input', function() {
-            var length = $(this).val().length;
-            $('#contador-caracteres').text(length + '/1000');
-            
-            // Cambiar color si se acerca al límite
-            if (length > 900) {
-                $('#contador-caracteres').addClass('text-danger').removeClass('text-muted');
-            } else {
-                $('#contador-caracteres').addClass('text-muted').removeClass('text-danger');
-            }
-        });
-
-        // Manejar el envío del formulario de reclamo
-        $('#reclamoForm').on('submit', function(e) {
-            e.preventDefault();
-            var pedidoId = $(this).data('pedido-id');
-            var reclamo = $('#reclamo').val().trim();
-            
-            if (reclamo.length < 10) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Descripción insuficiente',
-                    text: 'El reclamo debe tener al menos 10 caracteres.'
-                });
-                return;
-            }
-            
-            // Enviar el reclamo al servidor
+        // Función para eliminar declarante
+        function eliminarDeclarante(id) {
             $.ajax({
-                url: '/pedidos/' + pedidoId + '/reclamo',
-                method: 'POST',
+                url: '{{ route("pedidos.declarantes.destroy", ":id") }}'.replace(':id', id),
+                method: 'DELETE',
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                data: {
-                    reclamo: reclamo
-                },
-                success: function(response) {
-                    $('#reclamoModal').modal('hide');
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Reclamo Registrado!',
-                        text: 'El reclamo se ha guardado correctamente.',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        // Recargar la página para mostrar los cambios
-                        window.location.reload();
-                    });
-                },
-                error: function(xhr) {
-                    let errorMessage = 'Error al guardar el reclamo';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-                    
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: errorMessage
-                    });
-                }
-            });
-        });
-
-        // Variables para el filtro de reclamos
-        var filtroReclamosActivo = false;
-        var todasLasFilas = [];
-        
-        // Guardar todas las filas al cargar la página
-        $(document).ready(function() {
-            todasLasFilas = $('#pedidosTable tbody tr').toArray();
-        });
-
-        // Manejar el botón de filtrar reclamos
-        $('#filtrarReclamos').click(function() {
-            var button = $(this);
-            var tabla = $('#pedidosTable tbody');
-            
-            if (!filtroReclamosActivo) {
-                // Activar filtro de reclamos
-                filtroReclamosActivo = true;
-                
-                // Cambiar estado visual del botón
-                button.addClass('active')
-                      .html('<i class="fas fa-eye-slash"></i> Ocultar Reclamos')
-                      .attr('title', 'Ocultar pedidos con reclamos y mostrar todos');
-                
-                // Ocultar todas las filas que NO tienen reclamos
-                tabla.find('tr').each(function() {
-                    var fila = $(this);
-                    var tieneReclamo = fila.hasClass('reclamo-row') || fila.hasClass('bg-danger-light');
-                    
-                    if (!tieneReclamo) {
-                        fila.hide();
-                    }
-                });
-                
-                // Verificar si hay reclamos para mostrar
-                var filasConReclamo = tabla.find('tr.reclamo-row:visible, tr.bg-danger-light:visible').length;
-                
-                if (filasConReclamo === 0) {
-                    // Si no hay reclamos, mostrar mensaje
-                    var mensajeNoReclamos = '<tr id="no-reclamos-message"><td colspan="12" class="text-center text-muted py-4">' +
-                                          '<i class="fas fa-check-circle fa-2x mb-2 text-success"></i><br>' +
-                                          '<strong>¡Excelente!</strong><br>' +
-                                          'No hay pedidos con reclamos en este momento.' +
-                                          '</td></tr>';
-                    tabla.append(mensajeNoReclamos);
-                }
-                
-                // Mostrar notificación
-                Swal.fire({
-                    icon: filasConReclamo > 0 ? 'info' : 'success',
-                    title: filasConReclamo > 0 ? 'Mostrando Reclamos' : '¡Sin Reclamos!',
-                    text: filasConReclamo > 0 ? 
-                          `Se encontraron ${filasConReclamo} pedido(s) con reclamos.` : 
-                          'No hay pedidos con reclamos actualmente.',
-                    timer: 3000,
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false
-                });
-                
-                // Mantener el ordenamiento después del filtro
-                manteneerOrdenamiento();
-                
-            } else {
-                // Desactivar filtro de reclamos
-                filtroReclamosActivo = false;
-                
-                // Cambiar estado visual del botón
-                button.removeClass('active')
-                      .html('<i class="fas fa-exclamation-triangle"></i> Ver Reclamos')
-                      .attr('title', 'Mostrar solo pedidos con reclamos');
-                
-                // Remover mensaje de "no reclamos" si existe
-                $('#no-reclamos-message').remove();
-                
-                // Mostrar todas las filas originales
-                tabla.find('tr').show();
-                
-                // Mostrar notificación
-                Swal.fire({
-                    icon: 'info',
-                    title: 'Mostrando Todos',
-                    text: 'Se están mostrando todos los pedidos nuevamente.',
-                    timer: 2000,
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false
-                });
-                
-                // Mantener el ordenamiento después de mostrar todos
-                manteneerOrdenamiento();
-            }
-            
-            // Actualizar el contador de DataTables si existe
-            if (pedidosTable && pedidosTable.page) {
-                pedidosTable.draw(false);
-            }
-        });
-
-        // Asegurar que el filtro se mantenga después de operaciones de DataTables
-        if (typeof pedidosTable !== 'undefined') {
-            pedidosTable.on('draw', function() {
-                if (filtroReclamosActivo) {
-                    // Reaplica el filtro después de un redraw de DataTables
-                    setTimeout(function() {
-                        $('#pedidosTable tbody tr').each(function() {
-                            var fila = $(this);
-                            var tieneReclamo = fila.hasClass('reclamo-row') || fila.hasClass('bg-danger-light');
-                            
-                            if (!tieneReclamo && fila.attr('id') !== 'no-reclamos-message') {
-                                fila.hide();
-                            }
-                        });
-                    }, 100);
-                }
-            });
-        }
-        $('#reclamoForm').on('submit', function(e) {
-            e.preventDefault();
-            
-            var pedidoId = $(this).data('pedido-id');
-            var reclamo = $('#reclamo').val().trim();
-            var submitButton = $(this).find('button[type="submit"]');
-            var originalText = submitButton.text();
-            
-            // Validación del lado del cliente
-            if (reclamo.length < 10) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Reclamo muy corto',
-                    text: 'El reclamo debe tener al menos 10 caracteres'
-                });
-                return;
-            }
-            
-            // Deshabilitar botón durante el envío
-            submitButton.prop('disabled', true).text('Guardando...');
-            
-            $.ajax({
-                url: '/pedidos/' + pedidoId + '/agregar-reclamo',
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                data: {
-                    reclamo: reclamo
                 },
                 success: function(response) {
                     if (response.success) {
-                        $('#reclamoModal').modal('hide');
-                        
-                        Swal.fire({
+                        mostrarAlerta({
                             icon: 'success',
-                            title: '¡Reclamo Guardado!',
-                            text: 'El reclamo se ha registrado correctamente.',
+                            title: '¡Eliminado!',
+                            text: response.message,
                             timer: 2000,
                             showConfirmButton: false
-                        }).then(() => {
-                            // Recargar la página para actualizar la vista
-                            window.location.reload();
+                        });
+                        
+                        cargarDeclarantes();
+                    } else {
+                        mostrarAlerta({
+                            icon: 'error',
+                            title: 'Error',
+                            text: response.message || 'Error al eliminar el declarante'
                         });
                     }
                 },
                 error: function(xhr) {
-                    let errorMessage = 'Error al guardar el reclamo';
-                    
-                    if (xhr.responseJSON) {
-                        if (xhr.responseJSON.message) {
-                            errorMessage = xhr.responseJSON.message;
-                        } else if (xhr.responseJSON.errors && xhr.responseJSON.errors.reclamo) {
-                            errorMessage = xhr.responseJSON.errors.reclamo[0];
-                        }
-                    }
-                    
-                    Swal.fire({
+                    mostrarAlerta({
                         icon: 'error',
                         title: 'Error',
-                        text: errorMessage
+                        text: xhr.responseJSON?.message || 'Error al eliminar el declarante'
                     });
-                },
-                complete: function() {
-                    // Rehabilitar botón
-                    submitButton.prop('disabled', false).text(originalText);
                 }
             });
+        }
+
+        // Manejar el botón de mostrar facturas
+        $(document).on('click', '.btn-mostrar-facturas', function() {
+            var button = $(this);
+            var id = button.data('id');
+            var nombre = button.data('nombre');
+
+            // Configurar modal
+            $('#nombreDeclarante').text(nombre);
+            $('#infoNombreDeclarante').text(nombre);
+            
+            // Mostrar modal
+            $('#facturasDeclaranteModal').modal('show');
+            
+            // Cargar facturas
+            cargarFacturasDeclarante(id);
+        });
+
+        // Función para cargar las facturas de un declarante
+        function cargarFacturasDeclarante(declaranteId) {
+            // Mostrar loading
+            $('#facturasLoading').show();
+            $('#totalesFacturas').hide();
+            $('#tablaFacturasContainer').hide();
+            $('#noFacturasMessage').hide();
+            $('#errorFacturas').hide();
+
+            $.ajax({
+                url: '/pedidos/declarantes/' + declaranteId + '/facturas',
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        mostrarFacturasDeclarante(response);
+                    } else {
+                        mostrarErrorFacturas(response.message || 'Error al cargar las facturas');
+                    }
+                },
+                error: function(xhr) {
+                    var mensaje = 'Error al cargar las facturas';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        mensaje = xhr.responseJSON.message;
+                    }
+                    mostrarErrorFacturas(mensaje);
+                },
+                complete: function() {
+                    $('#facturasLoading').hide();
+                }
+            });
+        }
+
+        // Función para mostrar las facturas en el modal
+        function mostrarFacturasDeclarante(data) {
+            var declarante = data.declarante;
+            var facturas = data.facturas;
+            var totales = data.totales;
+
+            // Llenar información del declarante
+            $('#infoRucDeclarante').text(declarante.ruc || 'N/A');
+            $('#infoCantidadFacturas').text(totales.cantidad_facturas);
+
+            // Mostrar totales
+            $('#totalBaseFacturas').text('$' + parseFloat(totales.total_base).toFixed(2));
+            $('#totalIvaFacturas').text('$' + parseFloat(totales.total_iva).toFixed(2));
+            $('#totalDebitoFiscal').text('$' + parseFloat(totales.total_iva).toFixed(2)); // IVA Débito Fiscal = solo el IVA
+            $('#totalFacturadoFacturas').text('$' + parseFloat(totales.total_facturado).toFixed(2)); // Total facturado (Base + IVA)
+            $('#cantidadTotalFacturas').text(totales.cantidad_facturas);
+
+            if (facturas.length === 0) {
+                $('#noFacturasMessage').show();
+            } else {
+                // Llenar tabla de facturas
+                var tbody = $('#facturasTbody');
+                tbody.empty();
+
+                $.each(facturas, function(index, factura) {
+                    var xmlCell = factura.xml ? 
+                        `<span class="badge badge-success" title="${factura.xml}">
+                            <i class="fas fa-file-code"></i> XML
+                        </span>` : 
+                        `<span class="badge badge-secondary">Sin XML</span>`;
+
+                    var tipoClass = factura.tipo.toLowerCase() === 'factura' ? 'badge-primary' : 'badge-info';
+
+                    var fila = `
+                        <tr>
+                            <td>${factura.id}</td>
+                            <td>${factura.fecha}</td>
+                            <td>${factura.numero_orden}</td>
+                            <td>${factura.cliente}</td>
+                            <td><span class="badge ${tipoClass}">${factura.tipo}</span></td>
+                            <td class="text-right">$${parseFloat(factura.monto).toFixed(2)}</td>
+                            <td class="text-right">$${parseFloat(factura.iva).toFixed(2)}</td>
+                            <td class="text-right font-weight-bold">$${parseFloat(factura.total).toFixed(2)}</td>
+                            <td class="text-center">${xmlCell}</td>
+                        </tr>
+                    `;
+                    tbody.append(fila);
+                });
+
+                $('#totalesFacturas').show();
+                $('#tablaFacturasContainer').show();
+            }
+        }
+
+        // Función para mostrar error al cargar facturas
+        function mostrarErrorFacturas(mensaje) {
+            $('#errorFacturasMessage').text(mensaje);
+            $('#errorFacturas').show();
+        }
+
+        // Limpiar modal de facturas al cerrarlo
+        $('#facturasDeclaranteModal').on('hidden.bs.modal', function() {
+            $('#facturasTbody').empty();
+            $('#totalesFacturas').hide();
+            $('#tablaFacturasContainer').hide();
+            $('#noFacturasMessage').hide();
+            $('#errorFacturas').hide();
+            $('#facturasLoading').hide();
+        });
+
+        // Función para limpiar el formulario
+        function limpiarFormulario() {
+            $('#declaranteForm')[0].reset();
+            $('#declaranteId').val('');
+            $('#formTitle').text('Agregar Nuevo Declarante');
+            $('#submitButton').html('<i class="fas fa-save"></i> Guardar');
+            $('#cancelEditButton').hide();
+            $('.form-control, .custom-file-input').removeClass('is-invalid');
+            $('.invalid-feedback').text('');
+            $('.custom-file-label').text('Seleccionar certificado...');
+            $('#firmaPreview').hide();
+            $('#firmaActual').hide();
+        }
+
+        // Función para mostrar errores del formulario
+        function mostrarErroresFormulario(errors) {
+            $.each(errors, function(campo, mensajes) {
+                var input = $('#' + campo);
+                if (input.length) {
+                    input.addClass('is-invalid');
+                    input.siblings('.invalid-feedback').text(mensajes[0] || mensajes);
+                }
+            });
+        }
+
+        // Manejar el cambio de archivo de certificado
+        $('#firma').on('change', function() {
+            var file = this.files[0];
+            var label = $(this).next('.custom-file-label');
+            var preview = $('#firmaPreview');
+            var fileName = $('#firmaFileName');
+            
+            if (file) {
+                // Validar extensión
+                var extension = file.name.split('.').pop().toLowerCase();
+                if (!['p12', 'pem'].includes(extension)) {
+                    mostrarAlerta({
+                        icon: 'error',
+                        title: 'Formato no válido',
+                        text: 'Solo se permiten archivos de certificados digitales (.p12 o .pem)',
+                    });
+                    $(this).val('');
+                    label.text('Seleccionar certificado...');
+                    return;
+                }
+                
+                // Validar tamaño (máximo 5MB para certificados)
+                if (file.size > 5 * 1024 * 1024) {
+                    mostrarAlerta({
+                        icon: 'error',
+                        title: 'Archivo muy grande',
+                        text: 'El certificado no puede ser mayor a 5MB',
+                    });
+                    $(this).val('');
+                    label.text('Seleccionar certificado...');
+                    return;
+                }
+                
+                label.text(file.name);
+                fileName.text(file.name);
+                preview.show();
+            } else {
+                label.text('Seleccionar certificado...');
+                preview.hide();
+            }
+        });
+
+        // Manejar el botón de eliminar certificado
+        $('#removeFirma').on('click', function() {
+            $('#firma').val('');
+            $('.custom-file-label').text('Seleccionar certificado...');
+            $('#firmaPreview').hide();
+        });
+
+        // Función para mostrar información del certificado
+        window.mostrarCertificado = function(url, nombre, extension) {
+            var iconClass = extension === 'p12' ? 'fa-certificate text-primary' : 'fa-key text-success';
+            var certType = extension === 'p12' ? 'Certificado P12' : 'Certificado PEM';
+            
+            mostrarAlerta({
+                title: `Certificado de ${nombre}`,
+                html: `
+                    <div class="text-center">
+                        <i class="fas ${iconClass} fa-4x mb-3"></i>
+                        <h5>${certType}</h5>
+                        <p class="text-muted">Certificado digital para firma electrónica</p>
+                        <a href="${url}" download class="btn btn-primary">
+                            <i class="fas fa-download"></i> Descargar Certificado
+                        </a>
+                    </div>
+                `,
+                showCloseButton: true,
+                showConfirmButton: false,
+                width: '400px'
+            });
+        };
+
+        // Manejar la edición de declarantes para mostrar firma actual
+        $(document).on('click', '.btn-editar-declarante', function() {
+            var button = $(this);
+            var id = button.data('id');
+            var nombre = button.data('nombre');
+            var ruc = button.data('ruc');
+            var firma = button.data('firma');
+
+            // Llenar el formulario
+            $('#declaranteId').val(id);
+            $('#nombre').val(nombre);
+            $('#ruc').val(ruc);
+
+            // Mostrar certificado actual si existe
+            if (firma) {
+                var extension = firma.split('.').pop().toLowerCase();
+                $('#firmaActualName').text(firma);
+                $('#firmaActual').show();
+            } else {
+                $('#firmaActual').hide();
+            }
+
+            // Cambiar el título y botón
+            $('#formTitle').text('Editar Declarante');
+            $('#submitButton').html('<i class="fas fa-save"></i> Actualizar');
+            $('#cancelEditButton').show();
+
+            // Scroll al formulario
+            $('#declaranteForm')[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        // Manejar el botón de crear factura
+        $(document).on('click', '.btn-crear-factura', function() {
+            var button = $(this);
+            var pedidoId = button.data('pedido-id');
+            var cliente = button.data('cliente');
+            var total = button.data('total');
+
+            // Llenar los datos básicos del pedido en el modal
+            $('#factPedidoId').val(pedidoId);
+            $('#factCliente').text(cliente || 'N/A');
+            $('#factTotal').text(total || '0.00');
+
+            // Limpiar errores previos
+            $('.form-control').removeClass('is-invalid');
+            $('.invalid-feedback').text('');
+
+            // Mostrar modal
+            $('#crearFacturaModal').modal('show');
+
+            // Cargar detalles del pedido
+            cargarDetallesPedido(pedidoId);
+
+            // Cargar declarantes en el select
+            cargarDeclarantesSelect();
+        });
+
+        // Función para cargar los detalles del pedido con cálculos
+        function cargarDetallesPedido(pedidoId) {
+            // Mostrar loading
+            $('#detallesLoading').show();
+            $('#detallesProductos').hide();
+            
+            $.ajax({
+                url: '/pedidos/' + pedidoId + '/detalles-factura',
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        mostrarDetallesPedido(response.detalles);
+                        
+                        // Llenar los campos automáticamente
+                        var totales = response.detalles.totales;
+                        $('#montoFactura').val(totales.base_total.toFixed(2));
+                        $('#ivaFactura').val(totales.iva_total.toFixed(2));
+                        
+                        // Ocultar loading y mostrar detalles
+                        $('#detallesLoading').hide();
+                        $('#detallesProductos').show();
+                    } else {
+                        mostrarAlerta({
+                            icon: 'error',
+                            title: 'Error',
+                            text: response.message || 'Error al cargar los detalles del pedido'
+                        });
+                        $('#detallesLoading').hide();
+                    }
+                },
+                error: function(xhr) {
+                    var mensaje = 'Error al cargar los detalles del pedido';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        mensaje = xhr.responseJSON.message;
+                    }
+                    mostrarAlerta({
+                        icon: 'error',
+                        title: 'Error',
+                        text: mensaje
+                    });
+                    $('#detallesLoading').hide();
+                }
+            });
+        }
+
+        // Función para mostrar los detalles en las tablas
+        function mostrarDetallesPedido(detalles) {
+            // Limpiar tablas
+            $('#tablaInventarios').empty();
+            $('#tablaLunas').empty();
+            
+            var totalBaseInventarios = 0;
+            var totalIvaInventarios = 0;
+            var totalBaseLunas = 0;
+            var totalIvaLunas = 0;
+
+            // Mostrar inventarios si existen
+            if (detalles.inventarios && detalles.inventarios.length > 0) {
+                $('#cardInventarios').show();
+                
+                $.each(detalles.inventarios, function(index, item) {
+                    var fila = `
+                        <tr>
+                            <td>${item.codigo}</td>
+                            <td>$${item.precio_original.toFixed(2)}</td>
+                            <td>${item.descuento}%</td>
+                            <td>$${item.precio_con_descuento.toFixed(2)}</td>
+                            <td>$${item.base.toFixed(2)}</td>
+                            <td>$${item.iva.toFixed(2)}</td>
+                        </tr>
+                    `;
+                    $('#tablaInventarios').append(fila);
+                    
+                    totalBaseInventarios += item.base;
+                    totalIvaInventarios += item.iva;
+                });
+                
+                $('#subtotalBaseInventarios').text('$' + totalBaseInventarios.toFixed(2));
+                $('#subtotalIvaInventarios').text('$' + totalIvaInventarios.toFixed(2));
+            } else {
+                $('#cardInventarios').hide();
+            }
+
+            // Mostrar lunas si existen
+            if (detalles.lunas && detalles.lunas.length > 0) {
+                $('#cardLunas').show();
+                
+                $.each(detalles.lunas, function(index, item) {
+                    var fila = `
+                        <tr>
+                            <td>${item.medida || 'N/A'}</td>
+                            <td>${item.tipo_lente || 'N/A'}</td>
+                            <td>${item.material || 'N/A'}</td>
+                            <td>$${item.precio_original.toFixed(2)}</td>
+                            <td>${item.descuento}%</td>
+                            <td>$${item.precio_con_descuento.toFixed(2)}</td>
+                            <td>$${item.base.toFixed(2)}</td>
+                            <td>$${item.iva.toFixed(2)}</td>
+                        </tr>
+                    `;
+                    $('#tablaLunas').append(fila);
+                    
+                    totalBaseLunas += item.base;
+                    totalIvaLunas += item.iva;
+                });
+                
+                $('#subtotalBaseLunas').text('$' + totalBaseLunas.toFixed(2));
+                $('#subtotalIvaLunas').text('$' + totalIvaLunas.toFixed(2));
+            } else {
+                $('#cardLunas').hide();
+            }
+
+            // Actualizar totales generales
+            var totalBase = totalBaseInventarios + totalBaseLunas;
+            var totalIva = totalIvaInventarios + totalIvaLunas;
+            var montoTotal = totalBase + totalIva;
+
+            $('#totalBaseCalculado').text('$' + totalBase.toFixed(2));
+            $('#totalIvaCalculado').text('$' + totalIva.toFixed(2));
+            $('#montoTotalCalculado').text('$' + montoTotal.toFixed(2));
+        }
+
+        // Función para cargar declarantes en el select
+        function cargarDeclarantesSelect() {
+            var select = $('#declaranteSelect');
+            select.html('<option value="">Cargando declarantes...</option>');
+
+            $.ajax({
+                url: '{{ route("pedidos.declarantes.listar") }}',
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        select.html('<option value="">Seleccione un declarante...</option>');
+                        $.each(response.data, function(index, declarante) {
+                            select.append(`<option value="${declarante.id}">${declarante.nombre} - ${declarante.ruc}</option>`);
+                        });
+                    } else {
+                        select.html('<option value="">No hay declarantes disponibles</option>');
+                    }
+                },
+                error: function(xhr) {
+                    select.html('<option value="">Error al cargar declarantes</option>');
+                    console.error('Error al cargar declarantes:', xhr);
+                }
+            });
+        }
+
+        // Manejar el guardado de la factura
+        $('#guardarFacturaBtn').on('click', function() {
+            var button = $(this);
+            var form = $('#crearFacturaForm');
+
+            // Validar formulario
+            if (!validarFormularioFactura()) {
+                return;
+            }
+
+            // Preparar datos
+            var formData = {
+                pedido_id: $('#factPedidoId').val(),
+                declarante_id: $('#declaranteSelect').val(),
+                tipo: $('#tipoFactura').val(),
+                monto: $('#montoFactura').val(),
+                iva: $('#ivaFactura').val(),
+                xml: $('#xmlRuta').val()
+            };
+
+            // Deshabilitar botón
+            button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Creando...');
+
+            // Enviar petición
+            $.ajax({
+                url: '{{ route("pedidos.crear-factura") }}',
+                method: 'POST',
+                data: formData,
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function(response) {
+                    if (response.success) {
+                        mostrarAlerta({
+                            icon: 'success',
+                            title: '¡Factura Creada!',
+                            text: response.message,
+                            timer: 3000,
+                            showConfirmButton: false
+                        });
+
+                        // Cerrar modal
+                        $('#crearFacturaModal').modal('hide');
+
+                        // Recargar la página para reflejar los cambios
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        mostrarErroresFormularioFactura(response.errors || {});
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) {
+                        mostrarErroresFormularioFactura(xhr.responseJSON.errors || {});
+                    } else {
+                        mostrarAlerta({
+                            icon: 'error',
+                            title: 'Error',
+                            text: xhr.responseJSON?.message || 'Error al crear la factura'
+                        });
+                    }
+                },
+                complete: function() {
+                    button.prop('disabled', false).html('<i class="fas fa-save"></i> Crear Factura');
+                }
+            });
+        });
+
+        // Función para validar formulario de factura
+        function validarFormularioFactura() {
+            var valid = true;
+            var campos = [
+                { id: 'declaranteSelect', mensaje: 'Debe seleccionar un declarante' },
+                { id: 'tipoFactura', mensaje: 'Debe seleccionar un tipo de documento' },
+                { id: 'montoFactura', mensaje: 'Debe ingresar el monto' },
+                { id: 'ivaFactura', mensaje: 'Debe ingresar el IVA' }
+            ];
+
+            // Limpiar errores previos
+            $('.form-control').removeClass('is-invalid');
+            $('.invalid-feedback').text('');
+
+            $.each(campos, function(index, campo) {
+                var input = $('#' + campo.id);
+                if (!input.val() || input.val().trim() === '') {
+                    input.addClass('is-invalid');
+                    input.siblings('.invalid-feedback').text(campo.mensaje);
+                    valid = false;
+                }
+            });
+
+            // Validar que el monto y IVA sean números positivos
+            var monto = parseFloat($('#montoFactura').val());
+            var iva = parseFloat($('#ivaFactura').val());
+
+            if (isNaN(monto) || monto <= 0) {
+                $('#montoFactura').addClass('is-invalid');
+                $('#montoFactura').siblings('.invalid-feedback').text('El monto debe ser mayor a 0');
+                valid = false;
+            }
+
+            if (isNaN(iva) || iva < 0) {
+                $('#ivaFactura').addClass('is-invalid');
+                $('#ivaFactura').siblings('.invalid-feedback').text('El IVA debe ser mayor o igual a 0');
+                valid = false;
+            }
+
+            return valid;
+        }
+
+        // Función para mostrar errores del formulario de factura
+        function mostrarErroresFormularioFactura(errors) {
+            $.each(errors, function(campo, mensajes) {
+                var input = $('#' + campo) || $('#' + campo + 'Factura') || $('#' + campo + 'Select');
+                if (input.length) {
+                    input.addClass('is-invalid');
+                    input.siblings('.invalid-feedback').text(mensajes[0] || mensajes);
+                }
+            });
+        }
+
+        // Calcular IVA automáticamente cuando cambie el monto
+        $('#montoFactura').on('input', function() {
+            var monto = parseFloat($(this).val()) || 0;
+            var iva = (monto * 0.12).toFixed(2);
+            $('#ivaFactura').val(iva);
+        });
+
+        // Limpiar modal al cerrarlo
+        $('#crearFacturaModal').on('hidden.bs.modal', function() {
+            $('#crearFacturaForm')[0].reset();
+            $('.form-control').removeClass('is-invalid');
+            $('.invalid-feedback').text('');
+            $('#declaranteSelect').html('<option value="">Seleccione un declarante...</option>');
+            
+            // Limpiar tablas y secciones de detalles
+            $('#tablaInventarios').empty();
+            $('#tablaLunas').empty();
+            $('#detallesProductos').hide();
+            $('#detallesLoading').hide();
+            $('#cardInventarios').hide();
+            $('#cardLunas').hide();
+            
+            // Limpiar totales
+            $('#subtotalBaseInventarios').text('$0.00');
+            $('#subtotalIvaInventarios').text('$0.00');
+            $('#subtotalBaseLunas').text('$0.00');
+            $('#subtotalIvaLunas').text('$0.00');
+            $('#totalBaseCalculado').text('$0.00');
+            $('#totalIvaCalculado').text('$0.00');
+            $('#montoTotalCalculado').text('$0.00');
         });
     });
 </script>
