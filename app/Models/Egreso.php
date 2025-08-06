@@ -46,6 +46,16 @@ class Egreso extends Model
      */
     public function setValorAttribute($value)
     {
-        $this->attributes['valor'] = number_format((float)$value, 2, '.', '');
+        // Eliminar cualquier formato de miles y convertir a float
+        $cleanValue = str_replace([',', '.'], ['', '.'], $value);
+        $this->attributes['valor'] = (float)$cleanValue;
+    }
+
+    /**
+     * Accessor para mostrar el valor con el formato correcto
+     */
+    public function getValorFormateadoAttribute()
+    {
+        return number_format((float)$this->valor, 2, '.', ',');
     }
 } 

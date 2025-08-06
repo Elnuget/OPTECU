@@ -56,7 +56,7 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label>VALOR:</label>
-                        <p>${{ number_format($egreso->valor, 0, ',', '.') }}</p>
+                        <p>${{ number_format($egreso->valor, 2, ',', '.') }}</p>
                     </div>
                 </div>
             </div>

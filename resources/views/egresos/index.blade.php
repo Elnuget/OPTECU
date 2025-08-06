@@ -68,7 +68,7 @@
                     <div class="info-box bg-danger">
                         <div class="info-box-content">
                             <span class="info-box-text">TOTAL EGRESOS</span>
-                            <span class="info-box-number">${{ number_format($totales['egresos'], 0, ',', '.') }}</span>
+                            <span class="info-box-number">${{ number_format($totales['egresos'], 2, ',', '.') }}</span>
                         </div>
                     </div>
                 </div>
@@ -149,7 +149,7 @@
                             <tr>
                                 <td>{{ $egreso->created_at->format('Y-m-d') }}</td>
                                 <td>{{ $egreso->motivo }}</td>
-                                <td>${{ number_format($egreso->valor, 0, ',', '.') }}</td>
+                                <td>${{ number_format($egreso->valor, 2, ',', '.') }}</td>
                                 <td>{{ $egreso->user->name }}</td>
                                 <td>{{ $egreso->empresa ? $egreso->empresa->nombre : 'SIN SUCURSAL' }}</td>
                                 <td>
@@ -300,7 +300,7 @@
                         
                         <div class="form-group">
                             <label for="valor">VALOR DEL SUELDO:</label>
-                            <input type="number" class="form-control" id="valor" name="valor" required step="1" min="0">
+                            <input type="number" class="form-control" id="valor" name="valor" required step="0.01" min="0">
                         </div>
                         <input type="hidden" name="motivo" value="PAGO DE SUELDO">
                         <input type="hidden" name="mes_pedidos" id="hidden_mes_pedidos">

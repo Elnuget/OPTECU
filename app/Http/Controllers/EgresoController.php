@@ -69,6 +69,7 @@ class EgresoController extends Controller
             $egreso = new Egreso();
             $targetUserId = $request->motivo === 'PAGO DE SUELDO' ? $request->usuario : auth()->id();
             $egreso->user_id = $targetUserId;
+            // Asegurar que el valor se maneje como decimal
             $egreso->valor = $request->valor;
             
             // Asignar empresa
@@ -138,6 +139,7 @@ class EgresoController extends Controller
                 'empresa_id' => 'nullable|exists:empresas,id'
             ]);
 
+            // Asegurar que el valor se maneje como decimal
             $egreso->valor = $request->valor;
             $egreso->motivo = strtoupper($request->motivo);
             $egreso->empresa_id = $request->empresa_id;

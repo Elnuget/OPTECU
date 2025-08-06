@@ -79,7 +79,7 @@
                                        class="form-control @error('valor') is-invalid @enderror" 
                                        id="valor" 
                                        name="valor" 
-                                       step="1" 
+                                       step="0.01" 
                                        min="0" 
                                        value="{{ old('valor', $egreso->valor) }}"
                                        required>
