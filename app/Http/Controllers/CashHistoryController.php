@@ -66,7 +66,7 @@ class CashHistoryController extends Controller
             Log::info('CashHistory store request data: ' . json_encode($request->all()));
             
             $request->validate([
-                'monto' => 'required|numeric',
+                'monto' => 'required|numeric|min:0.01',
                 'estado' => 'required|in:Apertura,Cierre',
                 'empresa_id' => 'nullable|exists:empresas,id'
             ]);
@@ -203,7 +203,7 @@ class CashHistoryController extends Controller
         }
         
         $request->validate([
-            'monto' => 'required|numeric',
+            'monto' => 'required|numeric|min:0.01',
             'estado' => 'required|string',
             'empresa_id' => 'nullable|exists:empresas,id'
         ]);
@@ -326,7 +326,7 @@ class CashHistoryController extends Controller
 
                     // Crear el registro de apertura automática
                     $cashHistory = new CashHistory();
-                    $cashHistory->monto = intval($sumCaja);
+                    $cashHistory->monto = floatval($sumCaja);
                     $cashHistory->estado = 'Apertura';
                     $cashHistory->user_id = $user->id;
                     $cashHistory->empresa_id = $empresa->id;

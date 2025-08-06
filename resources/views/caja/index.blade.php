@@ -124,7 +124,7 @@
                     <div class="info-box bg-success">
                         <div class="info-box-content">
                             <span class="info-box-text">TOTAL EN CAJA</span>
-                            <span class="info-box-number">${{ number_format($totalCaja, 0, ',', '.') }}</span>
+                            <span class="info-box-number">${{ number_format($totalCaja, 2, ',', '.') }}</span>
                         </div>
                     </div>
                 </div>
@@ -141,7 +141,7 @@
                         </span>
                         <div class="info-box-content">
                             <span class="info-box-text">{{ strtoupper($item['empresa']->nombre) }}</span>
-                            <span class="info-box-number">${{ number_format($item['total'], 0, ',', '.') }}</span>
+                            <span class="info-box-number">${{ number_format($item['total'], 2, ',', '.') }}</span>
                         </div>
                     </div>
                 </div>
@@ -155,7 +155,7 @@
                         </span>
                         <div class="info-box-content">
                             <span class="info-box-text">SIN SUCURSAL ASIGNADA</span>
-                            <span class="info-box-number">${{ number_format($totalSinEmpresa, 0, ',', '.') }}</span>
+                            <span class="info-box-number">${{ number_format($totalSinEmpresa, 2, ',', '.') }}</span>
                         </div>
                     </div>
                 </div>
@@ -170,8 +170,8 @@
                     <div class="col-md-3">
                         <div class="form-group">
                             <label>VALOR</label>
-                            <input type="number" name="valor" class="form-control" step="1" required>
-                            <small class="form-text text-muted">SOLO NÚMEROS ENTEROS (SIN CENTAVOS)</small>
+                            <input type="number" name="valor" class="form-control" step="0.01" min="0.01" required>
+                            <small class="form-text text-muted">PUEDE INCLUIR CENTAVOS (EJ: 1500.50)</small>
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -226,8 +226,8 @@
                     <div class="col-md-3">
                         <div class="form-group">
                             <label>VALOR</label>
-                            <input type="number" name="valor" id="valorCuadre" class="form-control" step="1" min="1" required>
-                            <small class="form-text text-muted">SOLO VALORES POSITIVOS ENTEROS</small>
+                            <input type="number" name="valor" id="valorCuadre" class="form-control" step="0.01" min="0.01" required>
+                            <small class="form-text text-muted">PUEDE INCLUIR CENTAVOS (EJ: 1500.50)</small>
                             <input type="hidden" name="is_positive" value="1">
                         </div>
                     </div>
@@ -282,7 +282,7 @@
                                 <td>{{ strtoupper($movimiento->motivo) }}</td>
                                 <td>{{ $movimiento->user ? strtoupper($movimiento->user->name) : 'N/A' }}</td>
                                 <td>{{ $movimiento->empresa ? strtoupper($movimiento->empresa->nombre) : 'N/A' }}</td>
-                                <td>${{ number_format($movimiento->valor, 0, ',', '.') }}</td>
+                                <td>${{ number_format($movimiento->valor, 2, ',', '.') }}</td>
                                 <td>
                                     @can('admin')
                                     <button type="button" class="btn btn-xs btn-primary mr-1" 
@@ -325,7 +325,7 @@
                     <div class="modal-body">
                         <div class="form-group">
                             <label>VALOR</label>
-                            <input type="number" id="edit_valor" name="valor" class="form-control" step="1" required>
+                            <input type="number" id="edit_valor" name="valor" class="form-control" step="0.01" required>
                         </div>
                         <div class="form-group">
                             <label>MOTIVO</label>
@@ -395,10 +395,10 @@
 
             // Validación para el formulario de cuadrar caja
             $('#formCuadrarCaja').submit(function(e) {
-                var valor = parseInt($('#valorCuadre').val());
+                var valor = parseFloat($('#valorCuadre').val());
                 if (valor <= 0 || isNaN(valor)) {
                     e.preventDefault();
-                    alert('EL VALOR DEBE SER UN NÚMERO ENTERO POSITIVO PARA CUADRAR CAJA');
+                    alert('EL VALOR DEBE SER UN NÚMERO POSITIVO PARA CUADRAR CAJA');
                     return false;
                 }
                 return true;

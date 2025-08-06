@@ -95,7 +95,7 @@ class CajaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'valor' => 'required|numeric',
+            'valor' => 'required|numeric|min:0.01',
             'motivo' => 'required|string',
             'user_email' => 'required|email',
             'empresa_id' => 'nullable|exists:empresas,id'
@@ -104,10 +104,10 @@ class CajaController extends Controller
         // Verificar si es un cuadre de caja (positivo) o un retiro (negativo)
         if ($request->has('is_positive') && $request->get('is_positive') == 1) {
             // Para cuadrar caja, aseguramos que sea positivo
-            $valor = abs($request->get('valor'));
+            $valor = abs(floatval($request->get('valor')));
         } else {
             // Para retiros, aseguramos que sea negativo
-            $valor = -abs($request->get('valor'));
+            $valor = -abs(floatval($request->get('valor')));
         }
 
         // Create Caja entry

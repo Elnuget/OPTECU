@@ -142,7 +142,7 @@
                     <td>{{ $history->created_at->format('Y-m-d H:i') }}</td>
                     <td>{{ $history->user ? strtoupper($history->user->name) : 'USUARIO NO DISPONIBLE' }}</td>
                     <td>{{ $history->empresa ? strtoupper($history->empresa->nombre) : 'NO ASIGNADA' }}</td>
-                    <td>${{ number_format($history->monto, 0, ',', '.') }}</td>
+                    <td>${{ number_format($history->monto, 2, ',', '.') }}</td>
                     <td>{{ strtoupper($history->estado) }}</td>
                     <td>
                         @if($currentUser->is_admin)
@@ -212,9 +212,9 @@
                             <div class="input-group-prepend">
                                 <span class="input-group-text">$</span>
                             </div>
-                            <input type="number" step="1" name="monto" id="monto_admin" class="form-control" required readonly>
+                            <input type="number" step="0.01" name="monto" id="monto_admin" class="form-control" required readonly>
                         </div>
-                        <small class="form-text text-muted">EL MONTO SE CARGA AUTOMÁTICAMENTE SEGÚN LA EMPRESA SELECCIONADA (SOLO NÚMEROS ENTEROS)</small>
+                        <small class="form-text text-muted">EL MONTO SE CARGA AUTOMÁTICAMENTE SEGÚN LA EMPRESA SELECCIONADA (PUEDE INCLUIR DECIMALES)</small>
                     </div>
                 </form>
             </div>
