@@ -112,10 +112,10 @@
                                 <input type="date" name="proxima_consulta" id="proxima_consulta" class="form-control">
                             </div>
                             <div class="form-group col-md-4">
-                                <label for="empresa_id">SUCURSAL</label>
+                                <label for="empresa_id">SUCURSAL <span class="text-danger">*</span></label>
                                 @if (!$isUserAdmin && $empresas->count() == 1)
                                     {{-- Si el usuario no es admin y solo tiene una empresa, mostrar como readonly --}}
-                                    <select name="empresa_id" id="empresa_id" class="form-control" readonly disabled>
+                                    <select name="empresa_id" id="empresa_id" class="form-control" readonly disabled required>
                                         @foreach($empresas as $empresa)
                                             <option value="{{ $empresa->id }}" selected>
                                                 {{ $empresa->nombre }}
@@ -126,7 +126,7 @@
                                     <small class="text-muted">Tu usuario está asociado únicamente a esta empresa.</small>
                                 @elseif (!$isUserAdmin && $empresas->count() > 1)
                                     {{-- Si el usuario no es admin pero tiene múltiples empresas, permitir selección --}}
-                                    <select name="empresa_id" id="empresa_id" class="form-control">
+                                    <select name="empresa_id" id="empresa_id" class="form-control" required>
                                         <option value="">Seleccione una sucursal...</option>
                                         @foreach($empresas as $empresa)
                                             <option value="{{ $empresa->id }}" {{ $userEmpresaId == $empresa->id ? 'selected' : '' }}>
@@ -143,7 +143,7 @@
                                     </small>
                                 @else
                                     {{-- Usuario administrador --}}
-                                    <select name="empresa_id" id="empresa_id" class="form-control">
+                                    <select name="empresa_id" id="empresa_id" class="form-control" required>
                                         <option value="">Seleccione una empresa...</option>
                                         @foreach($empresas as $empresa)
                                             <option value="{{ $empresa->id }}">{{ $empresa->nombre }}</option>
@@ -608,6 +608,15 @@
         // Convertir checkboxes de diagnóstico a string antes de enviar el formulario
         $('form').on('submit', function(e) {
             actualizarDiagnosticoString();
+            
+            // Validar que se haya seleccionado una sucursal
+            const empresaId = $('#empresa_id').val();
+            if (!empresaId) {
+                e.preventDefault();
+                alert('Por favor, seleccione una sucursal antes de guardar el historial clínico.');
+                $('#empresa_id').focus();
+                return false;
+            }
         });
         
         // Actualizar campo oculto cuando se seleccionen/deseleccionen checkboxes
