@@ -7,91 +7,43 @@ use App\Models\MensajesEnviados;
 use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class HistorialClinicoController extends Controller
 {
     public function index(Request $request)
     {
-        // Iniciar la consulta con las relaciones usuario y empresa
+        // Si se solicita ver todos los registros, no aplicar filtros de fecha
+        $mostrarTodos = $request->has('todos') && $request->todos == '1';
+        
+        // Si no hay fecha seleccionada y no se solicita ver todos, redirigir al mes actual
+        if (!$mostrarTodos && (!$request->filled('ano') || !$request->filled('mes'))) {
+            return redirect()->route('historiales_clinicos.index', [
+                'ano' => now()->setTimezone('America/Guayaquil')->format('Y'),
+                'mes' => now()->setTimezone('America/Guayaquil')->format('m')
+            ]);
+        }
+
+        // Iniciar la consulta con la relación usuario y empresa
         $query = HistorialClinico::with(['usuario', 'empresa']);
 
-        // Si no se solicitan todos los registros y no hay parámetros de fecha, redirigir al mes actual
-        if (!$request->has('todos') && !$request->filled('fecha_especifica') && (!$request->filled('ano') || !$request->filled('mes'))) {
-            $currentDate = now()->setTimezone('America/Guayaquil');
-            $redirectParams = [
-                'ano' => $currentDate->format('Y'),
-                'mes' => $currentDate->format('m')
-            ];
-            
-            // Mantener el filtro de empresa si se especifica
-            if ($request->filled('empresa_id')) {
-                $redirectParams['empresa_id'] = $request->get('empresa_id');
-            }
-            
-            return redirect()->route('historiales_clinicos.index', $redirectParams);
+        // Aplicar filtros de año y mes solo si no se solicita ver todos
+        if (!$mostrarTodos) {
+            $query->whereYear('fecha', $request->get('ano'))
+                  ->whereMonth('fecha', $request->get('mes'));
         }
 
-        // Aplicar filtros de fecha
-        if (!$request->has('todos')) {
-            // Si hay una fecha específica, filtrar solo por esa fecha
-            if ($request->filled('fecha_especifica')) {
-                $query->whereDate('fecha', $request->fecha_especifica);
-            } else {
-                // Usar filtros de año y mes como antes
-                $query->whereYear('fecha', $request->get('ano'))
-                      ->whereMonth('fecha', $request->get('mes'));
-            }
-        }
-
-        // Aplicar filtro de empresa si se especifica
-        if ($request->filled('empresa_id')) {
-            $query->where('empresa_id', $request->get('empresa_id'));
-        }
-        
-        // Verificar si el usuario está asociado a una empresa y no es admin
-        $userEmpresaId = null;
-        $isUserAdmin = auth()->user()->is_admin;
-        
-        if (!$isUserAdmin) {
-            // Obtener todas las empresas del usuario (principal + adicionales)
-            $userEmpresas = auth()->user()->todasLasEmpresas();
-            $userEmpresaId = auth()->user()->empresa_id;
-            
-            if ($userEmpresas->count() > 0) {
-                // Si no hay filtro específico, mostrar historiales de todas sus empresas
-                if (!$request->filled('empresa_id')) {
-                    $empresaIds = $userEmpresas->pluck('id')->toArray();
-                    $query->whereIn('empresa_id', $empresaIds);
-                } else {
-                    // Si hay filtro específico, verificar que tenga acceso a esa empresa
-                    $empresaId = $request->empresa_id;
-                    if ($userEmpresas->where('id', $empresaId)->count() > 0) {
-                        $query->where('empresa_id', $empresaId);
-                    } else {
-                        // Si no tiene acceso, mostrar sus empresas por defecto
-                        $empresaIds = $userEmpresas->pluck('id')->toArray();
-                        $query->whereIn('empresa_id', $empresaIds);
-                    }
-                }
-            }
-        } else if ($request->filled('empresa_id')) {
-            // Si es admin, aplicar el filtro seleccionado
-            $query->where('empresa_id', $request->get('empresa_id'));
+        // Aplicar filtro por empresa si se selecciona
+        if ($request->filled('empresa_id') && $request->empresa_id != '') {
+            $query->where('empresa_id', $request->empresa_id);
         }
 
         // Obtener los historiales
         $historiales = $query->get();
 
-        // Obtener empresas para el filtro según el tipo de usuario
-        if ($isUserAdmin) {
-            $empresas = Empresa::orderBy('nombre')->get();
-        } else {
-            // Para usuarios no admin, mostrar solo sus empresas asignadas
-            $empresas = auth()->user()->todasLasEmpresas()->sortBy('nombre')->values();
-        }
+        // Obtener lista de empresas para el filtro
+        $empresas = Empresa::orderBy('nombre')->get();
 
-        return view('historiales_clinicos.index', compact('historiales', 'empresas', 'userEmpresaId', 'isUserAdmin'));
+        return view('historiales_clinicos.index', compact('historiales', 'empresas'));
     }
 
     public function create()
@@ -132,21 +84,8 @@ class HistorialClinicoController extends Controller
             ->pluck('celular')
             ->toArray();
 
-        // Obtener empresas para el select según el tipo de usuario
-        if (auth()->user()->is_admin) {
-            $empresas = Empresa::orderBy('nombre')->get();
-        } else {
-            // Para usuarios no admin, mostrar solo sus empresas asignadas
-            $empresas = auth()->user()->todasLasEmpresas()->sortBy('nombre')->values();
-        }
-
-        // Verificar si el usuario está asociado a una empresa y no es admin
-        $userEmpresaId = null;
-        $isUserAdmin = auth()->user()->is_admin;
-        
-        if (!$isUserAdmin) {
-            $userEmpresaId = auth()->user()->empresa_id;
-        }
+        // Obtener lista de empresas
+        $empresas = Empresa::orderBy('nombre')->get();
 
         return view('historiales_clinicos.create', compact(
             'antecedentesPersonalesOculares',
@@ -158,40 +97,36 @@ class HistorialClinicoController extends Controller
             'cedulas',
             'celulares',
             'nombresCompletos',
-            'empresas',
-            'userEmpresaId',
-            'isUserAdmin'
+            'empresas'
         ));
     }
 
     protected function validationRules()
     {
         return [
-            'empresa_id' => 'nullable|exists:empresas,id',
-            'nombres' => 'nullable|string|max:255',
-            'apellidos' => 'nullable|string|max:255',
-            'edad' => 'nullable|numeric|min:0|max:150',
+            'empresa_id' => 'required|exists:empresas,id',
+            'nombres' => 'required|string|max:255',
+            'apellidos' => 'required|string|max:255',
+            'edad' => 'required|numeric|min:0|max:150',
             'fecha_nacimiento' => 'nullable|date',
             'cedula' => 'nullable|string|max:50',
-            'celular' => 'nullable|string|max:20',
-            'correo' => 'nullable|string|email|max:255',
-            'direccion' => 'nullable|string|max:255',
-            'ocupacion' => 'nullable|string|max:100',
-            'fecha' => 'nullable|date',
-            'motivo_consulta' => 'nullable|string|max:1000',
-            'enfermedad_actual' => 'nullable|string|max:1000',
-            'antecedentes_personales_oculares' => 'nullable|string|max:1000',
-            'antecedentes_personales_generales' => 'nullable|string|max:1000',
-            'antecedentes_familiares_oculares' => 'nullable|string|max:1000',
-            'antecedentes_familiares_generales' => 'nullable|string|max:1000',
-            'agudeza_visual_vl_sin_correccion_od' => 'nullable|string|max:50',
-            'agudeza_visual_vl_sin_correccion_oi' => 'nullable|string|max:50',
-            'agudeza_visual_vl_sin_correccion_ao' => 'nullable|string|max:50',
-            'agudeza_visual_vp_sin_correccion_od' => 'nullable|string|max:50',
-            'agudeza_visual_vp_sin_correccion_oi' => 'nullable|string|max:50',
-            'agudeza_visual_vp_sin_correccion_ao' => 'nullable|string|max:50',
-            'ph_od' => 'nullable|string|max:50',
-            'ph_oi' => 'nullable|string|max:50',
+            'celular' => 'required|string|max:20',
+            'ocupacion' => 'required|string|max:100',
+            'fecha' => 'required|date',
+            'motivo_consulta' => 'required|string|max:1000',
+            'enfermedad_actual' => 'required|string|max:1000',
+            'antecedentes_personales_oculares' => 'required|string|max:1000',
+            'antecedentes_personales_generales' => 'required|string|max:1000',
+            'antecedentes_familiares_oculares' => 'required|string|max:1000',
+            'antecedentes_familiares_generales' => 'required|string|max:1000',
+            'agudeza_visual_vl_sin_correccion_od' => 'required|string|max:50',
+            'agudeza_visual_vl_sin_correccion_oi' => 'required|string|max:50',
+            'agudeza_visual_vl_sin_correccion_ao' => 'required|string|max:50',
+            'agudeza_visual_vp_sin_correccion_od' => 'required|string|max:50',
+            'agudeza_visual_vp_sin_correccion_oi' => 'required|string|max:50',
+            'agudeza_visual_vp_sin_correccion_ao' => 'required|string|max:50',
+            'ph_od' => 'required|string|max:50',
+            'ph_oi' => 'required|string|max:50',
             'optotipo' => 'nullable|string|max:1000',
             'lensometria_od' => 'nullable|string|max:50',
             'lensometria_oi' => 'nullable|string|max:50',
@@ -199,54 +134,28 @@ class HistorialClinicoController extends Controller
             'material' => 'nullable|string|max:50',
             'filtro' => 'nullable|string|max:50',
             'tiempo_uso' => 'nullable|string|max:50',
-            'refraccion_od' => 'nullable|string|max:50',
-            'refraccion_oi' => 'nullable|string|max:50',
-            'rx_final_dp_od' => 'nullable|string|max:50',
-            'rx_final_dp_oi' => 'nullable|string|max:50',
-            'rx_final_av_vl_od' => 'nullable|string|max:50',
-            'rx_final_av_vl_oi' => 'nullable|string|max:50',
-            'rx_final_av_vp_od' => 'nullable|string|max:50',
-            'rx_final_av_vp_oi' => 'nullable|string|max:50',
+            'refraccion_od' => 'required|string|max:50',
+            'refraccion_oi' => 'required|string|max:50',
+            'rx_final_dp_od' => 'required|string|max:50',
+            'rx_final_dp_oi' => 'required|string|max:50',
+            'rx_final_av_vl_od' => 'required|string|max:50',
+            'rx_final_av_vl_oi' => 'required|string|max:50',
+            'rx_final_av_vp_od' => 'required|string|max:50',
+            'rx_final_av_vp_oi' => 'required|string|max:50',
             'add' => 'nullable|string|max:50',
-            'diagnostico' => 'nullable|string|max:1000',
-            'tratamiento' => 'nullable|string|max:1000',
+            'diagnostico' => 'required|string|max:1000',
+            'tratamiento' => 'required|string|max:1000',
             'proxima_consulta' => 'nullable|date',
             'cotizacion' => 'nullable|string|max:1000',
             'usuario_id' => 'nullable|exists:users,id',
-            
-            // Reglas de validación para múltiples recetas (sin archivos - se validan dinámicamente)
-            'recetas' => 'nullable|array',
-            'recetas.*.od_esfera' => 'nullable|string|max:20',
-            'recetas.*.od_cilindro' => 'nullable|string|max:20',
-            'recetas.*.od_eje' => 'nullable|string|max:20',
-            'recetas.*.od_adicion' => 'nullable|string|max:20',
-            'recetas.*.oi_esfera' => 'nullable|string|max:20',
-            'recetas.*.oi_cilindro' => 'nullable|string|max:20',
-            'recetas.*.oi_eje' => 'nullable|string|max:20',
-            'recetas.*.oi_adicion' => 'nullable|string|max:20',
-            'recetas.*.dp' => 'nullable|string|max:20',
-            'recetas.*.observaciones' => 'nullable|string|max:1000',
-            'recetas.*.tipo' => 'nullable|string|max:50',
         ];
     }
 
     public function store(Request $request)
     {
         try {
-            // Crear reglas de validación específicas para este request
-            $validationRules = $this->validationRules();
-            
-            // Validar archivos de recetas dinámicamente si existen
-            if ($request->hasFile('recetas')) {
-                foreach ($request->file('recetas') as $index => $archivos) {
-                    if (isset($archivos['foto'])) {
-                        $validationRules["recetas.$index.foto"] = 'nullable|image|mimes:jpeg,jpg,png|max:2048';
-                    }
-                }
-            }
-            
             // Validar los datos
-            $validator = \Validator::make($request->all(), $validationRules, [
+            $validator = \Validator::make($request->all(), $this->validationRules(), [
                 'required' => 'El campo :attribute es obligatorio.',
                 'string' => 'El campo :attribute debe ser texto.',
                 'max' => [
@@ -259,15 +168,11 @@ class HistorialClinicoController extends Controller
                     'numeric' => 'El campo :attribute debe ser al menos :min.',
                     'string' => 'El campo :attribute debe tener al menos :min caracteres.',
                 ],
-                'image' => 'El archivo :attribute debe ser una imagen.',
-                'mimes' => 'El archivo :attribute debe ser de tipo: :values.',
             ], [
                 'edad' => 'edad',
                 'nombres' => 'nombres',
                 'apellidos' => 'apellidos',
                 'celular' => 'celular',
-                'correo' => 'correo electrónico',
-                'direccion' => 'dirección',
                 'ocupacion' => 'ocupación',
                 'motivo_consulta' => 'motivo de consulta',
                 'enfermedad_actual' => 'enfermedad actual',
@@ -304,56 +209,17 @@ class HistorialClinicoController extends Controller
 
             $data = $validator->validated();
             
-            // Eliminar datos de recetas del array principal para evitar conflictos
-            if (isset($data['recetas'])) {
-                unset($data['recetas']);
-            }
-            
             // Asegurarse de que el usuario_id esté establecido
             if (!isset($data['usuario_id'])) {
                 $data['usuario_id'] = auth()->id();
             }
             
             // Crear el historial clínico
-            $historialClinico = HistorialClinico::create($data);
-
-            // Guardar las recetas asociadas al historial clínico
-            if ($historialClinico && $request->has('recetas')) {
-                // Debug: verificar si hay archivos
-                Log::info('Request tiene recetas: ' . json_encode(array_keys($request->input('recetas'))));
-                Log::info('Request tiene archivos de recetas: ' . ($request->hasFile('recetas') ? 'true' : 'false'));
-                
-                // Preparar datos de recetas con archivos
-                $recetasData = $request->input('recetas');
-                $archivosRecetas = $request->file('recetas');
-                
-                // Debug: mostrar estructura de archivos recibidos
-                if ($archivosRecetas) {
-                    foreach ($archivosRecetas as $index => $archivos) {
-                        if (is_array($archivos)) {
-                            Log::info("Archivos para receta $index: " . json_encode(array_keys($archivos)));
-                        }
-                    }
-                } else {
-                    Log::info('No se recibieron archivos de recetas');
-                }
-                
-                // Combinar datos con archivos de forma segura
-                if ($archivosRecetas && is_array($archivosRecetas)) {
-                    foreach ($archivosRecetas as $index => $archivos) {
-                        if (is_array($archivos) && isset($archivos['foto']) && $archivos['foto']->isValid()) {
-                            $recetasData[$index]['foto'] = $archivos['foto'];
-                            Log::info("Archivo foto válido encontrado para receta $index: " . $archivos['foto']->getClientOriginalName());
-                        }
-                    }
-                }
-                
-                $this->guardarMultiplesRecetas($recetasData, $historialClinico->id);
-            }
+            HistorialClinico::create($data);
 
             return redirect()
                 ->route('historiales_clinicos.index')
-                ->with('success', 'Historial clínico y recetas creados exitosamente');
+                ->with('success', 'Historial clínico creado exitosamente');
                 
         } catch (\Exception $e) {
             Log::error('Error al crear historial clínico: ' . $e->getMessage());
@@ -366,101 +232,29 @@ class HistorialClinicoController extends Controller
 
     public function show($id)
     {
-        $historialClinico = HistorialClinico::with(['empresa', 'recetas'])->findOrFail($id);
+        $historialClinico = HistorialClinico::with('empresa')->findOrFail($id);
         return view('historiales_clinicos.show', compact('historialClinico'));
-    }
-
-    public function print($id)
-    {
-        $historialClinico = HistorialClinico::with(['empresa', 'recetas', 'usuario'])->findOrFail($id);
-        return view('historiales_clinicos.print', compact('historialClinico'));
-    }
-
-    public function multiplePrint(Request $request)
-    {
-        $ids = $request->get('ids');
-        
-        if (!$ids) {
-            return redirect()->route('historiales_clinicos.index')->with([
-                'tipo' => 'alert-danger',
-                'mensaje' => 'No se proporcionaron IDs de historiales para imprimir'
-            ]);
-        }
-        
-        // Convertir string de IDs separados por coma a array
-        $idsArray = explode(',', $ids);
-        
-        // Obtener los historiales clínicos con sus recetas
-        $historiales = HistorialClinico::with(['empresa', 'recetas', 'usuario'])
-            ->whereIn('id', $idsArray)
-            ->whereHas('recetas') // Solo historiales que tengan recetas
-            ->get();
-        
-        if ($historiales->isEmpty()) {
-            return redirect()->route('historiales_clinicos.index')->with([
-                'tipo' => 'alert-warning',
-                'mensaje' => 'No se encontraron historiales con recetas para los IDs proporcionados'
-            ]);
-        }
-        
-        return view('historiales_clinicos.multipleprint', compact('historiales'));
     }
 
     public function edit($id)
     {
-        $historialClinico = HistorialClinico::with('recetas')->findOrFail($id);
+        $historialClinico = HistorialClinico::findOrFail($id);
         
-        // Obtener empresas para el select según el tipo de usuario
-        if (auth()->user()->is_admin) {
-            $empresas = Empresa::orderBy('nombre')->get();
-        } else {
-            // Para usuarios no admin, mostrar solo sus empresas asignadas
-            $empresas = auth()->user()->todasLasEmpresas()->sortBy('nombre')->values();
-        }
+        // Obtener lista de empresas
+        $empresas = Empresa::orderBy('nombre')->get();
         
-        // Verificar si el usuario está asociado a una empresa y no es admin
-        $userEmpresaId = null;
-        $isUserAdmin = auth()->user()->is_admin;
-        
-        if (!$isUserAdmin) {
-            $userEmpresaId = auth()->user()->empresa_id;
-        }
-        
-        // Obtener todas las recetas asociadas al historial clínico
-        $recetas = $historialClinico->recetas;
-        $receta = $recetas->first(); // Mantener compatibilidad con la vista actual
-        
-        return view('historiales_clinicos.edit', compact('historialClinico', 'empresas', 'userEmpresaId', 'isUserAdmin', 'receta', 'recetas'));
+        return view('historiales_clinicos.edit', compact('historialClinico', 'empresas'));
     }
 
     public function update(Request $request, $id)
     {
         try {
-            \DB::beginTransaction();
-            
             $historialClinico = HistorialClinico::findOrFail($id);
             
-            // Crear reglas de validación específicas para este request
-            $validationRules = $this->validationRules();
-            
-            // Validar archivos de recetas dinámicamente si existen
-            if ($request->hasFile('recetas')) {
-                foreach ($request->file('recetas') as $index => $archivos) {
-                    if (isset($archivos['foto'])) {
-                        $validationRules["recetas.$index.foto"] = 'nullable|image|mimes:jpeg,jpg,png|max:2048';
-                    }
-                }
-            }
-            
             // Obtener los datos validados
-            $data = $request->validate($validationRules);
+            $data = $request->validate($this->validationRules());
             
-            // Eliminar datos de recetas del array principal para evitar conflictos
-            if (isset($data['recetas'])) {
-                unset($data['recetas']);
-            }
-            
-            // Filtrar campos vacíos del historial clínico
+            // Filtrar campos vacíos
             $data = array_filter($data, function($value) {
                 return $value !== null && $value !== '';
             });
@@ -468,52 +262,15 @@ class HistorialClinicoController extends Controller
             // Asegurar que el usuario_id se mantiene
             $data['usuario_id'] = $historialClinico->usuario_id;
             
-            // Actualizar el registro del historial clínico
+            // Actualizar el registro
             $historialClinico->update($data);
-            
-            // Manejar las recetas asociadas
-            if ($request->has('recetas')) {
-                // Debug: verificar si hay archivos
-                Log::info('Update - Request tiene recetas: ' . json_encode(array_keys($request->input('recetas'))));
-                Log::info('Update - Request tiene archivos de recetas: ' . ($request->hasFile('recetas') ? 'true' : 'false'));
-                
-                // Preparar datos de recetas con archivos
-                $recetasData = $request->input('recetas');
-                $archivosRecetas = $request->file('recetas');
-                
-                // Debug: mostrar estructura de archivos recibidos
-                if ($archivosRecetas) {
-                    foreach ($archivosRecetas as $index => $archivos) {
-                        if (is_array($archivos)) {
-                            Log::info("Update - Archivos para receta $index: " . json_encode(array_keys($archivos)));
-                        }
-                    }
-                } else {
-                    Log::info('Update - No se recibieron archivos de recetas');
-                }
-                
-                // Combinar datos con archivos de forma segura
-                if ($archivosRecetas && is_array($archivosRecetas)) {
-                    foreach ($archivosRecetas as $index => $archivos) {
-                        if (is_array($archivos) && isset($archivos['foto']) && $archivos['foto']->isValid()) {
-                            $recetasData[$index]['foto'] = $archivos['foto'];
-                            Log::info("Update - Archivo foto válido encontrado para receta $index: " . $archivos['foto']->getClientOriginalName());
-                        }
-                    }
-                }
-                
-                $this->actualizarMultiplesRecetas($request, $historialClinico->id);
-            }
-            
-            \DB::commit();
             
             return redirect()
                 ->route('historiales_clinicos.index')
-                ->with('success', 'Historial clínico y recetas actualizadas exitosamente');
+                ->with('success', 'Historial clínico actualizado exitosamente');
                 
         } catch (\Exception $e) {
-            \DB::rollback();
-            Log::error('Error al actualizar historial clínico: ' . $e->getMessage());
+            Log::error('Error al actualizar: ' . $e->getMessage());
             return redirect()
                 ->back()
                 ->withInput()
@@ -521,50 +278,42 @@ class HistorialClinicoController extends Controller
         }
     }
 
-    /**
-     * Actualizar o crear la receta asociada al historial clínico
-     */
-    private function actualizarReceta(Request $request, $historialClinicoId)
+    public function destroy($id)
     {
-        // Preparar datos de la receta
-        $recetaData = [
-            'od_esfera' => $request->input('od_esfera'),
-            'od_cilindro' => $request->input('od_cilindro'),
-            'od_eje' => $request->input('od_eje'),
-            'od_adicion' => $request->input('add'), // ADD se aplica a ambos ojos
-            'oi_esfera' => $request->input('oi_esfera'),
-            'oi_cilindro' => $request->input('oi_cilindro'),
-            'oi_eje' => $request->input('oi_eje'),
-            'oi_adicion' => $request->input('add'), // ADD se aplica a ambos ojos
-            'dp' => $request->input('dp'),
-            'observaciones' => $request->input('observaciones'),
-            'tipo' => $request->input('tipo')
-        ];
-        
-        // Filtrar campos vacíos en la receta
-        $recetaData = array_filter($recetaData, function($value) {
-            return $value !== null && $value !== '';
-        });
-        
-        // Buscar si ya existe una receta para este historial
-        $receta = \App\Models\Receta::where('historial_clinico_id', $historialClinicoId)->first();
-        
-        if ($receta) {
-            // Actualizar la receta existente
-            $receta->update($recetaData);
-            Log::info('Receta actualizada para historial clínico ID: ' . $historialClinicoId);
-        } else if (count($recetaData) > 0) {
-            // Crear una nueva receta si hay datos y no existe una
-            $recetaData['historial_clinico_id'] = $historialClinicoId;
-            \App\Models\Receta::create($recetaData);
-            Log::info('Nueva receta creada para historial clínico ID: ' . $historialClinicoId);
+        try {
+            // Buscar el historial clínico por ID
+            $historialClinico = HistorialClinico::findOrFail($id);
+            
+            // Guardar datos importantes antes de la eliminación
+            $historialId = $historialClinico->id;
+            $nombres = $historialClinico->nombres;
+            $apellidos = $historialClinico->apellidos;
+            
+            // Realizar eliminación (soft delete)
+            $historialClinico->delete();
+            
+            // Verificar que se haya realizado el soft delete
+            $historialEliminado = HistorialClinico::withTrashed()->find($historialId);
+            if (!$historialEliminado || $historialEliminado->deleted_at === null) {
+                // Si no se encuentra o no tiene fecha de eliminación, algo falló
+                throw new \Exception('Error al realizar soft delete: No se actualizó el campo deleted_at');
+            }
+            
+            // Registrar la operación exitosa
+            Log::info("Historial clínico eliminado (soft delete): ID {$historialId}, Paciente: {$nombres} {$apellidos}");
+            
+            return redirect()->route('historiales_clinicos.index')
+                ->with('tipo', 'alert-success')
+                ->with('mensaje', "Historial clínico de {$nombres} {$apellidos} eliminado exitosamente");
+                
+        } catch (\Exception $e) {
+            // Registrar el error detallado en el log
+            Log::error('Error al eliminar historial clínico: ' . $e->getMessage() . ' | Traza: ' . $e->getTraceAsString());
+            
+            return redirect()->route('historiales_clinicos.index')
+                ->with('tipo', 'alert-danger')
+                ->with('mensaje', 'Error al eliminar el historial clínico: ' . $e->getMessage());
         }
-    }
-
-    public function destroy(HistorialClinico $historialClinico)
-    {
-        $historialClinico->delete();
-        return redirect()->route('historiales_clinicos.index');
     }
 
     public function enviarWhatsapp($id)
@@ -577,7 +326,7 @@ class HistorialClinicoController extends Controller
             $DIAS_VALIDEZ = 15;
             $TELEFONO_OPTICA = "(02) 234-5678";
             $DIRECCION_OPTICA = "Av. Principal 123, Quito";
-            $NOMBRE_OPTICA = "ESCLERÓPTICA";
+            $NOMBRE_OPTICA = "Escleróptica";
             $HORARIO_ATENCION = "Lunes a Viernes de 09:00 a 18:00";
             
             // Debug para ver qué datos estamos recibiendo
@@ -983,234 +732,5 @@ class HistorialClinicoController extends Controller
             ->distinct()
             ->pluck($tipo)
             ->toArray();
-    }
-
-    /**
-     * Guardar múltiples recetas asociadas a un historial clínico
-     */
-    private function guardarMultiplesRecetas($recetas, $historialClinicoId)
-    {
-        foreach ($recetas as $index => $recetaData) {
-            Log::info("Procesando receta $index: " . json_encode(array_keys($recetaData)));
-            
-            // Inicializar array limpio para los datos de la receta
-            $recetaDataLimpia = [];
-            
-            // Manejar la subida de foto si existe
-            if (isset($recetaData['foto']) && $recetaData['foto'] instanceof \Illuminate\Http\UploadedFile) {
-                $foto = $recetaData['foto'];
-                
-                // Crear directorio si no existe
-                if (!Storage::disk('public')->exists('recetas')) {
-                    Storage::disk('public')->makeDirectory('recetas');
-                }
-                
-                // Generar nombre único para el archivo
-                $extension = $foto->getClientOriginalExtension();
-                $nombreArchivo = 'receta_' . $historialClinicoId . '_' . $index . '_' . time() . '.' . $extension;
-                
-                try {
-                    // Guardar el archivo en storage/app/public/recetas
-                    $rutaArchivo = $foto->storeAs('recetas', $nombreArchivo, 'public');
-                    
-                    if ($rutaArchivo) {
-                        // Guardar la ruta en la base de datos
-                        $recetaDataLimpia['foto'] = '/storage/' . $rutaArchivo;
-                        Log::info('Foto guardada en: /storage/' . $rutaArchivo);
-                    } else {
-                        Log::error('Error al guardar la foto para la receta del historial clínico ID: ' . $historialClinicoId);
-                    }
-                } catch (\Exception $e) {
-                    Log::error('Excepción al guardar foto: ' . $e->getMessage());
-                }
-            }
-            
-            // Procesar los demás campos, excluyendo archivos
-            foreach ($recetaData as $key => $value) {
-                // Saltar archivos y campos vacíos
-                if ($value instanceof \Illuminate\Http\UploadedFile) {
-                    continue;
-                }
-                
-                // Solo incluir valores no vacíos
-                if ($value !== null && $value !== '') {
-                    $recetaDataLimpia[$key] = $value;
-                }
-            }
-            
-            // Solo crear la receta si tiene al menos un campo con datos válidos (excluyendo solo historial_clinico_id)
-            $camposSignificativos = array_diff_key($recetaDataLimpia, array_flip(['historial_clinico_id']));
-            if (count($camposSignificativos) > 0) {
-                $recetaDataLimpia['historial_clinico_id'] = $historialClinicoId;
-                
-                // Asegurar que oi_adicion tenga el mismo valor que od_adicion si no está definido
-                if (isset($recetaDataLimpia['od_adicion']) && !isset($recetaDataLimpia['oi_adicion'])) {
-                    $recetaDataLimpia['oi_adicion'] = $recetaDataLimpia['od_adicion'];
-                }
-                
-                try {
-                    $recetaCreada = \App\Models\Receta::create($recetaDataLimpia);
-                    Log::info('Receta creada para historial clínico ID: ' . $historialClinicoId . ' con datos: ' . json_encode($recetaDataLimpia));
-                } catch (\Exception $e) {
-                    Log::error('Error al crear receta: ' . $e->getMessage());
-                    Log::error('Datos de receta que fallaron: ' . json_encode($recetaDataLimpia));
-                }
-            } else {
-                Log::info('Receta vacía omitida para índice: ' . $index);
-            }
-        }
-    }
-
-    /**
-     * Actualizar múltiples recetas asociadas a un historial clínico
-     */
-    private function actualizarMultiplesRecetas(Request $request, $historialClinicoId)
-    {
-        // Si el request contiene recetas múltiples, usar ese formato
-        if ($request->has('recetas')) {
-            // Obtener recetas existentes
-            $recetasExistentes = \App\Models\Receta::where('historial_clinico_id', $historialClinicoId)->get()->keyBy('id');
-            
-            // Preparar datos de recetas con archivos
-            $recetasData = $request->input('recetas');
-            $archivosRecetas = $request->file('recetas');
-            
-            // Combinar datos con archivos
-            if ($archivosRecetas && is_array($archivosRecetas)) {
-                foreach ($archivosRecetas as $index => $archivos) {
-                    if (is_array($archivos) && isset($archivos['foto']) && $archivos['foto']->isValid()) {
-                        $recetasData[$index]['foto'] = $archivos['foto'];
-                        Log::info("Update - Archivo foto válido encontrado para receta $index: " . $archivos['foto']->getClientOriginalName());
-                    } elseif (isset($recetasData[$index]['foto_actual']) && $recetasData[$index]['foto_actual']) {
-                        // Mantener foto actual si no se subió una nueva
-                        $recetasData[$index]['foto'] = $recetasData[$index]['foto_actual'];
-                        Log::info("Update - Manteniendo foto actual para receta $index: " . $recetasData[$index]['foto_actual']);
-                    }
-                }
-            } else {
-                // Si no hay archivos nuevos, preservar las fotos actuales
-                foreach ($recetasData as $index => $recetaData) {
-                    if (isset($recetaData['foto_actual']) && $recetaData['foto_actual']) {
-                        $recetasData[$index]['foto'] = $recetaData['foto_actual'];
-                        Log::info("Update - Preservando foto actual para receta $index: " . $recetaData['foto_actual']);
-                    }
-                }
-            }
-            
-            // Obtener IDs de recetas que se están enviando (las que tienen ID)
-            $recetasEnviadas = [];
-            foreach ($recetasData as $index => $recetaData) {
-                if (isset($recetaData['id']) && !empty($recetaData['id'])) {
-                    $recetasEnviadas[] = $recetaData['id'];
-                }
-            }
-            
-            // Eliminar recetas que ya no están en el formulario
-            $recetasAEliminar = $recetasExistentes->whereNotIn('id', $recetasEnviadas);
-            foreach ($recetasAEliminar as $recetaAEliminar) {
-                // Eliminar archivo de foto si existe
-                if ($recetaAEliminar->foto && \Storage::disk('public')->exists(str_replace('/storage/', '', $recetaAEliminar->foto))) {
-                    \Storage::disk('public')->delete(str_replace('/storage/', '', $recetaAEliminar->foto));
-                    Log::info("Update - Foto eliminada: " . $recetaAEliminar->foto);
-                }
-                $recetaAEliminar->delete();
-                Log::info("Update - Receta eliminada: " . $recetaAEliminar->id);
-            }
-            
-            // Procesar cada receta del formulario
-            foreach ($recetasData as $index => $recetaData) {
-                // Limpiar datos de la receta
-                $recetaDataLimpia = [];
-                
-                // Manejar la subida de foto si existe
-                if (isset($recetaData['foto']) && $recetaData['foto'] instanceof \Illuminate\Http\UploadedFile) {
-                    $foto = $recetaData['foto'];
-                    
-                    // Crear directorio si no existe
-                    if (!Storage::disk('public')->exists('recetas')) {
-                        Storage::disk('public')->makeDirectory('recetas');
-                    }
-                    
-                    // Generar nombre único para el archivo
-                    $extension = $foto->getClientOriginalExtension();
-                    $nombreArchivo = 'receta_' . $historialClinicoId . '_' . $index . '_' . time() . '.' . $extension;
-                    
-                    try {
-                        // Si hay una receta existente con foto, eliminar la foto anterior
-                        if (isset($recetaData['id']) && !empty($recetaData['id'])) {
-                            $recetaExistente = $recetasExistentes->get($recetaData['id']);
-                            if ($recetaExistente && $recetaExistente->foto && \Storage::disk('public')->exists(str_replace('/storage/', '', $recetaExistente->foto))) {
-                                \Storage::disk('public')->delete(str_replace('/storage/', '', $recetaExistente->foto));
-                                Log::info("Update - Foto anterior eliminada: " . $recetaExistente->foto);
-                            }
-                        }
-                        
-                        // Guardar el archivo en storage/app/public/recetas
-                        $rutaArchivo = $foto->storeAs('recetas', $nombreArchivo, 'public');
-                        
-                        if ($rutaArchivo) {
-                            // Guardar la ruta en la base de datos
-                            $recetaDataLimpia['foto'] = '/storage/' . $rutaArchivo;
-                            Log::info('Update - Foto guardada en: /storage/' . $rutaArchivo);
-                        } else {
-                            Log::error('Update - Error al guardar la foto para la receta del historial clínico ID: ' . $historialClinicoId);
-                        }
-                    } catch (\Exception $e) {
-                        Log::error('Update - Excepción al guardar foto: ' . $e->getMessage());
-                    }
-                } elseif (isset($recetaData['foto']) && is_string($recetaData['foto'])) {
-                    // Es una foto existente (string con la ruta)
-                    $recetaDataLimpia['foto'] = $recetaData['foto'];
-                }
-                
-                // Procesar los demás campos, excluyendo archivos y campos de control
-                foreach ($recetaData as $key => $value) {
-                    // Saltar archivos, campos de control y campos vacíos
-                    if ($value instanceof \Illuminate\Http\UploadedFile || in_array($key, ['foto_actual', 'id']) || $value === null || $value === '') {
-                        continue;
-                    }
-                    
-                    $recetaDataLimpia[$key] = $value;
-                }
-                
-                // Solo procesar si tiene al menos un campo con datos válidos (excluyendo historial_clinico_id)
-                $camposSignificativos = array_diff_key($recetaDataLimpia, array_flip(['historial_clinico_id']));
-                if (count($camposSignificativos) > 0) {
-                    $recetaDataLimpia['historial_clinico_id'] = $historialClinicoId;
-                    
-                    // Asegurar que oi_adicion tenga el mismo valor que od_adicion si no está definido
-                    if (isset($recetaDataLimpia['od_adicion']) && !isset($recetaDataLimpia['oi_adicion'])) {
-                        $recetaDataLimpia['oi_adicion'] = $recetaDataLimpia['od_adicion'];
-                    }
-                    
-                    try {
-                        // Si tiene ID, actualizar la receta existente
-                        if (isset($recetaData['id']) && !empty($recetaData['id'])) {
-                            $recetaExistente = \App\Models\Receta::find($recetaData['id']);
-                            if ($recetaExistente) {
-                                $recetaExistente->update($recetaDataLimpia);
-                                Log::info('Update - Receta actualizada ID: ' . $recetaData['id'] . ' con datos: ' . json_encode($recetaDataLimpia));
-                            } else {
-                                Log::warning('Update - Receta con ID ' . $recetaData['id'] . ' no encontrada, creando nueva');
-                                \App\Models\Receta::create($recetaDataLimpia);
-                                Log::info('Update - Nueva receta creada con datos: ' . json_encode($recetaDataLimpia));
-                            }
-                        } else {
-                            // No tiene ID, crear nueva receta
-                            \App\Models\Receta::create($recetaDataLimpia);
-                            Log::info('Update - Nueva receta creada para historial clínico ID: ' . $historialClinicoId . ' con datos: ' . json_encode($recetaDataLimpia));
-                        }
-                    } catch (\Exception $e) {
-                        Log::error('Update - Error al procesar receta: ' . $e->getMessage());
-                        Log::error('Update - Datos de receta que fallaron: ' . json_encode($recetaDataLimpia));
-                    }
-                } else {
-                    Log::info('Update - Receta vacía omitida para índice: ' . $index);
-                }
-            }
-        } else {
-            // Mantener compatibilidad con formato antiguo
-            $this->actualizarReceta($request, $historialClinicoId);
-        }
     }
 }

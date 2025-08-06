@@ -15,7 +15,7 @@ current:
     hour: 22
     minute: 55
     second: 58
-    timezone: America/Santiago
+    timezone: America/Guayaquil
 commit:
   mode: absorb
   length: 7

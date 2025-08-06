@@ -67,7 +67,7 @@ return [
     |
     */
 
-    'timezone' => 'America/Santiago',
+    'timezone' => 'America/Guayaquil',
 
     /*
     |--------------------------------------------------------------------------

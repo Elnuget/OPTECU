@@ -122,16 +122,7 @@ use App\Models\MensajePredeterminado;
                 <form id="mensajePredeterminadoForm">
                     <div class="form-group">
                         <label>MENSAJE DE FELICITACIÓN:</label>
-                        <textarea class="form-control" id="mensajePredeterminado" rows="6">{{ MensajePredeterminado::obtenerMensaje('cumpleanos') ?: '¡Feliz cumpleaños [NOMBRE]! 🎉🎂
-
-En este día tan especial queremos desearte toda la felicidad del mundo. Que este nuevo año de vida esté lleno de alegría, salud y muchas bendiciones.
-
-🎁 Como agradecimiento por confiar en nosotros, te recordamos que siempre tendrás un descuento especial en tu próxima visita.
-
-¡Que disfrutes mucho tu día! 🥳✨
-
-Con cariño,
-El equipo de Óptica' }}</textarea>
+                        <textarea class="form-control" id="mensajePredeterminado" rows="6">{{ MensajePredeterminado::obtenerMensaje('cumpleanos') }}</textarea>
                     </div>
                 </form>
             </div>
@@ -197,69 +188,148 @@ El equipo de Óptica' }}</textarea>
 
 @section('js')
 <script>
-// Función para detectar si es dispositivo móvil
-function isMobileDevice() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+// Función mejorada para envío seguro de WhatsApp
+function enviarWhatsAppSeguro(telefono, mensaje, callback) {
+    // Limpiar el número de teléfono
+    var numeroLimpio = telefono.toString().replace(/[^\d]/g, '');
+    
+    // Asegurar que tenga el código de país (Ecuador: 593)
+    if (!numeroLimpio.startsWith('593')) {
+        // Si empieza con 0, quitarlo y agregar 593
+        if (numeroLimpio.startsWith('0')) {
+            numeroLimpio = '593' + numeroLimpio.substring(1);
+        } else {
+            numeroLimpio = '593' + numeroLimpio;
+        }
+    }
+    
+    // Codificar el mensaje de forma segura
+    var mensajeCodificado = encodeURIComponent(mensaje);
+    
+    // Crear URLs para diferentes casos
+    var urlWeb = `https://web.whatsapp.com/send?phone=${numeroLimpio}&text=${mensajeCodificado}`;
+    var urlApi = `https://api.whatsapp.com/send?phone=${numeroLimpio}&text=${mensajeCodificado}`;
+    var urlWa = `https://wa.me/${numeroLimpio}?text=${mensajeCodificado}`;
+    
+    // Mostrar modal de selección de método de envío
+    var modalHtml = `
+        <div class="modal fade" id="whatsappModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">ENVIAR MENSAJE DE WHATSAPP</h5>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Número:</strong> +${numeroLimpio}</p>
+                        <p><strong>Vista previa del mensaje:</strong></p>
+                        <div class="alert alert-info" style="max-height: 200px; overflow-y: auto; white-space: pre-wrap; font-size: 0.9em;">${mensaje}</div>
+                        <p>Seleccione cómo desea enviar el mensaje:</p>
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <button type="button" class="btn btn-success btn-block" onclick="abrirWhatsApp('${urlWa}')">
+                                    <i class="fab fa-whatsapp"></i> WhatsApp Oficial
+                                </button>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <button type="button" class="btn btn-info btn-block" onclick="abrirWhatsApp('${urlWeb}')">
+                                    <i class="fab fa-whatsapp"></i> WhatsApp Web
+                                </button>
+                            </div>
+                            <div class="col-md-12 mb-2">
+                                <button type="button" class="btn btn-secondary btn-block" onclick="copiarMensaje('${numeroLimpio}', \`${mensaje.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">
+                                    <i class="fas fa-copy"></i> Copiar Mensaje y Número
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remover modal anterior si existe
+    $('#whatsappModal').remove();
+    
+    // Agregar modal al DOM
+    $('body').append(modalHtml);
+    
+    // Mostrar modal
+    $('#whatsappModal').modal('show');
+    
+    // Ejecutar callback si se proporciona
+    if (callback) callback();
 }
 
-// Función para limpiar y formatear número de teléfono chileno
-function formatChileanPhone(phone) {
-    // Remover todos los caracteres no numéricos
-    let cleanPhone = phone.replace(/\D/g, '');
+// Función para abrir WhatsApp
+window.abrirWhatsApp = function(url) {
+    $('#whatsappModal').modal('hide');
     
-    // Si empieza con 56 (código de Chile), mantenerlo
-    if (cleanPhone.startsWith('56')) {
-        return cleanPhone;
-    }
+    // Intentar abrir la URL
+    var ventana = window.open(url, '_blank');
     
-    // Si empieza con 9 (celular chileno), agregar código de país
-    if (cleanPhone.startsWith('9') && cleanPhone.length === 9) {
-        return '56' + cleanPhone;
-    }
-    
-    // Si tiene 8 dígitos, asumir que falta el 9 inicial
-    if (cleanPhone.length === 8) {
-        return '569' + cleanPhone;
-    }
-    
-    // Si no cumple ningún patrón, devolver tal como está para validación posterior
-    return cleanPhone;
+    // Verificar si se abrió correctamente
+    setTimeout(function() {
+        if (!ventana || ventana.closed || typeof ventana.closed == 'undefined') {
+            // Si no se pudo abrir, mostrar alerta
+            Swal.fire({
+                icon: 'warning',
+                title: 'Bloqueador de Ventanas',
+                html: `
+                    <p>No se pudo abrir WhatsApp automáticamente.</p>
+                    <p>Por favor, haga clic en el siguiente enlace:</p>
+                    <a href="${url}" target="_blank" class="btn btn-success">
+                        <i class="fab fa-whatsapp"></i> Abrir WhatsApp
+                    </a>
+                `,
+                showConfirmButton: false,
+                showCloseButton: true
+            });
+        }
+    }, 1000);
 }
 
-// Función para generar URL de WhatsApp más segura
-function generateWhatsAppURL(phoneNumber, message) {
-    const formattedPhone = formatChileanPhone(phoneNumber);
-    const encodedMessage = encodeURIComponent(message);
+// Función para copiar mensaje y número
+window.copiarMensaje = function(numero, mensaje) {
+    var textoCompleto = `Número: +${numero}\n\nMensaje:\n${mensaje}`;
     
-    if (isMobileDevice()) {
-        // Para móviles, usar el esquema whatsapp://
-        return `whatsapp://send?phone=${formattedPhone}&text=${encodedMessage}`;
+    // Intentar copiar al portapapeles
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(textoCompleto).then(() => {
+            $('#whatsappModal').modal('hide');
+            Swal.fire({
+                icon: 'success',
+                title: '¡Copiado!',
+                text: 'El número y mensaje han sido copiados al portapapeles.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        }).catch(() => {
+            mostrarTextoParaCopiar(textoCompleto);
+        });
     } else {
-        // Para escritorio, usar WhatsApp Web con api.whatsapp.com (más confiable)
-        return `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodedMessage}`;
+        mostrarTextoParaCopiar(textoCompleto);
     }
+}
+
+// Función para mostrar texto para copiar manualmente
+function mostrarTextoParaCopiar(texto) {
+    $('#whatsappModal').modal('hide');
+    Swal.fire({
+        title: 'Copiar Manualmente',
+        html: `<textarea class="form-control" rows="8" readonly style="width: 100%;">${texto}</textarea>`,
+        showConfirmButton: true,
+        confirmButtonText: 'Cerrar',
+        width: '600px'
+    });
 }
 
 function mostrarModalMensaje(pacienteId, nombrePaciente) {
     $('#pacienteId').val(pacienteId);
     $('#nombrePaciente').text(nombrePaciente);
-    
-    // Mensaje predeterminado personalizado para Chile
-    let mensajePredeterminado = $('#mensajePredeterminado').val();
-    if (!mensajePredeterminado || mensajePredeterminado.trim() === '') {
-        mensajePredeterminado = `¡Feliz cumpleaños ${nombrePaciente}! 🎉🎂
-
-En este día tan especial queremos desearte toda la felicidad del mundo. Que este nuevo año de vida esté lleno de alegría, salud y muchas bendiciones.
-
-🎁 Como agradecimiento por confiar en nosotros, te recordamos que siempre tendrás un descuento especial en tu próxima visita.
-
-¡Que disfrutes mucho tu día! 🥳✨
-
-Con cariño,
-El equipo de Óptica`;
-    }
-    
-    $('#mensajePersonalizado').val(mensajePredeterminado);
+    $('#mensajePersonalizado').val($('#mensajePredeterminado').val());
     $('#enviarMensajeModal').modal('show');
 }
 
@@ -280,9 +350,7 @@ function guardarMensajePredeterminado() {
             Swal.fire({
                 icon: 'success',
                 title: '¡Guardado!',
-                text: 'El mensaje predeterminado ha sido actualizado.',
-                timer: 2000,
-                timerProgressBar: true
+                text: 'El mensaje predeterminado ha sido actualizado.'
             });
         },
         error: function(xhr) {
@@ -305,35 +373,21 @@ function enviarMensaje() {
     const mensaje = $('#mensajePersonalizado').val();
     const boton = $(`.btn-enviar-mensaje[data-paciente-id="${pacienteId}"]`);
     
-    // Validar mensaje
-    if (!mensaje || mensaje.trim() === '') {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Por favor, ingrese un mensaje antes de enviar.'
-        });
-        return;
-    }
-
-    // Obtener número de teléfono del botón de la tabla
+    // Obtener el número de teléfono del paciente de la tabla
     const celularRow = boton.closest('tr');
-    const celularBadge = celularRow.find('.badge-success');
+    const celularText = celularRow.find('.badge-success').text();
+    const celular = celularText.replace(/[^\d]/g, '');
     
-    if (celularBadge.length === 0) {
+    // Validar que exista el número de teléfono
+    if (!celular) {
         Swal.fire({
             icon: 'error',
             title: 'Error',
-            text: 'No se encontró un número de teléfono válido para este paciente.'
+            text: 'No se encontró un número de teléfono válido'
         });
         return;
     }
     
-    const celular = celularBadge.text().replace(/[^\d]/g, '');
-    
-    // Deshabilitar botón temporalmente
-    const botonEnviar = $('#enviarMensajeModal .btn-success');
-    botonEnviar.prop('disabled', true);
-
     // Registrar el mensaje en la base de datos y enviar
     $.ajax({
         url: `/historiales_clinicos/${pacienteId}/enviar-mensaje`,
@@ -345,42 +399,30 @@ function enviarMensaje() {
             forzar_envio: false
         },
         success: function(response) {
-            // Actualizar el botón inmediatamente
-            boton.removeClass('btn-success')
-                 .addClass('btn-warning')
-                 .html('<i class="fab fa-whatsapp"></i> VOLVER A ENVIAR');
-            
-            // Generar URL de WhatsApp optimizada
-            const whatsappURL = generateWhatsAppURL(celular, mensaje);
-            
-            // Abrir WhatsApp
-            const whatsappWindow = window.open(whatsappURL, '_blank');
-            
-            // Verificar si se abrió correctamente y ofrecer alternativa
-            setTimeout(() => {
-                if (!whatsappWindow || whatsappWindow.closed) {
-                    // Si no se abrió, intentar con URL alternativa
-                    const alternativeURL = `https://web.whatsapp.com/send?phone=${formatChileanPhone(celular)}&text=${encodeURIComponent(mensaje)}`;
-                    window.open(alternativeURL, '_blank');
-                }
-            }, 1000);
-            
             // Cerrar el modal
             $('#enviarMensajeModal').modal('hide');
             
-            // Mostrar mensaje de éxito
-            Swal.fire({
-                icon: 'success',
-                title: '¡WhatsApp Abierto!',
-                text: 'Se ha abierto WhatsApp con el mensaje de felicitación.',
-                timer: 3000,
-                timerProgressBar: true
+            // Usar la función mejorada de WhatsApp
+            enviarWhatsAppSeguro(celular, mensaje, function() {
+                // Actualizar el botón inmediatamente
+                boton.removeClass('btn-success')
+                     .addClass('btn-warning')
+                     .html('<i class="fab fa-whatsapp"></i> VOLVER A ENVIAR');
+                
+                // Mostrar mensaje de éxito
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Mensaje Preparado!',
+                    text: 'Seleccione una opción para enviar el mensaje.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
             });
         },
         error: function(xhr) {
-            let errorMessage = 'Error al enviar el mensaje';
+            let mensaje = 'Error al enviar el mensaje';
             if (xhr.responseJSON && xhr.responseJSON.error) {
-                errorMessage = xhr.responseJSON.error;
+                mensaje = xhr.responseJSON.error;
             }
             
             // Si requiere confirmación para reenviar en el mismo mes
@@ -388,7 +430,7 @@ function enviarMensaje() {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Atención',
-                    text: errorMessage,
+                    text: mensaje,
                     showCancelButton: true,
                     confirmButtonText: 'Sí, enviar de todos modos',
                     cancelButtonText: 'Cancelar'
@@ -405,30 +447,19 @@ function enviarMensaje() {
                                 forzar_envio: true
                             },
                             success: function(response) {
-                                // Generar URL de WhatsApp optimizada
-                                const whatsappURL = generateWhatsAppURL(celular, mensaje);
-                                
-                                // Abrir WhatsApp
-                                const whatsappWindow = window.open(whatsappURL, '_blank');
-                                
-                                // Verificar si se abrió correctamente
-                                setTimeout(() => {
-                                    if (!whatsappWindow || whatsappWindow.closed) {
-                                        const alternativeURL = `https://web.whatsapp.com/send?phone=${formatChileanPhone(celular)}&text=${encodeURIComponent(mensaje)}`;
-                                        window.open(alternativeURL, '_blank');
-                                    }
-                                }, 1000);
-                                
                                 // Cerrar el modal
                                 $('#enviarMensajeModal').modal('hide');
                                 
-                                // Mostrar mensaje de éxito
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: '¡WhatsApp Abierto!',
-                                    text: 'Se ha abierto WhatsApp con el mensaje de felicitación.',
-                                    timer: 3000,
-                                    timerProgressBar: true
+                                // Usar la función mejorada de WhatsApp
+                                enviarWhatsAppSeguro(celular, mensaje, function() {
+                                    // Mostrar mensaje de éxito
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: '¡Mensaje Preparado!',
+                                        text: 'Seleccione una opción para enviar el mensaje.',
+                                        timer: 2000,
+                                        showConfirmButton: false
+                                    });
                                 });
                             },
                             error: function(xhr) {
@@ -452,22 +483,15 @@ function enviarMensaje() {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: errorMessage
+                text: mensaje
             });
-        },
-        complete: function() {
-            // Rehabilitar botón
-            botonEnviar.prop('disabled', false);
         }
     });
 }
 
 // Cargar mensaje predeterminado al iniciar la página
 $(document).ready(function() {
-    // Agregar el token CSRF si no existe
-    if (!$('meta[name="csrf-token"]').length) {
-        $('head').append('<meta name="csrf-token" content="{{ csrf_token() }}">');
-    }
+    // No necesitamos verificar mensajes enviados aquí ya que lo hacemos en el servidor con @php
 });
 </script>
 @stop 

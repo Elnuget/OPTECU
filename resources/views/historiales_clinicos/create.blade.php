@@ -20,7 +20,7 @@
             </div>
         @endif
 
-        <form action="{{ route('historiales_clinicos.store') }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('historiales_clinicos.store') }}" method="POST">
             @csrf
 
             {{-- FECHA DE REGISTRO --}}
@@ -34,8 +34,8 @@
                     <div class="card-body">
                         <div class="form-row">
                             <div class="form-group col-md-4">
-                                <label for="fecha">Fecha</label>
-                                <input type="date" name="fecha" id="fecha" class="form-control" value="{{ date('Y-m-d') }}">
+                                <label for="fecha">Fecha <span class="text-danger">*</span></label>
+                                <input type="date" name="fecha" id="fecha" class="form-control" value="{{ date('Y-m-d') }}" required>
                             </div>
                         </div>
                     </div>
@@ -62,17 +62,31 @@
                                 </datalist>
                             </div>
                         </div>
+                        
+                        {{-- Campo de Empresa --}}
+                        <div class="form-row">
+                            <div class="form-group col-md-12">
+                                <label for="empresa_id">Empresa <span class="text-danger">*</span></label>
+                                <select name="empresa_id" id="empresa_id" class="form-control" required>
+                                    <option value="">SELECCIONE UNA EMPRESA</option>
+                                    @foreach($empresas as $empresa)
+                                        <option value="{{ $empresa->id }}">{{ strtoupper($empresa->nombre) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        
                         <div class="form-row">
                             <div class="form-group col-md-4">
-                                <label for="nombres">Nombres</label>
-                                <input type="text" name="nombres" id="nombres" class="form-control">
+                                <label for="nombres">Nombres <span class="text-danger">*</span></label>
+                                <input type="text" name="nombres" id="nombres" class="form-control" required>
                             </div>
                             <div class="form-group col-md-4">
-                                <label for="apellidos">Apellidos</label>
-                                <input type="text" name="apellidos" id="apellidos" class="form-control">
+                                <label for="apellidos">Apellidos <span class="text-danger">*</span></label>
+                                <input type="text" name="apellidos" id="apellidos" class="form-control" required>
                             </div>                            <div class="form-group col-md-4">
-                                <label for="cedula">RUT</label>
-                                <input type="text" name="cedula" id="cedula" class="form-control" list="cedulas_existentes" placeholder="Seleccione o escriba un RUT" autocomplete="off">
+                                <label for="cedula">Cédula</label>
+                                <input type="text" name="cedula" id="cedula" class="form-control" list="cedulas_existentes" placeholder="Seleccione o escriba una cédula" autocomplete="off">
                                 <datalist id="cedulas_existentes">
                                     @foreach($cedulas as $cedula)
                                         <option value="{{ $cedula }}">
@@ -80,15 +94,15 @@
                                 </datalist>
                             </div>
                             <div class="form-group col-md-4">
-                                <label for="edad">Edad</label>
-                                <input type="number" name="edad" id="edad" class="form-control">
+                                <label for="edad">Edad <span class="text-danger">*</span></label>
+                                <input type="number" name="edad" id="edad" class="form-control" required>
                             </div>
                             <div class="form-group col-md-4">
                                 <label for="fecha_nacimiento">Fecha de Nacimiento</label>
                                 <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" class="form-control">
                             </div>                            <div class="form-group col-md-4">
-                                <label for="celular">Celular</label>
-                                <input type="text" name="celular" id="celular" class="form-control" list="celulares_existentes" placeholder="Seleccione o escriba un número de celular" autocomplete="off">
+                                <label for="celular">Celular <span class="text-danger">*</span></label>
+                                <input type="text" name="celular" id="celular" class="form-control" required list="celulares_existentes" placeholder="Seleccione o escriba un número de celular" autocomplete="off">
                                 <datalist id="celulares_existentes">
                                     @foreach($celulares as $celular)
                                         <option value="{{ $celular }}">
@@ -96,420 +110,203 @@
                                 </datalist>
                             </div>
                             <div class="form-group col-md-4">
-                                <label for="correo">Correo Electrónico</label>
-                                <input type="email" name="correo" id="correo" class="form-control" placeholder="ejemplo@correo.com">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="direccion">Dirección</label>
-                                <input type="text" name="direccion" id="direccion" class="form-control" placeholder="Ingrese la dirección">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="ocupacion">Ocupación</label>
-                                <input type="text" name="ocupacion" id="ocupacion" class="form-control">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="proxima_consulta">Próxima Consulta</label>
-                                <input type="date" name="proxima_consulta" id="proxima_consulta" class="form-control">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="empresa_id">SUCURSAL <span class="text-danger">*</span></label>
-                                @if (!$isUserAdmin && $empresas->count() == 1)
-                                    {{-- Si el usuario no es admin y solo tiene una empresa, mostrar como readonly --}}
-                                    <select name="empresa_id" id="empresa_id" class="form-control" readonly disabled required>
-                                        @foreach($empresas as $empresa)
-                                            <option value="{{ $empresa->id }}" selected>
-                                                {{ $empresa->nombre }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <input type="hidden" name="empresa_id" value="{{ $empresas->first()->id }}">
-                                    <small class="text-muted">Tu usuario está asociado únicamente a esta empresa.</small>
-                                @elseif (!$isUserAdmin && $empresas->count() > 1)
-                                    {{-- Si el usuario no es admin pero tiene múltiples empresas, permitir selección --}}
-                                    <select name="empresa_id" id="empresa_id" class="form-control" required>
-                                        <option value="">Seleccione una sucursal...</option>
-                                        @foreach($empresas as $empresa)
-                                            <option value="{{ $empresa->id }}" {{ $userEmpresaId == $empresa->id ? 'selected' : '' }}>
-                                                {{ $empresa->nombre }}{{ $userEmpresaId == $empresa->id ? ' (Principal)' : '' }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <small class="text-muted">
-                                        <i class="fas fa-info-circle mr-1"></i>
-                                        Puede seleccionar cualquiera de las empresas a las que está asociado.
-                                        @if($userEmpresaId)
-                                            <br><strong>Empresa principal:</strong> {{ $empresas->where('id', $userEmpresaId)->first()->nombre ?? 'No encontrada' }}
-                                        @endif
-                                    </small>
-                                @else
-                                    {{-- Usuario administrador --}}
-                                    <select name="empresa_id" id="empresa_id" class="form-control" required>
-                                        <option value="">Seleccione una empresa...</option>
-                                        @foreach($empresas as $empresa)
-                                            <option value="{{ $empresa->id }}">{{ $empresa->nombre }}</option>
-                                        @endforeach
-                                    </select>
-                                @endif
+                                <label for="ocupacion">Ocupación <span class="text-danger">*</span></label>
+                                <input type="text" name="ocupacion" id="ocupacion" class="form-control" required>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- PRESCRIPCIÓN / RECETAS --}}
+            {{-- MOTIVO DE CONSULTA Y ENFERMEDAD ACTUAL --}}
             <div class="card mb-4">
-                <div class="card-header" data-toggle="collapse" data-target="#prescripcion" style="cursor: pointer">
+                <div class="card-header" data-toggle="collapse" data-target="#motivoConsulta">
                     <h5 class="mb-0">
-                        <i class="fas fa-prescription mr-2"></i> Recetas
-                        <small class="text-muted ml-2">(Al buscar un paciente, se cargarán los datos de su última receta)</small>
+                        <i class="fas fa-notes-medical mr-2"></i> Motivo de Consulta y Enfermedad Actual
                     </h5>
                 </div>
-                <div id="prescripcion" class="collapse">
+                <div id="motivoConsulta" class="collapse">
                     <div class="card-body">
-                        {{-- Botón para añadir nueva receta --}}
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <button type="button" id="btnAnadirReceta" class="btn btn-success btn-sm">
-                                    <i class="fas fa-plus mr-2"></i>Añadir Receta
-                                </button>
-                                <hr>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>Motivo de Consulta <span class="text-danger">*</span></label>
+                                <input type="text" name="motivo_consulta" class="form-control" required>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Enfermedad Actual <span class="text-danger">*</span></label>
+                                <input type="text" name="enfermedad_actual" class="form-control" required>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
 
-                        {{-- Contenedor para todas las recetas --}}
-                        <div id="recetasContainer">
-                            {{-- Primera receta (template inicial) --}}
-                            <div class="receta-item border rounded p-3 mb-3" data-receta-index="0">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h6 class="mb-0 text-primary">
-                                        <i class="fas fa-prescription mr-2"></i>Receta #<span class="receta-number">1</span>
-                                    </h6>
-                                    <button type="button" class="btn btn-danger btn-sm btn-eliminar-receta" style="display: none;">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
+            {{-- ANTECEDENTES --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#antecedentes">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history mr-2"></i> Antecedentes
+                    </h5>
+                </div>
+                <div id="antecedentes" class="collapse">
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label>Antecedentes Personales Oculares <span class="text-danger">*</span></label>
+                                <input list="antecedentesPersonalesOcularesList" name="antecedentes_personales_oculares" class="form-control" required>
+                                <datalist id="antecedentesPersonalesOcularesList">
+                                    @foreach($antecedentesPersonalesOculares as $antecedente)
+                                        <option value="{{ $antecedente }}">
+                                    @endforeach
+                                </datalist>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Antecedentes Personales Generales <span class="text-danger">*</span></label>
+                                <input list="antecedentesPersonalesGeneralesList" name="antecedentes_personales_generales" class="form-control" required>
+                                <datalist id="antecedentesPersonalesGeneralesList">
+                                    @foreach($antecedentesPersonalesGenerales as $antecedente)
+                                        <option value="{{ $antecedente }}">
+                                    @endforeach
+                                </datalist>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Antecedentes Familiares Oculares <span class="text-danger">*</span></label>
+                                <input list="antecedentesFamiliaresOcularesList" name="antecedentes_familiares_oculares" class="form-control" required>
+                                <datalist id="antecedentesFamiliaresOcularesList">
+                                    @foreach($antecedentesFamiliaresOculares as $antecedente)
+                                        <option value="{{ $antecedente }}">
+                                    @endforeach
+                                </datalist>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Antecedentes Familiares Generales <span class="text-danger">*</span></label>
+                                <input list="antecedentesFamiliaresGeneralesList" name="antecedentes_familiares_generales" class="form-control" required>
+                                <datalist id="antecedentesFamiliaresGeneralesList">
+                                    @foreach($antecedentesFamiliaresGenerales as $antecedente)
+                                        <option value="{{ $antecedente }}">
+                                    @endforeach
+                                </datalist>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                                {{-- Campo Tipo de Receta --}}
-                                <div class="row mb-3">
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            <label for="recetas[0][tipo]"><strong>Tipo de Receta</strong></label>
-                                            <select name="recetas[0][tipo]" class="form-control">
-                                                <option value="">Seleccionar...</option>
-                                                <option value="CERCA">CERCA</option>
-                                                <option value="LEJOS">LEJOS</option>
-                                                <option value="BIFOCAL">BIFOCAL</option>
-                                                <option value="MULTIFOCAL">MULTIFOCAL</option>
-                                                <option value="PROGRESIVO">PROGRESIVO</option>
-                                            </select>
-                                        </div>
+            {{-- AGUDEZA VISUAL Y PH --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#agudezaVisual">
+                    <h5 class="mb-0">
+                        <i class="fas fa-eye mr-2"></i> Agudeza Visual y PH
+                    </h5>
+                </div>
+                <div id="agudezaVisual" class="collapse">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Agudeza Visual VL sin Corrección <span class="text-danger">*</span></h6>
+                                <div class="form-row">
+                                    <div class="form-group col-md-4">
+                                        <label>OD <span class="text-danger">*</span></label>
+                                        <input type="text" name="agudeza_visual_vl_sin_correccion_od" class="form-control" required>
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>OI <span class="text-danger">*</span></label>
+                                        <input type="text" name="agudeza_visual_vl_sin_correccion_oi" class="form-control" required>
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>AO <span class="text-danger">*</span></label>
+                                        <input type="text" name="agudeza_visual_vl_sin_correccion_ao" class="form-control" required>
                                     </div>
                                 </div>
-                        
-                                <div class="table-responsive mb-3">
-                                    <table class="table table-bordered">
-                                        <thead class="bg-primary text-white">
-                                            <tr>
-                                                <th></th>
-                                                <th class="text-center">Esfera</th>
-                                                <th class="text-center">Cilindro</th>
-                                                <th class="text-center">Eje</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td class="font-weight-bold">OD</td>
-                                                <td><input type="text" name="recetas[0][od_esfera]" class="form-control"></td>
-                                                <td><input type="text" name="recetas[0][od_cilindro]" class="form-control"></td>
-                                                <td><input type="text" name="recetas[0][od_eje]" class="form-control"></td>
-                                            </tr>
-                                            <tr>
-                                                <td class="font-weight-bold">OI</td>
-                                                <td><input type="text" name="recetas[0][oi_esfera]" class="form-control"></td>
-                                                <td><input type="text" name="recetas[0][oi_cilindro]" class="form-control"></td>
-                                                <td><input type="text" name="recetas[0][oi_eje]" class="form-control"></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>ADD</label>
-                                            <input type="text" name="recetas[0][od_adicion]" class="form-control">
-                                        </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Agudeza Visual VP sin Corrección <span class="text-danger">*</span></h6>
+                                <div class="form-row">
+                                    <div class="form-group col-md-4">
+                                        <label>OD <span class="text-danger">*</span></label>
+                                        <input type="text" name="agudeza_visual_vp_sin_correccion_od" class="form-control" required>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label>DP pl/pc</label>
-                                            <input type="text" name="recetas[0][dp]" class="form-control">
-                                        </div>
+                                    <div class="form-group col-md-4">
+                                        <label>OI <span class="text-danger">*</span></label>
+                                        <input type="text" name="agudeza_visual_vp_sin_correccion_oi" class="form-control" required>
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>AO <span class="text-danger">*</span></label>
+                                        <input type="text" name="agudeza_visual_vp_sin_correccion_ao" class="form-control" required>
                                     </div>
                                 </div>
-                                
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h6>Pin Hole (PH) <span class="text-danger">*</span></h6>
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label>PH OD <span class="text-danger">*</span></label>
+                                        <input type="text" name="ph_od" class="form-control" required>
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label>PH OI <span class="text-danger">*</span></label>
+                                        <input type="text" name="ph_oi" class="form-control" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Optotipo</label> <!-- Removido text-danger -->
+                            <textarea name="optotipo" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- LENSOMETRÍA --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#lensometria">
+                    <h5 class="mb-0">
+                        <i class="fas fa-glasses mr-2"></i> Lensometría
+                    </h5>
+                </div>
+                <div id="lensometria" class="collapse">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Lensometría</h6> <!-- Removido text-danger -->
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label>OD</label> <!-- Removido text-danger -->
+                                        <input type="text" name="lensometria_od" class="form-control">
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label>OI</label> <!-- Removido text-danger -->
+                                        <input type="text" name="lensometria_oi" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-3">
                                 <div class="form-group">
-                                    <label>Observaciones:</label>
-                                    <textarea name="recetas[0][observaciones]" class="form-control" rows="3"></textarea>
+                                    <label>Tipo de Lente</label> <!-- Removido text-danger y required -->
+                                    <input type="text" name="tipo_lente" class="form-control">
                                 </div>
-                                
+                            </div>
+                            <div class="col-md-3">
                                 <div class="form-group">
-                                    <label>Foto de la receta:</label>
-                                    <input type="file" name="recetas[0][foto]" class="form-control" accept="image/png,image/jpg,image/jpeg">
-                                    <small class="text-muted">Seleccione una imagen (PNG, JPG, JPEG) - Máximo 2MB</small>
+                                    <label>Material</label> <!-- Removido text-danger y required -->
+                                    <input type="text" name="material" class="form-control">
                                 </div>
                             </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- DIAGNÓSTICO --}}
-<div class="card mb-4">
-    <div class="card-header" data-toggle="collapse" data-target="#diagnostico" style="cursor: pointer">
-        <h5 class="mb-0">
-            <i class="fas fa-stethoscope mr-2"></i> Diagnóstico
-        </h5>
-    </div>
-    <div id="diagnostico" class="collapse">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Astigmatismo" id="astigmatismo">
-                        <label class="form-check-label" for="astigmatismo">
-                            Astigmatismo
-                        </label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Miopía" id="miopia">
-                        <label class="form-check-label" for="miopia">
-                            Miopía
-                        </label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Hipermetropía" id="hipermetropia">
-                        <label class="form-check-label" for="hipermetropia">
-                            Hipermetropía
-                        </label>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Presbicia" id="presbicia">
-                        <label class="form-check-label" for="presbicia">
-                            Presbicia
-                        </label>
-                    </div>
-                </div>
-            </div>
-            {{-- Campo oculto para enviar el diagnóstico como string --}}
-            <input type="hidden" name="diagnostico" id="diagnostico_string">
-        </div>
-    </div>
-</div>
-
-{{-- BOTÓN PARA MOSTRAR/OCULTAR SECCIONES OPCIONALES --}}
-<div class="text-center mb-4">
-    <button type="button" id="btnMostrarOpcionales" class="btn btn-outline-primary">
-        <i class="fas fa-plus-circle mr-2"></i>Mostrar información adicional
-    </button>
-</div>            {{-- SECCIONES OPCIONALES --}}
-            <div id="seccionesOpcionales" style="display: none;">
-                {{-- MOTIVO DE CONSULTA Y ENFERMEDAD ACTUAL --}}
-                <div class="card mb-4">
-                    <div class="card-header" data-toggle="collapse" data-target="#motivoConsulta">
-                        <h5 class="mb-0">
-                            <i class="fas fa-notes-medical mr-2"></i> Motivo de Consulta y Enfermedad Actual
-                        </h5>
-                    </div>
-                    <div id="motivoConsulta" class="collapse">
-                        <div class="card-body">
-                            <div class="form-row">
-                                <div class="form-group col-md-6">
-                                    <label>Motivo de Consulta</label>
-                                    <input type="text" name="motivo_consulta" class="form-control">
-                                </div>
-                                <div class="form-group col-md-6">
-                                    <label>Enfermedad Actual</label>
-                                    <input type="text" name="enfermedad_actual" class="form-control">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Filtro</label> <!-- Removido text-danger y required -->
+                                    <input type="text" name="filtro" class="form-control">
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- ANTECEDENTES --}}
-                <div class="card mb-4">
-                    <div class="card-header" data-toggle="collapse" data-target="#antecedentes">
-                        <h5 class="mb-0">
-                            <i class="fas fa-history mr-2"></i> Antecedentes
-                        </h5>
-                    </div>
-                    <div id="antecedentes" class="collapse">
-                        <div class="card-body">
-                            <div class="form-row">
-                                <div class="form-group col-md-6">
-                                    <label>Antecedentes Personales Oculares</label>
-                                    <input list="antecedentesPersonalesOcularesList" name="antecedentes_personales_oculares" class="form-control">
-                                    <datalist id="antecedentesPersonalesOcularesList">
-                                        @foreach($antecedentesPersonalesOculares as $antecedente)
-                                            <option value="{{ $antecedente }}">
-                                        @endforeach
-                                    </datalist>
-                                </div>
-                                <div class="form-group col-md-6">
-                                    <label>Antecedentes Personales Generales</label>
-                                    <input list="antecedentesPersonalesGeneralesList" name="antecedentes_personales_generales" class="form-control">
-                                    <datalist id="antecedentesPersonalesGeneralesList">
-                                        @foreach($antecedentesPersonalesGenerales as $antecedente)
-                                            <option value="{{ $antecedente }}">
-                                        @endforeach
-                                    </datalist>
-                                </div>
-                                <div class="form-group col-md-6">
-                                    <label>Antecedentes Familiares Oculares</label>
-                                    <input list="antecedentesFamiliaresOcularesList" name="antecedentes_familiares_oculares" class="form-control">
-                                    <datalist id="antecedentesFamiliaresOcularesList">
-                                        @foreach($antecedentesFamiliaresOculares as $antecedente)
-                                            <option value="{{ $antecedente }}">
-                                        @endforeach
-                                    </datalist>
-                                </div>
-                                <div class="form-group col-md-6">
-                                    <label>Antecedentes Familiares Generales</label>
-                                    <input list="antecedentesFamiliaresGeneralesList" name="antecedentes_familiares_generales" class="form-control">
-                                    <datalist id="antecedentesFamiliaresGeneralesList">
-                                        @foreach($antecedentesFamiliaresGenerales as $antecedente)
-                                            <option value="{{ $antecedente }}">
-                                        @endforeach
-                                    </datalist>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- AGUDEZA VISUAL Y PH --}}
-                <div class="card mb-4">
-                    <div class="card-header" data-toggle="collapse" data-target="#agudezaVisual">
-                        <h5 class="mb-0">
-                            <i class="fas fa-eye mr-2"></i> Agudeza Visual y PH
-                        </h5>
-                    </div>
-                    <div id="agudezaVisual" class="collapse">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6>Agudeza Visual VL sin Corrección</h6>
-                                    <div class="form-row">
-                                        <div class="form-group col-md-4">
-                                            <label>OD</label>
-                                            <input type="text" name="agudeza_visual_vl_sin_correccion_od" class="form-control">
-                                        </div>
-                                        <div class="form-group col-md-4">
-                                            <label>OI</label>
-                                            <input type="text" name="agudeza_visual_vl_sin_correccion_oi" class="form-control">
-                                        </div>
-                                        <div class="form-group col-md-4">
-                                            <label>AO</label>
-                                            <input type="text" name="agudeza_visual_vl_sin_correccion_ao" class="form-control">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <h6>Agudeza Visual VP sin Corrección</h6>
-                                    <div class="form-row">
-                                        <div class="form-group col-md-4">
-                                            <label>OD</label>
-                                            <input type="text" name="agudeza_visual_vp_sin_correccion_od" class="form-control">
-                                        </div>
-                                        <div class="form-group col-md-4">
-                                            <label>OI</label>
-                                            <input type="text" name="agudeza_visual_vp_sin_correccion_oi" class="form-control">
-                                        </div>
-                                        <div class="form-group col-md-4">
-                                            <label>AO</label>
-                                            <input type="text" name="agudeza_visual_vp_sin_correccion_ao" class="form-control">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-md-6">
-                                    <h6>Pin Hole (PH)</h6>
-                                    <div class="form-row">
-                                        <div class="form-group col-md-6">
-                                            <label>PH OD</label>
-                                            <input type="text" name="ph_od" class="form-control">
-                                        </div>
-                                        <div class="form-group col-md-6">
-                                            <label>PH OI</label>
-                                            <input type="text" name="ph_oi" class="form-control">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Optotipo</label> <!-- Removido text-danger -->
-                                <textarea name="optotipo" class="form-control" rows="2"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- LENSOMETRÍA --}}
-                <div class="card mb-4">
-                    <div class="card-header" data-toggle="collapse" data-target="#lensometria">
-                        <h5 class="mb-0">
-                            <i class="fas fa-glasses mr-2"></i> Lensometría
-                        </h5>
-                    </div>
-                    <div id="lensometria" class="collapse">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6>Lensometría</h6> <!-- Removido text-danger -->
-                                    <div class="form-row">
-                                        <div class="form-group col-md-6">
-                                            <label>OD</label> <!-- Removido text-danger -->
-                                            <input type="text" name="lensometria_od" class="form-control">
-                                        </div>
-                                        <div class="form-group col-md-6">
-                                            <label>OI</label> <!-- Removido text-danger -->
-                                            <input type="text" name="lensometria_oi" class="form-control">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-md-3">
-                                    <div class="form-group">
-                                        <label>Tipo de Lente</label> <!-- Removido text-danger y required -->
-                                        <input type="text" name="tipo_lente" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-group">
-                                        <label>Material</label> <!-- Removido text-danger y required -->
-                                        <input type="text" name="material" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-group">
-                                        <label>Filtro</label> <!-- Removido text-danger y required -->
-                                        <input type="text" name="filtro" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-group">
-                                        <label>Tiempo de Uso</label> <!-- Ya estaba como no obligatorio -->
-                                        <input type="text" name="tiempo_uso" class="form-control">
-                                    </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Tiempo de Uso</label> <!-- Ya estaba como no obligatorio -->
+                                    <input type="text" name="tiempo_uso" class="form-control">
                                 </div>
                             </div>
                         </div>
@@ -517,13 +314,110 @@
                 </div>
             </div>
 
-            <div class="form-group text-center mt-4">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save mr-2"></i>Guardar Historial Clínico
-                </button>
-                <a href="{{ route('historiales_clinicos.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-times mr-2"></i>Cancelar
+            {{-- RX FINAL --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#rxFinal">
+                    <h5 class="mb-0">
+                        <i class="fas fa-prescription mr-2"></i> Rx Final
+                    </h5>
+                </div>
+                <div id="rxFinal" class="collapse">
+                    <div class="card-body">
+                        <div class="form-row mb-3">
+                            <div class="form-group col-md-6">
+                                <label>Refracción OD <span class="text-danger">*</span></label>
+                                <input type="text" name="refraccion_od" class="form-control" required>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Refracción OI <span class="text-danger">*</span></label>
+                                <input type="text" name="refraccion_oi" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-3">
+                                <label>DP OD <span class="text-danger">*</span></label>
+                                <input type="text" name="rx_final_dp_od" class="form-control" required>
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>DP OI <span class="text-danger">*</span></label>
+                                <input type="text" name="rx_final_dp_oi" class="form-control" required>
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>AV VL OD <span class="text-danger">*</span></label>
+                                <input type="text" name="rx_final_av_vl_od" class="form-control" required>
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>AV VL OI <span class="text-danger">*</span></label>
+                                <input type="text" name="rx_final_av_vl_oi" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-3">
+                                <label>AV VP OD <span class="text-danger">*</span></label>
+                                <input type="text" name="rx_final_av_vp_od" class="form-control" required>
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>AV VP OI <span class="text-danger">*</span></label>
+                                <input type="text" name="rx_final_av_vp_oi" class="form-control" required>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>ADD</label> <!-- Removido text-danger -->
+                                <input type="text" name="add" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- DIAGNÓSTICO, TRATAMIENTO Y COTIZACIÓN --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#diagnostico">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-medical mr-2"></i> Diagnóstico y Cotización
+                    </h5>
+                </div>
+                <div id="diagnostico" class="collapse">
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div class="form-group col-12">
+                                <label>Diagnóstico <span class="text-danger">*</span></label>
+                                <textarea name="diagnostico" class="form-control" rows="3" required></textarea>
+                            </div>
+                            <div class="form-group col-12">
+                                <label>Tratamiento <span class="text-danger">*</span></label>
+                                <textarea name="tratamiento" class="form-control" rows="3" required></textarea>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Cotización</label>
+                                <input type="text" name="cotizacion" class="form-control">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Próxima Consulta (en meses)</label>
+                                <div class="input-group">
+                                    <input type="number" id="meses_proxima_consulta" class="form-control" min="1" step="1">
+                                    <select id="meses_predefinidos" class="form-control">
+                                        <option value="">Seleccione meses</option>
+                                        <option value="3">3 meses</option>
+                                        <option value="6">6 meses</option>
+                                        <option value="9">9 meses</option>
+                                    </select>
+                                    <input type="hidden" name="proxima_consulta" id="proxima_consulta">
+                                </div>
+                            </div>
+                            <input type="hidden" name="usuario_id" value="{{ Auth::id() }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- BOTONES DE ACCIÓN --}}
+            <div class="d-flex justify-content-end">
+                <a href="{{ route('historiales_clinicos.index') }}" class="btn btn-secondary mr-2">
+                    Cancelar
                 </a>
+                <button type="submit" class="btn btn-primary">
+                    Guardar
+                </button>
             </div>
         </form>
     </div>
@@ -551,37 +445,11 @@
 @section('js')
 <script>
     $(document).ready(function() {
-        // Botón para mostrar/ocultar secciones opcionales
-        $('#btnMostrarOpcionales').click(function() {
-            const $seccionesOpcionales = $('#seccionesOpcionales');
-            const $boton = $(this);
-            
-            if ($seccionesOpcionales.is(':visible')) {
-                $seccionesOpcionales.slideUp();
-                $boton.html('<i class="fas fa-plus-circle mr-2"></i>Mostrar información adicional');
-            } else {
-                $seccionesOpcionales.slideDown();
-                $boton.html('<i class="fas fa-minus-circle mr-2"></i>Ocultar información adicional');
-            }
-        });
-    
         // Convertir input a mayúsculas mientras se escribe
         $('input[type="text"], textarea').on('input', function() {
             $(this).val($(this).val().toUpperCase());
         });
 
-        // Función para actualizar el campo diagnóstico basado en los checkboxes seleccionados
-        function actualizarDiagnosticoString() {
-            const diagnosticoSeleccionados = $('input[name="diagnostico[]"]:checked').map(function() {
-                return this.value;
-            }).get();
-            
-            $('#diagnostico_string').val(diagnosticoSeleccionados.join(', '));
-        }
-        
-        // Inicializar el campo diagnóstico al cargar la página
-        actualizarDiagnosticoString();
-        
         // Manejar la selección de paciente existente
         $('#buscar_paciente').on('input', function() {
             const selectedOption = $('#pacientes_existentes option[value="' + this.value + '"]');
@@ -592,36 +460,9 @@
                 $('#nombres').val(nombre);
                 $('#apellidos').val(apellido);
                 
-                // Cargar datos adicionales del paciente
-                cargarDatosPersonales('nombres', nombre);
+                // Cargar datos adicionales del paciente usando nombre y apellido completo
+                cargarDatosPorNombreCompleto(nombre, apellido);
             }
-        });
-
-        // Abrir automáticamente la sección de receta cuando se carga la página o se selecciona un paciente
-        function mostrarSeccionReceta() {
-            // Asegurarse de que la sección esté abierta
-            if (!$('#prescripcion').hasClass('show')) {
-                $('#prescripcion').collapse('show');
-            }
-        }
-
-        // Convertir checkboxes de diagnóstico a string antes de enviar el formulario
-        $('form').on('submit', function(e) {
-            actualizarDiagnosticoString();
-            
-            // Validar que se haya seleccionado una sucursal
-            const empresaId = $('#empresa_id').val();
-            if (!empresaId) {
-                e.preventDefault();
-                alert('Por favor, seleccione una sucursal antes de guardar el historial clínico.');
-                $('#empresa_id').focus();
-                return false;
-            }
-        });
-        
-        // Actualizar campo oculto cuando se seleccionen/deseleccionen checkboxes
-        $('input[name="diagnostico[]"]').on('change', function() {
-            actualizarDiagnosticoString();
         });
 
         // Función para calcular la próxima consulta basada en la fecha de registro
@@ -669,7 +510,7 @@
             if (!elemento.nextElementSibling || !elemento.nextElementSibling.classList.contains('loading-indicator')) {
                 const loadingIndicator = document.createElement('small');
                 loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
-                loadingIndicator.textContent = 'Cargando datos y última receta...';
+                loadingIndicator.textContent = 'Cargando datos...';
                 elemento.parentNode.appendChild(loadingIndicator);
             }
 
@@ -682,9 +523,6 @@
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Respuesta de la API:', data); // Añadir para depuración
-                    console.log('Recetas encontradas:', data.historial?.recetas); // Debug específico de recetas
-
                     // Remover indicador de carga
                     const loadingIndicator = elemento.parentNode.querySelector('.loading-indicator');
                     if (loadingIndicator) {
@@ -695,47 +533,13 @@
                         // Cargar todos los datos del historial, excepto la fecha
                         const historial = data.historial;
                         
-                        // Abrir sección de receta automáticamente cuando se cargan datos
-                        mostrarSeccionReceta();
-                        
-                        // Esperar un momento para que la sección se abra completamente
-                        setTimeout(() => {
-                            
-                            // Indicador visual de que se cargaron las recetas
-                            if (historial.recetas && historial.recetas.length > 0) {
-                                // Mostrar notificación temporal
-                                const notificacion = document.createElement('div');
-                                notificacion.classList.add('alert', 'alert-success', 'alert-dismissible', 'fade', 'show', 'mt-2', 'mb-0');
-                                notificacion.setAttribute('role', 'alert');
-                                const cantidadRecetas = historial.recetas.length;
-                                const textoRecetas = cantidadRecetas === 1 ? 'receta' : 'recetas';
-                                notificacion.innerHTML = `
-                                    <strong><i class="fas fa-check-circle mr-2"></i>Datos cargados:</strong> Se han cargado ${cantidadRecetas} ${textoRecetas} del historial más reciente del paciente.
-                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
-                                `;
-                                
-                                // Agregar notificación después del título de la sección Receta
-                                const seccionReceta = document.querySelector('#prescripcion .card-body');
-                                if (seccionReceta) {
-                                    seccionReceta.insertBefore(notificacion, seccionReceta.firstChild);
-                                }
-                                
-                                // Auto-eliminar después de 5 segundos
-                                setTimeout(() => {
-                                    notificacion.classList.remove('show');
-                                    setTimeout(() => notificacion.remove(), 150);
-                                }, 5000);
-                            }
-                            
-                            // Autocompletar campos excepto el que generó la búsqueda y la fecha
-                            // Datos personales
-                            if (campo !== 'nombres') document.getElementById('nombres').value = historial.nombres || '';
-                            if (campo !== 'apellidos') document.getElementById('apellidos').value = historial.apellidos || '';
-                            if (campo !== 'cedula') document.getElementById('cedula').value = historial.cedula || '';
-                            if (campo !== 'celular') document.getElementById('celular').value = historial.celular || '';
-                            document.getElementById('edad').value = historial.edad || '';
+                        // Autocompletar campos excepto el que generó la búsqueda y la fecha
+                        // Datos personales
+                        if (campo !== 'nombres') document.getElementById('nombres').value = historial.nombres || '';
+                        if (campo !== 'apellidos') document.getElementById('apellidos').value = historial.apellidos || '';
+                        if (campo !== 'cedula') document.getElementById('cedula').value = historial.cedula || '';
+                        if (campo !== 'celular') document.getElementById('celular').value = historial.celular || '';
+                        document.getElementById('edad').value = historial.edad || '';
                         
                         // Formatear y establecer la fecha de nacimiento si existe
                         if (historial.fecha_nacimiento) {
@@ -750,16 +554,6 @@
                         }
                         
                         document.getElementById('ocupacion').value = historial.ocupacion || '';
-                        
-                        // Próxima consulta
-                        document.getElementById('proxima_consulta').value = historial.proxima_consulta ? new Date(historial.proxima_consulta).toISOString().split('T')[0] : '';
-                        
-                        // Empresa
-                        if (historial.empresa_id) {
-                            document.getElementById('empresa_id').value = historial.empresa_id;
-                        } else {
-                            document.getElementById('empresa_id').value = '';
-                        }
                         
                         // Motivo de consulta y enfermedad actual
                         document.getElementsByName('motivo_consulta')[0].value = historial.motivo_consulta || '';
@@ -790,165 +584,21 @@
                         document.getElementsByName('filtro')[0].value = historial.filtro || '';
                         document.getElementsByName('tiempo_uso')[0].value = historial.tiempo_uso || '';
                         
-                        // Si hay recetas asociadas, cargar la más reciente en el formulario
-                        if (historial.recetas && historial.recetas.length > 0) {
-                            const ultimaReceta = historial.recetas[0]; // La primera receta es la más reciente
-                            console.log('Cargando receta:', ultimaReceta);
-                            
-                            // Verificar que los elementos existan antes de poblarlos
-                            const tipoElement = document.getElementsByName('recetas[0][tipo]')[0];
-                            const odEsferaElement = document.getElementsByName('recetas[0][od_esfera]')[0];
-                            
-                            if (tipoElement) tipoElement.value = ultimaReceta.tipo || '';
-                            if (odEsferaElement) odEsferaElement.value = ultimaReceta.od_esfera || '';
-                            
-                            // Poblar los campos de la primera receta (índice 0)
-                            const campos = [
-                                { name: 'recetas[0][od_cilindro]', value: ultimaReceta.od_cilindro },
-                                { name: 'recetas[0][od_eje]', value: ultimaReceta.od_eje },
-                                { name: 'recetas[0][oi_esfera]', value: ultimaReceta.oi_esfera },
-                                { name: 'recetas[0][oi_cilindro]', value: ultimaReceta.oi_cilindro },
-                                { name: 'recetas[0][oi_eje]', value: ultimaReceta.oi_eje },
-                                { name: 'recetas[0][od_adicion]', value: ultimaReceta.od_adicion },
-                                { name: 'recetas[0][dp]', value: ultimaReceta.dp },
-                                { name: 'recetas[0][observaciones]', value: ultimaReceta.observaciones }
-                            ];
-                            
-                            campos.forEach(campo => {
-                                const elemento = document.getElementsByName(campo.name)[0];
-                                if (elemento) {
-                                    elemento.value = campo.value || '';
-                                } else {
-                                    console.warn('Elemento no encontrado:', campo.name);
-                                }
-                            });
-                            
-                            // Si hay más recetas, crear elementos adicionales
-                            if (historial.recetas.length > 1) {
-                                // Primero limpiar cualquier receta adicional existente
-                                $('.receta-item').not(':first').remove();
-                                recetaIndex = 0; // Resetear el índice
-                                
-                                // Agregar las recetas adicionales
-                                for (let i = 1; i < historial.recetas.length; i++) {
-                                    const receta = historial.recetas[i];
-                                    recetaIndex++;
-                                    
-                                    const nuevaReceta = `
-                                        <div class="receta-item border rounded p-3 mb-3" data-receta-index="${recetaIndex}">
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <h6 class="mb-0 text-primary">
-                                                    <i class="fas fa-prescription mr-2"></i>Receta #<span class="receta-number">${recetaIndex + 1}</span>
-                                                </h6>
-                                                <button type="button" class="btn btn-danger btn-sm btn-eliminar-receta">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-
-                                            <div class="row mb-3">
-                                                <div class="col-md-4">
-                                                    <div class="form-group">
-                                                        <label><strong>Tipo de Receta</strong></label>
-                                                        <select name="recetas[${recetaIndex}][tipo]" class="form-control">
-                                                            <option value="">Seleccionar...</option>
-                                                            <option value="CERCA" ${receta.tipo === 'CERCA' ? 'selected' : ''}>CERCA</option>
-                                                            <option value="LEJOS" ${receta.tipo === 'LEJOS' ? 'selected' : ''}>LEJOS</option>
-                                                            <option value="BIFOCAL" ${receta.tipo === 'BIFOCAL' ? 'selected' : ''}>BIFOCAL</option>
-                                                            <option value="MULTIFOCAL" ${receta.tipo === 'MULTIFOCAL' ? 'selected' : ''}>MULTIFOCAL</option>
-                                                            <option value="PROGRESIVO" ${receta.tipo === 'PROGRESIVO' ? 'selected' : ''}>PROGRESIVO</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="table-responsive mb-3">
-                                                <table class="table table-bordered">
-                                                    <thead class="bg-primary text-white">
-                                                        <tr>
-                                                            <th></th>
-                                                            <th class="text-center">Esfera</th>
-                                                            <th class="text-center">Cilindro</th>
-                                                            <th class="text-center">Eje</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr>
-                                                            <td class="font-weight-bold">OD</td>
-                                                            <td><input type="text" name="recetas[${recetaIndex}][od_esfera]" class="form-control" value="${receta.od_esfera || ''}"></td>
-                                                            <td><input type="text" name="recetas[${recetaIndex}][od_cilindro]" class="form-control" value="${receta.od_cilindro || ''}"></td>
-                                                            <td><input type="text" name="recetas[${recetaIndex}][od_eje]" class="form-control" value="${receta.od_eje || ''}"></td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td class="font-weight-bold">OI</td>
-                                                            <td><input type="text" name="recetas[${recetaIndex}][oi_esfera]" class="form-control" value="${receta.oi_esfera || ''}"></td>
-                                                            <td><input type="text" name="recetas[${recetaIndex}][oi_cilindro]" class="form-control" value="${receta.oi_cilindro || ''}"></td>
-                                                            <td><input type="text" name="recetas[${recetaIndex}][oi_eje]" class="form-control" value="${receta.oi_eje || ''}"></td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                            
-                                            <div class="row mb-3">
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>ADD</label>
-                                                        <input type="text" name="recetas[${recetaIndex}][od_adicion]" class="form-control" value="${receta.od_adicion || ''}">
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-group">
-                                                        <label>DP pl/pc</label>
-                                                        <input type="text" name="recetas[${recetaIndex}][dp]" class="form-control" value="${receta.dp || ''}">
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="form-group">
-                                                <label>Observaciones:</label>
-                                                <textarea name="recetas[${recetaIndex}][observaciones]" class="form-control" rows="3">${receta.observaciones || ''}</textarea>
-                                            </div>
-                                            
-                                            <div class="form-group">
-                                                <label>Foto de la receta:</label>
-                                                <input type="file" name="recetas[${recetaIndex}][foto]" class="form-control" accept="image/png,image/jpg,image/jpeg">
-                                                <small class="text-muted">Seleccione una imagen (PNG, JPG, JPEG) - Máximo 2MB</small>
-                                            </div>
-                                        </div>
-                                    `;
-                                    
-                                    $('#recetasContainer').append(nuevaReceta);
-                                }
-                                
-                                // Actualizar botones después de agregar recetas
-                                actualizarBotonesEliminar();
-                                
-                                // Aplicar el evento de mayúsculas a los nuevos inputs
-                                $('#recetasContainer input[type="text"], #recetasContainer textarea').off('input.uppercase').on('input.uppercase', function() {
-                                    $(this).val($(this).val().toUpperCase());
-                                });
-                            }
-                        }
+                        // RX Final
+                        document.getElementsByName('refraccion_od')[0].value = historial.refraccion_od || '';
+                        document.getElementsByName('refraccion_oi')[0].value = historial.refraccion_oi || '';
+                        document.getElementsByName('rx_final_dp_od')[0].value = historial.rx_final_dp_od || '';
+                        document.getElementsByName('rx_final_dp_oi')[0].value = historial.rx_final_dp_oi || '';
+                        document.getElementsByName('rx_final_av_vl_od')[0].value = historial.rx_final_av_vl_od || '';
+                        document.getElementsByName('rx_final_av_vl_oi')[0].value = historial.rx_final_av_vl_oi || '';
+                        document.getElementsByName('rx_final_av_vp_od')[0].value = historial.rx_final_av_vp_od || '';
+                        document.getElementsByName('rx_final_av_vp_oi')[0].value = historial.rx_final_av_vp_oi || '';
+                        document.getElementsByName('add')[0].value = historial.add || '';
                         
-                        // Si hay diagnóstico, marcar los checkboxes correspondientes
-                        if (historial.diagnostico) {
-                            const diagnosticos = historial.diagnostico.split(',').map(d => d.trim().toUpperCase());
-                            
-                            // Limpiar selecciones previas
-                            $('input[name="diagnostico[]"]').prop('checked', false);
-                            
-                            // Marcar las casillas correspondientes
-                            $('input[name="diagnostico[]"]').each(function() {
-                                const valorCheckbox = $(this).val().toUpperCase();
-                                if (diagnosticos.some(d => d === valorCheckbox)) {
-                                    $(this).prop('checked', true);
-                                }
-                            });
-                            
-                            // Actualizar el campo oculto
-                            actualizarDiagnosticoString();
-                        }
-                        
-                        }, 100); // Fin del setTimeout
+                        // Diagnóstico y tratamiento
+                        document.getElementsByName('diagnostico')[0].value = historial.diagnostico || '';
+                        document.getElementsByName('tratamiento')[0].value = historial.tratamiento || '';
+                        document.getElementsByName('cotizacion')[0].value = historial.cotizacion || '';
                     }
                 })
                 .catch(error => {
@@ -959,140 +609,125 @@
                         loadingIndicator.remove();
                     }
                 });
-        }        // Eventos para autocompletado
-        $('#cedula').on('change', function() {
-            if (this.value.trim()) {
-                cargarDatosPersonales('cedula', this.value);
-            }
-        });
-
-        $('#celular').on('change', function() {
-            if (this.value.trim()) {
-                cargarDatosPersonales('celular', this.value);
-            }
-        });
-
-        // Funcionalidad para múltiples recetas
-        let recetaIndex = 0;
-
-        // Función para añadir nueva receta
-        $('#btnAnadirReceta').on('click', function() {
-            recetaIndex++;
-            
-            const nuevaReceta = `
-                <div class="receta-item border rounded p-3 mb-3" data-receta-index="${recetaIndex}">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="mb-0 text-primary">
-                            <i class="fas fa-prescription mr-2"></i>Receta #<span class="receta-number">${recetaIndex + 1}</span>
-                        </h6>
-                        <button type="button" class="btn btn-danger btn-sm btn-eliminar-receta">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label><strong>Tipo de Receta</strong></label>
-                                <select name="recetas[${recetaIndex}][tipo]" class="form-control">
-                                    <option value="">Seleccionar...</option>
-                                    <option value="CERCA">CERCA</option>
-                                    <option value="LEJOS">LEJOS</option>
-                                    <option value="BIFOCAL">BIFOCAL</option>
-                                    <option value="MULTIFOCAL">MULTIFOCAL</option>
-                                    <option value="PROGRESIVO">PROGRESIVO</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="table-responsive mb-3">
-                        <table class="table table-bordered">
-                            <thead class="bg-primary text-white">
-                                <tr>
-                                    <th></th>
-                                    <th class="text-center">Esfera</th>
-                                    <th class="text-center">Cilindro</th>
-                                    <th class="text-center">Eje</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="font-weight-bold">OD</td>
-                                    <td><input type="text" name="recetas[${recetaIndex}][od_esfera]" class="form-control"></td>
-                                    <td><input type="text" name="recetas[${recetaIndex}][od_cilindro]" class="form-control"></td>
-                                    <td><input type="text" name="recetas[${recetaIndex}][od_eje]" class="form-control"></td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">OI</td>
-                                    <td><input type="text" name="recetas[${recetaIndex}][oi_esfera]" class="form-control"></td>
-                                    <td><input type="text" name="recetas[${recetaIndex}][oi_cilindro]" class="form-control"></td>
-                                    <td><input type="text" name="recetas[${recetaIndex}][oi_eje]" class="form-control"></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>ADD</label>
-                                <input type="text" name="recetas[${recetaIndex}][od_adicion]" class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>DP pl/pc</label>
-                                <input type="text" name="recetas[${recetaIndex}][dp]" class="form-control">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Observaciones:</label>
-                        <textarea name="recetas[${recetaIndex}][observaciones]" class="form-control" rows="3"></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Foto de la receta:</label>
-                        <input type="file" name="recetas[${recetaIndex}][foto]" class="form-control" accept="image/png,image/jpg,image/jpeg">
-                        <small class="text-muted">Seleccione una imagen (PNG, JPG, JPEG) - Máximo 2MB</small>
-                    </div>
-                </div>
-            `;
-            
-            $('#recetasContainer').append(nuevaReceta);
-            actualizarBotonesEliminar();
-            
-            // Aplicar el evento de mayúsculas a los nuevos inputs
-            $('#recetasContainer .receta-item:last input[type="text"], #recetasContainer .receta-item:last textarea').on('input', function() {
-                $(this).val($(this).val().toUpperCase());
-            });
-        });
-
-        // Función para eliminar receta
-        $(document).on('click', '.btn-eliminar-receta', function() {
-            $(this).closest('.receta-item').remove();
-            actualizarNumerosRecetas();
-            actualizarBotonesEliminar();
-        });
-
-        // Función para actualizar números de recetas
-        function actualizarNumerosRecetas() {
-            $('.receta-item').each(function(index) {
-                $(this).find('.receta-number').text(index + 1);
-            });
         }
 
-        // Función para mostrar/ocultar botones de eliminar
-        function actualizarBotonesEliminar() {
-            const totalRecetas = $('.receta-item').length;
-            if (totalRecetas > 1) {
-                $('.btn-eliminar-receta').show();
-            } else {
-                $('.btn-eliminar-receta').hide();
+        // Función para cargar datos personales por nombre y apellido completo
+        function cargarDatosPorNombreCompleto(nombres, apellidos) {
+            if (!nombres || !apellidos) return;
+
+            // Mostrar indicador de carga
+            const elementoNombre = document.getElementById('nombres');
+            if (!elementoNombre.nextElementSibling || !elementoNombre.nextElementSibling.classList.contains('loading-indicator')) {
+                const loadingIndicator = document.createElement('small');
+                loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
+                loadingIndicator.textContent = 'Cargando datos...';
+                elementoNombre.parentNode.appendChild(loadingIndicator);
             }
+
+            // Hacer petición AJAX para obtener datos del último historial por nombre y apellido
+            fetch(`/api/historiales-clinicos/buscar-por-nombre/${encodeURIComponent(nombres)}/${encodeURIComponent(apellidos)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error al obtener datos');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Remover indicador de carga
+                    const loadingIndicator = elementoNombre.parentNode.querySelector('.loading-indicator');
+                    if (loadingIndicator) {
+                        loadingIndicator.remove();
+                    }
+
+                    if (data.success && data.historial) {
+                        // Cargar todos los datos del historial, excepto la fecha
+                        const historial = data.historial;
+                        
+                        // Autocompletar todos los campos excepto nombres, apellidos y fecha
+                        document.getElementById('cedula').value = historial.cedula || '';
+                        document.getElementById('celular').value = historial.celular || '';
+                        document.getElementById('edad').value = historial.edad || '';
+                        
+                        // Formatear y establecer la fecha de nacimiento si existe
+                        if (historial.fecha_nacimiento) {
+                            const fechaNacimiento = new Date(historial.fecha_nacimiento);
+                            if (!isNaN(fechaNacimiento.getTime())) {
+                                document.getElementById('fecha_nacimiento').value = fechaNacimiento.toISOString().split('T')[0];
+                            }
+                        } else {
+                            document.getElementById('fecha_nacimiento').value = '';
+                        }
+                        
+                        document.getElementById('ocupacion').value = historial.ocupacion || '';
+                        
+                        // Motivo de consulta y enfermedad actual
+                        document.getElementsByName('motivo_consulta')[0].value = historial.motivo_consulta || '';
+                        document.getElementsByName('enfermedad_actual')[0].value = historial.enfermedad_actual || '';
+                        
+                        // Antecedentes
+                        document.getElementsByName('antecedentes_personales_oculares')[0].value = historial.antecedentes_personales_oculares || '';
+                        document.getElementsByName('antecedentes_personales_generales')[0].value = historial.antecedentes_personales_generales || '';
+                        document.getElementsByName('antecedentes_familiares_oculares')[0].value = historial.antecedentes_familiares_oculares || '';
+                        document.getElementsByName('antecedentes_familiares_generales')[0].value = historial.antecedentes_familiares_generales || '';
+                        
+                        // Agudeza visual y PH
+                        document.getElementsByName('agudeza_visual_vl_sin_correccion_od')[0].value = historial.agudeza_visual_vl_sin_correccion_od || '';
+                        document.getElementsByName('agudeza_visual_vl_sin_correccion_oi')[0].value = historial.agudeza_visual_vl_sin_correccion_oi || '';
+                        document.getElementsByName('agudeza_visual_vl_sin_correccion_ao')[0].value = historial.agudeza_visual_vl_sin_correccion_ao || '';
+                        document.getElementsByName('agudeza_visual_vp_sin_correccion_od')[0].value = historial.agudeza_visual_vp_sin_correccion_od || '';
+                        document.getElementsByName('agudeza_visual_vp_sin_correccion_oi')[0].value = historial.agudeza_visual_vp_sin_correccion_oi || '';
+                        document.getElementsByName('agudeza_visual_vp_sin_correccion_ao')[0].value = historial.agudeza_visual_vp_sin_correccion_ao || '';
+                        document.getElementsByName('ph_od')[0].value = historial.ph_od || '';
+                        document.getElementsByName('ph_oi')[0].value = historial.ph_oi || '';
+                        document.getElementsByName('optotipo')[0].value = historial.optotipo || '';
+                        
+                        // Lensometría
+                        document.getElementsByName('lensometria_od')[0].value = historial.lensometria_od || '';
+                        document.getElementsByName('lensometria_oi')[0].value = historial.lensometria_oi || '';
+                        document.getElementsByName('tipo_lente')[0].value = historial.tipo_lente || '';
+                        document.getElementsByName('material')[0].value = historial.material || '';
+                        document.getElementsByName('filtro')[0].value = historial.filtro || '';
+                        document.getElementsByName('tiempo_uso')[0].value = historial.tiempo_uso || '';
+                        
+                        // RX Final
+                        document.getElementsByName('refraccion_od')[0].value = historial.refraccion_od || '';
+                        document.getElementsByName('refraccion_oi')[0].value = historial.refraccion_oi || '';
+                        document.getElementsByName('rx_final_dp_od')[0].value = historial.rx_final_dp_od || '';
+                        document.getElementsByName('rx_final_dp_oi')[0].value = historial.rx_final_dp_oi || '';
+                        document.getElementsByName('rx_final_av_vl_od')[0].value = historial.rx_final_av_vl_od || '';
+                        document.getElementsByName('rx_final_av_vl_oi')[0].value = historial.rx_final_av_vl_oi || '';
+                        document.getElementsByName('rx_final_av_vp_od')[0].value = historial.rx_final_av_vp_od || '';
+                        document.getElementsByName('rx_final_av_vp_oi')[0].value = historial.rx_final_av_vp_oi || '';
+                        document.getElementsByName('add')[0].value = historial.add || '';
+                        
+                        // Diagnóstico y tratamiento
+                        document.getElementsByName('diagnostico')[0].value = historial.diagnostico || '';
+                        document.getElementsByName('tratamiento')[0].value = historial.tratamiento || '';
+                        document.getElementsByName('cotizacion')[0].value = historial.cotizacion || '';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Remover indicador de carga en caso de error
+                    const loadingIndicator = elementoNombre.parentNode.querySelector('.loading-indicator');
+                    if (loadingIndicator) {
+                        loadingIndicator.remove();
+                    }
+                });
         }
+
+        // Eventos para autocompletado eliminados
+        // $('#cedula').on('change', function() {
+        //     if (this.value.trim()) {
+        //         cargarDatosPersonales('cedula', this.value);
+        //     }
+        // });
+
+        // $('#celular').on('change', function() {
+        //     if (this.value.trim()) {
+        //         cargarDatosPersonales('celular', this.value);
+        //     }
+        // });
     });
 </script>
 @stop

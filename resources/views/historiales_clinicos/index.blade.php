@@ -44,14 +44,10 @@
                         </select>
                     </div>
                     <div class="form-group mr-2">
-                        <label for="empresa_id" class="mr-2">SUCURSAL:</label>
+                        <label for="empresa_id" class="mr-2">EMPRESA:</label>
                         <select name="empresa_id" id="empresa_id" class="form-control">
-                            @if($isUserAdmin)
-                                <option value="">TODAS LAS SUCURSALES</option>
-                            @else
-                                <option value="">MIS SUCURSALES</option>
-                            @endif
-                            @foreach($empresas ?? [] as $empresa)
+                            <option value="">TODAS LAS EMPRESAS</option>
+                            @foreach($empresas as $empresa)
                                 <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
                                     {{ strtoupper($empresa->nombre) }}
                                 </option>
@@ -64,77 +60,23 @@
             </div>
         </div>
 
-        {{-- Filtro por fecha específica --}}
-        <div class="row mb-3">
-            <div class="col-md-12">
-                <div class="form-inline">
-                    <div class="form-group mr-2">
-                        <label for="fechaSeleccion" class="mr-2">FILTRAR POR FECHA ESPECÍFICA:</label>
-                        <input type="date" class="form-control" id="fechaSeleccion" value="{{ request('fecha_especifica', date('Y-m-d')) }}">
-                    </div>
-                    <div class="btn-group">
-                        @if(request()->filled('fecha_especifica'))
-                            <button type="button" class="btn btn-danger" id="filtrarPorFecha">
-                                <i class="fas fa-filter"></i> 
-                                @if(request()->filled('empresa_id'))
-                                    FILTROS ACTIVOS ({{ $historiales->count() }})
-                                @else
-                                    FILTRO FECHA ({{ $historiales->count() }})
-                                @endif
-                            </button>
-                            <button type="button" class="btn btn-secondary" id="limpiarFiltroFecha">
-                                <i class="fas fa-times"></i> LIMPIAR FILTRO FECHA
-                            </button>
-                        @else
-                            <button type="button" class="btn btn-warning" id="filtrarPorFecha">
-                                <i class="fas fa-calendar-day"></i> FILTRAR POR FECHA
-                            </button>
-                            <button type="button" class="btn btn-secondary" id="limpiarFiltroFecha" style="display: none;">
-                                <i class="fas fa-times"></i> LIMPIAR FILTRO FECHA
-                            </button>
-                        @endif
-                    </div>
-                </div>
-                @if(request()->filled('fecha_especifica'))
-                    <small class="text-info d-block mt-2">
-                        <i class="fas fa-info-circle"></i> 
-                        MOSTRANDO HISTORIALES DEL {{ \Carbon\Carbon::parse(request('fecha_especifica'))->format('d/m/Y') }}
-                        @if(request()->filled('empresa_id'))
-                            @php
-                                $empresaSeleccionada = $empresas->firstWhere('id', request('empresa_id'));
-                            @endphp
-                            @if($empresaSeleccionada)
-                                EN <strong>{{ strtoupper($empresaSeleccionada->nombre) }}</strong>
-                            @endif
-                        @endif
-                    </small>
-                @endif
-            </div>
-        </div>
-
         {{-- Botón Añadir Historial Clínico --}}
         <div class="btn-group mb-3">
             <a type="button" class="btn btn-success" href="{{ route('historiales_clinicos.create') }}">
                 AÑADIR HISTORIAL CLÍNICO
             </a>
-            <button type="button" class="btn btn-primary" id="imprimirSeleccionados" style="display: none;">
-                <i class="fas fa-print mr-2"></i>IMPRIMIR RECETAS SELECCIONADAS
-            </button>
         </div>
 
         <div class="table-responsive">
             <table id="historialesTable" class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <th>
-                            <input type="checkbox" id="selectAll" title="SELECCIONAR TODOS">
-                        </th>
                         <th>ID</th>
                         <th>NOMBRES</th>
                         <th>APELLIDOS</th>
                         <th>FECHA</th>
+                        <th>MOTIVO CONSULTA</th>
                         <th>PRÓXIMA CONSULTA</th>
-                        <th>RECETAS</th>
                         <th>EMPRESA</th>
                         <th>USUARIO</th>
                         <th>ACCIONES</th>
@@ -143,14 +85,11 @@
                 <tbody>
                     @foreach ($historiales as $index => $historial)
                     <tr>
-                        <td>
-                            <input type="checkbox" class="historial-checkbox" value="{{ $historial->id }}" 
-                                   data-has-recetas="{{ $historial->recetas && $historial->recetas->count() > 0 ? '1' : '0' }}">
-                        </td>
                         <td>{{ $index + 1 }}</td>
                         <td>{{ strtoupper($historial->nombres) }}</td>
                         <td>{{ strtoupper($historial->apellidos) }}</td>
                         <td>{{ \Carbon\Carbon::parse($historial->fecha)->format('d/m/Y') }}</td>
+                        <td>{{ strtoupper($historial->motivo_consulta) }}</td>
                         <td>
                             @if($historial->proxima_consulta)
                                 <span class="badge {{ strtotime($historial->proxima_consulta) < time() ? 'badge-danger' : 'badge-success' }}">
@@ -160,18 +99,7 @@
                                 <span class="badge badge-secondary">NO PROGRAMADA</span>
                             @endif
                         </td>
-                        <td class="text-center">
-                            @if($historial->recetas && $historial->recetas->count() > 0)
-                                <span class="badge badge-primary" title="Número de recetas">
-                                    <i class="fas fa-prescription mr-1"></i>{{ $historial->recetas->count() }}
-                                </span>
-                            @else
-                                <span class="badge badge-secondary" title="Sin recetas">
-                                    <i class="fas fa-prescription mr-1"></i>0
-                                </span>
-                            @endif
-                        </td>
-                        <td>{{ $historial->empresa ? strtoupper($historial->empresa->nombre) : 'SIN EMPRESA' }}</td>
+                        <td>{{ strtoupper($historial->empresa ? $historial->empresa->nombre : 'SIN EMPRESA') }}</td>
                         <td>{{ strtoupper($historial->usuario->name ?? 'N/A') }}</td>
                         <td>
                             <a href="{{ route('historiales_clinicos.show', $historial->id) }}"
@@ -183,12 +111,6 @@
                                 class="btn btn-xs btn-default text-warning mx-1 shadow" 
                                 title="EDITAR">
                                 <i class="fa fa-lg fa-fw fa-pen"></i>
-                            </a>
-                            <a href="{{ route('historiales_clinicos.print', $historial->id) }}"
-                                class="btn btn-xs btn-default text-success mx-1 shadow" 
-                                title="IMPRIMIR HISTORIAL"
-                                target="_blank">
-                                <i class="fa fa-lg fa-fw fa-print"></i>
                             </a>
                             <button type="button" 
                                 class="btn btn-xs btn-info mx-1 shadow ver-historiales-relacionados" 
@@ -231,9 +153,10 @@
                 ¿ESTÁ SEGURO DE QUE DESEA ELIMINAR ESTE HISTORIAL CLÍNICO?
             </div>
             <div class="modal-footer">
-                <form id="eliminarForm" method="POST" style="display: inline-block;">
+                <form id="eliminarForm" method="POST" action="" style="display: inline-block;">
                     @csrf
                     @method('DELETE')
+                    <input type="hidden" name="historial_id" id="historial_id" value="">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">CANCELAR</button>
                     <button type="submit" class="btn btn-danger">ELIMINAR</button>
                 </form>
@@ -330,52 +253,6 @@
         background-color: #6c757d;
         color: white;
     }
-
-    /* Estilos para el filtro por fecha */
-    .form-inline .form-group {
-        margin-bottom: 0.5rem;
-    }
-
-    .btn-group .btn {
-        transition: all 0.2s ease-in-out;
-    }
-
-    .btn-group .btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-    }
-
-    /* Estilos para el indicador de filtro activo */
-    .text-info {
-        font-weight: 500;
-    }
-
-    .text-info i {
-        margin-right: 5px;
-    }
-
-    /* Mejoras responsive para los filtros */
-    @media (max-width: 768px) {
-        .form-inline {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        
-        .form-inline .form-group {
-            width: 100%;
-            margin-bottom: 1rem;
-        }
-        
-        .form-inline .btn-group {
-            width: 100%;
-            flex-direction: column;
-        }
-        
-        .form-inline .btn-group .btn {
-            width: 100%;
-            margin-bottom: 0.5rem;
-        }
-    }
 </style>
 @stop
 
@@ -384,14 +261,9 @@
     $(document).ready(function() {
         // Inicializar DataTable
         $('#historialesTable').DataTable({
-            "order": [[1, "desc"]], // Cambiar el orden por la nueva columna ID
+            "order": [[0, "desc"]],
             "columnDefs": [{
-                "targets": [0], // Columna de checkbox
-                "orderable": false,
-                "searchable": false,
-                "width": "50px"
-            }, {
-                "targets": [3],
+                "targets": [2],
                 "visible": true,
                 "searchable": true,
             }],
@@ -409,7 +281,7 @@
                     "text": 'IMPRIMIR',
                     "autoPrint": true,
                     "exportOptions": {
-                        "columns": [1, 2, 3, 4] // Ajustar columnas por el nuevo checkbox
+                        "columns": [0, 1, 2, 3]
                     },
                     "customize": function(win) {
                         $(win.document.body).css('font-size', '16pt');
@@ -424,7 +296,7 @@
                     "filename": 'HISTORIALES_CLINICOS.pdf',
                     "pageSize": 'LETTER',
                     "exportOptions": {
-                        "columns": [1, 2, 3, 4] // Ajustar columnas por el nuevo checkbox
+                        "columns": [0, 1, 2, 3]
                     }
                 }
             ],
@@ -440,107 +312,32 @@
         $('#confirmarEliminarModal').on('show.bs.modal', function(event) {
             var button = $(event.relatedTarget);
             var url = button.data('url');
+            var id = button.data('id');
             var modal = $(this);
+            
+            // Establecer la URL de acción y el ID del historial clínico
             modal.find('#eliminarForm').attr('action', url);
+            modal.find('#historial_id').val(id);
+            
+            // Imprimir en consola para debugging
+            console.log("URL de eliminación: " + url);
+            console.log("ID del historial: " + id);
         });
 
         // Botón Mostrar Todos
         $('#mostrarTodosButton').click(function() {
-            const params = new URLSearchParams();
-            params.set('todos', '1');
-            
-            // Mantener el filtro de empresa si existe
-            if ($('#empresa_id').val()) {
-                params.set('empresa_id', $('#empresa_id').val());
-            }
-            
-            window.location.href = '{{ route("historiales_clinicos.index") }}?' + params.toString();
+            window.location.href = '{{ route("historiales_clinicos.index", ["todos" => "1"]) }}';
         });
 
-        // Manejar cambios en los filtros - Filtrado automático
-        $('#mes, #ano, #empresa_id').change(function() {
-            const params = new URLSearchParams();
-            
-            // Mantener el filtro de fecha específica si está activo
-            var currentParams = new URLSearchParams(window.location.search);
-            if (currentParams.has('fecha_especifica')) {
-                params.set('fecha_especifica', currentParams.get('fecha_especifica'));
-            } else {
-                // Solo aplicar filtros de año y mes si no hay fecha específica
-                if ($('#ano').val()) params.set('ano', $('#ano').val());
-                if ($('#mes').val()) params.set('mes', $('#mes').val());
-                
-                // Si no hay año ni mes, agregar parámetro "todos"
-                if (!$('#ano').val() && !$('#mes').val()) {
-                    params.set('todos', '1');
-                }
-            }
-            
-            // Siempre agregar el filtro de empresa si está seleccionado
-            if ($('#empresa_id').val()) {
-                params.set('empresa_id', $('#empresa_id').val());
-            }
-            
-            window.location.href = '{{ route("historiales_clinicos.index") }}?' + params.toString();
+        // Auto-submit cuando cambie el filtro de empresa
+        $('#empresa_id').change(function() {
+            $(this).closest('form').submit();
         });
 
-        // Manejar clic en el botón de filtrar por fecha - ENVIAR AL SERVIDOR
-        $('#filtrarPorFecha').click(function() {
-            var fechaSeleccionada = $('#fechaSeleccion').val();
-            
-            if (!fechaSeleccionada) {
-                alert('POR FAVOR SELECCIONE UNA FECHA PARA FILTRAR');
-                return;
-            }
-            
-            // Construir URL con filtro de fecha y mantener filtro de sucursal si existe
-            const params = new URLSearchParams();
-            params.set('fecha_especifica', fechaSeleccionada);
-            
-            // Mantener el filtro de empresa/sucursal si está seleccionado
-            if ($('#empresa_id').val()) {
-                params.set('empresa_id', $('#empresa_id').val());
-            }
-            
-            // Redirigir al servidor con los filtros combinados
-            window.location.href = '{{ route("historiales_clinicos.index") }}?' + params.toString();
+        // Auto-submit cuando cambien los filtros de mes y año
+        $('#mes, #ano').change(function() {
+            $(this).closest('form').submit();
         });
-
-        // Manejar clic en el botón de limpiar filtro de fecha - REDIRIGIR AL SERVIDOR
-        $('#limpiarFiltroFecha').click(function() {
-            // Obtener parámetros actuales y remover solo la fecha específica
-            var currentParams = new URLSearchParams(window.location.search);
-            currentParams.delete('fecha_especifica'); // Remover el filtro de fecha específica
-            
-            var newUrl = '{{ route("historiales_clinicos.index") }}';
-            
-            // Si hay otros parámetros (como sucursal), mantenerlos
-            if (currentParams.toString()) {
-                newUrl += '?' + currentParams.toString();
-            } else {
-                // Si no hay otros parámetros, ir al mes actual pero mantener sucursal si existe
-                const params = new URLSearchParams();
-                const now = new Date();
-                params.set('ano', now.getFullYear());
-                params.set('mes', (now.getMonth() + 1).toString().padStart(2, '0'));
-                
-                // Mantener el filtro de empresa/sucursal si está seleccionado
-                if ($('#empresa_id').val()) {
-                    params.set('empresa_id', $('#empresa_id').val());
-                }
-                
-                newUrl += '?' + params.toString();
-            }
-            
-            window.location.href = newUrl;
-        });
-
-        // Verificar si hay filtro de fecha activo y mostrar/ocultar botón de limpiar filtro
-        @if(request()->filled('fecha_especifica'))
-            $('#limpiarFiltroFecha').show();
-        @else
-            $('#limpiarFiltroFecha').hide();
-        @endif
 
         // Manejo del botón de ver historiales relacionados
         $('.ver-historiales-relacionados').click(function() {
@@ -633,57 +430,6 @@
                     $('#historialesRelacionadosContent').show();
                 }
             });
-        });
-        
-        // Manejar selección de todos los checkboxes
-        $('#selectAll').change(function() {
-            const isChecked = $(this).is(':checked');
-            $('.historial-checkbox').prop('checked', isChecked);
-            actualizarBotonImprimir();
-        });
-        
-        // Manejar selección individual de checkboxes
-        $(document).on('change', '.historial-checkbox', function() {
-            const totalCheckboxes = $('.historial-checkbox').length;
-            const checkedCheckboxes = $('.historial-checkbox:checked').length;
-            
-            // Actualizar el estado del checkbox "Seleccionar todos"
-            $('#selectAll').prop('checked', checkedCheckboxes === totalCheckboxes);
-            $('#selectAll').prop('indeterminate', checkedCheckboxes > 0 && checkedCheckboxes < totalCheckboxes);
-            
-            actualizarBotonImprimir();
-        });
-        
-        // Función para mostrar/ocultar el botón de imprimir
-        function actualizarBotonImprimir() {
-            const checkboxesSeleccionados = $('.historial-checkbox:checked');
-            const conRecetas = checkboxesSeleccionados.filter('[data-has-recetas="1"]');
-            
-            if (conRecetas.length > 0) {
-                $('#imprimirSeleccionados').show();
-                $('#imprimirSeleccionados').text(`IMPRIMIR RECETAS SELECCIONADAS (${conRecetas.length})`);
-            } else {
-                $('#imprimirSeleccionados').hide();
-            }
-        }
-        
-        // Manejar clic en el botón de imprimir seleccionados
-        $('#imprimirSeleccionados').click(function() {
-            const idsSeleccionados = [];
-            $('.historial-checkbox:checked').each(function() {
-                if ($(this).data('has-recetas') === 1) {
-                    idsSeleccionados.push($(this).val());
-                }
-            });
-            
-            if (idsSeleccionados.length === 0) {
-                alert('NO HAY HISTORIALES CON RECETAS SELECCIONADOS');
-                return;
-            }
-            
-            // Abrir nueva ventana para imprimir múltiples recetas
-            const url = '{{ route("historiales_clinicos.multipleprint") }}?ids=' + idsSeleccionados.join(',');
-            window.open(url, '_blank');
         });
     });
 </script>

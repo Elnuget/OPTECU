@@ -1,625 +1,426 @@
 @extends('adminlte::page')
 
-@section('title', 'Editar Historial Clínico')
+@section('title', 'EDITAR HISTORIAL CLÍNICO')
 
 @section('content_header')
-    <h1 class="mb-3">Editar Historial Clínico</h1>
+    <h1>EDITAR HISTORIAL CLÍNICO</h1>
 @stop
 
 @section('content')
+    {{-- Mensajes de error y éxito --}}
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ session('error') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
+
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
 <div class="card">
     <div class="card-body">
-        {{-- Mensajes de éxito --}}
-        @if (session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle"></i> {{ session('success') }}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        @endif
-
-        {{-- Mensajes de error --}}
-        @if (session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="fas fa-exclamation-triangle"></i> {{ session('error') }}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        @endif
-
-        @if ($errors->any())
-            <div class="alert alert-danger">
-                <h6><i class="fas fa-exclamation-triangle"></i> Por favor corrige los siguientes errores:</h6>
-                <ul class="mb-0">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        {{-- Debug de la receta (solo en desarrollo) --}}
-        @if (config('app.debug') && isset($receta))
-            <div class="alert alert-info">
-                <small><strong>Debug - Receta encontrada:</strong> ID: {{ $receta->id ?? 'N/A' }} | 
-                OD: {{ $receta->od_esfera ?? 'N/A' }} {{ $receta->od_cilindro ?? 'N/A' }} x {{ $receta->od_eje ?? 'N/A' }} | 
-                OI: {{ $receta->oi_esfera ?? 'N/A' }} {{ $receta->oi_cilindro ?? 'N/A' }} x {{ $receta->oi_eje ?? 'N/A' }}</small>
-            </div>
-        @endif
-
-        <form action="{{ route('historiales_clinicos.update', $historialClinico->id) }}" method="POST" enctype="multipart/form-data">
+        <form action="{{ route('historiales_clinicos.update', $historialClinico->id) }}" method="POST">
             @csrf
             @method('PUT')
 
-            {{-- FECHA DE REGISTRO --}}
+            {{-- Fecha de Registro --}}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-calendar"></i> FECHA DE REGISTRO</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="fecha">FECHA <span class="text-danger">*</span></label>
+                        <input type="date" name="fecha" id="fecha" class="form-control" value="{{ \Carbon\Carbon::parse($historialClinico->fecha)->format('Y-m-d') }}" required>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Datos del Paciente --}}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-user"></i> DATOS DEL PACIENTE</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="nombres">NOMBRES <span class="text-danger">*</span></label>
+                                <input type="text" name="nombres" id="nombres" class="form-control" value="{{ $historialClinico->nombres }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="apellidos">APELLIDOS <span class="text-danger">*</span></label>
+                                <input type="text" name="apellidos" id="apellidos" class="form-control" value="{{ $historialClinico->apellidos }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="empresa_id">EMPRESA <span class="text-danger">*</span></label>
+                                <select name="empresa_id" id="empresa_id" class="form-control" required>
+                                    <option value="">SELECCIONE UNA EMPRESA</option>
+                                    @foreach($empresas as $empresa)
+                                        <option value="{{ $empresa->id }}" {{ $historialClinico->empresa_id == $empresa->id ? 'selected' : '' }}>
+                                            {{ strtoupper($empresa->nombre) }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="cedula">CÉDULA</label>
+                                <input type="text" name="cedula" id="cedula" class="form-control" value="{{ $historialClinico->cedula }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="edad">EDAD <span class="text-danger">*</span></label>
+                                <input type="number" name="edad" id="edad" class="form-control" value="{{ $historialClinico->edad }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="fecha_nacimiento">FECHA DE NACIMIENTO</label>
+                                <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" class="form-control" value="{{ $historialClinico->fecha_nacimiento ? \Carbon\Carbon::parse($historialClinico->fecha_nacimiento)->format('Y-m-d') : '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="celular">CELULAR <span class="text-danger">*</span></label>
+                                <input type="text" name="celular" id="celular" class="form-control" value="{{ $historialClinico->celular }}" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="ocupacion">OCUPACIÓN <span class="text-danger">*</span></label>
+                        <input type="text" name="ocupacion" id="ocupacion" class="form-control" value="{{ $historialClinico->ocupacion }}" required>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Motivo de Consulta y Enfermedad Actual --}}
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-notes-medical"></i> MOTIVO DE CONSULTA Y ENFERMEDAD ACTUAL</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="motivo_consulta">MOTIVO DE CONSULTA <span class="text-danger">*</span></label>
+                        <input type="text" name="motivo_consulta" id="motivo_consulta" class="form-control" value="{{ $historialClinico->motivo_consulta }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="enfermedad_actual">ENFERMEDAD ACTUAL <span class="text-danger">*</span></label>
+                        <textarea name="enfermedad_actual" id="enfermedad_actual" class="form-control" rows="3" required>{{ $historialClinico->enfermedad_actual }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Antecedentes --}}
             <div class="card mb-4">
-                <div class="card-header" data-toggle="collapse" data-target="#fechaRegistro" style="cursor: pointer">
+                <div class="card-header" data-toggle="collapse" data-target="#antecedentes">
                     <h5 class="mb-0">
-                        <i class="fas fa-calendar-alt mr-2"></i> Fecha de Registro
+                        <i class="fas fa-history mr-2"></i> Antecedentes
                     </h5>
                 </div>
-                <div id="fechaRegistro" class="collapse show">
+                <div id="antecedentes" class="collapse show">
                     <div class="card-body">
                         <div class="form-row">
-                            <div class="form-group col-md-4">
-                                <label for="fecha">Fecha</label>
-                                <input type="date" name="fecha" id="fecha" class="form-control" value="{{ old('fecha', \Carbon\Carbon::parse($historialClinico->fecha)->format('Y-m-d')) }}">
+                            <div class="form-group col-md-6">
+                                <label>Antecedentes Personales Oculares <span class="text-danger">*</span></label>
+                                <textarea name="antecedentes_personales_oculares" class="form-control" rows="3" required>{{ old('antecedentes_personales_oculares', $historialClinico->antecedentes_personales_oculares) }}</textarea>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Antecedentes Personales Generales <span class="text-danger">*</span></label>
+                                <textarea name="antecedentes_personales_generales" class="form-control" rows="3" required>{{ old('antecedentes_personales_generales', $historialClinico->antecedentes_personales_generales) }}</textarea>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Antecedentes Familiares Oculares <span class="text-danger">*</span></label>
+                                <textarea name="antecedentes_familiares_oculares" class="form-control" rows="3" required>{{ old('antecedentes_familiares_oculares', $historialClinico->antecedentes_familiares_oculares) }}</textarea>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Antecedentes Familiares Generales <span class="text-danger">*</span></label>
+                                <textarea name="antecedentes_familiares_generales" class="form-control" rows="3" required>{{ old('antecedentes_familiares_generales', $historialClinico->antecedentes_familiares_generales) }}</textarea>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- DATOS DEL PACIENTE --}}
+            {{-- Agudeza Visual y PH --}}
             <div class="card mb-4">
-                <div class="card-header" data-toggle="collapse" data-target="#datosPaciente" style="cursor: pointer">
+                <div class="card-header" data-toggle="collapse" data-target="#agudezaVisual">
                     <h5 class="mb-0">
-                        <i class="fas fa-user mr-2"></i> Datos del Paciente
+                        <i class="fas fa-eye mr-2"></i> Agudeza Visual y PH
                     </h5>
                 </div>
-                <div id="datosPaciente" class="collapse show">
-                    <div class="card-body">
-                        <div class="form-row">
-                            <div class="form-group col-md-4">
-                                <label for="nombres">Nombres</label>
-                                <input type="text" name="nombres" id="nombres" class="form-control" value="{{ old('nombres', $historialClinico->nombres) }}">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="apellidos">Apellidos</label>
-                                <input type="text" name="apellidos" id="apellidos" class="form-control" value="{{ old('apellidos', $historialClinico->apellidos) }}">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="cedula">RUT</label>
-                                <input type="text" name="cedula" id="cedula" class="form-control" value="{{ old('cedula', $historialClinico->cedula) }}">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="edad">Edad</label>
-                                <input type="number" name="edad" id="edad" class="form-control" value="{{ old('edad', $historialClinico->edad) }}">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="fecha_nacimiento">Fecha de Nacimiento</label>
-                                <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" class="form-control" value="{{ old('fecha_nacimiento', $historialClinico->fecha_nacimiento ? \Carbon\Carbon::parse($historialClinico->fecha_nacimiento)->format('Y-m-d') : '') }}">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="celular">Celular</label>
-                                <input type="text" name="celular" id="celular" class="form-control" value="{{ old('celular', $historialClinico->celular) }}">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="correo">Correo Electrónico</label>
-                                <input type="email" name="correo" id="correo" class="form-control" value="{{ old('correo', $historialClinico->correo) }}" placeholder="ejemplo@correo.com">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="direccion">Dirección</label>
-                                <input type="text" name="direccion" id="direccion" class="form-control" value="{{ old('direccion', $historialClinico->direccion) }}" placeholder="Ingrese la dirección">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="ocupacion">Ocupación</label>
-                                <input type="text" name="ocupacion" id="ocupacion" class="form-control" value="{{ old('ocupacion', $historialClinico->ocupacion) }}">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="proxima_consulta">Próxima Consulta</label>
-                                <input type="date" name="proxima_consulta" id="proxima_consulta" class="form-control" value="{{ old('proxima_consulta', $historialClinico->proxima_consulta ? \Carbon\Carbon::parse($historialClinico->proxima_consulta)->format('Y-m-d') : '') }}">
-                            </div>
-                            <div class="form-group col-md-4">
-                                <label for="empresa_id">SUCURSAL</label>
-                                @if (!$isUserAdmin && $userEmpresaId)
-                                    <select name="empresa_id" id="empresa_id" class="form-control" readonly disabled>
-                                        @foreach($empresas as $empresa)
-                                            <option value="{{ $empresa->id }}" {{ $userEmpresaId == $empresa->id ? 'selected' : '' }}>
-                                                {{ $empresa->nombre }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <input type="hidden" name="empresa_id" value="{{ $userEmpresaId }}">
-                                    <small class="text-muted">Tu usuario está asociado a esta empresa y no puede ser cambiada.</small>
-                                @else
-                                    <select name="empresa_id" id="empresa_id" class="form-control">
-                                        <option value="">Seleccione una empresa...</option>
-                                        @foreach($empresas as $empresa)
-                                            <option value="{{ $empresa->id }}" {{ old('empresa_id', $historialClinico->empresa_id) == $empresa->id ? 'selected' : '' }}>
-                                                {{ $empresa->nombre }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- PRESCRIPCIÓN / RECETAS --}}
-            <div class="card mb-4">
-                <div class="card-header" data-toggle="collapse" data-target="#prescripcion" style="cursor: pointer">
-                    <h5 class="mb-0">
-                        <i class="fas fa-prescription mr-2"></i> Recetas
-                    </h5>
-                </div>
-                <div id="prescripcion" class="collapse show">
-                    <div class="card-body">
-                        {{-- Botón para añadir nueva receta --}}
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <button type="button" id="btnAnadirReceta" class="btn btn-success btn-sm">
-                                    <i class="fas fa-plus mr-2"></i>Añadir Receta
-                                </button>
-                                <hr>
-                            </div>
-                        </div>
-
-                        {{-- Contenedor para todas las recetas --}}
-                        <div id="recetasContainer">
-                            @if($recetas && $recetas->count() > 0)
-                                {{-- Mostrar recetas existentes --}}
-                                @foreach($recetas as $index => $recetaItem)
-                                    <div class="receta-item border rounded p-3 mb-3" data-receta-index="{{ $index }}">
-                                        <div class="d-flex justify-content-between align-items-center mb-3">
-                                            <h6 class="mb-0 text-primary">
-                                                <i class="fas fa-prescription mr-2"></i>Receta #<span class="receta-number">{{ $index + 1 }}</span>
-                                            </h6>
-                                            <button type="button" class="btn btn-danger btn-sm btn-eliminar-receta" style="{{ $recetas->count() <= 1 ? 'display: none;' : '' }}">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-
-                                        {{-- Campo ID oculto para recetas existentes --}}
-                                        <input type="hidden" name="recetas[{{ $index }}][id]" value="{{ $recetaItem->id }}">
-
-                                        {{-- Campo Tipo de Receta --}}
-                                        <div class="row mb-3">
-                                            <div class="col-md-4">
-                                                <div class="form-group">
-                                                    <label><strong>Tipo de Receta</strong></label>
-                                                    <select name="recetas[{{ $index }}][tipo]" class="form-control">
-                                                        <option value="">Seleccionar...</option>
-                                                        <option value="CERCA" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'CERCA' ? 'selected' : '' }}>CERCA</option>
-                                                        <option value="LEJOS" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'LEJOS' ? 'selected' : '' }}>LEJOS</option>
-                                                        <option value="BIFOCAL" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'BIFOCAL' ? 'selected' : '' }}>BIFOCAL</option>
-                                                        <option value="MULTIFOCAL" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'MULTIFOCAL' ? 'selected' : '' }}>MULTIFOCAL</option>
-                                                        <option value="PROGRESIVO" {{ old("recetas.{$index}.tipo", $recetaItem->tipo) == 'PROGRESIVO' ? 'selected' : '' }}>PROGRESIVO</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="table-responsive mb-3">
-                                            <table class="table table-bordered">
-                                                <thead class="bg-primary text-white">
-                                                    <tr>
-                                                        <th></th>
-                                                        <th class="text-center">Esfera</th>
-                                                        <th class="text-center">Cilindro</th>
-                                                        <th class="text-center">Eje</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td class="font-weight-bold">OD</td>
-                                                        <td><input type="text" name="recetas[{{ $index }}][od_esfera]" class="form-control" value="{{ old("recetas.{$index}.od_esfera", $recetaItem->od_esfera) }}"></td>
-                                                        <td><input type="text" name="recetas[{{ $index }}][od_cilindro]" class="form-control" value="{{ old("recetas.{$index}.od_cilindro", $recetaItem->od_cilindro) }}"></td>
-                                                        <td><input type="text" name="recetas[{{ $index }}][od_eje]" class="form-control" value="{{ old("recetas.{$index}.od_eje", $recetaItem->od_eje) }}"></td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td class="font-weight-bold">OI</td>
-                                                        <td><input type="text" name="recetas[{{ $index }}][oi_esfera]" class="form-control" value="{{ old("recetas.{$index}.oi_esfera", $recetaItem->oi_esfera) }}"></td>
-                                                        <td><input type="text" name="recetas[{{ $index }}][oi_cilindro]" class="form-control" value="{{ old("recetas.{$index}.oi_cilindro", $recetaItem->oi_cilindro) }}"></td>
-                                                        <td><input type="text" name="recetas[{{ $index }}][oi_eje]" class="form-control" value="{{ old("recetas.{$index}.oi_eje", $recetaItem->oi_eje) }}"></td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>ADD</label>
-                                                    <input type="text" name="recetas[{{ $index }}][od_adicion]" class="form-control" value="{{ old("recetas.{$index}.od_adicion", $recetaItem->od_adicion) }}">
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="form-group">
-                                                    <label>DP pl/pc</label>
-                                                    <input type="text" name="recetas[{{ $index }}][dp]" class="form-control" value="{{ old("recetas.{$index}.dp", $recetaItem->dp) }}">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="form-group">
-                                            <label>Observaciones:</label>
-                                            <textarea name="recetas[{{ $index }}][observaciones]" class="form-control" rows="3">{{ old("recetas.{$index}.observaciones", $recetaItem->observaciones) }}</textarea>
-                                        </div>
-                                        
-                                        <div class="form-group">
-                                            <label>Foto de la receta:</label>
-                                            @if($recetaItem->foto)
-                                                <div class="mb-2">
-                                                    <small class="text-muted">Foto actual:</small><br>
-                                                    <img src="{{ $recetaItem->foto }}" alt="Foto actual" class="img-thumbnail" style="max-width: 150px; max-height: 150px;">
-                                                </div>
-                                            @endif
-                                            <input type="file" name="recetas[{{ $index }}][foto]" class="form-control" accept="image/png,image/jpg,image/jpeg">
-                                            <input type="hidden" name="recetas[{{ $index }}][foto_actual]" value="{{ $recetaItem->foto }}">
-                                            <small class="text-muted">Seleccione una nueva imagen para reemplazar la actual (PNG, JPG, JPEG) - Máximo 2MB</small>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            @else
-                                {{-- Si no hay recetas, mostrar template vacío --}}
-                                <div class="receta-item border rounded p-3 mb-3" data-receta-index="0">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h6 class="mb-0 text-primary">
-                                            <i class="fas fa-prescription mr-2"></i>Receta #<span class="receta-number">1</span>
-                                        </h6>
-                                        <button type="button" class="btn btn-danger btn-sm btn-eliminar-receta" style="display: none;">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-
-                                    {{-- Campo Tipo de Receta --}}
-                                    <div class="row mb-3">
-                                        <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label><strong>Tipo de Receta</strong></label>
-                                                <select name="recetas[0][tipo]" class="form-control">
-                                                    <option value="">Seleccionar...</option>
-                                                    <option value="CERCA">CERCA</option>
-                                                    <option value="LEJOS">LEJOS</option>
-                                                    <option value="BIFOCAL">BIFOCAL</option>
-                                                    <option value="MULTIFOCAL">MULTIFOCAL</option>
-                                                    <option value="PROGRESIVO">PROGRESIVO</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="table-responsive mb-3">
-                                        <table class="table table-bordered">
-                                            <thead class="bg-primary text-white">
-                                                <tr>
-                                                    <th></th>
-                                                    <th class="text-center">Esfera</th>
-                                                    <th class="text-center">Cilindro</th>
-                                                    <th class="text-center">Eje</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td class="font-weight-bold">OD</td>
-                                                    <td><input type="text" name="recetas[0][od_esfera]" class="form-control"></td>
-                                                    <td><input type="text" name="recetas[0][od_cilindro]" class="form-control"></td>
-                                                    <td><input type="text" name="recetas[0][od_eje]" class="form-control"></td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="font-weight-bold">OI</td>
-                                                    <td><input type="text" name="recetas[0][oi_esfera]" class="form-control"></td>
-                                                    <td><input type="text" name="recetas[0][oi_cilindro]" class="form-control"></td>
-                                                    <td><input type="text" name="recetas[0][oi_eje]" class="form-control"></td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label>ADD</label>
-                                                <input type="text" name="recetas[0][od_adicion]" class="form-control">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label>DP pl/pc</label>
-                                                <input type="text" name="recetas[0][dp]" class="form-control">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label>Observaciones:</label>
-                                        <textarea name="recetas[0][observaciones]" class="form-control" rows="3"></textarea>
-                                    </div>
-                                    
-                                    <div class="form-group">
-                                        <label>Foto de la receta:</label>
-                                        <input type="file" name="recetas[0][foto]" class="form-control" accept="image/png,image/jpg,image/jpeg">
-                                        <small class="text-muted">Seleccione una imagen (PNG, JPG, JPEG) - Máximo 2MB</small>
-                                    </div>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- DIAGNÓSTICO --}}
-            <div class="card mb-4">
-                <div class="card-header" data-toggle="collapse" data-target="#diagnostico" style="cursor: pointer">
-                    <h5 class="mb-0">
-                        <i class="fas fa-stethoscope mr-2"></i> Diagnóstico
-                    </h5>
-                </div>
-                <div id="diagnostico" class="collapse">
+                <div id="agudezaVisual" class="collapse show">
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Astigmatismo" id="astigmatismo" 
-                                        {{ str_contains(old('diagnostico', $historialClinico->diagnostico ?? ''), 'Astigmatismo') ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="astigmatismo">
-                                        Astigmatismo
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Miopía" id="miopia"
-                                        {{ str_contains(old('diagnostico', $historialClinico->diagnostico ?? ''), 'Miopía') ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="miopia">
-                                        Miopía
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Hipermetropía" id="hipermetropia"
-                                        {{ str_contains(old('diagnostico', $historialClinico->diagnostico ?? ''), 'Hipermetropía') ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="hipermetropia">
-                                        Hipermetropía
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="diagnostico[]" value="Presbicia" id="presbicia"
-                                        {{ str_contains(old('diagnostico', $historialClinico->diagnostico ?? ''), 'Presbicia') ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="presbicia">
-                                        Presbicia
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        {{-- Campo oculto para enviar el diagnóstico como string --}}
-                        <input type="hidden" name="diagnostico" id="diagnostico_string" value="{{ old('diagnostico', $historialClinico->diagnostico) }}">
-                    </div>
-                </div>
-            </div>
-
-            {{-- BOTÓN PARA MOSTRAR/OCULTAR SECCIONES OPCIONALES --}}
-            <div class="text-center mb-4">
-                <button type="button" id="btnMostrarOpcionales" class="btn btn-outline-primary">
-                    <i class="fas fa-plus-circle mr-2"></i>Mostrar información adicional
-                </button>
-            </div>
-
-            {{-- SECCIONES OPCIONALES --}}
-            <div id="seccionesOpcionales" style="display: none;">
-                {{-- MOTIVO DE CONSULTA Y ENFERMEDAD ACTUAL --}}
-                <div class="card mb-4">
-                    <div class="card-header" data-toggle="collapse" data-target="#motivoConsulta">
-                        <h5 class="mb-0">
-                            <i class="fas fa-notes-medical mr-2"></i> Motivo de Consulta y Enfermedad Actual
-                        </h5>
-                    </div>
-                    <div id="motivoConsulta" class="collapse">
-                        <div class="card-body">
-                            <div class="form-row">
-                                <div class="form-group col-md-6">
-                                    <label>Motivo de Consulta</label>
-                                    <input type="text" name="motivo_consulta" class="form-control" value="{{ old('motivo_consulta', $historialClinico->motivo_consulta) }}">
-                                </div>
-                                <div class="form-group col-md-6">
-                                    <label>Enfermedad Actual</label>
-                                    <input type="text" name="enfermedad_actual" class="form-control" value="{{ old('enfermedad_actual', $historialClinico->enfermedad_actual) }}">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- ANTECEDENTES --}}
-                <div class="card mb-4">
-                    <div class="card-header" data-toggle="collapse" data-target="#antecedentes">
-                        <h5 class="mb-0">
-                            <i class="fas fa-history mr-2"></i> Antecedentes
-                        </h5>
-                    </div>
-                    <div id="antecedentes" class="collapse">
-                        <div class="card-body">
-                            <div class="form-row">
-                                <div class="form-group col-md-6">
-                                    <label>Antecedentes Personales Oculares</label>
-                                    <input name="antecedentes_personales_oculares" class="form-control" value="{{ old('antecedentes_personales_oculares', $historialClinico->antecedentes_personales_oculares) }}">
-                                </div>
-                                <div class="form-group col-md-6">
-                                    <label>Antecedentes Personales Generales</label>
-                                    <input name="antecedentes_personales_generales" class="form-control" value="{{ old('antecedentes_personales_generales', $historialClinico->antecedentes_personales_generales) }}">
-                                </div>
-                                <div class="form-group col-md-6">
-                                    <label>Antecedentes Familiares Oculares</label>
-                                    <input name="antecedentes_familiares_oculares" class="form-control" value="{{ old('antecedentes_familiares_oculares', $historialClinico->antecedentes_familiares_oculares) }}">
-                                </div>
-                                <div class="form-group col-md-6">
-                                    <label>Antecedentes Familiares Generales</label>
-                                    <input name="antecedentes_familiares_generales" class="form-control" value="{{ old('antecedentes_familiares_generales', $historialClinico->antecedentes_familiares_generales) }}">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- AGUDEZA VISUAL Y PH --}}
-                <div class="card mb-4">
-                    <div class="card-header" data-toggle="collapse" data-target="#agudezaVisual">
-                        <h5 class="mb-0">
-                            <i class="fas fa-eye mr-2"></i> Agudeza Visual y PH
-                        </h5>
-                    </div>
-                    <div id="agudezaVisual" class="collapse">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6>Agudeza Visual VL sin Corrección</h6>
-                                    <div class="form-row">
-                                        <div class="form-group col-md-4">
-                                            <label>OD</label>
-                                            <input type="text" name="agudeza_visual_vl_sin_correccion_od" class="form-control" value="{{ old('agudeza_visual_vl_sin_correccion_od', $historialClinico->agudeza_visual_vl_sin_correccion_od) }}">
-                                        </div>
-                                        <div class="form-group col-md-4">
-                                            <label>OI</label>
-                                            <input type="text" name="agudeza_visual_vl_sin_correccion_oi" class="form-control" value="{{ old('agudeza_visual_vl_sin_correccion_oi', $historialClinico->agudeza_visual_vl_sin_correccion_oi) }}">
-                                        </div>
-                                        <div class="form-group col-md-4">
-                                            <label>AO</label>
-                                            <input type="text" name="agudeza_visual_vl_sin_correccion_ao" class="form-control" value="{{ old('agudeza_visual_vl_sin_correccion_ao', $historialClinico->agudeza_visual_vl_sin_correccion_ao) }}">
-                                        </div>
+                            <div class="col-md-6">
+                                <h6>Agudeza Visual VL sin Corrección <span class="text-danger">*</span></h6>
+                                <div class="form-row">
+                                    <div class="form-group col-md-4">
+                                        <label>OD</label>
+                                        <input type="text" name="agudeza_visual_vl_sin_correccion_od" class="form-control" required
+                                            value="{{ old('agudeza_visual_vl_sin_correccion_od', $historialClinico->agudeza_visual_vl_sin_correccion_od) }}">
                                     </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <h6>Agudeza Visual VP sin Corrección</h6>
-                                    <div class="form-row">
-                                        <div class="form-group col-md-4">
-                                            <label>OD</label>
-                                            <input type="text" name="agudeza_visual_vp_sin_correccion_od" class="form-control" value="{{ old('agudeza_visual_vp_sin_correccion_od', $historialClinico->agudeza_visual_vp_sin_correccion_od) }}">
-                                        </div>
-                                        <div class="form-group col-md-4">
-                                            <label>OI</label>
-                                            <input type="text" name="agudeza_visual_vp_sin_correccion_oi" class="form-control" value="{{ old('agudeza_visual_vp_sin_correccion_oi', $historialClinico->agudeza_visual_vp_sin_correccion_oi) }}">
-                                        </div>
-                                        <div class="form-group col-md-4">
-                                            <label>AO</label>
-                                            <input type="text" name="agudeza_visual_vp_sin_correccion_ao" class="form-control" value="{{ old('agudeza_visual_vp_sin_correccion_ao', $historialClinico->agudeza_visual_vp_sin_correccion_ao) }}">
-                                        </div>
+                                    <div class="form-group col-md-4">
+                                        <label>OI</label>
+                                        <input type="text" name="agudeza_visual_vl_sin_correccion_oi" class="form-control" required
+                                            value="{{ old('agudeza_visual_vl_sin_correccion_oi', $historialClinico->agudeza_visual_vl_sin_correccion_oi) }}">
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>AO</label>
+                                        <input type="text" name="agudeza_visual_vl_sin_correccion_ao" class="form-control" required
+                                            value="{{ old('agudeza_visual_vl_sin_correccion_ao', $historialClinico->agudeza_visual_vl_sin_correccion_ao) }}">
                                     </div>
                                 </div>
                             </div>
-                            <div class="row mt-3">
-                                <div class="col-md-6">
-                                    <h6>Pin Hole (PH)</h6>
-                                    <div class="form-row">
-                                        <div class="form-group col-md-6">
-                                            <label>PH OD</label>
-                                            <input type="text" name="ph_od" class="form-control" value="{{ old('ph_od', $historialClinico->ph_od) }}">
+                            <div class="col-md-6">
+                                <h6>Agudeza Visual VP sin Corrección <span class="text-danger">*</span></h6>
+                                <div class="form-row">
+                                    <div class="form-group col-md-4">
+                                        <label>OD</label>
+                                        <input type="text" name="agudeza_visual_vp_sin_correccion_od" class="form-control" required
+                                            value="{{ old('agudeza_visual_vp_sin_correccion_od', $historialClinico->agudeza_visual_vp_sin_correccion_od) }}">
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>OI</label>
+                                        <input type="text" name="agudeza_visual_vp_sin_correccion_oi" class="form-control" required
+                                            value="{{ old('agudeza_visual_vp_sin_correccion_oi', $historialClinico->agudeza_visual_vp_sin_correccion_oi) }}">
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>AO</label>
+                                        <input type="text" name="agudeza_visual_vp_sin_correccion_ao" class="form-control" required
+                                            value="{{ old('agudeza_visual_vp_sin_correccion_ao', $historialClinico->agudeza_visual_vp_sin_correccion_ao) }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h6>Pin Hole (PH) <span class="text-danger">*</span></h6>
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label>PH OD</label>
+                                        <input type="text" name="ph_od" class="form-control" required
+                                            value="{{ old('ph_od', $historialClinico->ph_od) }}">
                                         </div>
                                         <div class="form-group col-md-6">
                                             <label>PH OI</label>
-                                            <input type="text" name="ph_oi" class="form-control" value="{{ old('ph_oi', $historialClinico->ph_oi) }}">
+                                            <input type="text" name="ph_oi" class="form-control" required
+                                                value="{{ old('ph_oi', $historialClinico->ph_oi) }}">
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group">
-                                <label>Optotipo</label>
-                                <textarea name="optotipo" class="form-control" rows="2">{{ old('optotipo', $historialClinico->optotipo) }}</textarea>
-                            </div>
+                            {{-- Se eliminó el campo ADD de esta sección --}}
+                            <input type="hidden" name="usuario_id" value="{{ old('usuario_id', $historialClinico->usuario_id) }}">
+                        <div class="form-group">
+                            <label>Optotipo</label>
+                            <textarea name="optotipo" class="form-control" rows="2">{{ old('optotipo', $historialClinico->optotipo) }}</textarea>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {{-- LENSOMETRÍA --}}
-                <div class="card mb-4">
-                    <div class="card-header" data-toggle="collapse" data-target="#lensometria">
-                        <h5 class="mb-0">
-                            <i class="fas fa-glasses mr-2"></i> Lensometría
-                        </h5>
-                    </div>
-                    <div id="lensometria" class="collapse">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6>Lensometría</h6>
-                                    <div class="form-row">
-                                        <div class="form-group col-md-6">
-                                            <label>OD</label>
-                                            <input type="text" name="lensometria_od" class="form-control" value="{{ old('lensometria_od', $historialClinico->lensometria_od) }}">
-                                        </div>
-                                        <div class="form-group col-md-6">
-                                            <label>OI</label>
-                                            <input type="text" name="lensometria_oi" class="form-control" value="{{ old('lensometria_oi', $historialClinico->lensometria_oi) }}">
-                                        </div>
+            {{-- Lensometría --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#lensometria">
+                    <h5 class="mb-0">
+                        <i class="fas fa-glasses mr-2"></i> Lensometría
+                    </h5>
+                </div>
+                <div id="lensometria" class="collapse show">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Lensometría</h6>
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label>OD</label>
+                                        <input type="text" name="lensometria_od" class="form-control" 
+                                            value="{{ old('lensometria_od', $historialClinico->lensometria_od) }}">
                                     </div>
-                                </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-md-3">
-                                    <div class="form-group">
-                                        <label>Tipo de Lente</label>
-                                        <input type="text" name="tipo_lente" class="form-control" value="{{ old('tipo_lente', $historialClinico->tipo_lente) }}">
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-group">
-                                        <label>Material</label>
-                                        <input type="text" name="material" class="form-control" value="{{ old('material', $historialClinico->material) }}">
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-group">
-                                        <label>Filtro</label>
-                                        <input type="text" name="filtro" class="form-control" value="{{ old('filtro', $historialClinico->filtro) }}">
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-group">
-                                        <label>Tiempo de Uso</label>
-                                        <input type="text" name="tiempo_uso" class="form-control" value="{{ old('tiempo_uso', $historialClinico->tiempo_uso) }}">
+                                    <div class="form-group col-md-6">
+                                        <label>OI</label>
+                                        <input type="text" name="lensometria_oi" class="form-control" 
+                                            value="{{ old('lensometria_oi', $historialClinico->lensometria_oi) }}">
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                {{-- DIAGNÓSTICO Y TRATAMIENTO ADICIONAL --}}
-                <div class="card mb-4">
-                    <div class="card-header" data-toggle="collapse" data-target="#diagnosticoAdicional">
-                        <h5 class="mb-0">
-                            <i class="fas fa-file-medical mr-2"></i> Información Adicional
-                        </h5>
-                    </div>
-                    <div id="diagnosticoAdicional" class="collapse">
-                        <div class="card-body">
-                            <div class="form-group">
-                                <label>Tratamiento</label>
-                                <textarea name="tratamiento" class="form-control" rows="3">{{ old('tratamiento', $historialClinico->tratamiento) }}</textarea>
+                        <div class="row mt-3">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Tipo de Lente</label>
+                                    <input type="text" name="tipo_lente" class="form-control" 
+                                        value="{{ old('tipo_lente', $historialClinico->tipo_lente) }}">
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Cotización</label>
-                                <textarea name="cotizacion" class="form-control" rows="3">{{ old('cotizacion', $historialClinico->cotizacion) }}</textarea>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Material</label>
+                                    <input type="text" name="material" class="form-control" 
+                                        value="{{ old('material', $historialClinico->material) }}">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Filtro</label>
+                                    <input type="text" name="filtro" class="form-control" 
+                                        value="{{ old('filtro', $historialClinico->filtro) }}">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label>Tiempo de Uso</label>
+                                    <input type="text" name="tiempo_uso" class="form-control" 
+                                        value="{{ old('tiempo_uso', $historialClinico->tiempo_uso) }}">
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="form-group text-center mt-4">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save mr-2"></i>Guardar Cambios
-                </button>
+            {{-- Rx Final --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#rxFinal">
+                    <h5 class="mb-0">
+                        <i class="fas fa-prescription mr-2"></i> Rx Final
+                    </h5>
+                </div>
+                <div id="rxFinal" class="collapse show">
+                    <div class="card-body">
+                        <div class="form-row mb-3">
+                            <div class="form-group col-md-6">
+                                <label>Refracción OD <span class="text-danger">*</span></label>
+                                <input type="text" name="refraccion_od" class="form-control" required
+                                    value="{{ old('refraccion_od', $historialClinico->refraccion_od) }}">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Refracción OI <span class="text-danger">*</span></label>
+                                <input type="text" name="refraccion_oi" class="form-control" required
+                                    value="{{ old('refraccion_oi', $historialClinico->refraccion_oi) }}">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-3">
+                                <label>DP OD <span class="text-danger">*</span></label>
+                                <input type="text" name="rx_final_dp_od" class="form-control" required
+                                    value="{{ old('rx_final_dp_od', $historialClinico->rx_final_dp_od) }}">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>DP OI <span class="text-danger">*</span></label>
+                                <input type="text" name="rx_final_dp_oi" class="form-control" required
+                                    value="{{ old('rx_final_dp_oi', $historialClinico->rx_final_dp_oi) }}">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>AV VL OD <span class="text-danger">*</span></label>
+                                <input type="text" name="rx_final_av_vl_od" class="form-control" required
+                                    value="{{ old('rx_final_av_vl_od', $historialClinico->rx_final_av_vl_od) }}">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>AV VL OI <span class="text-danger">*</span></label>
+                                <input type="text" name="rx_final_av_vl_oi" class="form-control" required
+                                    value="{{ old('rx_final_av_vl_oi', $historialClinico->rx_final_av_vl_oi) }}">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-3">
+                                <label>AV VP OD <span class="text-danger">*</span></label>
+                                <input type="text" name="rx_final_av_vp_od" class="form-control" required
+                                    value="{{ old('rx_final_av_vp_od', $historialClinico->rx_final_av_vp_od) }}">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>AV VP OI <span class="text-danger">*</span></label>
+                                <input type="text" name="rx_final_av_vp_oi" class="form-control" required
+                                    value="{{ old('rx_final_av_vp_oi', $historialClinico->rx_final_av_vp_oi) }}">
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label>ADD</label>
+                                <input type="text" name="add" class="form-control" 
+                                    value="{{ old('add', $historialClinico->add) }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Diagnóstico, Tratamiento y Cotización --}}
+            <div class="card mb-4">
+                <div class="card-header" data-toggle="collapse" data-target="#diagnostico">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-medical mr-2"></i> Diagnóstico y Cotización
+                    </h5>
+                </div>
+                <div id="diagnostico" class="collapse show">
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div class="form-group col-12">
+                                <label>Diagnóstico <span class="text-danger">*</span></label>
+                                <textarea name="diagnostico" class="form-control" rows="3" required>{{ old('diagnostico', $historialClinico->diagnostico) }}</textarea>
+                            </div>
+                            <div class="form-group col-12">
+                                <label>Tratamiento <span class="text-danger">*</span></label>
+                                <textarea name="tratamiento" class="form-control" rows="3" required>{{ old('tratamiento', $historialClinico->tratamiento) }}</textarea>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Cotización</label>
+                                <input type="text" name="cotizacion" class="form-control" 
+                                    value="{{ old('cotizacion', $historialClinico->cotizacion) }}">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>Próxima Consulta (en meses)</label>
+                                <div class="input-group">
+                                    <input type="number" id="meses_proxima_consulta" class="form-control" min="1" step="1">
+                                    <select id="meses_predefinidos" class="form-control">
+                                        <option value="">Seleccione meses</option>
+                                        <option value="3">3 meses</option>
+                                        <option value="6">6 meses</option>
+                                        <option value="9">9 meses</option>
+                                    </select>
+                                    <input type="hidden" name="proxima_consulta" id="proxima_consulta" value="{{ old('proxima_consulta', $historialClinico->proxima_consulta) }}">
+                                </div>
+                            </div>
+                            <input type="hidden" name="usuario_id" value="{{ old('usuario_id', $historialClinico->usuario_id) }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Botones de Acción --}}
+            <div class="text-right">
                 <a href="{{ route('historiales_clinicos.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-times mr-2"></i>Cancelar
+                    <i class="fas fa-times"></i> CANCELAR
                 </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> GUARDAR CAMBIOS
+                </button>
             </div>
         </form>
     </div>
@@ -628,15 +429,36 @@
 
 @section('css')
 <style>
+    /* Convertir todo el texto a mayúsculas */
+    .card-title,
+    .card-header,
+    label,
+    input,
+    textarea,
+    select,
+    .btn,
+    h1, h2, h3,
+    .form-control {
+        text-transform: uppercase !important;
+    }
+
+    .card {
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
     .card-header {
         background-color: #f8f9fa;
-        transition: background-color 0.3s ease;
+        border-bottom: 1px solid #e9ecef;
     }
-    .card-header:hover {
-        background-color: #e9ecef;
+
+    .form-control:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
     }
-    .form-group label {
-        font-weight: 600;
+
+    .text-danger {
+        font-weight: bold;
     }
 </style>
 @stop
@@ -644,295 +466,70 @@
 @section('js')
 <script>
     $(document).ready(function() {
-        // Botón para mostrar/ocultar secciones opcionales
-        $('#btnMostrarOpcionales').click(function() {
-            const $seccionesOpcionales = $('#seccionesOpcionales');
-            const $boton = $(this);
-            
-            if ($seccionesOpcionales.is(':visible')) {
-                $seccionesOpcionales.slideUp();
-                $boton.html('<i class="fas fa-plus-circle mr-2"></i>Mostrar información adicional');
-            } else {
-                $seccionesOpcionales.slideDown();
-                $boton.html('<i class="fas fa-minus-circle mr-2"></i>Ocultar información adicional');
-            }
-        });
-
-        // Función para actualizar el campo diagnóstico basado en los checkboxes seleccionados
-        function actualizarDiagnosticoString() {
-            const diagnosticoSeleccionados = $('input[name="diagnostico[]"]:checked').map(function() {
-                return this.value;
-            }).get();
-            
-            $('#diagnostico_string').val(diagnosticoSeleccionados.join(', '));
-        }
-        
-        // Inicializar el campo diagnóstico al cargar la página
-        actualizarDiagnosticoString();
-        
-        // Manejar cambio en checkboxes de diagnóstico
-        $('input[name="diagnostico[]"]').on('change', function() {
-            actualizarDiagnosticoString();
-        });
-
-        // Convertir campos de texto a mayúsculas
+        // Convertir input a mayúsculas mientras se escribe
         $('input[type="text"], textarea').on('input', function() {
             $(this).val($(this).val().toUpperCase());
         });
 
-        // Calcular edad desde fecha de nacimiento
+        // Actualizar edad automáticamente cuando cambia la fecha de nacimiento
         $('#fecha_nacimiento').on('change', function() {
             let fechaNacimiento = new Date($(this).val());
-            if (!isNaN(fechaNacimiento.getTime())) {
-                let hoy = new Date();
-                let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
-                let m = hoy.getMonth() - fechaNacimiento.getMonth();
-                if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
-                    edad--;
-                }
-                $('#edad').val(edad);
+            let hoy = new Date();
+            let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+            let mes = hoy.getMonth() - fechaNacimiento.getMonth();
+            
+            if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+                edad--;
             }
+            
+            $('#edad').val(edad);
         });
 
-        // Validación en tiempo real para campos de receta
-        $('input[name^="od_"], input[name^="oi_"], input[name="add"], input[name="dp"]').on('input', function() {
-            const campo = $(this);
-            const valor = campo.val().trim();
-            
-            // Remover estilos de error previos
-            campo.removeClass('is-invalid');
-            campo.next('.invalid-feedback').remove();
-            
-            // Validar campos numéricos de la receta
-            if (valor && campo.attr('name') !== 'od_eje' && campo.attr('name') !== 'oi_eje') {
-                // Para esfera, cilindro, ADD (deben ser números con posibles signos + o -)
-                const patronNumerico = /^[+\-]?\d*\.?\d*$/;
-                if (!patronNumerico.test(valor)) {
-                    campo.addClass('is-invalid');
-                    campo.after('<div class="invalid-feedback">Debe ser un valor numérico válido (ej: +2.25, -1.50)</div>');
-                }
-            } else if (valor && (campo.attr('name') === 'od_eje' || campo.attr('name') === 'oi_eje')) {
-                // Para eje (debe ser un número entre 0 y 180)
-                const eje = parseInt(valor.replace('°', ''));
-                if (isNaN(eje) || eje < 0 || eje > 180) {
-                    campo.addClass('is-invalid');
-                    campo.after('<div class="invalid-feedback">El eje debe ser un número entre 0 y 180</div>');
-                }
-            } else if (valor && campo.attr('name') === 'dp') {
-                // Para DP (debe ser un número positivo)
-                const dp = parseInt(valor);
-                if (isNaN(dp) || dp <= 0) {
-                    campo.addClass('is-invalid');
-                    campo.after('<div class="invalid-feedback">La distancia pupilar debe ser un número positivo</div>');
-                }
+        // Función para calcular la próxima consulta basada en la fecha de registro
+        function calcularProximaConsulta(meses) {
+            if (!meses) return;
+            let fechaRegistro = new Date($('#fecha').val());
+            if (isNaN(fechaRegistro.getTime())) {
+                alert('Por favor, primero seleccione una fecha de registro válida');
+                return;
             }
-        });
-
-        // Auto-formatear campos de eje para agregar símbolo de grado
-        $('input[name="od_eje"], input[name="oi_eje"]').on('blur', function() {
-            let valor = $(this).val().trim();
-            if (valor && !valor.includes('°')) {
-                const numero = parseInt(valor);
-                if (!isNaN(numero) && numero >= 0 && numero <= 180) {
-                    $(this).val(numero + '°');
-                }
-            }
-        });
-
-        // Validación antes del envío del formulario
-        $('form').on('submit', function(e) {
-            const errores = $('.is-invalid').length;
-            if (errores > 0) {
-                e.preventDefault();
-                alert('Por favor corrige los errores en los campos marcados antes de continuar.');
-                return false;
-            }
-        });
-
-        // Llamar a la función de diagnóstico al cargar la página
-        actualizarDiagnosticoString();
-
-        // Funcionalidad para múltiples recetas
-        let recetaIndex = {{ $recetas && $recetas->count() > 0 ? $recetas->count() - 1 : 0 }};
-
-        // Función para añadir nueva receta
-        $('#btnAnadirReceta').on('click', function() {
-            recetaIndex++;
-            
-            const nuevaReceta = `
-                <div class="receta-item border rounded p-3 mb-3" data-receta-index="${recetaIndex}">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="mb-0 text-primary">
-                            <i class="fas fa-prescription mr-2"></i>Receta #<span class="receta-number">${recetaIndex + 1}</span>
-                        </h6>
-                        <button type="button" class="btn btn-danger btn-sm btn-eliminar-receta">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label><strong>Tipo de Receta</strong></label>
-                                <select name="recetas[${recetaIndex}][tipo]" class="form-control">
-                                    <option value="">Seleccionar...</option>
-                                    <option value="CERCA">CERCA</option>
-                                    <option value="LEJOS">LEJOS</option>
-                                    <option value="BIFOCAL">BIFOCAL</option>
-                                    <option value="MULTIFOCAL">MULTIFOCAL</option>
-                                    <option value="PROGRESIVO">PROGRESIVO</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="table-responsive mb-3">
-                        <table class="table table-bordered">
-                            <thead class="bg-primary text-white">
-                                <tr>
-                                    <th></th>
-                                    <th class="text-center">Esfera</th>
-                                    <th class="text-center">Cilindro</th>
-                                    <th class="text-center">Eje</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="font-weight-bold">OD</td>
-                                    <td><input type="text" name="recetas[${recetaIndex}][od_esfera]" class="form-control"></td>
-                                    <td><input type="text" name="recetas[${recetaIndex}][od_cilindro]" class="form-control"></td>
-                                    <td><input type="text" name="recetas[${recetaIndex}][od_eje]" class="form-control"></td>
-                                </tr>
-                                <tr>
-                                    <td class="font-weight-bold">OI</td>
-                                    <td><input type="text" name="recetas[${recetaIndex}][oi_esfera]" class="form-control"></td>
-                                    <td><input type="text" name="recetas[${recetaIndex}][oi_cilindro]" class="form-control"></td>
-                                    <td><input type="text" name="recetas[${recetaIndex}][oi_eje]" class="form-control"></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>ADD</label>
-                                <input type="text" name="recetas[${recetaIndex}][od_adicion]" class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label>DP pl/pc</label>
-                                <input type="text" name="recetas[${recetaIndex}][dp]" class="form-control">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Observaciones:</label>
-                        <textarea name="recetas[${recetaIndex}][observaciones]" class="form-control" rows="3"></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Foto de la receta:</label>
-                        <input type="file" name="recetas[${recetaIndex}][foto]" class="form-control" accept="image/png,image/jpg,image/jpeg">
-                        <small class="text-muted">Seleccione una imagen (PNG, JPG, JPEG) - Máximo 2MB</small>
-                    </div>
-                </div>
-            `;
-            
-            $('#recetasContainer').append(nuevaReceta);
-            actualizarBotonesEliminar();
-            
-            // Aplicar eventos a los nuevos campos
-            aplicarEventosReceta();
-        });
-
-        // Función para eliminar receta
-        $(document).on('click', '.btn-eliminar-receta', function() {
-            $(this).closest('.receta-item').remove();
-            actualizarNumerosRecetas();
-            actualizarBotonesEliminar();
-        });
-
-        // Función para actualizar números de recetas
-        function actualizarNumerosRecetas() {
-            $('.receta-item').each(function(index) {
-                $(this).find('.receta-number').text(index + 1);
-            });
+            fechaRegistro.setMonth(fechaRegistro.getMonth() + parseInt(meses));
+            return fechaRegistro.toISOString().split('T')[0];
         }
 
-        // Función para mostrar/ocultar botones de eliminar
-        function actualizarBotonesEliminar() {
-            const totalRecetas = $('.receta-item').length;
-            if (totalRecetas > 1) {
-                $('.btn-eliminar-receta').show();
-            } else {
-                $('.btn-eliminar-receta').hide();
+        // Manejar cambios en el input de meses
+        $('#meses_proxima_consulta').on('input', function() {
+            let meses = $(this).val();
+            $('#meses_predefinidos').val(''); // Limpiar el select
+            $('#proxima_consulta').val(calcularProximaConsulta(meses));
+        });
+
+        // Manejar cambios en el select de meses predefinidos
+        $('#meses_predefinidos').on('change', function() {
+            let meses = $(this).val();
+            if (meses) {
+                $('#meses_proxima_consulta').val(meses);
+                $('#proxima_consulta').val(calcularProximaConsulta(meses));
             }
+        });
+
+        // Recalcular próxima consulta cuando cambie la fecha de registro
+        $('#fecha').on('change', function() {
+            let meses = $('#meses_proxima_consulta').val();
+            if (meses) {
+                $('#proxima_consulta').val(calcularProximaConsulta(meses));
+            }
+        });
+
+        // Si hay una próxima consulta ya establecida, calcular los meses desde la fecha de registro
+        let proximaConsulta = $('#proxima_consulta').val();
+        let fechaRegistro = new Date($('#fecha').val());
+        if (proximaConsulta && !isNaN(fechaRegistro.getTime())) {
+            let fechaProxima = new Date(proximaConsulta);
+            let meses = (fechaProxima.getFullYear() - fechaRegistro.getFullYear()) * 12 + 
+                       (fechaProxima.getMonth() - fechaRegistro.getMonth());
+            $('#meses_proxima_consulta').val(meses);
         }
-
-        // Función para aplicar eventos a campos de receta
-        function aplicarEventosReceta() {
-            // Validación en tiempo real para campos de receta
-            $('input[name*="[od_esfera]"], input[name*="[od_cilindro]"], input[name*="[oi_esfera]"], input[name*="[oi_cilindro]"], input[name*="[od_adicion]"], input[name*="[dp]"]').off('input').on('input', function() {
-                const campo = $(this);
-                const valor = campo.val().trim();
-                
-                // Remover estilos de error previos
-                campo.removeClass('is-invalid');
-                campo.next('.invalid-feedback').remove();
-                
-                // Validar campos numéricos de la receta
-                if (valor) {
-                    // Para esfera, cilindro, ADD (deben ser números con posibles signos + o -)
-                    const patronNumerico = /^[+\-]?\d*\.?\d*$/;
-                    if (!patronNumerico.test(valor)) {
-                        campo.addClass('is-invalid');
-                        campo.after('<div class="invalid-feedback">Debe ser un valor numérico válido (ej: +2.25, -1.50)</div>');
-                    }
-                }
-            });
-
-            // Para campos de eje
-            $('input[name*="[od_eje]"], input[name*="[oi_eje]"]').off('input').on('input', function() {
-                const campo = $(this);
-                const valor = campo.val().trim();
-                
-                // Remover estilos de error previos
-                campo.removeClass('is-invalid');
-                campo.next('.invalid-feedback').remove();
-                
-                if (valor) {
-                    // Para eje (debe ser un número entre 0 y 180)
-                    const eje = parseInt(valor.replace('°', ''));
-                    if (isNaN(eje) || eje < 0 || eje > 180) {
-                        campo.addClass('is-invalid');
-                        campo.after('<div class="invalid-feedback">El eje debe ser un número entre 0 y 180</div>');
-                    }
-                }
-            });
-
-            // Auto-formatear campos de eje para agregar símbolo de grado
-            $('input[name*="[od_eje]"], input[name*="[oi_eje]"]').off('blur').on('blur', function() {
-                let valor = $(this).val().trim();
-                if (valor && !valor.includes('°')) {
-                    const numero = parseInt(valor);
-                    if (!isNaN(numero) && numero >= 0 && numero <= 180) {
-                        $(this).val(numero + '°');
-                    }
-                }
-            });
-
-            // Convertir campos de texto a mayúsculas
-            $('input[name*="recetas"], textarea[name*="recetas"]').off('input.uppercase').on('input.uppercase', function() {
-                $(this).val($(this).val().toUpperCase());
-            });
-        }
-
-        // Aplicar eventos iniciales
-        aplicarEventosReceta();
-        actualizarBotonesEliminar();
     });
 </script>
 @stop
