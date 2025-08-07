@@ -81,4 +81,20 @@ class Empresa extends Model
     {
         return $this->hasMany(Egreso::class);
     }
+
+    /**
+     * Obtener los préstamos de la empresa
+     */
+    public function prestamos()
+    {
+        return $this->hasMany(Prestamo::class);
+    }
+
+    /**
+     * Obtener los sueldos de la empresa
+     */
+    public function sueldos()
+    {
+        return $this->hasMany(Sueldo::class);
+    }
 }

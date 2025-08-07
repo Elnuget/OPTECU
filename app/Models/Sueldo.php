@@ -16,7 +16,8 @@ class Sueldo extends Model
         'fecha',
         'descripcion',
         'valor',
-        'user_id'
+        'user_id',
+        'empresa_id'
     ];
 
     protected $casts = [
@@ -30,5 +31,21 @@ class Sueldo extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Obtiene la empresa asociada al sueldo.
+     */
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
+    }
+
+    /**
+     * Scope para filtrar sueldos por empresa.
+     */
+    public function scopePorEmpresa($query, $empresaId)
+    {
+        return $query->where('empresa_id', $empresaId);
     }
 } 

@@ -12,6 +12,7 @@ class Prestamo extends Model
 
     protected $fillable = [
         'user_id',
+        'empresa_id',
         'valor',
         'valor_neto',
         'cuotas',
@@ -28,9 +29,20 @@ class Prestamo extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function empresa()
+    {
+        return $this->belongsTo(Empresa::class);
+    }
+
     public function pagos()
     {
         return $this->hasMany(PagoPrestamo::class);
+    }
+
+    // Scopes
+    public function scopePorEmpresa($query, $empresaId)
+    {
+        return $query->where('empresa_id', $empresaId);
     }
 
     // Métodos de cálculo
