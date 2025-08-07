@@ -10,19 +10,45 @@ use Illuminate\Http\Request;
 
 class PrestamoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $prestamos = Prestamo::with('user')->latest()->get();
-        $empresas = Empresa::orderBy('nombre')->get();
-        $empresa = Empresa::first(); // Obtener la primera empresa registrada
+        $query = Prestamo::with(['user', 'empresa']);
         
-        return view('prestamos.index', compact('prestamos', 'empresas', 'empresa'));
+        // Filtro por empresa
+        if ($request->filled('empresa_id')) {
+            $query->where('empresa_id', $request->empresa_id);
+        }
+        
+        // Filtro por estado del préstamo (opcional)
+        if ($request->filled('estado')) {
+            switch ($request->estado) {
+                case 'pendiente':
+                    $query->whereDoesntHave('pagos', function($q) {
+                        $q->where('estado', 'pagado');
+                    });
+                    break;
+                case 'parcial':
+                    $query->whereHas('pagos', function($q) {
+                        $q->where('estado', 'pagado');
+                    })->whereRaw('(SELECT COALESCE(SUM(valor), 0) FROM pago_prestamos WHERE prestamo_id = prestamos.id AND estado = "pagado") < valor_neto');
+                    break;
+                case 'pagado':
+                    $query->whereRaw('(SELECT COALESCE(SUM(valor), 0) FROM pago_prestamos WHERE prestamo_id = prestamos.id AND estado = "pagado") >= valor_neto');
+                    break;
+            }
+        }
+        
+        $prestamos = $query->latest()->get();
+        $empresas = Empresa::orderBy('nombre')->get();
+        
+        return view('prestamos.index', compact('prestamos', 'empresas'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
+            'empresa_id' => 'nullable|exists:empresas,id',
             'valor' => 'required|numeric|min:0',
             'valor_neto' => 'required|numeric|min:0',
             'cuotas' => 'required|integer|min:1',
@@ -50,6 +76,7 @@ class PrestamoController extends Controller
     {
         $request->validate([
             'user_id' => 'required|exists:users,id',
+            'empresa_id' => 'nullable|exists:empresas,id',
             'valor' => 'required|numeric|min:0',
             'valor_neto' => 'required|numeric|min:0',
             'cuotas' => 'required|integer|min:1',
@@ -75,6 +102,32 @@ class PrestamoController extends Controller
                 ->with('mensaje', 'ERROR AL ELIMINAR EL PRÉSTAMO')
                 ->with('tipo', 'alert-danger');
         }
+    }
+
+    /**
+     * Obtener estadísticas de préstamos por empresa
+     */
+    public function getEstadisticas(Request $request)
+    {
+        $empresaId = $request->get('empresa_id');
+        
+        $query = Prestamo::query();
+        
+        if ($empresaId) {
+            $query->where('empresa_id', $empresaId);
+        }
+        
+        $totalPrestamos = $query->count();
+        $valorTotalPrestado = $query->sum('valor_neto');
+        $prestamosPendientes = $query->where('estado_prestamo', 'pendiente')->count();
+        $prestamosPagados = $query->where('estado_prestamo', 'pagado')->count();
+        
+        return response()->json([
+            'total_prestamos' => $totalPrestamos,
+            'valor_total_prestado' => $valorTotalPrestado,
+            'prestamos_pendientes' => $prestamosPendientes,
+            'prestamos_pagados' => $prestamosPagados
+        ]);
     }
 
     /**

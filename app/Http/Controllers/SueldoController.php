@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Sueldo;
 use App\Models\Egreso;
+use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
@@ -22,7 +23,7 @@ class SueldoController extends Controller
         $ano = $request->input('ano', date('Y'));
         $mes = $request->input('mes', date('m'));
         
-        $query = Sueldo::query();
+        $query = Sueldo::with(['user', 'empresa']);
         
         // Aplicar filtros si están presentes
         if ($ano) {
@@ -33,10 +34,18 @@ class SueldoController extends Controller
             $query->whereMonth('fecha', $mes);
         }
         
-        $sueldos = $query->with('user')->orderBy('fecha', 'desc')->get();
+        // Filtro por empresa
+        if ($request->filled('empresa_id')) {
+            $query->where('empresa_id', $request->empresa_id);
+        }
+        
+        $sueldos = $query->orderBy('fecha', 'desc')->get();
         $totalSueldos = $sueldos->sum('valor');
         
-        return view('sueldos.index', compact('sueldos', 'totalSueldos'));
+        // Obtener todas las empresas para el filtro
+        $empresas = Empresa::orderBy('nombre')->get();
+        
+        return view('sueldos.index', compact('sueldos', 'totalSueldos', 'empresas'));
     }
 
     /**
@@ -62,6 +71,7 @@ class SueldoController extends Controller
 
             $request->validate([
                 'user_id' => 'required|exists:users,id',
+                'empresa_id' => 'nullable|exists:empresas,id',
                 'fecha' => 'required|date',
                 'descripcion' => 'required|string',
                 'valor' => 'required|numeric'
@@ -69,6 +79,7 @@ class SueldoController extends Controller
 
             $sueldo = Sueldo::create([
                 'user_id' => $request->user_id,
+                'empresa_id' => $request->empresa_id,
                 'fecha' => $request->fecha,
                 'descripcion' => $request->descripcion,
                 'valor' => $request->valor
@@ -144,6 +155,7 @@ class SueldoController extends Controller
         try {
             $request->validate([
                 'user_id' => 'required|exists:users,id',
+                'empresa_id' => 'nullable|exists:empresas,id',
                 'fecha' => 'required|date',
                 'descripcion' => 'required|string',
                 'valor' => 'required|numeric'
@@ -153,6 +165,7 @@ class SueldoController extends Controller
             
             $sueldo->update([
                 'user_id' => $request->user_id,
+                'empresa_id' => $request->empresa_id,
                 'fecha' => $request->fecha,
                 'descripcion' => $request->descripcion,
                 'valor' => $request->valor
