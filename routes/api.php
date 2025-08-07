@@ -49,7 +49,9 @@ Route::get('/sueldos/registros-cobro', [SueldoController::class, 'getRegistrosCo
 Route::get('/sueldos/total-registros-cobro', [SueldoController::class, 'getTotalRegistrosCobro']);
 Route::post('/sueldos/datos-rol-pagos', [SueldoController::class, 'getDatosRolPagos']);
 
-Route::get('/prestamos/egresos-locales', [PrestamoController::class, 'getEgresosLocales']);
+Route::get('/prestamos/pagos-locales', [PrestamoController::class, 'getPagosLocales']);
+Route::post('/prestamos/pagos', [PrestamoController::class, 'storePago']);
+Route::get('/prestamos/{prestamo}/resumen-pagos', [PrestamoController::class, 'getResumenPagos']);
 
 Route::post('/inventario/restaurar/{id}', [InventarioController::class, 'restaurar']);
 Route::post('/inventario/restar/{id}', [InventarioController::class, 'restar']);

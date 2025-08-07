@@ -53,14 +53,14 @@
         }
     </style>
 
-    {{-- Tarjetas de Resumen de Egresos --}}
+    {{-- Tarjetas de Resumen de Pagos --}}
     <div class="row mb-4">
         <div class="col-md-12">
-            <div class="info-box bg-purple">
-                <span class="info-box-icon"><i class="fas fa-sign-out-alt"></i></span>
+            <div class="info-box bg-success">
+                <span class="info-box-icon"><i class="fas fa-dollar-sign"></i></span>
                 <div class="info-box-content">
-                    <span class="info-box-text">EGRESOS (PRÉSTAMOS DESDE ENE 2025)</span>
-                    <span class="info-box-number" id="summary-egresos-mes-actual">CARGANDO...</span>
+                    <span class="info-box-text">PAGOS DE PRÉSTAMOS - MES ACTUAL</span>
+                    <span class="info-box-number" id="summary-pagos-mes-actual">CARGANDO...</span>
                 </div>
             </div>
         </div>
@@ -78,7 +78,7 @@
                     <div class="form-group">
                         <label for="filtro-empresa">FILTRAR POR EMPRESA:</label>
                         <select class="form-control" id="filtro-empresa">
-                            <option value="TODAS">TODAS LAS EMPRESAS</option>
+                            <option value="todas">TODAS LAS EMPRESAS</option>
                             @foreach($empresas as $emp)
                                 <option value="{{ $emp->id }}" data-nombre="{{ $emp->nombre }}">{{ $emp->nombre }}</option>
                             @endforeach
@@ -90,10 +90,10 @@
     </div>
     {{-- Fin Filtro de Empresa --}}
 
-    {{-- Tarjeta Plegable Egresos Mes Actual --}}
-    <div class="card card-outline card-purple card-widget collapsed-card" id="card-egresos-mes-actual">
+    {{-- Tarjeta Plegable Pagos de Préstamos --}}
+    <div class="card card-outline card-purple card-widget collapsed-card" id="card-pagos-prestamos">
         <div class="card-header">
-            <h3 class="card-title">DETALLE EGRESOS (PRÉSTAMOS DESDE ENE 2025)</h3>
+            <h3 class="card-title">PAGOS DE PRÉSTAMOS - MES ACTUAL: <span id="summary-pagos-mes-actual" class="badge badge-warning">$0.00</span></h3>
             <div class="card-tools">
                 <button type="button" class="btn btn-tool" data-card-widget="collapse"><i class="fas fa-plus"></i></button>
             </div>
@@ -110,17 +110,17 @@
                             <th>USUARIO</th>
                         </tr>
                     </thead>
-                    <tbody id="desglose-egresos-mes-actual">
+                    <tbody id="desglose-pagos-prestamos">
                         <tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
-        <div class="overlay dark" id="loading-overlay-egresos-mes" style="display: none;">
+        <div class="overlay dark" id="loading-overlay-pagos" style="display: none;">
             <i class="fas fa-2x fa-sync-alt fa-spin"></i>
         </div>
     </div>
-    {{-- Fin Tarjeta Plegable Egresos Mes Actual --}}
+    {{-- Fin Tarjeta Plegable Pagos de Préstamos --}}
 
     <div class="card">
         <div class="card-header bg-primary">
@@ -266,8 +266,8 @@
 @section('js')
 @include('atajos')
     <script>
-        let detallesEgresosGlobal = [];
-        let egresosCargados = false;
+        let detallesPagosGlobal = [];
+        let pagosCargados = false;
         let empresaSeleccionada = 'TODAS';
         let empresaIdSeleccionada = 'todas';
 
@@ -276,38 +276,38 @@
             return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(number);
         }
 
-        // Función para filtrar egresos por empresa
-        function filtrarEgresosPorEmpresa(egresos, empresaId) {
-            if (empresaId === 'TODAS' || !empresaId) {
-                return egresos;
+        // Función para filtrar pagos por empresa
+        function filtrarPagosPorEmpresa(pagos, empresaId) {
+            if (empresaId === 'todas' || !empresaId) {
+                return pagos;
             }
-            return egresos.filter(egreso => egreso.empresa_id == empresaId);
+            return pagos.filter(pago => pago.empresa_id == empresaId);
         }
 
-        // Función para actualizar la visualización de egresos
-        function actualizarVisualizacionEgresos() {
-            const egresosFiltrados = filtrarEgresosPorEmpresa(detallesEgresosGlobal, empresaIdSeleccionada);
+        // Función para actualizar la visualización de pagos
+        function actualizarVisualizacionPagos() {
+            const pagosFiltrados = filtrarPagosPorEmpresa(detallesPagosGlobal, empresaIdSeleccionada);
             
             // Actualizar el resumen
-            const totalEgresosFiltrados = egresosFiltrados.reduce((sum, egreso) => sum + egreso.valorAbs, 0);
-            const summarySpan = document.getElementById('summary-egresos-mes-actual');
-            summarySpan.textContent = formatCurrency(totalEgresosFiltrados);
+            const totalPagosFiltrados = pagosFiltrados.reduce((sum, pago) => sum + parseFloat(pago.valor), 0);
+            const summarySpan = document.getElementById('summary-pagos-mes-actual');
+            summarySpan.textContent = formatCurrency(totalPagosFiltrados);
 
             // Actualizar la tabla de detalles
-            const desgloseBody = document.getElementById('desglose-egresos-mes-actual');
+            const desgloseBody = document.getElementById('desglose-pagos-prestamos');
             
-            if (egresosFiltrados.length > 0) {
-                desgloseBody.innerHTML = egresosFiltrados.map(egreso => `
+            if (pagosFiltrados.length > 0) {
+                desgloseBody.innerHTML = pagosFiltrados.map(pago => `
                     <tr>
-                        <td>${egreso.fecha}</td>
-                        <td>${egreso.empresa}</td>
-                        <td>${egreso.motivo}</td>
-                        <td class="text-danger">${formatCurrency(egreso.valor)}</td>
-                        <td>${egreso.usuario}</td>
+                        <td>${pago.fecha}</td>
+                        <td>${pago.empresa}</td>
+                        <td>${pago.motivo}</td>
+                        <td class="text-danger">${formatCurrency(pago.valor)}</td>
+                        <td>${pago.usuario}</td>
                     </tr>
                 `).join('');
             } else {
-                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY EGRESOS DE PRÉSTAMOS PARA LA EMPRESA SELECCIONADA.</td></tr>';
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY PAGOS DE PRÉSTAMOS PARA LA EMPRESA SELECCIONADA.</td></tr>';
             }
 
             // Actualizar los valores netos y deducciones
@@ -317,48 +317,19 @@
         // Genera una lista de meses/años desde Enero 2025 hasta la fecha actual
 
 
-        // Función para obtener y sumar egresos locales (resumen filtrado por préstamo)
-        async function fetchAndDisplayEgresosSummary(monthsToFetch) {
-            const summarySpan = document.getElementById('summary-egresos-mes-actual');
+        // Función combinada para cargar todos los datos de pagos
+        async function cargarDatosPagos() {
+            const summarySpan = document.getElementById('summary-pagos-mes-actual');
+            const desgloseBody = document.getElementById('desglose-pagos-prestamos');
+            const loadingOverlay = document.getElementById('loading-overlay-pagos');
+
+            // Mostrar estado de carga
             summarySpan.textContent = 'CARGANDO...';
-
-            try {
-                let totalEgresosPrestamo = 0;
-                
-                // Hacer consultas para cada mes
-                for (const { year, month } of monthsToFetch) {
-                    const url = `/api/prestamos/egresos-locales?ano=${year}&mes=${month}`;
-                    
-                    try {
-                        const response = await fetch(url);
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data.success) {
-                                totalEgresosPrestamo += parseFloat(data.total_egresos || 0);
-                            }
-                        }
-                    } catch (error) {
-                        console.error(`Error al obtener egresos para ${month}/${year}:`, error);
-                    }
-                }
-                
-                summarySpan.textContent = formatCurrency(totalEgresosPrestamo);
-            } catch (error) {
-                console.error('Error al obtener egresos (resumen préstamo):', error);
-                summarySpan.textContent = 'ERROR';
-            }
-        }
-
-        // Función para obtener y mostrar detalles de egresos (tabla filtrada por préstamo)
-        async function fetchAndDisplayDetallesEgresos() {
-            const desgloseBody = document.getElementById('desglose-egresos-mes-actual');
-            const loadingOverlay = document.getElementById('loading-overlay-egresos-mes');
-
             desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
             loadingOverlay.style.display = 'flex';
 
             try {
-                const response = await fetch('/api/prestamos/egresos-locales', {
+                const response = await fetch('/api/prestamos/pagos-locales', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -371,43 +342,30 @@
                 }
 
                 const data = await response.json();
-                let todosLosEgresos = data.egresos || [];
+                let todosLosPagos = data.pagos || [];
 
-                // Procesar egresos con empresa
-                todosLosEgresos = todosLosEgresos.map(egreso => ({
-                    ...egreso,
-                    empresa: egreso.empresa || 'N/A',
-                    valorAbs: parseFloat(egreso.valor || 0)
+                // Procesar pagos con empresa
+                todosLosPagos = todosLosPagos.map(pago => ({
+                    ...pago,
+                    empresa: pago.empresa || 'N/A',
+                    valorAbs: parseFloat(pago.valor || 0)
                 }));
 
-                // Filtrar por motivo que contenga "prestamo"
-                const egresosFiltrados = todosLosEgresos.filter(egreso =>
-                    egreso.motivo && egreso.motivo.toLowerCase().includes('prestamo')
-                );
+                // Guardar datos globalmente
+                detallesPagosGlobal = todosLosPagos;
+                pagosCargados = true;
 
-                detallesEgresosGlobal = egresosFiltrados;
-                egresosCargados = true;
-                actualizarVisualizacionEgresos();
+                // Actualizar resumen
+                const totalPagos = data.total_pagos || 0;
+                summarySpan.textContent = formatCurrency(totalPagos);
 
-                // Ordenar por fecha descendente
-                egresosFiltrados.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
+                // Actualizar visualización con filtros aplicados
+                actualizarVisualizacionPagos();
 
-                if (egresosFiltrados.length > 0) {
-                    desgloseBody.innerHTML = egresosFiltrados.map(egreso => `
-                        <tr>
-                            <td>${egreso.fecha}</td>
-                            <td>${egreso.empresa}</td>
-                            <td>${egreso.motivo}</td>
-                            <td class="text-danger">${formatCurrency(egreso.valor)}</td>
-                            <td>${egreso.usuario}</td>
-                        </tr>
-                    `).join('');
-                } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY EGRESOS DE PRÉSTAMOS REGISTRADOS.</td></tr>';
-                }
             } catch (error) {
-                console.error('Error al obtener detalles de egresos (préstamo):', error);
-                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DETALLES DE EGRESOS DE PRÉSTAMOS.</td></tr>';
+                console.error('Error al obtener pagos de préstamos:', error);
+                summarySpan.textContent = 'ERROR AL CARGAR';
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS DE PAGOS.</td></tr>';
             } finally {
                 loadingOverlay.style.display = 'none';
             }
@@ -456,63 +414,66 @@
                 const $deduccionesCell = $rowNode.find('td.prestamo-deducciones');
                 const $cuotasCell = $rowNode.find('td.prestamo-cuotas');
 
-                // Filtrar deducciones por empresa seleccionada
-                const egresosFiltrados = empresaIdSeleccionada === 'todas' 
-                    ? detallesEgresosGlobal 
-                    : detallesEgresosGlobal.filter(egreso => egreso.empresa_id == empresaIdSeleccionada);
+                // Filtrar pagos por empresa seleccionada
+                const pagosFiltrados = empresaIdSeleccionada === 'todas' 
+                    ? detallesPagosGlobal 
+                    : detallesPagosGlobal.filter(pago => pago.empresa_id == empresaIdSeleccionada);
 
-                let totalDeducciones = 0;
-                let deduccionesDetalladas = [];
+                let totalPagos = 0;
 
-                // Función interna para verificar relación y guardar deducción
-                const verificarYGuardarDeduccion = (item, tipo) => {
-                    const motivoItemNormalizado = normalizarTexto(item.motivo);
-                    let relacionado = false;
+                let totalPagos = 0;
+                let pagosDetallados = [];
 
+                // Buscar pagos relacionados con este préstamo
+                const prestamoId = $rowNode.data('prestamo-id');
+                const pagosRelacionados = pagosFiltrados.filter(pago => {
+                    // Si el pago tiene prestamo_id, verificar coincidencia directa
+                    if (pago.prestamo_id) {
+                        return pago.prestamo_id == prestamoId;
+                    }
+                    
+                    // Si no, usar lógica de texto (compatibilidad con datos antiguos)
+                    const motivoPagoNormalizado = normalizarTexto(pago.motivo);
+                    
                     // Opción 1: Contiene nombre de usuario?
-                    if (usuarioNombreNormalizado.length > 0 && motivoItemNormalizado.includes(usuarioNombreNormalizado)) {
-                        relacionado = true;
+                    if (usuarioNombreNormalizado.length > 0 && motivoPagoNormalizado.includes(usuarioNombreNormalizado)) {
+                        return true;
                     }
+                    
                     // Opción 2: Comparte palabra clave?
-                    if (!relacionado && palabrasClavePrestamo.length > 0) {
-                        const palabrasClaveItem = obtenerPalabrasClave(item.motivo);
-                        if (palabrasClavePrestamo.some(p => palabrasClaveItem.includes(p))) {
-                            relacionado = true;
-                        }
+                    if (palabrasClavePrestamo.length > 0) {
+                        const palabrasClavePago = obtenerPalabrasClave(pago.motivo);
+                        return palabrasClavePrestamo.some(p => palabrasClavePago.includes(p));
                     }
-
-                    if (relacionado) {
-                        deduccionesDetalladas.push({
-                            fecha: item.fecha,
-                            tipo: tipo,
-                            valor: item.valorAbs,
-                            motivo: item.motivo,
-                            empresa: item.empresa
-                        });
-                    }
-                };
-
-                // Procesar Egresos filtrados
-                egresosFiltrados.forEach(egreso => {
-                    verificarYGuardarDeduccion(egreso, 'Egreso');
+                    
+                    return false;
                 });
 
-                // Calcular total de deducciones
-                totalDeducciones = deduccionesDetalladas.reduce((sum, d) => sum + d.valor, 0);
+                // Procesar pagos relacionados
+                pagosRelacionados.forEach(pago => {
+                    pagosDetallados.push({
+                        fecha: pago.fecha,
+                        tipo: 'Pago',
+                        valor: parseFloat(pago.valor),
+                        motivo: pago.motivo,
+                        empresa: pago.empresa,
+                        usuario: pago.usuario
+                    });
+                });
+
+                // Calcular total de pagos
+                totalPagos = pagosDetallados.reduce((sum, d) => sum + d.valor, 0);
                 
-                // Obtener valor neto original de la base de datos
-                const valorNetoOriginal = valorNetoBD;
-                
-                // Calcular valor neto actualizado (valor neto original - deducciones)
-                const valorNetoActualizado = valorNetoOriginal - totalDeducciones;
+                // Calcular valor neto actualizado (valor neto original - pagos)
+                const valorNetoActualizado = valorNetoOriginal - totalPagos;
                 
                 // Crear contenido detallado para la celda de valor neto
                 let valorNetoHtml = `
                     <div class="d-flex flex-column">
                         <div><strong>NETO ORIGINAL:</strong> ${formatCurrency(valorNetoOriginal)}</div>
-                        <div><strong>DEDUCCIONES${empresaIdSeleccionada !== 'todas' ? ' (' + empresaSeleccionada + ')' : ''}:</strong> ${formatCurrency(totalDeducciones)}</div>
+                        <div><strong>PAGOS${empresaIdSeleccionada !== 'todas' ? ' (' + empresaSeleccionada + ')' : ''}:</strong> ${formatCurrency(totalPagos)}</div>
                         <div class="border-top pt-1 mt-1">
-                            <strong>NETO ACTUAL:</strong> ${formatCurrency(valorNetoActualizado)}
+                            <strong>SALDO PENDIENTE:</strong> ${formatCurrency(valorNetoActualizado)}
                         </div>
                     </div>
                 `;
@@ -521,8 +482,8 @@
                 
                 const cuotasTotal = cuotasBD;
                 
-                // Cuotas pagadas = número de deducciones según el filtro
-                const cuotasPagadas = deduccionesDetalladas.length;
+                // Cuotas pagadas = número de pagos según el filtro
+                const cuotasPagadas = pagosDetallados.length;
                 
                 // Cuotas pendientes
                 const cuotasPendientes = Math.max(0, cuotasTotal - cuotasPagadas);
@@ -550,32 +511,33 @@
                 }
                 $cuotasCell.html(cuotasHtml);
 
-                // Construir lista HTML para deducciones
-                let deduccionesHtml = '<span class="text-muted">NINGUNA</span>';
-                if (deduccionesDetalladas.length > 0) {
-                    // Ordenar deducciones por fecha para mostrarlas cronológicamente
-                    deduccionesDetalladas.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+                // Construir lista HTML para pagos
+                let pagosHtml = '<span class="text-muted">NINGÚN PAGO</span>';
+                if (pagosDetallados.length > 0) {
+                    // Ordenar pagos por fecha para mostrarlas cronológicamente
+                    pagosDetallados.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
-                    deduccionesHtml = '<ul class="list-unstyled mb-0" style="font-size: 0.8em;">';
-                    deduccionesDetalladas.forEach(d => {
-                        deduccionesHtml += `
+                    pagosHtml = '<ul class="list-unstyled mb-0" style="font-size: 0.8em;">';
+                    pagosDetallados.forEach(d => {
+                        pagosHtml += `
                             <li class="mb-1">
-                                <div><strong>${d.fecha}</strong> (${d.tipo}): ${formatCurrency(d.valor)}</div>
+                                <div><strong>${d.fecha}</strong>: ${formatCurrency(d.valor)}</div>
                                 <div class="text-muted" style="font-size: 0.9em;">
                                     Empresa: ${d.empresa}<br>
-                                    Motivo: ${d.motivo}
+                                    Motivo: ${d.motivo}<br>
+                                    Usuario: ${d.usuario}
                                 </div>
                             </li>`;
                     });
                     // Agregar línea separadora y total
-                    deduccionesHtml += `
+                    pagosHtml += `
                         <li class="mt-2 pt-2 border-top">
-                            <strong>TOTAL DEDUCCIONES${empresaIdSeleccionada !== 'todas' ? ' (' + empresaSeleccionada + ')' : ''}: ${formatCurrency(totalDeducciones)}</strong>
+                            <strong>TOTAL PAGOS${empresaIdSeleccionada !== 'todas' ? ' (' + empresaSeleccionada + ')' : ''}: ${formatCurrency(totalPagos)}</strong>
                         </li>
                     </ul>`;
                 }
 
-                $deduccionesCell.html(deduccionesHtml);
+                $deduccionesCell.html(pagosHtml);
                 $deduccionesCell.tooltip('dispose');
             });
         }
@@ -600,12 +562,11 @@
             $('#filtro-empresa').on('change', function() {
                 empresaIdSeleccionada = $(this).val();
                 empresaSeleccionada = $(this).find('option:selected').text();
-                actualizarVisualizacionEgresos();
+                actualizarVisualizacionPagos();
             });
 
-            // Cargar datos de egresos
-            fetchAndDisplayEgresosSummary();
-            fetchAndDisplayDetallesEgresos();
+            // Cargar datos de pagos
+            cargarDatosPagos();
 
             // Inicializar select2 para los combobox de usuarios
             $('#user_id').select2({

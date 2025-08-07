@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Prestamo;
 use App\Models\Empresa;
+use App\Models\PagoPrestamo;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class PrestamoController extends Controller
@@ -76,56 +78,50 @@ class PrestamoController extends Controller
     }
 
     /**
-     * Obtiene los egresos locales de préstamos para un período específico
+     * Obtiene los pagos de préstamos locales para un período específico
      */
-    public function getEgresosLocales(Request $request)
+    public function getPagosLocales(Request $request)
     {
         try {
-            $request->validate([
-                'ano' => 'required|integer',
-                'mes' => 'required|integer|min:1|max:12',
-                'empresa_id' => 'nullable|exists:empresas,id'
-            ]);
+            $currentYear = date('Y');
+            $currentMonth = date('n');
+            
+            $ano = $request->get('ano', $currentYear);
+            $mes = $request->get('mes', $currentMonth);
+            $empresaId = $request->get('empresa_id');
 
-            $ano = $request->ano;
-            $mes = $request->mes;
-            $empresaId = $request->empresa_id;
+            // Consultar pagos de préstamos
+            $query = PagoPrestamo::with(['prestamo', 'empresa', 'user'])
+                ->whereYear('fecha_pago', $ano)
+                ->whereMonth('fecha_pago', $mes);
 
-            // Consultar egresos que contengan "prestamo" en el motivo
-            $query = \DB::table('egresos')
-                ->leftJoin('empresas', 'egresos.empresa_id', '=', 'empresas.id')
-                ->leftJoin('users', 'egresos.user_id', '=', 'users.id')
-                ->whereYear('egresos.created_at', $ano)
-                ->whereMonth('egresos.created_at', $mes)
-                ->where('egresos.motivo', 'LIKE', '%prestamo%')
-                ->select(
-                    'egresos.*',
-                    'empresas.nombre as empresa',
-                    'users.name as usuario',
-                    \DB::raw('DATE(egresos.created_at) as fecha'),
-                    \DB::raw('TIME(egresos.created_at) as hora')
-                );
-
-            if ($empresaId) {
-                $query->where('egresos.empresa_id', $empresaId);
+            if ($empresaId && $empresaId !== 'todas') {
+                $query->where('empresa_id', $empresaId);
             }
 
-            $egresos = $query->orderBy('egresos.created_at', 'desc')->get();
+            $pagos = $query->orderBy('fecha_pago', 'desc')
+                          ->orderBy('created_at', 'desc')
+                          ->get();
 
-            $totalEgresos = $egresos->sum('valor');
+            $totalPagos = $pagos->sum('valor');
 
             return response()->json([
                 'success' => true,
-                'total_egresos' => $totalEgresos,
-                'egresos' => $egresos->map(function ($egreso) {
+                'total_pagos' => $totalPagos,
+                'pagos' => $pagos->map(function ($pago) {
                     return [
-                        'id' => $egreso->id,
-                        'fecha' => $egreso->fecha,
-                        'hora' => $egreso->hora,
-                        'empresa' => $egreso->empresa ?? 'SIN ESPECIFICAR',
-                        'motivo' => $egreso->motivo,
-                        'valor' => $egreso->valor,
-                        'usuario' => $egreso->usuario ?? 'DESCONOCIDO'
+                        'id' => $pago->id,
+                        'fecha' => $pago->fecha_pago->format('Y-m-d'),
+                        'hora' => $pago->created_at->format('H:i:s'),
+                        'empresa' => $pago->empresa->nombre ?? 'SIN ESPECIFICAR',
+                        'empresa_id' => $pago->empresa_id,
+                        'motivo' => $pago->motivo ?? 'Pago préstamo: ' . ($pago->prestamo->motivo ?? ''),
+                        'valor' => $pago->valor,
+                        'usuario' => $pago->user->name ?? 'DESCONOCIDO',
+                        'prestamo_id' => $pago->prestamo_id,
+                        'prestamo_usuario' => $pago->prestamo->user->name ?? 'N/A',
+                        'observaciones' => $pago->observaciones,
+                        'estado' => $pago->estado
                     ];
                 })
             ]);
@@ -133,7 +129,92 @@ class PrestamoController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'mensaje' => 'Error al obtener egresos: ' . $e->getMessage()
+                'mensaje' => 'Error al obtener pagos de préstamos: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Registrar un nuevo pago de préstamo
+     */
+    public function storePago(Request $request)
+    {
+        try {
+            $request->validate([
+                'prestamo_id' => 'required|exists:prestamos,id',
+                'empresa_id' => 'required|exists:empresas,id',
+                'valor' => 'required|numeric|min:0.01',
+                'fecha_pago' => 'required|date',
+                'motivo' => 'nullable|string|max:255',
+                'observaciones' => 'nullable|string'
+            ]);
+
+            $pago = PagoPrestamo::create([
+                'prestamo_id' => $request->prestamo_id,
+                'empresa_id' => $request->empresa_id,
+                'user_id' => auth()->id(),
+                'valor' => $request->valor,
+                'fecha_pago' => $request->fecha_pago,
+                'motivo' => $request->motivo,
+                'observaciones' => $request->observaciones,
+                'estado' => 'pagado'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'mensaje' => 'Pago registrado exitosamente',
+                'pago' => $pago->load(['prestamo', 'empresa', 'user'])
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'Error al registrar el pago: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtener resumen de pagos por préstamo
+     */
+    public function getResumenPagos($prestamoId)
+    {
+        try {
+            $prestamo = Prestamo::with(['pagos.empresa', 'pagos.user', 'user'])->findOrFail($prestamoId);
+
+            return response()->json([
+                'success' => true,
+                'prestamo' => [
+                    'id' => $prestamo->id,
+                    'usuario' => $prestamo->user->name,
+                    'valor_original' => $prestamo->valor,
+                    'valor_neto' => $prestamo->valor_neto,
+                    'cuotas_totales' => $prestamo->cuotas,
+                    'motivo' => $prestamo->motivo,
+                    'total_pagado' => $prestamo->total_pagado,
+                    'saldo_pendiente' => $prestamo->saldo_pendiente,
+                    'cuotas_pagadas' => $prestamo->cuotas_pagadas,
+                    'cuotas_pendientes' => $prestamo->cuotas_pendientes,
+                    'estado' => $prestamo->estado_prestamo
+                ],
+                'pagos' => $prestamo->pagos->map(function ($pago) {
+                    return [
+                        'id' => $pago->id,
+                        'fecha' => $pago->fecha_pago->format('Y-m-d'),
+                        'empresa' => $pago->empresa->nombre,
+                        'valor' => $pago->valor,
+                        'motivo' => $pago->motivo,
+                        'usuario' => $pago->user->name,
+                        'observaciones' => $pago->observaciones,
+                        'estado' => $pago->estado
+                    ];
+                })
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'Error al obtener resumen: ' . $e->getMessage()
             ], 500);
         }
     }
