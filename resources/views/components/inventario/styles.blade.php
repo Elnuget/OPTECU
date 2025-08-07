@@ -231,5 +231,31 @@
         .empty-space td.editable:hover {
             background-color: #dee2e6;
         }
+
+        /* Estilos para resaltar resultados de búsqueda */
+        .highlight-search {
+            background-color: #fff3cd !important;
+            border: 2px solid #ffc107 !important;
+        }
+
+        .highlight-search:hover {
+            background-color: #ffeeba !important;
+        }
+
+        /* Mejorar la visibilidad del filtro de empresas */
+        .empresa-filter-info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 0.375rem;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Estilos para mejorar la búsqueda */
+        .search-results-counter {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
     </style>
 @endpush 

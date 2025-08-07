@@ -29,7 +29,7 @@
             </h5>
         </div>
         <div class="card-body p-0">
-            <table class="table table-hover mb-0" style="width: 100%">
+            <table class="table table-hover inventario-table mb-0" style="width: 100%">
                 <thead>
                     <tr>
                         <th style="width: 10%">Número</th>

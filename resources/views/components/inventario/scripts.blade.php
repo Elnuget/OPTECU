@@ -1,6 +1,14 @@
 @push('js')
     <script>
         $(document).ready(function() {
+            // Verificar si DataTables está disponible
+            if (typeof $.fn.DataTable === 'undefined') {
+                console.warn('DataTables no está cargad            }
+
+            // Función para actualizar contador de resultados;
+                return;
+            }
+
             // Función para guardar el estado de las tablas y la posición del scroll
             function saveState() {
                 // Guardar qué tablas están expandidas
@@ -40,16 +48,26 @@
 
             // Función para inicializar DataTables de forma segura
             function initializeDataTables() {
+                // Verificar que DataTables esté disponible
+                if (typeof $.fn.DataTable === 'undefined') {
+                    console.warn('DataTables no disponible para inicialización');
+                    return;
+                }
+
                 // Destruir instancias existentes de DataTables antes de reinicializar
-                $('.table').each(function() {
+                $('.inventario-table').each(function() {
                     if ($.fn.DataTable.isDataTable(this)) {
-                        $(this).DataTable().destroy();
+                        try {
+                            $(this).DataTable().destroy();
+                        } catch (e) {
+                            console.warn('Error destruyendo DataTable:', e);
+                        }
                     }
                 });
 
                 // Esperar un momento para que el DOM se estabilice
                 setTimeout(function() {
-                    $('.table').each(function() {
+                    $('.inventario-table').each(function() {
                         const $table = $(this);
                         
                         // Verificar que la tabla tenga la estructura correcta
@@ -78,19 +96,39 @@
                                     responsive: false, // Desactivar responsive para evitar conflictos
                                     autoWidth: false,
                                     language: {
-                                        search: "Buscar:",
+                                        search: "Buscar en esta tabla:",
                                         zeroRecords: "No se encontraron registros coincidentes",
-                                        searchPlaceholder: "Buscar en esta columna..."
+                                        searchPlaceholder: "Buscar número, código, lugar, empresa..."
                                     },
                                     columnDefs: [
                                         {
                                             targets: 0, // Primera columna (NÚMERO)
                                             type: 'num',
+                                        },
+                                        {
+                                            targets: 4, // Columna empresa
+                                            type: 'string',
                                         }
+                                    ],
+                                    // Mejorar búsqueda para incluir todos los campos
+                                    searchCols: [
+                                        null, // Número
+                                        null, // Lugar  
+                                        null, // Columna
+                                        null, // Código
+                                        null, // Empresa
+                                        null, // Cantidad
+                                        null  // Acciones
                                     ],
                                     // Guardar estado cuando se dibuja la tabla
                                     drawCallback: function() {
                                         saveState();
+                                        
+                                        // Actualizar contador de resultados si hay búsqueda activa
+                                        const searchTerm = $('#busquedaGlobal').val();
+                                        if (searchTerm && searchTerm.length > 0) {
+                                            updateSearchResultsCounter();
+                                        }
                                     }
                                 });
                             } catch (error) {
@@ -133,6 +171,17 @@
 
             // Botón buscar y expandir
             $('#buscarExpandir').on('click', function() {
+                const searchTerm = $('#busquedaGlobal').val().toLowerCase().trim();
+                
+                if (searchTerm === '') {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Búsqueda vacía',
+                        text: 'Ingrese un término de búsqueda'
+                    });
+                    return;
+                }
+                
                 // Expandir todas las tarjetas
                 $('.collapse').collapse('show');
                 $('.transition-icon').addClass('fa-rotate-180');
@@ -143,25 +192,102 @@
                     initializeDataTables();
                     
                     // Realizar la búsqueda después de reinicializar
-                    let searchTerm = $('#busquedaGlobal').val().toLowerCase();
-                    $('.table').each(function() {
+                    let totalMatches = 0;
+                    $('.inventario-table').each(function() {
                         if ($.fn.DataTable.isDataTable(this)) {
-                            $(this).DataTable().search(searchTerm).draw();
+                            const table = $(this).DataTable();
+                            table.search(searchTerm).draw();
+                            
+                            // Contar coincidencias visibles
+                            const visibleRows = table.rows({search: 'applied'}).count();
+                            totalMatches += visibleRows;
                         }
                     });
+                    
+                    // Resaltar resultados
+                    $('.inventario-table tbody tr').removeClass('highlight-search');
+                    $('.inventario-table tbody tr:visible').each(function() {
+                        let row = $(this);
+                        let rowText = row.text().toLowerCase();
+                        if (rowText.includes(searchTerm)) {
+                            row.addClass('highlight-search');
+                        }
+                    });
+                    
+                    // Mostrar resultado de la búsqueda
+                    if (totalMatches > 0) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Búsqueda completada',
+                            text: `Se encontraron ${totalMatches} coincidencias para "${searchTerm}"`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Sin resultados',
+                            text: `No se encontraron coincidencias para "${searchTerm}"`
+                        });
+                    }
                 }, 500);
                 
                 saveState();
             });
 
+            // Función para actualizar contador de resultados
+            function updateSearchResultsCounter() {
+                let totalResults = 0;
+                $('.inventario-table').each(function() {
+                    if ($.fn.DataTable.isDataTable(this)) {
+                        const table = $(this).DataTable();
+                        const visibleRows = table.rows({search: 'applied'}).count();
+                        totalResults += visibleRows;
+                    }
+                });
+                
+                // Mostrar contador si existe
+                let counter = $('.search-results-counter');
+                if (counter.length === 0) {
+                    $('#busquedaGlobal').parent().append('<div class="search-results-counter"></div>');
+                    counter = $('.search-results-counter');
+                }
+                
+                const searchTerm = $('#busquedaGlobal').val();
+                if (searchTerm && searchTerm.length > 0) {
+                    counter.text(`${totalResults} resultados encontrados`).show();
+                } else {
+                    counter.hide();
+                }
+            }
+
             // Búsqueda global
             $('#busquedaGlobal').on('keyup', function() {
                 let searchTerm = $(this).val().toLowerCase();
-                $('.table').each(function() {
+                $('.inventario-table').each(function() {
                     if ($.fn.DataTable.isDataTable(this)) {
+                        // Aplicar búsqueda global en todas las columnas
                         $(this).DataTable().search(searchTerm).draw();
                     }
                 });
+                
+                // Actualizar contador de resultados
+                updateSearchResultsCounter();
+                
+                // Marcar resultados encontrados
+                if (searchTerm.length > 0) {
+                    $('.inventario-table tbody tr:visible').each(function() {
+                        let row = $(this);
+                        let rowText = row.text().toLowerCase();
+                        if (rowText.includes(searchTerm)) {
+                            row.addClass('highlight-search');
+                        } else {
+                            row.removeClass('highlight-search');
+                        }
+                    });
+                } else {
+                    $('.inventario-table tbody tr').removeClass('highlight-search');
+                }
             });
 
             // Manejar la rotación del icono en los headers de las tarjetas
