@@ -249,144 +249,212 @@
             $('#ganancia-neta').html('<i class="fas fa-spinner fa-spin"></i>');
             $('#margen').html('<i class="fas fa-spinner fa-spin"></i>');
 
-            // Simular carga de datos (aquí deberías hacer una llamada AJAX real)
-            setTimeout(() => {
-                // Datos de ejemplo - deberían venir del servidor
-                const ingresos = 150000;
-                const egresos = 80000;
-                const ganancia = ingresos - egresos;
-                const margen = ingresos > 0 ? ((ganancia / ingresos) * 100).toFixed(1) : 0;
+            // Cargar datos financieros reales
+            $.ajax({
+                url: '{{ route("egresos.datos-financieros") }}',
+                method: 'GET',
+                data: {
+                    ano: ano,
+                    mes: mes,
+                    empresa: empresa
+                },
+                success: function(data) {
+                    $('#ingresos-mes').text('$ ' + number_format(data.ingresos));
+                    $('#egresos-mes').text('$ ' + number_format(data.egresos));
+                    $('#ganancia-neta').text('$ ' + number_format(data.ganancia));
+                    $('#margen').text(data.margen + '%');
 
-                $('#ingresos-mes').text('$ ' + number_format(ingresos));
-                $('#egresos-mes').text('$ ' + number_format(egresos));
-                $('#ganancia-neta').text('$ ' + number_format(ganancia));
-                $('#margen').text(margen + '%');
-
-                // Actualizar gráficos
-                actualizarGraficos();
-                cargarMovimientos();
-            }, 1000);
+                    // Actualizar gráficos
+                    actualizarGraficos();
+                    cargarMovimientos();
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error al cargar datos financieros:', error);
+                    $('#ingresos-mes').text('Error');
+                    $('#egresos-mes').text('Error');
+                    $('#ganancia-neta').text('Error');
+                    $('#margen').text('Error');
+                }
+            });
         }
 
         function actualizarGraficos() {
-            // Datos de ejemplo para los gráficos
-            const datosIngresoEgreso = {
-                labels: ['Ingresos', 'Egresos'],
-                datasets: [{
-                    data: [150000, 80000],
-                    backgroundColor: ['#28a745', '#ffc107'],
-                    borderWidth: 2
-                }]
-            };
+            const ano = $('#ano').val();
+            const mes = $('#mes').val();
+            const empresa = $('#empresa').val();
 
-            const datosDistribucion = {
-                labels: ['Sueldos', 'Gastos Operativos', 'Inventario', 'Otros'],
-                datasets: [{
-                    data: [40000, 20000, 15000, 5000],
-                    backgroundColor: ['#dc3545', '#6f42c1', '#fd7e14', '#6c757d'],
-                    borderWidth: 2
-                }]
-            };
+            // Cargar datos para gráficos
+            $.ajax({
+                url: '{{ route("egresos.graficos-financieros") }}',
+                method: 'GET',
+                data: {
+                    ano: ano,
+                    mes: mes,
+                    empresa: empresa
+                },
+                success: function(data) {
+                    // Destruir gráficos existentes
+                    if (chartIngresosEgresos) {
+                        chartIngresosEgresos.destroy();
+                    }
+                    if (chartDistribucionEgresos) {
+                        chartDistribucionEgresos.destroy();
+                    }
 
-            // Destruir gráficos existentes
-            if (chartIngresosEgresos) {
-                chartIngresosEgresos.destroy();
-            }
-            if (chartDistribucionEgresos) {
-                chartDistribucionEgresos.destroy();
-            }
+                    // Preparar datos para gráfico de ingresos vs egresos
+                    const datosIngresoEgreso = {
+                        labels: data.ingresoEgreso.labels,
+                        datasets: [{
+                            label: 'Ingresos',
+                            data: data.ingresoEgreso.ingresos,
+                            backgroundColor: '#28a745',
+                            borderWidth: 2
+                        }, {
+                            label: 'Egresos',
+                            data: data.ingresoEgreso.egresos,
+                            backgroundColor: '#ffc107',
+                            borderWidth: 2
+                        }]
+                    };
 
-            // Crear gráfico de Ingresos vs Egresos
-            const ctx1 = document.getElementById('chartIngresosEgresos').getContext('2d');
-            chartIngresosEgresos = new Chart(ctx1, {
-                type: 'bar',
-                data: datosIngresoEgreso,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return '$ ' + number_format(value);
+                    // Preparar datos para distribución de egresos
+                    const datosDistribucion = {
+                        labels: data.distribucion.labels,
+                        datasets: [{
+                            data: data.distribucion.data,
+                            backgroundColor: [
+                                '#dc3545', '#6f42c1', '#fd7e14', '#6c757d', 
+                                '#20c997', '#e83e8c', '#17a2b8', '#28a745',
+                                '#ffc107', '#f8f9fa'
+                            ],
+                            borderWidth: 2
+                        }]
+                    };
+
+                    // Crear gráfico de Ingresos vs Egresos
+                    const ctx1 = document.getElementById('chartIngresosEgresos').getContext('2d');
+                    chartIngresosEgresos = new Chart(ctx1, {
+                        type: 'bar',
+                        data: datosIngresoEgreso,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return '$ ' + number_format(value);
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
-                }
-            });
+                    });
 
-            // Crear gráfico de Distribución de Egresos
-            const ctx2 = document.getElementById('chartDistribucionEgresos').getContext('2d');
-            chartDistribucionEgresos = new Chart(ctx2, {
-                type: 'doughnut',
-                data: datosDistribucion,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
+                    // Crear gráfico de Distribución de Egresos
+                    const ctx2 = document.getElementById('chartDistribucionEgresos').getContext('2d');
+                    chartDistribucionEgresos = new Chart(ctx2, {
+                        type: 'doughnut',
+                        data: datosDistribucion,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
                         }
-                    }
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error al cargar gráficos:', error);
                 }
             });
         }
 
         function cargarMovimientos() {
-            // Simular datos de movimientos recientes
-            const movimientos = [
-                {
-                    fecha: '2025-08-06',
-                    tipo: 'Ingreso',
-                    concepto: 'Venta de productos',
-                    usuario: 'Juan Pérez',
-                    empresa: 'ESCLERÓPTICA',
-                    monto: 15000
+            const ano = $('#ano').val();
+            const mes = $('#mes').val();
+            const empresa = $('#empresa').val();
+
+            // Cargar movimientos recientes reales
+            $.ajax({
+                url: '{{ route("egresos.movimientos-recientes") }}',
+                method: 'GET',
+                data: {
+                    ano: ano,
+                    mes: mes,
+                    empresa: empresa
                 },
-                {
-                    fecha: '2025-08-05',
-                    tipo: 'Egreso',
-                    concepto: 'Pago de sueldo',
-                    usuario: 'María García',
-                    empresa: 'ESCLERÓPTICA',
-                    monto: -8000
+                success: function(movimientos) {
+                    const tbody = $('#tabla-movimientos tbody');
+                    tbody.empty();
+
+                    if (movimientos.length === 0) {
+                        tbody.append(`
+                            <tr>
+                                <td colspan="6" class="text-center">No hay movimientos para mostrar</td>
+                            </tr>
+                        `);
+                        return;
+                    }
+
+                    movimientos.forEach(mov => {
+                        const row = `
+                            <tr>
+                                <td>${mov.fecha}</td>
+                                <td>
+                                    <span class="badge ${mov.tipo === 'Ingreso' ? 'badge-success' : 'badge-danger'}">
+                                        ${mov.tipo}
+                                    </span>
+                                </td>
+                                <td>${mov.concepto}</td>
+                                <td>${mov.usuario}</td>
+                                <td>${mov.empresa}</td>
+                                <td class="text-right ${mov.monto >= 0 ? 'text-success' : 'text-danger'}">
+                                    $ ${number_format(Math.abs(mov.monto))}
+                                </td>
+                            </tr>
+                        `;
+                        tbody.append(row);
+                    });
+
+                    // Reinicializar DataTable
+                    if ($.fn.DataTable.isDataTable('#tabla-movimientos')) {
+                        $('#tabla-movimientos').DataTable().destroy();
+                    }
+                    
+                    $('#tabla-movimientos').DataTable({
+                        "language": {
+                            "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
+                        },
+                        "order": [[ 0, "desc" ]],
+                        "pageLength": 10
+                    });
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error al cargar movimientos:', error);
+                    const tbody = $('#tabla-movimientos tbody');
+                    tbody.empty();
+                    tbody.append(`
+                        <tr>
+                            <td colspan="6" class="text-center text-danger">Error al cargar movimientos</td>
+                        </tr>
+                    `);
                 }
-            ];
-
-            const tbody = $('#tabla-movimientos tbody');
-            tbody.empty();
-
-            movimientos.forEach(mov => {
-                const row = `
-                    <tr>
-                        <td>${mov.fecha}</td>
-                        <td>
-                            <span class="badge ${mov.tipo === 'Ingreso' ? 'badge-success' : 'badge-danger'}">
-                                ${mov.tipo}
-                            </span>
-                        </td>
-                        <td>${mov.concepto}</td>
-                        <td>${mov.usuario}</td>
-                        <td>${mov.empresa}</td>
-                        <td class="text-right ${mov.monto >= 0 ? 'text-success' : 'text-danger'}">
-                            $ ${number_format(Math.abs(mov.monto))}
-                        </td>
-                    </tr>
-                `;
-                tbody.append(row);
             });
         }
 
         function limpiarFiltros() {
             $('#ano').val(new Date().getFullYear());
-            $('#mes').val(new Date().getMonth() + 1);
+            $('#mes').val('{{ date("n") }}');
             $('#empresa').val('');
             cargarDatos();
         }

@@ -66,6 +66,12 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
     // Egresos - Solo para administradores
     Route::get('/egresos/finanzas', [EgresoController::class, 'finanzas'])
         ->name('egresos.finanzas');
+    Route::get('/egresos/datos-financieros', [EgresoController::class, 'getDatosFinancieros'])
+        ->name('egresos.datos-financieros');
+    Route::get('/egresos/graficos-financieros', [EgresoController::class, 'getGraficosFinancieros'])
+        ->name('egresos.graficos-financieros');
+    Route::get('/egresos/movimientos-recientes', [EgresoController::class, 'getMovimientosRecientes'])
+        ->name('egresos.movimientos-recientes');
     Route::get('/egresos/pedidos-usuario', [EgresoController::class, 'getPedidosPorUsuario'])
         ->name('egresos.pedidos-usuario');
     Route::get('/egresos/ultimo-sueldo-usuario', [EgresoController::class, 'getUltimoSueldoUsuario'])
