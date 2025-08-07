@@ -18,7 +18,7 @@
             </div>
             <div class="col-md-6">
                 <label for="numero_orden">Número de Orden</label>
-                <input type="text" name="numero_orden" class="form-control" value="{{ $pedido->numero_orden }}">
+                <input type="number" name="numero_orden" class="form-control" value="{{ $pedido->numero_orden }}">
             </div>
         </div>
         <div class="row mb-3">
