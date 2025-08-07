@@ -67,7 +67,7 @@
     </div>
     {{-- Fin Tarjetas de Resumen --}}
 
-    {{-- Filtro de Sucursal --}}
+    {{-- Filtro de Empresa --}}
     <div class="card card-outline card-purple mb-4">
         <div class="card-header">
             <h3 class="card-title">FILTROS</h3>
@@ -76,19 +76,19 @@
             <div class="row">
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label for="filtro-sucursal">FILTRAR POR SUCURSAL:</label>
-                        <select class="form-control" id="filtro-sucursal">
-                            <option value="TODAS" {{ $sucursalPorDefecto == 'TODAS' ? 'selected' : '' }}>TODAS LAS SUCURSALES</option>
-                            <option value="MATRIZ" {{ $sucursalPorDefecto == 'MATRIZ' ? 'selected' : '' }}>MATRIZ</option>
-                            <option value="ROCÍO" {{ $sucursalPorDefecto == 'ROCÍO' ? 'selected' : '' }}>ROCÍO</option>
-                            <option value="NORTE" {{ $sucursalPorDefecto == 'NORTE' ? 'selected' : '' }}>NORTE</option>
+                        <label for="filtro-empresa">FILTRAR POR EMPRESA:</label>
+                        <select class="form-control" id="filtro-empresa">
+                            <option value="TODAS">TODAS LAS EMPRESAS</option>
+                            @foreach($empresas as $emp)
+                                <option value="{{ $emp->id }}" data-nombre="{{ $emp->nombre }}">{{ $emp->nombre }}</option>
+                            @endforeach
                         </select>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    {{-- Fin Filtro de Sucursal --}}
+    {{-- Fin Filtro de Empresa --}}
 
     {{-- Tarjeta Plegable Egresos Mes Actual --}}
     <div class="card card-outline card-purple card-widget collapsed-card" id="card-egresos-mes-actual">
@@ -104,7 +104,7 @@
                     <thead>
                         <tr>
                             <th>FECHA</th>
-                            <th>SUCURSAL</th>
+                            <th>EMPRESA</th>
                             <th>MOTIVO</th>
                             <th>VALOR</th>
                             <th>USUARIO</th>
@@ -268,24 +268,25 @@
     <script>
         let detallesEgresosGlobal = [];
         let egresosCargados = false;
-        let sucursalSeleccionada = '{{ $sucursalPorDefecto }}';
+        let empresaSeleccionada = 'TODAS';
+        let empresaIdSeleccionada = 'todas';
 
         // Función para formatear números como moneda
         function formatCurrency(number) {
             return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(number);
         }
 
-        // Función para filtrar egresos por sucursal
-        function filtrarEgresosPorSucursal(egresos, sucursal) {
-            if (sucursal === 'TODAS') {
+        // Función para filtrar egresos por empresa
+        function filtrarEgresosPorEmpresa(egresos, empresaId) {
+            if (empresaId === 'TODAS' || !empresaId) {
                 return egresos;
             }
-            return egresos.filter(egreso => egreso.sucursal === sucursal);
+            return egresos.filter(egreso => egreso.empresa_id == empresaId);
         }
 
         // Función para actualizar la visualización de egresos
         function actualizarVisualizacionEgresos() {
-            const egresosFiltrados = filtrarEgresosPorSucursal(detallesEgresosGlobal, sucursalSeleccionada);
+            const egresosFiltrados = filtrarEgresosPorEmpresa(detallesEgresosGlobal, empresaIdSeleccionada);
             
             // Actualizar el resumen
             const totalEgresosFiltrados = egresosFiltrados.reduce((sum, egreso) => sum + egreso.valorAbs, 0);
@@ -299,14 +300,14 @@
                 desgloseBody.innerHTML = egresosFiltrados.map(egreso => `
                     <tr>
                         <td>${egreso.fecha}</td>
-                        <td>${egreso.sucursal}</td>
+                        <td>${egreso.empresa}</td>
                         <td>${egreso.motivo}</td>
                         <td class="text-danger">${formatCurrency(egreso.valor)}</td>
                         <td>${egreso.usuario}</td>
                     </tr>
                 `).join('');
             } else {
-                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY EGRESOS DE PRÉSTAMOS PARA LA SUCURSAL SELECCIONADA.</td></tr>';
+                desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY EGRESOS DE PRÉSTAMOS PARA LA EMPRESA SELECCIONADA.</td></tr>';
             }
 
             // Actualizar los valores netos y deducciones
@@ -314,60 +315,33 @@
         }
 
         // Genera una lista de meses/años desde Enero 2025 hasta la fecha actual
-        function getMonthsToFetch() {
-            const months = [];
-            const startYear = 2025;
-            const startMonth = 1; // Enero
-            const currentDate = new Date();
-            const endYear = currentDate.getFullYear();
-            const endMonth = currentDate.getMonth() + 1;
 
-            for (let year = startYear; year <= endYear; year++) {
-                const monthStart = (year === startYear) ? startMonth : 1;
-                const monthEnd = (year === endYear) ? endMonth : 12;
-                for (let month = monthStart; month <= monthEnd; month++) {
-                    months.push({ year, month });
-                }
-            }
-            // Asegurarse de que al menos el mes actual se incluya si estamos antes de 2025
-            if (months.length === 0 && endYear < startYear) {
-                 months.push({ year: endYear, month: endMonth });
-            } else if (months.length === 0 && endYear === startYear && endMonth < startMonth) {
-                 months.push({ year: endYear, month: endMonth });
-            }
-            return months;
-        }
 
-        // Función para obtener y sumar egresos (resumen filtrado por préstamo)
+        // Función para obtener y sumar egresos locales (resumen filtrado por préstamo)
         async function fetchAndDisplayEgresosSummary(monthsToFetch) {
-             const urls = [];
-             const sucursales = [
-                { domain: 'opticas.xyz', name: 'MATRIZ' },
-                { domain: 'escleroptica2.opticas.xyz', name: 'ROCÍO' },
-                { domain: 'sucursal3.opticas.xyz', name: 'NORTE' }
-            ];
-
-            monthsToFetch.forEach(({ year, month }) => {
-                sucursales.forEach(suc => {
-                    urls.push(`https://${suc.domain}/api/egresos?ano=${year}&mes=${month}`);
-                });
-            });
-
             const summarySpan = document.getElementById('summary-egresos-mes-actual');
             summarySpan.textContent = 'CARGANDO...';
 
-             try {
-                const results = await Promise.all(urls.map(url => fetch(url).then(resp => resp.ok ? resp.json() : {total_egresos: 0, egresos: []}).catch(() => ({ total_egresos: 0, egresos: [] }))));
+            try {
                 let totalEgresosPrestamo = 0;
-                results.forEach(data => {
-                    // Sumar solo los egresos cuyo motivo incluya "prestamo"
-                    if(data.egresos && data.egresos.length > 0) {
-                        const egresosFiltrados = data.egresos.filter(egreso =>
-                            egreso.motivo.toLowerCase().includes('prestamo')
-                        );
-                        totalEgresosPrestamo += egresosFiltrados.reduce((sum, egreso) => sum + parseFloat(egreso.valor || 0), 0);
+                
+                // Hacer consultas para cada mes
+                for (const { year, month } of monthsToFetch) {
+                    const url = `/api/prestamos/egresos-locales?ano=${year}&mes=${month}`;
+                    
+                    try {
+                        const response = await fetch(url);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.success) {
+                                totalEgresosPrestamo += parseFloat(data.total_egresos || 0);
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Error al obtener egresos para ${month}/${year}:`, error);
                     }
-                });
+                }
+                
                 summarySpan.textContent = formatCurrency(totalEgresosPrestamo);
             } catch (error) {
                 console.error('Error al obtener egresos (resumen préstamo):', error);
@@ -376,20 +350,7 @@
         }
 
         // Función para obtener y mostrar detalles de egresos (tabla filtrada por préstamo)
-        async function fetchAndDisplayDetallesEgresos(monthsToFetch) {
-             const urls = [];
-             const sucursales = [
-                { domain: 'opticas.xyz', name: 'MATRIZ' },
-                { domain: 'escleroptica2.opticas.xyz', name: 'ROCÍO' },
-                { domain: 'sucursal3.opticas.xyz', name: 'NORTE' }
-            ];
-
-             monthsToFetch.forEach(({ year, month }) => {
-                sucursales.forEach(suc => {
-                     urls.push({ url: `https://${suc.domain}/api/egresos?ano=${year}&mes=${month}`, sucursal: suc.name });
-                });
-            });
-
+        async function fetchAndDisplayDetallesEgresos() {
             const desgloseBody = document.getElementById('desglose-egresos-mes-actual');
             const loadingOverlay = document.getElementById('loading-overlay-egresos-mes');
 
@@ -397,53 +358,58 @@
             loadingOverlay.style.display = 'flex';
 
             try {
-                 const results = await Promise.all(urls.map(item => fetch(item.url)
-                                            .then(resp => resp.ok ? resp.json() : {egresos: []})
-                                            .then(data => ({ ...data, sucursal: item.sucursal }))
-                                            .catch(() => ({ egresos: [], sucursal: item.sucursal }))));
-
-                let todosLosEgresos = [];
-                results.forEach(data => {
-                    if (data.egresos && data.egresos.length > 0) {
-                        const egresosConSucursal = data.egresos.map(egreso => ({
-                            ...egreso,
-                            sucursal: data.sucursal,
-                            valorAbs: parseFloat(egreso.valor || 0)
-                        }));
-                        todosLosEgresos = todosLosEgresos.concat(egresosConSucursal);
+                const response = await fetch('/api/prestamos/egresos-locales', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     }
                 });
 
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+
+                const data = await response.json();
+                let todosLosEgresos = data.egresos || [];
+
+                // Procesar egresos con empresa
+                todosLosEgresos = todosLosEgresos.map(egreso => ({
+                    ...egreso,
+                    empresa: egreso.empresa || 'N/A',
+                    valorAbs: parseFloat(egreso.valor || 0)
+                }));
+
                 // Filtrar por motivo que contenga "prestamo"
                 const egresosFiltrados = todosLosEgresos.filter(egreso =>
-                    egreso.motivo.toLowerCase().includes('prestamo')
+                    egreso.motivo && egreso.motivo.toLowerCase().includes('prestamo')
                 );
 
                 detallesEgresosGlobal = egresosFiltrados;
                 egresosCargados = true;
                 actualizarVisualizacionEgresos();
 
-                 // Ordenar por fecha descendente
-                 egresosFiltrados.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
+                // Ordenar por fecha descendente
+                egresosFiltrados.sort((a, b) => new Date(b.fecha + ' ' + (b.hora || '00:00:00')) - new Date(a.fecha + ' ' + (a.hora || '00:00:00')));
 
                 if (egresosFiltrados.length > 0) {
                     desgloseBody.innerHTML = egresosFiltrados.map(egreso => `
                         <tr>
                             <td>${egreso.fecha}</td>
-                            <td>${egreso.sucursal}</td>
+                            <td>${egreso.empresa}</td>
                             <td>${egreso.motivo}</td>
                             <td class="text-danger">${formatCurrency(egreso.valor)}</td>
                             <td>${egreso.usuario}</td>
                         </tr>
                     `).join('');
                 } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY EGRESOS DE PRÉSTAMOS REGISTRADOS DESDE ENE 2025.</td></tr>';
+                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY EGRESOS DE PRÉSTAMOS REGISTRADOS.</td></tr>';
                 }
             } catch (error) {
                 console.error('Error al obtener detalles de egresos (préstamo):', error);
                 desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DETALLES DE EGRESOS DE PRÉSTAMOS.</td></tr>';
             } finally {
-                 loadingOverlay.style.display = 'none';
+                loadingOverlay.style.display = 'none';
             }
         }
 
@@ -490,10 +456,10 @@
                 const $deduccionesCell = $rowNode.find('td.prestamo-deducciones');
                 const $cuotasCell = $rowNode.find('td.prestamo-cuotas');
 
-                // Filtrar deducciones por sucursal seleccionada
-                const egresosFiltrados = sucursalSeleccionada === 'TODAS' 
+                // Filtrar deducciones por empresa seleccionada
+                const egresosFiltrados = empresaIdSeleccionada === 'todas' 
                     ? detallesEgresosGlobal 
-                    : detallesEgresosGlobal.filter(egreso => egreso.sucursal === sucursalSeleccionada);
+                    : detallesEgresosGlobal.filter(egreso => egreso.empresa_id == empresaIdSeleccionada);
 
                 let totalDeducciones = 0;
                 let deduccionesDetalladas = [];
@@ -521,7 +487,7 @@
                             tipo: tipo,
                             valor: item.valorAbs,
                             motivo: item.motivo,
-                            sucursal: item.sucursal
+                            empresa: item.empresa
                         });
                     }
                 };
@@ -544,7 +510,7 @@
                 let valorNetoHtml = `
                     <div class="d-flex flex-column">
                         <div><strong>NETO ORIGINAL:</strong> ${formatCurrency(valorNetoOriginal)}</div>
-                        <div><strong>DEDUCCIONES${sucursalSeleccionada !== 'TODAS' ? ' (' + sucursalSeleccionada + ')' : ''}:</strong> ${formatCurrency(totalDeducciones)}</div>
+                        <div><strong>DEDUCCIONES${empresaIdSeleccionada !== 'todas' ? ' (' + empresaSeleccionada + ')' : ''}:</strong> ${formatCurrency(totalDeducciones)}</div>
                         <div class="border-top pt-1 mt-1">
                             <strong>NETO ACTUAL:</strong> ${formatCurrency(valorNetoActualizado)}
                         </div>
@@ -567,7 +533,7 @@
                     cuotasHtml = `
                         <div class="d-flex flex-column">
                             <div><strong>CUOTAS TOTALES:</strong> ${cuotasTotal}</div>
-                            <div><strong>PAGADAS${sucursalSeleccionada !== 'TODAS' ? ' (' + sucursalSeleccionada + ')' : ''}:</strong> ${cuotasPagadas} de ${cuotasTotal}</div>
+                            <div><strong>PAGADAS${empresaIdSeleccionada !== 'todas' ? ' (' + empresaSeleccionada + ')' : ''}:</strong> ${cuotasPagadas} de ${cuotasTotal}</div>
                             <div><strong>PENDIENTES:</strong> ${cuotasPendientes}</div>
                             <div class="progress mt-1" style="height: 10px;">
                                 <div class="progress-bar bg-success" role="progressbar" 
@@ -596,7 +562,7 @@
                             <li class="mb-1">
                                 <div><strong>${d.fecha}</strong> (${d.tipo}): ${formatCurrency(d.valor)}</div>
                                 <div class="text-muted" style="font-size: 0.9em;">
-                                    Sucursal: ${d.sucursal}<br>
+                                    Empresa: ${d.empresa}<br>
                                     Motivo: ${d.motivo}
                                 </div>
                             </li>`;
@@ -604,7 +570,7 @@
                     // Agregar línea separadora y total
                     deduccionesHtml += `
                         <li class="mt-2 pt-2 border-top">
-                            <strong>TOTAL DEDUCCIONES${sucursalSeleccionada !== 'TODAS' ? ' (' + sucursalSeleccionada + ')' : ''}: ${formatCurrency(totalDeducciones)}</strong>
+                            <strong>TOTAL DEDUCCIONES${empresaIdSeleccionada !== 'todas' ? ' (' + empresaSeleccionada + ')' : ''}: ${formatCurrency(totalDeducciones)}</strong>
                         </li>
                     </ul>`;
                 }
@@ -630,18 +596,16 @@
                 $('#valor_neto').val(valorOriginal);
             });
 
-            // Evento para el cambio de sucursal
-            $('#filtro-sucursal').on('change', function() {
-                sucursalSeleccionada = $(this).val();
+            // Evento para el cambio de empresa
+            $('#filtro-empresa').on('change', function() {
+                empresaIdSeleccionada = $(this).val();
+                empresaSeleccionada = $(this).find('option:selected').text();
                 actualizarVisualizacionEgresos();
             });
 
-            // Obtener lista de meses a consultar (desde Ene 2025 hasta actual)
-            const monthsToFetch = getMonthsToFetch();
-
-            // Cargar datos de egresos para el rango de fechas
-            fetchAndDisplayEgresosSummary(monthsToFetch);
-            fetchAndDisplayDetallesEgresos(monthsToFetch);
+            // Cargar datos de egresos
+            fetchAndDisplayEgresosSummary();
+            fetchAndDisplayDetallesEgresos();
 
             // Inicializar select2 para los combobox de usuarios
             $('#user_id').select2({

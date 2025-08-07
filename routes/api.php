@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CashHistoryController;
 use App\Http\Controllers\Api\HistorialClinicoController;
 use App\Http\Controllers\SueldoController;
 use App\Http\Controllers\InventarioController;
+use App\Http\Controllers\PrestamoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +48,8 @@ Route::get('/historiales-clinicos/buscar-nombre-completo/{nombreCompleto}', [His
 Route::get('/sueldos/registros-cobro', [SueldoController::class, 'getRegistrosCobro']);
 Route::get('/sueldos/total-registros-cobro', [SueldoController::class, 'getTotalRegistrosCobro']);
 Route::post('/sueldos/datos-rol-pagos', [SueldoController::class, 'getDatosRolPagos']);
+
+Route::get('/prestamos/egresos-locales', [PrestamoController::class, 'getEgresosLocales']);
 
 Route::post('/inventario/restaurar/{id}', [InventarioController::class, 'restaurar']);
 Route::post('/inventario/restar/{id}', [InventarioController::class, 'restar']);
