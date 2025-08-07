@@ -31,22 +31,14 @@
             return fecha.toLocaleTimeString('es-EC', options);
         }
 
-        static getSucursalName(url) {
-            // Asegurarnos de que la URL sea una cadena y la convertimos a minúsculas
-            const urlLower = (url || '').toLowerCase();
-            
-            console.log('Detectando sucursal para URL:', urlLower); // Debug
-
-            // Orden específico de verificación para evitar falsos positivos
-            if (urlLower.includes('escleroptica2.opticas.xyz')) {
-                return 'ROCÍO';
-            } else if (urlLower.includes('sucursal3.opticas.xyz')) {
-                return 'NORTE';
-            } else if (urlLower.includes('opticas.xyz')) {
-                return 'MATRIZ';
+        static getEmpresaName(empresaId) {
+            // Obtener el nombre de la empresa desde el select
+            const selectEmpresa = document.getElementById('filtroEmpresa');
+            if (empresaId && selectEmpresa) {
+                const option = selectEmpresa.querySelector(`option[value="${empresaId}"]`);
+                return option ? option.textContent : 'DESCONOCIDA';
             }
-            
-            return 'DESCONOCIDA';
+            return 'TODAS';
         }
 
         static agruparPorFecha(items, fechaKey = 'fecha') {
@@ -65,7 +57,7 @@
         }
     }
 
-    class RolPagosAPI {
+    class RolPagosLocal {
         constructor(userId, nombre) {
             this.userId = userId;
             this.nombre = nombre;
@@ -83,155 +75,53 @@
             };
         }
 
-        static getApiUrls(tipo) {
-            const sucursal = document.getElementById('filtroSucursal').value;
-            const urls = [];
+        async obtenerDatosLocales(ano, mes) {
+            try {
+                const empresaId = document.getElementById('filtroEmpresa')?.value || '';
+                
+                const response = await fetch('/api/sueldos/datos-rol-pagos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({
+                        user_id: this.userId,
+                        ano: ano,
+                        mes: mes,
+                        empresa_id: empresaId
+                    })
+                });
 
-            // Modificamos el orden y la lógica de las URLs
-            if (sucursal === '' || sucursal === 'matriz') {
-                urls.push(`https://opticas.xyz/api/${tipo}`);
-            }
-            if (sucursal === '' || sucursal === 'rocio') {
-                urls.push(`https://escleroptica2.opticas.xyz/api/${tipo}`);
-            }
-            if (sucursal === '' || sucursal === 'norte') {
-                urls.push(`https://sucursal3.opticas.xyz/api/${tipo}`);
-            }
-
-            console.log('URLs generadas para', tipo, ':', urls); // Debug
-            return urls;
-        }
-
-        async obtenerRetiros(ano, mes) {
-            const urls = RolPagosAPI.getApiUrls('caja/retiros').map(url => `${url}?ano=${ano}&mes=${mes}`);
-            
-            this.data.retiros = [];
-            this.data.retiros_total = 0;
-            
-            for (const url of urls) {
-                try {
-                    const response = await fetch(url);
-                    const data = await response.json();
-                    if (data.retiros) {
-                        const retirosEmpleado = data.retiros
-                            .filter(retiro => 
-                                retiro.usuario.toLowerCase() === this.nombre.toLowerCase() &&
-                                !retiro.motivo.toLowerCase().includes('deposito') &&
-                                !retiro.motivo.toLowerCase().includes('depósito')
-                            )
-                            .map(retiro => {
-                                const sucursal = RolPagosUtils.getSucursalName(url);
-                                console.log('Retiro procesado:', { url, sucursal }); // Debug
-                                return {
-                                    ...retiro,
-                                    url,
-                                    sucursal
-                                };
-                            });
-                        
-                        this.data.retiros.push(...retirosEmpleado);
-                        this.data.retiros_total += retirosEmpleado.reduce((sum, retiro) => 
-                            sum + Math.abs(parseFloat(retiro.valor)), 0
-                        );
-                    }
-                } catch (error) {
-                    console.error('Error al obtener retiros:', error);
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
                 }
-            }
-        }
 
-        async obtenerPedidos(ano, mes) {
-            const urls = RolPagosAPI.getApiUrls('pedidos').map(url => `${url}?ano=${ano}&mes=${mes}`);
-            
-            this.data.pedidos = [];
-            this.data.pedidos_total = 0;
-            
-            for (const url of urls) {
-                try {
-                    const response = await fetch(url);
-                    const data = await response.json();
-                    if (data.success && data.data.pedidos) {
-                        const pedidosEmpleado = data.data.pedidos
-                            .filter(pedido => pedido.usuario.toLowerCase() === this.nombre.toLowerCase())
-                            .map(pedido => {
-                                const sucursal = RolPagosUtils.getSucursalName(url);
-                                console.log('Pedido procesado:', { url, sucursal }); // Debug
-                                return {
-                                    ...pedido,
-                                    url,
-                                    sucursal
-                                };
-                            });
-                        
-                        this.data.pedidos.push(...pedidosEmpleado);
-                        this.data.pedidos_total += pedidosEmpleado.reduce((sum, pedido) => 
-                            sum + parseFloat(pedido.total), 0
-                        );
-                    }
-                } catch (error) {
-                    console.error('Error al obtener pedidos:', error);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.data.retiros = data.data.retiros || [];
+                    this.data.retiros_total = data.data.retiros_total || 0;
+                    this.data.pedidos = data.data.pedidos || [];
+                    this.data.pedidos_total = data.data.pedidos_total || 0;
+                    this.data.historial = data.data.historial || { ingresos: 0, egresos: 0 };
+                    this.data.movimientos = data.data.movimientos || [];
+                    this.data.registrosCobro = data.data.registrosCobro || [];
                 }
-            }
-        }
-
-        async obtenerHistorial(ano, mes) {
-            const urls = RolPagosAPI.getApiUrls('caja/historial').map(url => `${url}?ano=${ano}&mes=${mes}`);
-            
-            this.data.historial = { ingresos: 0, egresos: 0 };
-            this.data.movimientos = [];
-            
-            for (const url of urls) {
-                try {
-                    const response = await fetch(url);
-                    const data = await response.json();
-                    if (data.success && data.data.movimientos) {
-                        const movimientosEmpleado = data.data.movimientos
-                            .filter(mov => mov.usuario.toLowerCase() === this.nombre.toLowerCase())
-                            .map(mov => {
-                                const sucursal = RolPagosUtils.getSucursalName(url);
-                                console.log('Movimiento procesado:', { url, sucursal }); // Debug
-                                return {
-                                    ...mov,
-                                    url,
-                                    sucursal,
-                                    valor_editable: '0.00' // Agregamos el campo para el valor editable
-                                };
-                            });
-                        
-                        movimientosEmpleado.forEach(mov => {
-                            const monto = Math.abs(parseFloat(mov.monto));
-                            if (mov.descripcion === 'Apertura') {
-                                this.data.historial.ingresos += monto;
-                            } else {
-                                this.data.historial.egresos += monto;
-                            }
-                        });
-                        
-                        this.data.movimientos.push(...movimientosEmpleado);
-                    }
-                } catch (error) {
-                    console.error('Error al obtener historial:', error);
-                }
+            } catch (error) {
+                console.error('Error al obtener datos locales:', error);
+                throw error;
             }
         }
 
         async obtenerRegistrosCobro(ano, mes) {
             try {
-                // Obtener los registros de cobro
-                const responseRegistros = await fetch(`/api/sueldos/registros-cobro?ano=${ano}&mes=${mes}&user_id=${this.userId}`);
-                const dataRegistros = await responseRegistros.json();
-                
-                if (dataRegistros.success) {
-                    this.data.registrosCobro = dataRegistros.data;
-                }
-
-                // Obtener el total de registros de cobro
-                const responseTotal = await fetch(`/api/sueldos/total-registros-cobro?ano=${ano}&mes=${mes}&user_id=${this.userId}`);
-                const dataTotal = await responseTotal.json();
-                
-                if (dataTotal.success) {
-                    // Actualizar el total en la interfaz
-                    document.getElementById(`total_registros_${this.userId}`).textContent = `$${parseFloat(dataTotal.total).toFixed(2)}`;
+                // Los registros de cobro ya están incluidos en obtenerDatosLocales
+                // Solo necesitamos actualizar el total en la interfaz si existe
+                const totalElement = document.getElementById(`total_registros_${this.userId}`);
+                if (totalElement) {
+                    const total = this.data.registrosCobro.reduce((sum, registro) => sum + parseFloat(registro.valor), 0);
+                    totalElement.textContent = `$${total.toFixed(2)}`;
                 }
             } catch (error) {
                 console.error('Error al obtener registros de cobro:', error);
@@ -243,53 +133,17 @@
                 const mes = document.getElementById('filtroMes').value;
                 const ano = document.getElementById('filtroAno').value;
                 
-                // Filtrar datos por mes y año considerando la zona horaria
-                const pedidosFiltrados = this.data.pedidos.filter(pedido => {
-                    const fecha = new Date(pedido.fecha);
-                    const fechaEcuador = new Date(fecha.getTime() - (5 * 60 * 60 * 1000));
-                    const mesPedido = (fechaEcuador.getMonth() + 1).toString().padStart(2, '0');
-                    const anoPedido = fechaEcuador.getFullYear().toString();
-                    return mesPedido === mes && anoPedido === ano;
-                });
-
-                const retirosFiltrados = this.data.retiros.filter(retiro => {
-                    const fecha = new Date(retiro.fecha);
-                    const fechaEcuador = new Date(fecha.getTime() - (5 * 60 * 60 * 1000));
-                    const mesRetiro = (fechaEcuador.getMonth() + 1).toString().padStart(2, '0');
-                    const anoRetiro = fechaEcuador.getFullYear().toString();
-                    return mesRetiro === mes && anoRetiro === ano;
-                });
-
-                // Calcular totales solo con los datos filtrados
-                const totalPedidos = pedidosFiltrados.reduce((sum, pedido) => 
-                    sum + parseFloat(pedido.total), 0
-                );
-
-                const totalRetiros = retirosFiltrados.reduce((sum, retiro) => 
-                    sum + Math.abs(parseFloat(retiro.valor)), 0
-                );
+                // Calcular totales
+                const totalPedidos = this.data.pedidos_total;
+                const totalRetiros = this.data.retiros_total;
 
                 // Actualizar período y total
                 document.getElementById(`periodo_${this.userId}`).textContent = `${mes}/${ano}`;
                 document.getElementById(`total_${this.userId}`).textContent = RolPagosUtils.formatCurrency(totalPedidos || 0);
 
-                // Agrupar datos por fecha
-                const movimientosPorFecha = this.agruparMovimientosPorFecha();
-                const pedidosPorFecha = RolPagosUtils.agruparPorFecha(pedidosFiltrados);
-                const retirosPorFecha = RolPagosUtils.agruparPorFecha(retirosFiltrados);
-                
-                // Generar filas
-                const todasLasFechas = new Set([
-                    ...Object.keys(movimientosPorFecha),
-                    ...Object.keys(pedidosPorFecha),
-                    ...Object.keys(retirosPorFecha)
-                ]);
-
-                const filas = this.generarFilasTabla(Array.from(todasLasFechas), {
-                    movimientosPorFecha,
-                    pedidosPorFecha,
-                    retirosPorFecha
-                });
+                // Generar filas de la tabla basándose en los movimientos locales
+                const todasLasFechas = this.obtenerFechasUnicas();
+                const filas = this.generarFilasTablaLocal(todasLasFechas);
 
                 document.getElementById(`desglose_${this.userId}`).innerHTML = filas.join('');
 
@@ -300,35 +154,34 @@
             }
         }
 
-        agruparMovimientosPorFecha() {
-            const movimientosPorFecha = {};
+        obtenerFechasUnicas() {
+            const fechas = new Set();
             
+            // Agregar fechas de movimientos
             this.data.movimientos.forEach(mov => {
-                // Convertir la fecha a la zona horaria de Ecuador
                 const fecha = new Date(mov.fecha);
-                const fechaEcuador = new Date(fecha.getTime() - (5 * 60 * 60 * 1000));
-                const fechaKey = fechaEcuador.toISOString().split('T')[0];
-                
-                if (!movimientosPorFecha[fechaKey]) {
-                    movimientosPorFecha[fechaKey] = {
-                        matriz: { apertura: null, cierre: null },
-                        rocio: { apertura: null, cierre: null },
-                        norte: { apertura: null, cierre: null }
-                    };
-                }
-                
-                const sucursalKey = mov.sucursal.toLowerCase().replace('í', 'i');
-                if (mov.descripcion === 'Apertura') {
-                    movimientosPorFecha[fechaKey][sucursalKey].apertura = mov;
-                } else {
-                    movimientosPorFecha[fechaKey][sucursalKey].cierre = mov;
-                }
+                const fechaKey = fecha.toISOString().split('T')[0];
+                fechas.add(fechaKey);
             });
             
-            return movimientosPorFecha;
+            // Agregar fechas de pedidos
+            this.data.pedidos.forEach(pedido => {
+                const fecha = new Date(pedido.fecha);
+                const fechaKey = fecha.toISOString().split('T')[0];
+                fechas.add(fechaKey);
+            });
+            
+            // Agregar fechas de retiros
+            this.data.retiros.forEach(retiro => {
+                const fecha = new Date(retiro.fecha);
+                const fechaKey = fecha.toISOString().split('T')[0];
+                fechas.add(fechaKey);
+            });
+            
+            return Array.from(fechas);
         }
 
-        generarFilasTabla(fechas, datos) {
+        generarFilasTablaLocal(fechas) {
             if (fechas.length === 0) {
                 return [`
                     <tr>
@@ -342,12 +195,11 @@
             const mesSeleccionado = document.getElementById('filtroMes').value;
             const anoSeleccionado = document.getElementById('filtroAno').value;
 
-            // Filtrar fechas que no correspondan al mes y año seleccionados
+            // Filtrar fechas que correspondan al mes y año seleccionados
             const fechasFiltradas = fechas.filter(fecha => {
                 const fechaObj = new Date(fecha);
-                const fechaEcuador = new Date(fechaObj.getTime() - (5 * 60 * 60 * 1000));
-                const mes = (fechaEcuador.getMonth() + 1).toString().padStart(2, '0');
-                const ano = fechaEcuador.getFullYear().toString();
+                const mes = (fechaObj.getMonth() + 1).toString().padStart(2, '0');
+                const ano = fechaObj.getFullYear().toString();
                 return mes === mesSeleccionado && ano === anoSeleccionado;
             });
 
@@ -362,104 +214,64 @@
             }
 
             return fechasFiltradas.sort().map(fecha => {
-                const movimientosDia = datos.movimientosPorFecha[fecha] || {
-                    matriz: { apertura: null, cierre: null },
-                    rocio: { apertura: null, cierre: null },
-                    norte: { apertura: null, cierre: null }
-                };
-                const pedidosDelDia = datos.pedidosPorFecha[fecha] || [];
-                const retirosDelDia = datos.retirosPorFecha[fecha] || [];
-                
-                const totalPedidosDia = pedidosDelDia.reduce((sum, pedido) => sum + parseFloat(pedido.total), 0);
-                const totalRetirosDia = retirosDelDia.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
+                // Obtener datos para esta fecha específica
+                const movimientosDelDia = this.data.movimientos.filter(mov => {
+                    const fechaMov = new Date(mov.fecha).toISOString().split('T')[0];
+                    return fechaMov === fecha;
+                });
 
-                let sucursalDia = this.determinarSucursalDia(movimientosDia, pedidosDelDia, retirosDelDia);
+                const pedidosDelDia = this.data.pedidos.filter(pedido => {
+                    const fechaPedido = new Date(pedido.fecha).toISOString().split('T')[0];
+                    return fechaPedido === fecha;
+                });
 
-                return this.generarFilaHTML(fecha, {
-                    movimientosDia,
-                    pedidosDelDia,
-                    retirosDelDia,
-                    totalPedidosDia,
-                    totalRetirosDia,
-                    sucursalDia
+                const retirosDelDia = this.data.retiros.filter(retiro => {
+                    const fechaRetiro = new Date(retiro.fecha).toISOString().split('T')[0];
+                    return fechaRetiro === fecha;
+                });
+
+                return this.generarFilaHTMLLocal(fecha, {
+                    movimientos: movimientosDelDia,
+                    pedidos: pedidosDelDia,
+                    retiros: retirosDelDia
                 });
             });
         }
 
-        determinarSucursalDia(movimientosDia, pedidosDelDia, retirosDelDia) {
-            let sucursales = new Set();
-            
-            // Recolectar todas las sucursales de las diferentes fuentes
-            if (movimientosDia.matriz.apertura) sucursales.add('MATRIZ');
-            if (movimientosDia.rocio.apertura) sucursales.add('ROCÍO');
-            if (movimientosDia.norte.apertura) sucursales.add('NORTE');
-            pedidosDelDia.forEach(p => sucursales.add(p.sucursal));
-            retirosDelDia.forEach(r => sucursales.add(r.sucursal));
-            
-            // Convertir el Set a Array y filtrar valores nulos o undefined
-            const sucursalesArray = Array.from(sucursales).filter(s => s);
-            
-            if (sucursalesArray.length === 0) return 'NO ESPECIFICADA';
-            if (sucursalesArray.length === 1) return sucursalesArray[0];
-            
-            // Si hay múltiples sucursales, mostrarlas todas
-            return sucursalesArray.join(' / ');
-        }
+        generarFilaHTMLLocal(fecha, datos) {
+            const { movimientos, pedidos, retiros } = datos;
 
-        generarFilaHTML(fecha, datos) {
-            const {
-                movimientosDia,
-                pedidosDelDia,
-                retirosDelDia,
-                totalPedidosDia,
-                totalRetirosDia
-            } = datos;
+            // Calcular totales del día
+            const totalPedidosDia = pedidos.reduce((sum, pedido) => sum + parseFloat(pedido.total), 0);
+            const totalRetirosDia = retiros.reduce((sum, retiro) => sum + Math.abs(parseFloat(retiro.valor)), 0);
 
-            // Obtener la fecha y hora del primer movimiento del día
-            let fechaMovimiento = fecha;
-            let horaMovimiento = '';
-            
-            // Buscar el primer movimiento del día para obtener la fecha y hora exacta
-            const sucursales = ['matriz', 'rocio', 'norte'];
-            for (const sucursal of sucursales) {
-                const movimientos = movimientosDia[sucursal];
-                if (movimientos && movimientos.apertura) {
-                    fechaMovimiento = movimientos.apertura.fecha;
-                    horaMovimiento = RolPagosUtils.formatTime(movimientos.apertura.fecha);
-                    break;
-                }
-            }
-
-            // Formatear la fecha para mostrar y para el atributo data
-            const fechaMostrar = RolPagosUtils.formatDate(fechaMovimiento);
-            const fechaParaData = fecha.split('T')[0]; // Solo la parte de la fecha sin hora
+            // Formatear la fecha para mostrar
+            const fechaMostrar = RolPagosUtils.formatDate(fecha);
 
             // Buscar si existe un registro de cobro para esta fecha
-            const registroCobro = this.data.registrosCobro.find(registro => 
-                registro.fecha.split('T')[0] === fechaParaData
-            );
+            const registroCobro = this.data.registrosCobro.find(registro => {
+                const fechaRegistro = new Date(registro.fecha).toISOString().split('T')[0];
+                return fechaRegistro === fecha;
+            });
 
             return `
                 <tr>
-                    <td data-fecha="${fechaParaData}">
+                    <td data-fecha="${fecha}">
                         ${fechaMostrar}
-                        <div class="text-muted" style="font-size: 0.85em;">
-                            <i class="fas fa-clock"></i> ${horaMovimiento}
-                        </div>
                     </td>
                     <td>
-                        ${this.generarHTMLMovimientos(movimientosDia)}
+                        ${this.generarHTMLMovimientosLocal(movimientos)}
                     </td>
                     <td>
-                        ${this.generarHTMLPedidos(pedidosDelDia, totalPedidosDia)}
+                        ${this.generarHTMLPedidosLocal(pedidos, totalPedidosDia)}
                     </td>
                     <td>
-                        ${this.generarHTMLRetiros(retirosDelDia, totalRetirosDia)}
+                        ${this.generarHTMLRetirosLocal(retiros, totalRetirosDia)}
                     </td>
                     <td>
                         <input type="number" 
                                class="form-control valor-editable" 
-                               data-fecha="${fechaParaData}"
+                               data-fecha="${fecha}"
                                value="${registroCobro ? registroCobro.valor : '0.00'}" 
                                step="0.01" 
                                min="0">
@@ -468,95 +280,78 @@
             `;
         }
 
-        generarHTMLMovimientos(movimientosDia) {
-            if (!movimientosDia) {
+        generarHTMLMovimientosLocal(movimientos) {
+            if (!movimientos || movimientos.length === 0) {
                 return '<small class="text-muted">Sin movimientos</small>';
             }
 
-            let html = '';
-            
-            // Array de sucursales para iterar
-            const sucursales = [
-                { key: 'matriz', nombre: 'MATRIZ' },
-                { key: 'rocio', nombre: 'ROCÍO' },
-                { key: 'norte', nombre: 'NORTE' }
-            ];
-
-            sucursales.forEach(({ key, nombre }) => {
-                const movimientos = movimientosDia[key];
-                if (movimientos && (movimientos.apertura || movimientos.cierre)) {
-                    html += `<div class="sucursal-movimientos mb-2">
-                        <div class="badge badge-secondary mb-1">
-                            <i class="fas fa-store-alt mr-1"></i>${nombre}
-                        </div>`;
-
-                    if (movimientos.apertura) {
-                        html += `
-                            <div class="badge badge-apertura d-block mb-1">
-                                APERTURA: ${RolPagosUtils.formatCurrency(Math.abs(movimientos.apertura.monto))}
-                                <span class="hora-movimiento">
-                                    <div class="fecha-movimiento">
-                                        <i class="fas fa-calendar-alt mr-1"></i>
-                                        ${RolPagosUtils.formatDate(movimientos.apertura.fecha)}
-                                    </div>
-                                    <div>
-                                        <i class="fas fa-clock mr-1"></i>
-                                        ${RolPagosUtils.formatTime(movimientos.apertura.fecha)}
-                                    </div>
-                                </span>
-                            </div>
-                        `;
-                    }
-                    
-                    if (movimientos.cierre) {
-                        html += `
-                            <div class="badge badge-cierre d-block">
-                                CIERRE: ${RolPagosUtils.formatCurrency(Math.abs(movimientos.cierre.monto))}
-                                <span class="hora-movimiento">
-                                    <div class="fecha-movimiento">
-                                        <i class="fas fa-calendar-alt mr-1"></i>
-                                        ${RolPagosUtils.formatDate(movimientos.cierre.fecha)}
-                                    </div>
-                                    <div>
-                                        <i class="fas fa-clock mr-1"></i>
-                                        ${RolPagosUtils.formatTime(movimientos.cierre.fecha)}
-                                    </div>
-                                </span>
-                            </div>
-                        `;
-                    }
-
-                    html += '</div>';
+            // Agrupar por empresa
+            const movimientosPorEmpresa = movimientos.reduce((acc, mov) => {
+                const empresa = mov.empresa || 'SIN ESPECIFICAR';
+                if (!acc[empresa]) {
+                    acc[empresa] = { apertura: [], cierre: [] };
                 }
-            });
-            
-            return html || '<small class="text-muted">Sin movimientos</small>';
+                
+                if (mov.descripcion && mov.descripcion.toLowerCase().includes('apertura')) {
+                    acc[empresa].apertura.push(mov);
+                } else {
+                    acc[empresa].cierre.push(mov);
+                }
+                return acc;
+            }, {});
+
+            return Object.entries(movimientosPorEmpresa).map(([empresa, movs]) => `
+                <div class="empresa-movimientos mb-2">
+                    <div class="badge badge-secondary mb-1">
+                        <i class="fas fa-building mr-1"></i>${empresa}
+                    </div>
+                    ${movs.apertura.map(mov => `
+                        <div class="badge badge-apertura d-block mb-1">
+                            APERTURA: ${RolPagosUtils.formatCurrency(Math.abs(mov.monto || 0))}
+                            <div class="mt-1">
+                                <i class="fas fa-clock mr-1"></i>
+                                ${RolPagosUtils.formatTime(mov.fecha)}
+                            </div>
+                        </div>
+                    `).join('')}
+                    ${movs.cierre.map(mov => `
+                        <div class="badge badge-cierre d-block">
+                            CIERRE: ${RolPagosUtils.formatCurrency(Math.abs(mov.monto || 0))}
+                            <div class="mt-1">
+                                <i class="fas fa-clock mr-1"></i>
+                                ${RolPagosUtils.formatTime(mov.fecha)}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('') || '<small class="text-muted">Sin movimientos</small>';
         }
 
-        generarHTMLPedidos(pedidos, total) {
+        generarHTMLPedidosLocal(pedidos, total) {
             if (pedidos.length === 0) {
                 return '<small class="text-muted">Sin pedidos</small>';
             }
 
-            // Agrupar pedidos por sucursal
-            const pedidosPorSucursal = pedidos.reduce((acc, pedido) => {
-                if (!acc[pedido.sucursal]) {
-                    acc[pedido.sucursal] = {
+            // Agrupar pedidos por empresa
+            const pedidosPorEmpresa = pedidos.reduce((acc, pedido) => {
+                const empresa = pedido.empresa || 'SIN ESPECIFICAR';
+                if (!acc[empresa]) {
+                    acc[empresa] = {
                         pedidos: [],
                         total: 0
                     };
                 }
-                acc[pedido.sucursal].pedidos.push(pedido);
-                acc[pedido.sucursal].total += parseFloat(pedido.total);
+                acc[empresa].pedidos.push(pedido);
+                acc[empresa].total += parseFloat(pedido.total);
                 return acc;
             }, {});
 
             return `
                 <div class="operaciones-container">
-                    ${Object.entries(pedidosPorSucursal).map(([sucursal, data]) => `
-                        <div class="sucursal-operaciones mb-3">
+                    ${Object.entries(pedidosPorEmpresa).map(([empresa, data]) => `
+                        <div class="empresa-operaciones mb-3">
                             <div class="badge badge-secondary mb-2">
-                                <i class="fas fa-store-alt mr-1"></i>${sucursal}
+                                <i class="fas fa-building mr-1"></i>${empresa}
                             </div>
                             <div class="pedidos-dia">
                                 <strong>Total: ${RolPagosUtils.formatCurrency(data.total)}</strong>
@@ -564,7 +359,7 @@
                                     ${data.pedidos.map(pedido => `
                                         <li>
                                             <small>
-                                                ${RolPagosUtils.formatTime(pedido.fecha)} - ${pedido.cliente}
+                                                ${RolPagosUtils.formatTime(pedido.fecha)} - ${pedido.cliente || 'Cliente no especificado'}
                                                 <span class="text-success">${RolPagosUtils.formatCurrency(pedido.total)}</span>
                                             </small>
                                         </li>
@@ -580,30 +375,31 @@
             `;
         }
 
-        generarHTMLRetiros(retiros, total) {
+        generarHTMLRetirosLocal(retiros, total) {
             if (retiros.length === 0) {
                 return '<small class="text-muted">Sin retiros</small>';
             }
 
-            // Agrupar retiros por sucursal
-            const retirosPorSucursal = retiros.reduce((acc, retiro) => {
-                if (!acc[retiro.sucursal]) {
-                    acc[retiro.sucursal] = {
+            // Agrupar retiros por empresa
+            const retirosPorEmpresa = retiros.reduce((acc, retiro) => {
+                const empresa = retiro.empresa || 'SIN ESPECIFICAR';
+                if (!acc[empresa]) {
+                    acc[empresa] = {
                         retiros: [],
                         total: 0
                     };
                 }
-                acc[retiro.sucursal].retiros.push(retiro);
-                acc[retiro.sucursal].total += Math.abs(parseFloat(retiro.valor));
+                acc[empresa].retiros.push(retiro);
+                acc[empresa].total += Math.abs(parseFloat(retiro.valor));
                 return acc;
             }, {});
 
             return `
                 <div class="operaciones-container">
-                    ${Object.entries(retirosPorSucursal).map(([sucursal, data]) => `
-                        <div class="sucursal-operaciones mb-3">
+                    ${Object.entries(retirosPorEmpresa).map(([empresa, data]) => `
+                        <div class="empresa-operaciones mb-3">
                             <div class="badge badge-secondary mb-2">
-                                <i class="fas fa-store-alt mr-1"></i>${sucursal}
+                                <i class="fas fa-building mr-1"></i>${empresa}
                             </div>
                             <div class="retiros-dia">
                                 <strong>Total: ${RolPagosUtils.formatCurrency(data.total)}</strong>
@@ -611,7 +407,7 @@
                                     ${data.retiros.map(retiro => `
                                         <li>
                                             <small>
-                                                ${RolPagosUtils.formatTime(retiro.fecha)} - ${retiro.motivo}
+                                                ${RolPagosUtils.formatTime(retiro.fecha)} - ${retiro.motivo || 'Motivo no especificado'}
                                                 <span class="text-danger">${RolPagosUtils.formatCurrency(Math.abs(retiro.valor))}</span>
                                             </small>
                                         </li>
@@ -636,16 +432,13 @@
         }
 
         try {
-            const api = new RolPagosAPI(userId, nombre);
+            const rolPagos = new RolPagosLocal(userId, nombre);
             
-            await Promise.all([
-                api.obtenerRetiros(ano, mes),
-                api.obtenerPedidos(ano, mes),
-                api.obtenerHistorial(ano, mes),
-                api.obtenerRegistrosCobro(ano, mes)
-            ]);
-
-            api.actualizarUI();
+            // Obtener todos los datos locales
+            await rolPagos.obtenerDatosLocales(ano, mes);
+            
+            // Actualizar la interfaz
+            rolPagos.actualizarUI();
         } catch (error) {
             console.error('Error al generar rol:', error);
             alert('Error al generar el rol de pagos');

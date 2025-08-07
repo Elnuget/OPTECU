@@ -343,4 +343,126 @@ class SueldoController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtiene todos los datos necesarios para el rol de pagos de forma local
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function getDatosRolPagos(Request $request)
+    {
+        try {
+            $request->validate([
+                'user_id' => 'required|exists:users,id',
+                'ano' => 'required|integer',
+                'mes' => 'required|string|size:2',
+                'empresa_id' => 'nullable|exists:empresas,id'
+            ]);
+
+            $userId = $request->user_id;
+            $ano = $request->ano;
+            $mes = $request->mes;
+            $empresaId = $request->empresa_id;
+
+            // Obtener datos de pedidos locales
+            $pedidosQuery = DB::table('pedidos')
+                ->where('user_id', $userId)
+                ->whereYear('fecha', $ano)
+                ->whereMonth('fecha', $mes);
+            
+            if ($empresaId) {
+                $pedidosQuery->where('empresa_id', $empresaId);
+            }
+            
+            $pedidos = $pedidosQuery->leftJoin('empresas', 'pedidos.empresa_id', '=', 'empresas.id')
+                ->leftJoin('clientes', 'pedidos.cliente_id', '=', 'clientes.id')
+                ->select(
+                    'pedidos.*',
+                    'empresas.nombre as empresa',
+                    'clientes.nombres as cliente'
+                )
+                ->get();
+
+            // Obtener datos de egresos/retiros locales
+            $retirosQuery = DB::table('egresos')
+                ->where('user_id', $userId)
+                ->whereYear('created_at', $ano)
+                ->whereMonth('created_at', $mes)
+                ->where(function($query) {
+                    $query->where('motivo', 'NOT LIKE', '%deposito%')
+                          ->where('motivo', 'NOT LIKE', '%depósito%');
+                });
+            
+            if ($empresaId) {
+                $retirosQuery->where('empresa_id', $empresaId);
+            }
+            
+            $retiros = $retirosQuery->leftJoin('empresas', 'egresos.empresa_id', '=', 'empresas.id')
+                ->select(
+                    'egresos.*',
+                    'empresas.nombre as empresa',
+                    'egresos.created_at as fecha',
+                    'egresos.motivo',
+                    'egresos.valor'
+                )
+                ->get();
+
+            // Obtener movimientos de caja locales (si existe la tabla)
+            $movimientos = [];
+            if (DB::getSchemaBuilder()->hasTable('cash_history')) {
+                $movimientosQuery = DB::table('cash_history')
+                    ->where('user_id', $userId)
+                    ->whereYear('created_at', $ano)
+                    ->whereMonth('created_at', $mes);
+                
+                if ($empresaId) {
+                    $movimientosQuery->where('empresa_id', $empresaId);
+                }
+                
+                $movimientos = $movimientosQuery->leftJoin('empresas', 'cash_history.empresa_id', '=', 'empresas.id')
+                    ->select(
+                        'cash_history.*',
+                        'empresas.nombre as empresa',
+                        'cash_history.created_at as fecha',
+                        DB::raw("CASE WHEN cash_history.estado = 'apertura' THEN 'Apertura' ELSE 'Cierre' END as descripcion"),
+                        'cash_history.monto'
+                    )
+                    ->get();
+            }
+
+            // Obtener registros de cobro
+            $registrosCobro = Sueldo::where('user_id', $userId)
+                ->where('descripcion', 'REGISTROCOBRO')
+                ->whereYear('fecha', $ano)
+                ->whereMonth('fecha', $mes)
+                ->get();
+
+            // Calcular totales
+            $pedidos_total = $pedidos->sum('total');
+            $retiros_total = $retiros->sum('valor');
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'pedidos' => $pedidos,
+                    'pedidos_total' => $pedidos_total,
+                    'retiros' => $retiros,
+                    'retiros_total' => $retiros_total,
+                    'movimientos' => $movimientos,
+                    'historial' => [
+                        'ingresos' => $movimientos->where('estado', 'apertura')->sum('monto'),
+                        'egresos' => $movimientos->where('estado', '!=', 'apertura')->sum('monto')
+                    ],
+                    'registrosCobro' => $registrosCobro
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener datos de rol de pagos: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'ERROR AL OBTENER LOS DATOS DEL ROL DE PAGOS: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 } 

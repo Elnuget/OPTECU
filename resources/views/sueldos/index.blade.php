@@ -47,7 +47,7 @@
 @section('content')
     @php
         $empresa = \App\Models\Empresa::first();
-        $tipoSucursal = $empresa ? $empresa->getTipoSucursal() : 'todas';
+        $empresas = \App\Models\Empresa::orderBy('nombre')->get();
         $users = \App\Models\User::orderBy('name')->get();
         $currentUser = auth()->user();
         
@@ -109,12 +109,12 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="filtroSucursal">SUCURSAL:</label>
-                                <select class="form-control" id="filtroSucursal">
-                                    <option value="">TODAS</option>
-                                    <option value="matriz">MATRIZ</option>
-                                    <option value="rocio">ROCÍO</option>
-                                    <option value="norte">NORTE</option>
+                                <label for="filtroEmpresa">EMPRESA:</label>
+                                <select class="form-control" id="filtroEmpresa">
+                                    <option value="">TODAS LAS EMPRESAS</option>
+                                    @foreach($empresas as $emp)
+                                        <option value="{{ $emp->id }}">{{ $emp->nombre }}</option>
+                                    @endforeach
                                 </select>
                             </div>
                         </div>
@@ -373,7 +373,6 @@
     @include('atajos')
     @include('components.sueldos.scripts.init')
     @include('components.sueldos.scripts.funciones')
-    @include('components.sueldos.scripts.api')
     <script>
         // Variables globales
         let selectedUserId = null;
@@ -436,14 +435,14 @@
             $(`#detalles_${userId}`).append(nuevaFila);
         };        // Funciones auxiliares para extraer texto de las celdas de la tabla
         function extraerTextoMovimientos(celda) {
-            const divs = celda.querySelectorAll('.sucursal-movimientos');
+            const divs = celda.querySelectorAll('.empresa-movimientos');
             let texto = '';
             divs.forEach(div => {
-                const sucursal = div.querySelector('.badge-secondary')?.textContent?.trim() || '';
+                const empresa = div.querySelector('.badge-secondary')?.textContent?.trim() || '';
                 const apertura = div.querySelector('.badge-apertura')?.textContent?.split(':')[1]?.trim() || '';
                 const cierre = div.querySelector('.badge-cierre')?.textContent?.split(':')[1]?.trim() || '';
-                if (sucursal) {
-                    texto += `${sucursal}: `;
+                if (empresa) {
+                    texto += `${empresa}: `;
                     if (apertura) texto += `Apertura ${apertura}`;
                     if (cierre) texto += `${apertura ? ', ' : ''}Cierre ${cierre}`;
                     texto += '\n';
@@ -453,14 +452,14 @@
         }
 
         function extraerTextoPedidos(celda) {
-            const operaciones = celda.querySelectorAll('.sucursal-operaciones');
+            const operaciones = celda.querySelectorAll('.empresa-operaciones');
             let texto = '';
             operaciones.forEach(op => {
-                const sucursal = op.querySelector('.badge-secondary')?.textContent?.trim() || '';
+                const empresa = op.querySelector('.badge-secondary')?.textContent?.trim() || '';
                 const total = op.querySelector('strong')?.textContent?.trim() || '';
                 const pedidos = op.querySelectorAll('li');
-                if (sucursal && total) {
-                    texto += `${sucursal} - ${total}\n`;
+                if (empresa && total) {
+                    texto += `${empresa} - ${total}\n`;
                     pedidos.forEach(pedido => {
                         const contenido = pedido.textContent?.trim();
                         if (contenido) texto += `  • ${contenido}\n`;
@@ -471,14 +470,14 @@
         }
 
         function extraerTextoRetiros(celda) {
-            const operaciones = celda.querySelectorAll('.sucursal-operaciones');
+            const operaciones = celda.querySelectorAll('.empresa-operaciones');
             let texto = '';
             operaciones.forEach(op => {
-                const sucursal = op.querySelector('.badge-secondary')?.textContent?.trim() || '';
+                const empresa = op.querySelector('.badge-secondary')?.textContent?.trim() || '';
                 const total = op.querySelector('strong')?.textContent?.trim() || '';
                 const retiros = op.querySelectorAll('li');
-                if (sucursal && total) {
-                    texto += `${sucursal} - ${total}\n`;
+                if (empresa && total) {
+                    texto += `${empresa} - ${total}\n`;
                     retiros.forEach(retiro => {
                         const contenido = retiro.textContent?.trim();
                         if (contenido) texto += `  • ${contenido}\n`;
@@ -1078,7 +1077,7 @@
             });
 
             // Manejar cambios en los filtros
-            $('#filtroMes, #filtroAno, #filtroSucursal').change(function() {
+            $('#filtroMes, #filtroAno, #filtroEmpresa').change(function() {
                 cargarRolDePagos();
                 if (selectedUserId) {
                     cargarDetalles(selectedUserId); // Cargar los detalles al cambiar los filtros
