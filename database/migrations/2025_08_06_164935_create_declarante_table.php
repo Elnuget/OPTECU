@@ -13,14 +13,16 @@ class CreateDeclaranteTable extends Migration
      */
     public function up()
     {
-        Schema::create('declarante', function (Blueprint $table) {
-            $table->id();
-            $table->string('nombre');
-            $table->string('ruc')->unique();
-            $table->text('firma')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (!Schema::hasTable('declarante')) {
+            Schema::create('declarante', function (Blueprint $table) {
+                $table->id();
+                $table->string('nombre');
+                $table->string('ruc')->unique();
+                $table->text('firma')->nullable();
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
     }
 
     /**
@@ -30,6 +32,8 @@ class CreateDeclaranteTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('declarante');
+        if (Schema::hasTable('declarante')) {
+            Schema::dropIfExists('declarante');
+        }
     }
 }
