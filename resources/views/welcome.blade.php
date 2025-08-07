@@ -89,7 +89,7 @@
                                 @foreach($cashHistories as $item)
                                     <tr>
                                         <td>{{ $item->created_at->format('d/m/Y H:i') }}</td>
-                                                                            <td>${{ number_format($history->monto, 2, ',', '.') }}</td>
+                                        <td>${{ number_format($item->monto, 2, ',', '.') }}</td>
                                         <td>
                                             <span class="badge badge-{{ $item->estado === 'Apertura' ? 'success' : 'danger' }}">
                                                 {{ $item->estado }}

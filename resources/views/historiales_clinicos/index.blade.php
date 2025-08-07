@@ -326,7 +326,15 @@
 
         // Botón Mostrar Todos
         $('#mostrarTodosButton').click(function() {
-            window.location.href = '{{ route("historiales_clinicos.index", ["todos" => "1"]) }}';
+            const empresaId = $('#empresa_id').val();
+            let url = '{{ route("historiales_clinicos.index") }}?todos=1';
+            
+            // Si hay una empresa seleccionada, mantenerla en el filtro
+            if (empresaId) {
+                url += '&empresa_id=' + empresaId;
+            }
+            
+            window.location.href = url;
         });
 
         // Auto-submit cuando cambie el filtro de empresa
