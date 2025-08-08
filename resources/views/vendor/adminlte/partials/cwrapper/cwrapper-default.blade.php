@@ -134,13 +134,13 @@
 {{-- Notificación de apertura automática (solo para usuarios no administradores) --}}
 @if($aperturaAutomatica && !$currentUser->is_admin)
 <div class="alert alert-success alert-dismissible position-fixed" 
-     style="top: 20px; right: 20px; z-index: 9998; min-width: 300px;">
+     style="top: 20px; right: 20px; z-index: 9998; min-width: 280px; max-width: 90vw;">
     <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
-    <h5><i class="icon fas fa-check"></i> Apertura Automática Exitosa</h5>
+    <h6 class="mb-1"><i class="icon fas fa-check"></i> Apertura Automática Exitosa</h6>
     @if($cajasAbiertas == 1)
-        Se ha abierto automáticamente 1 caja al iniciar sesión.
+        <small>Se ha abierto automáticamente 1 caja al iniciar sesión.</small>
     @else
-        Se han abierto automáticamente {{ $cajasAbiertas }} cajas al iniciar sesión.
+        <small>Se han abierto automáticamente {{ $cajasAbiertas }} cajas al iniciar sesión.</small>
     @endif
 </div>
 
@@ -154,17 +154,22 @@
 
 {{-- Tarjeta de Cierre Pendiente (cajas del día anterior sin cerrar) --}}
 @if($currentUser && $hayCajasPendientesCierre && $userEmpresas->count() > 0)
-<div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center" 
+<div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center p-3" 
      style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;">
-    <div class="text-white" style="max-width: 700px;">
+    <div class="text-white w-100" style="max-width: 700px;">
         <div class="text-center mb-4">
-            <h1><i class="fas fa-exclamation-triangle fa-3x mb-3 text-warning"></i></h1>
-            <h2 class="text-danger">CAJAS PENDIENTES DE CIERRE</h2>
-            <h3 class="text-warning">Debe cerrar las cajas del día anterior</h3>
+            <h1 class="d-none d-md-block"><i class="fas fa-exclamation-triangle fa-3x mb-3 text-warning"></i></h1>
+            <h3 class="d-md-none"><i class="fas fa-exclamation-triangle fa-2x mb-2 text-warning"></i></h3>
+            <h3 class="text-danger d-none d-md-block">CAJAS PENDIENTES DE CIERRE</h3>
+            <h5 class="text-danger d-md-none">CAJAS PENDIENTES DE CIERRE</h5>
+            <h4 class="text-warning d-none d-md-block">Debe cerrar las cajas del día anterior</h4>
+            <h6 class="text-warning d-md-none">Debe cerrar las cajas del día anterior</h6>
             <div class="alert alert-warning">
                 <i class="fas fa-info-circle mr-2"></i>
-                Se detectaron cajas abiertas de días anteriores que no fueron cerradas. 
-                Debe cerrarlas antes de poder trabajar normalmente.
+                <small class="d-md-none">Se detectaron cajas abiertas de días anteriores que no fueron cerradas. 
+                Debe cerrarlas antes de poder trabajar normalmente.</small>
+                <span class="d-none d-md-inline">Se detectaron cajas abiertas de días anteriores que no fueron cerradas. 
+                Debe cerrarlas antes de poder trabajar normalmente.</span>
             </div>
         </div>
 
@@ -195,13 +200,14 @@
                         <input type="hidden" name="empresa_id" value="{{ $userEmpresa->id }}">
                         <input type="hidden" name="cierre_pendiente" value="1">
                         
-                        <div class="d-flex justify-content-between mt-4">
-                            <button type="submit" class="btn btn-warning btn-lg flex-grow-1 mr-2">
+                        <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
+                            <button type="submit" class="btn btn-warning btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1">
                                 <i class="fas fa-door-closed mr-2"></i>Cerrar Caja Pendiente
                             </button>
                             <a href="{{ route('logout') }}" class="btn btn-danger btn-lg" 
                                onclick="event.preventDefault(); document.getElementById('logout-form-pendiente').submit();">
-                                <i class="fas fa-sign-out-alt"></i>
+                                <i class="fas fa-sign-out-alt mr-2"></i>
+                                <span class="d-none d-md-inline">Salir</span>
                             </a>
                         </div>
                     </form>
@@ -295,18 +301,22 @@
 
 {{-- Tarjeta de Apertura de Caja (para todos los usuarios con empresas asignadas) --}}
 @if($currentUser && $isClosed && $userEmpresas->count() > 0)
-<div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center" 
+<div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center p-3" 
      style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;">
-    <div class="text-white" style="max-width: 600px;">
+    <div class="text-white w-100" style="max-width: 600px;">
         <div class="text-center mb-4">
-            <h1><i class="fas fa-cash-register fa-3x mb-3"></i></h1>
-            <h2>Apertura de Caja</h2>
+            <h1 class="d-none d-md-block"><i class="fas fa-cash-register fa-3x mb-3"></i></h1>
+            <h3 class="d-md-none"><i class="fas fa-cash-register fa-2x mb-2"></i></h3>
+            <h3 class="d-none d-md-block">Apertura de Caja</h3>
+            <h5 class="d-md-none">Apertura de Caja</h5>
             @if($userEmpresas->count() == 1)
-                <h3 class="text-warning">{{ strtoupper($userEmpresa->nombre) }}</h3>
+                <h4 class="text-warning d-none d-md-block">{{ strtoupper($userEmpresa->nombre) }}</h4>
+                <h6 class="text-warning d-md-none">{{ strtoupper($userEmpresa->nombre) }}</h6>
             @else
-                <h3 class="text-info">SELECCIONE SUCURSAL</h3>
+                <h4 class="text-info d-none d-md-block">SELECCIONE SUCURSAL</h4>
+                <h6 class="text-info d-md-none">SELECCIONE SUCURSAL</h6>
                 @if($currentUser->is_admin)
-                    <p class="text-muted">Como administrador, puede abrir cualquier caja</p>
+                    <p class="text-muted"><small>Como administrador, puede abrir cualquier caja</small></p>
                 @endif
             @endif
         </div>
@@ -339,13 +349,14 @@
                         <input type="hidden" name="estado" value="Apertura">
                         <input type="hidden" name="empresa_id" value="{{ $userEmpresa->id }}">
                         
-                        <div class="d-flex justify-content-between mt-4">
-                            <button type="submit" class="btn btn-success btn-lg flex-grow-1 mr-2">
+                        <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
+                            <button type="submit" class="btn btn-success btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1">
                                 <i class="fas fa-door-open mr-2"></i>Abrir Caja
                             </button>
                             <a href="{{ route('logout') }}" class="btn btn-danger btn-lg" 
                                onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                <i class="fas fa-sign-out-alt"></i>
+                                <i class="fas fa-sign-out-alt mr-2"></i>
+                                <span class="d-none d-md-inline">Salir</span>
                             </a>
                         </div>
                     </form>
@@ -358,8 +369,8 @@
                             <div class="row">
                                 @foreach($empresasCaja as $index => $empresaData)
                                     @if($empresaData['isClosed'])
-                                        <div class="col-md-6 mb-2">
-                                            <button type="button" class="btn btn-outline-primary btn-block empresa-btn" 
+                                        <div class="col-12 col-md-6 mb-2">
+                                            <button type="button" class="btn btn-outline-primary btn-block empresa-btn py-3" 
                                                     data-empresa-id="{{ $empresaData['empresa']->id }}"
                                                     data-monto="{{ number_format($empresaData['sumCaja'], 2, '.', '') }}"
                                                     data-last-close="{{ $empresaData['previousHistory'] ? $empresaData['previousHistory']->created_at->format('d/m/Y H:i') : 'Sin cierres anteriores' }}"
@@ -367,8 +378,8 @@
                                                     data-last-amount="{{ $empresaData['previousHistory'] ? number_format($empresaData['previousHistory']->monto, 2) : '0.00' }}">
                                                 <i class="fas fa-building mr-2"></i>
                                                 <div class="text-left">
-                                                    <div><strong>{{ strtoupper($empresaData['empresa']->nombre) }}</strong></div>
-                                                    <small>Caja Cerrada - ${{ number_format($empresaData['sumCaja'], 2, '.', ',') }}</small>
+                                                    <div class="font-weight-bold">{{ strtoupper($empresaData['empresa']->nombre) }}</div>
+                                                    <small class="text-muted">Caja Cerrada - ${{ number_format($empresaData['sumCaja'], 2, '.', ',') }}</small>
                                                 </div>
                                             </button>
                                         </div>
@@ -397,13 +408,14 @@
                         </div>
                         <input type="hidden" name="estado" value="Apertura">
                         
-                        <div class="d-flex justify-content-between mt-4">
-                            <button type="submit" class="btn btn-success btn-lg flex-grow-1 mr-2" id="btn_abrir" disabled>
+                        <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
+                            <button type="submit" class="btn btn-success btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1" id="btn_abrir" disabled>
                                 <i class="fas fa-door-open mr-2"></i>Abrir Caja
                             </button>
                             <a href="{{ route('logout') }}" class="btn btn-danger btn-lg" 
                                onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                <i class="fas fa-sign-out-alt"></i>
+                                <i class="fas fa-sign-out-alt mr-2"></i>
+                                <span class="d-none d-md-inline">Salir</span>
                             </a>
                         </div>
                     </form>
@@ -454,24 +466,29 @@
 
 {{-- Tarjeta de Cierre de Caja (para todos los usuarios con empresas asignadas) --}}
 @if($showClosingCard && $currentUser && $userEmpresas->count() > 0)
-<div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center" 
+<div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center p-3" 
      style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;">
-    <div class="text-white" style="max-width: 600px;">
+    <div class="text-white w-100" style="max-width: 600px;">
         <div class="text-center mb-4">
-            <h1><i class="fas fa-cash-register fa-3x mb-3 text-danger"></i></h1>
-            <h2>Cierre de Caja</h2>
+            <h1 class="d-none d-md-block"><i class="fas fa-cash-register fa-3x mb-3 text-danger"></i></h1>
+            <h3 class="d-md-none"><i class="fas fa-cash-register fa-2x mb-2 text-danger"></i></h3>
+            <h3 class="d-none d-md-block">Cierre de Caja</h3>
+            <h5 class="d-md-none">Cierre de Caja</h5>
             @if($userEmpresas->count() == 1)
-                <h3 class="text-warning">{{ strtoupper($userEmpresa->nombre) }}</h3>
+                <h4 class="text-warning d-none d-md-block">{{ strtoupper($userEmpresa->nombre) }}</h4>
+                <h6 class="text-warning d-md-none">{{ strtoupper($userEmpresa->nombre) }}</h6>
             @else
-                <h3 class="text-info">SELECCIONE SUCURSAL</h3>
+                <h4 class="text-info d-none d-md-block">SELECCIONE SUCURSAL</h4>
+                <h6 class="text-info d-md-none">SELECCIONE SUCURSAL</h6>
                 @if($currentUser->is_admin)
-                    <p class="text-muted">Como administrador, puede cerrar cualquier caja</p>
+                    <p class="text-muted"><small>Como administrador, puede cerrar cualquier caja</small></p>
                 @endif
             @endif
-            <p>Usuario actual: {{ auth()->user()->name }}</p>
+            <p class="mb-2"><small>Usuario actual: {{ auth()->user()->name }}</small></p>
             <div class="alert alert-info">
                 <i class="fas fa-info-circle mr-2"></i>
-                Al confirmar el cierre de caja, su sesión se cerrará automáticamente. Use "Cancelar" si desea continuar trabajando.
+                <small class="d-md-none">Al confirmar el cierre de caja, su sesión se cerrará automáticamente. Use "Cancelar" si desea continuar trabajando.</small>
+                <span class="d-none d-md-inline">Al confirmar el cierre de caja, su sesión se cerrará automáticamente. Use "Cancelar" si desea continuar trabajando.</span>
             </div>
         </div>
 
@@ -494,12 +511,14 @@
                         <input type="hidden" name="estado" value="Cierre">
                         <input type="hidden" name="empresa_id" value="{{ $userEmpresa->id }}">
                         
-                        <div class="d-flex justify-content-between mt-4">
-                            <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg mr-2">
+                        <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
+                            <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg mb-2 mb-md-0 mr-md-2">
                                 <i class="fas fa-times mr-2"></i>Cancelar
                             </a>
                             <button type="submit" class="btn btn-danger btn-lg flex-grow-1">
-                                <i class="fas fa-door-closed mr-2"></i>Confirmar Cierre y Salir
+                                <i class="fas fa-door-closed mr-2"></i>
+                                <span class="d-none d-md-inline">Confirmar Cierre y Salir</span>
+                                <span class="d-md-none">Cerrar y Salir</span>
                             </button>
                         </div>
                     </form>
@@ -512,14 +531,14 @@
                             <div class="row">
                                 @foreach($empresasCaja as $index => $empresaData)
                                     @if(!$empresaData['isClosed'])
-                                        <div class="col-md-6 mb-2">
-                                            <button type="button" class="btn {{ $empresaData['isUltimaCajaAbierta'] ? 'btn-danger' : 'btn-outline-danger' }} btn-block empresa-close-btn" 
+                                        <div class="col-12 col-md-6 mb-2">
+                                            <button type="button" class="btn {{ $empresaData['isUltimaCajaAbierta'] ? 'btn-danger' : 'btn-outline-danger' }} btn-block empresa-close-btn py-3" 
                                                     data-empresa-id="{{ $empresaData['empresa']->id }}"
                                                     data-monto="{{ number_format($empresaData['sumCaja'], 2, '.', '') }}">
                                                 <i class="fas fa-cash-register mr-2"></i>
                                                 <div class="text-left">
-                                                    <div><strong>{{ strtoupper($empresaData['empresa']->nombre) }}</strong></div>
-                                                    <small>
+                                                    <div class="font-weight-bold">{{ strtoupper($empresaData['empresa']->nombre) }}</div>
+                                                    <small class="text-muted">
                                                         Caja Abierta - ${{ number_format($empresaData['sumCaja'], 2, '.', ',') }}
                                                         @if($empresaData['isUltimaCajaAbierta'])
                                                             <br><span class="badge badge-warning">ÚLTIMA ABIERTA</span>
@@ -546,12 +565,14 @@
                         </div>
                         <input type="hidden" name="estado" value="Cierre">
                         
-                        <div class="d-flex justify-content-between mt-4">
-                            <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg mr-2">
+                        <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
+                            <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg mb-2 mb-md-0 mr-md-2">
                                 <i class="fas fa-times mr-2"></i>Cancelar
                             </a>
                             <button type="submit" class="btn btn-danger btn-lg flex-grow-1" id="btn_cerrar" disabled>
-                                <i class="fas fa-door-closed mr-2"></i>Confirmar Cierre y Salir
+                                <i class="fas fa-door-closed mr-2"></i>
+                                <span class="d-none d-md-inline">Confirmar Cierre y Salir</span>
+                                <span class="d-md-none">Cerrar y Salir</span>
                             </button>
                         </div>
                     </form>
@@ -741,4 +762,83 @@
         </div>
     </div>
 </div>
+
+{{-- Estilos CSS adicionales para responsividad móvil --}}
+<style>
+    /* Mejoras de responsividad para dispositivos móviles */
+    @media (max-width: 768px) {
+        .position-fixed .card {
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .empresa-btn, .empresa-close-btn {
+            font-size: 14px !important;
+            padding: 12px 8px !important;
+        }
+        
+        .empresa-btn .text-left div,
+        .empresa-close-btn .text-left div {
+            font-size: 13px;
+        }
+        
+        .empresa-btn small,
+        .empresa-close-btn small {
+            font-size: 11px;
+        }
+        
+        .form-control-lg {
+            font-size: 16px; /* Evita zoom en iOS */
+        }
+        
+        .btn-lg {
+            padding: 12px 16px;
+            font-size: 14px;
+        }
+        
+        .alert {
+            font-size: 13px;
+        }
+        
+        .card-body {
+            padding: 1rem;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            margin-bottom: 0.5rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .position-fixed > div {
+            padding: 0.5rem !important;
+        }
+        
+        .card-body {
+            padding: 0.75rem;
+        }
+        
+        .btn-lg {
+            padding: 10px 12px;
+            font-size: 13px;
+        }
+        
+        .input-group-text {
+            padding: 8px 12px;
+        }
+    }
+    
+    /* Botones empresas con mejor espaciado en móvil */
+    .empresa-btn:hover,
+    .empresa-close-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+        transition: all 0.2s ease;
+    }
+    
+    /* Mejora para alertas en móvil */
+    .alert-dismissible .close {
+        padding: 8px 12px;
+    }
+</style>
 
