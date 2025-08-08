@@ -11,9 +11,11 @@
     $cajasAbiertas = 0;
     
     if ($currentUser) {
+        // Obtener empresas según el tipo de usuario
         if ($currentUser->is_admin) {
-            // Para admins, no mostrar tarjetas de apertura/cierre
-            $isClosed = false;
+            // Para administradores, obtener todas las empresas del sistema
+            $userEmpresas = \App\Models\Empresa::all();
+            $aperturaAutomatica = false; // Los admins no tienen apertura automática
         } else {
             // Para usuarios no admin, intentar apertura automática
             $controller = new \App\Http\Controllers\CashHistoryController();
@@ -22,39 +24,39 @@
             
             // Obtener todas sus empresas asignadas
             $userEmpresas = $currentUser->todasLasEmpresas();
-            
-            if ($userEmpresas->count() > 0) {
-                // Preparar información de caja para cada empresa (después de la apertura automática)
-                foreach ($userEmpresas as $empresa) {
-                    $lastHistory = \App\Models\CashHistory::where('empresa_id', $empresa->id)
+        }
+        
+        if ($userEmpresas->count() > 0) {
+            // Preparar información de caja para cada empresa
+            foreach ($userEmpresas as $empresa) {
+                $lastHistory = \App\Models\CashHistory::where('empresa_id', $empresa->id)
+                                                     ->latest()
+                                                     ->first();
+                
+                $previousHistory = \App\Models\CashHistory::where('empresa_id', $empresa->id)
+                                                         ->where('estado', 'Cierre')
                                                          ->latest()
                                                          ->first();
-                    
-                    $previousHistory = \App\Models\CashHistory::where('empresa_id', $empresa->id)
-                                                             ->where('estado', 'Cierre')
-                                                             ->latest()
-                                                             ->first();
-                    
-                    $empresasCaja[] = [
-                        'empresa' => $empresa,
-                        'lastHistory' => $lastHistory,
-                        'previousHistory' => $previousHistory,
-                        'isClosed' => !$lastHistory || $lastHistory->estado !== 'Apertura',
-                        'sumCaja' => \App\Models\Caja::where('empresa_id', $empresa->id)->sum('valor')
-                    ];
-                }
                 
-                // Verificar si hay alguna caja que necesite apertura (debería ser false después de la apertura automática)
-                $isClosed = collect($empresasCaja)->contains('isClosed', true);
-                
-                // Si solo hay una empresa, usar la lógica anterior
-                if ($userEmpresas->count() == 1) {
-                    $userEmpresa = $userEmpresas->first();
-                    $lastCashHistory = $empresasCaja[0]['lastHistory'];
-                    $previousCashHistory = $empresasCaja[0]['previousHistory'];
-                    $isClosed = $empresasCaja[0]['isClosed'];
-                    $sumCaja = $empresasCaja[0]['sumCaja'];
-                }
+                $empresasCaja[] = [
+                    'empresa' => $empresa,
+                    'lastHistory' => $lastHistory,
+                    'previousHistory' => $previousHistory,
+                    'isClosed' => !$lastHistory || $lastHistory->estado !== 'Apertura',
+                    'sumCaja' => \App\Models\Caja::where('empresa_id', $empresa->id)->sum('valor')
+                ];
+            }
+            
+            // Verificar si hay alguna caja que necesite apertura
+            $isClosed = collect($empresasCaja)->contains('isClosed', true);
+            
+            // Si solo hay una empresa, usar la lógica anterior
+            if ($userEmpresas->count() == 1) {
+                $userEmpresa = $userEmpresas->first();
+                $lastCashHistory = $empresasCaja[0]['lastHistory'];
+                $previousCashHistory = $empresasCaja[0]['previousHistory'];
+                $isClosed = $empresasCaja[0]['isClosed'];
+                $sumCaja = $empresasCaja[0]['sumCaja'];
             }
         }
     }
@@ -62,8 +64,8 @@
     $showClosingCard = session('showClosingCard', false);
 @endphp
 
-{{-- Notificación de apertura automática --}}
-@if($aperturaAutomatica)
+{{-- Notificación de apertura automática (solo para usuarios no administradores) --}}
+@if($aperturaAutomatica && !$currentUser->is_admin)
 <div class="alert alert-success alert-dismissible position-fixed" 
      style="top: 20px; right: 20px; z-index: 9998; min-width: 300px;">
     <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
@@ -83,8 +85,8 @@
 </script>
 @endif
 
-{{-- Tarjeta de Apertura de Caja (solo para usuarios no administradores) --}}
-@if($currentUser && !$currentUser->is_admin && $isClosed && $userEmpresas->count() > 0)
+{{-- Tarjeta de Apertura de Caja (para todos los usuarios con empresas asignadas) --}}
+@if($currentUser && $isClosed && $userEmpresas->count() > 0)
 <div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center" 
      style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;">
     <div class="text-white" style="max-width: 600px;">
@@ -95,6 +97,9 @@
                 <h3 class="text-warning">{{ strtoupper($userEmpresa->nombre) }}</h3>
             @else
                 <h3 class="text-info">SELECCIONE SUCURSAL</h3>
+                @if($currentUser->is_admin)
+                    <p class="text-muted">Como administrador, puede abrir cualquier caja</p>
+                @endif
             @endif
         </div>
 
@@ -225,8 +230,8 @@
 </div>
 @endif
 
-{{-- Tarjeta de Cierre de Caja --}}
-@if($showClosingCard && $currentUser && !$currentUser->is_admin && $userEmpresas->count() > 0)
+{{-- Tarjeta de Cierre de Caja (para todos los usuarios con empresas asignadas) --}}
+@if($showClosingCard && $currentUser && $userEmpresas->count() > 0)
 <div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center" 
      style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;">
     <div class="text-white" style="max-width: 600px;">
@@ -237,6 +242,9 @@
                 <h3 class="text-warning">{{ strtoupper($userEmpresa->nombre) }}</h3>
             @else
                 <h3 class="text-info">SELECCIONE SUCURSAL</h3>
+                @if($currentUser->is_admin)
+                    <p class="text-muted">Como administrador, puede cerrar cualquier caja</p>
+                @endif
             @endif
             <p>Usuario actual: {{ auth()->user()->name }}</p>
             <div class="alert alert-info">
@@ -456,8 +464,8 @@
 
 {{-- Content Wrapper --}}
 <div class="content-wrapper {{ config('adminlte.classes_content_wrapper', '') }}" 
-     @if(($currentUser && !$currentUser->is_admin && $isClosed && $userEmpresas->count() > 0) || 
-         ($showClosingCard && $currentUser && !$currentUser->is_admin && $userEmpresas->count() > 0)) style="filter: blur(5px);" @endif>
+     @if(($currentUser && $isClosed && $userEmpresas->count() > 0) || 
+         ($showClosingCard && $currentUser && $userEmpresas->count() > 0)) style="filter: blur(5px);" @endif>
     {{-- Content Header --}}
     @hasSection('content_header')
         <div class="content-header">
