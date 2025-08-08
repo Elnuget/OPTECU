@@ -104,18 +104,32 @@
         </li>
 
         {{-- Mensaje de advertencia de cierre de caja --}}
-        @if(Auth::user() && Auth::user()->empresa_id)
+        @if(Auth::user())
             @php
-                $cajaAbierta = \App\Models\CashHistory::where('empresa_id', Auth::user()->empresa_id)
-                                                    ->where('estado', 'Apertura')
-                                                    ->latest()
-                                                    ->first();
+                $cajaAbiertaAdvertencia = null;
+                if(Auth::user()->is_admin) {
+                    // Para administradores, mostrar advertencia si hay alguna caja abierta
+                    $cajaAbiertaAdvertencia = \App\Models\CashHistory::with('empresa')
+                                                                   ->where('estado', 'Apertura')
+                                                                   ->latest()
+                                                                   ->first();
+                } else if(Auth::user()->empresa_id) {
+                    // Para usuarios normales, verificar su empresa
+                    $cajaAbiertaAdvertencia = \App\Models\CashHistory::where('empresa_id', Auth::user()->empresa_id)
+                                                                    ->where('estado', 'Apertura')
+                                                                    ->latest()
+                                                                    ->first();
+                }
             @endphp
-            @if($cajaAbierta && (!Auth::user()->is_admin || (Auth::user()->is_admin && $cajaAbierta->user_id == Auth::id())))
+            @if($cajaAbiertaAdvertencia)
                 <li class="nav-item d-none d-md-block">
                     <div class="alert alert-danger py-1 px-3 mb-0 ml-3 d-flex align-items-center" style="font-size: 0.9rem;">
                         <i class="fas fa-exclamation-triangle mr-2"></i>
-                        Debe cerrar caja de {{ \App\Models\Empresa::find($cajaAbierta->empresa_id)->nombre ?? 'EMPRESA' }} antes de salir
+                        @if(Auth::user()->is_admin)
+                            Hay cajas abiertas - {{ $cajaAbiertaAdvertencia->empresa ? $cajaAbiertaAdvertencia->empresa->nombre : 'EMPRESA DESCONOCIDA' }} y otras
+                        @else
+                            Debe cerrar caja de {{ \App\Models\Empresa::find($cajaAbiertaAdvertencia->empresa_id)->nombre ?? 'EMPRESA' }} antes de salir
+                        @endif
                     </div>
                 </li>
             @endif
@@ -159,64 +173,55 @@
             </li>
         @endif
 
-        {{-- Botón de cierre de caja (solo para no administradores) o cierre de sesión (para administradores) --}}
+        {{-- Botón de cierre de caja para todos los usuarios --}}
         @auth
-            @if(Auth::user()->is_admin)
-                {{-- Botón de cierre de sesión para administradores --}}
-                <li class="nav-item">
-                    <a href="{{ route('logout') }}" 
-                       onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
-                       class="btn btn-outline-danger nav-link d-flex align-items-center" 
-                       style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
-                        <i class="fas fa-sign-out-alt mr-2" style="font-size: 1.1em;"></i>
-                        <span class="d-none d-sm-inline" style="font-weight: 500;">CERRAR SESIÓN</span>
-                        <span class="d-inline d-sm-none" style="font-weight: 500;">SALIR</span>
-                    </a>
-                    <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-                        @csrf
-                    </form>
-                </li>
-            @else
-                {{-- Verificar si hay caja abierta para la empresa del usuario --}}
-                @php
-                    $cajaAbierta = null;
+            {{-- Verificar si hay caja abierta --}}
+            @php
+                $cajaAbierta = null;
+                if(Auth::user()->is_admin) {
+                    // Para administradores, verificar si hay alguna caja abierta en cualquier empresa
+                    $cajaAbierta = \App\Models\CashHistory::where('estado', 'Apertura')
+                                                        ->latest()
+                                                        ->first();
+                } else {
+                    // Para usuarios normales, verificar su empresa asignada
                     if(Auth::user()->empresa_id) {
                         $cajaAbierta = \App\Models\CashHistory::where('empresa_id', Auth::user()->empresa_id)
                                                             ->where('estado', 'Apertura')
                                                             ->latest()
                                                             ->first();
                     }
-                @endphp
+                }
+            @endphp
 
-                @if($cajaAbierta)
-                    {{-- Botón de cierre de caja para usuarios no administradores --}}
-                    <li class="nav-item">
-                        <form action="{{ route('show-closing-card') }}" method="POST" style="display: inline;">
-                            @csrf
-                            <button type="submit" class="btn btn-outline-danger nav-link d-flex align-items-center" 
-                                    style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
-                                <i class="fas fa-cash-register mr-2" style="font-size: 1.1em;"></i>
-                                <span class="d-none d-sm-inline" style="font-weight: 500;">CERRAR CAJA</span>
-                                <span class="d-inline d-sm-none" style="font-weight: 500;">CERRAR</span>
-                            </button>
-                        </form>
-                    </li>
-                @else
-                    {{-- Botón de cierre de sesión cuando no hay caja abierta --}}
-                    <li class="nav-item">
-                        <a href="{{ route('logout') }}" 
-                           onclick="event.preventDefault(); document.getElementById('logout-form-alt').submit();"
-                           class="btn btn-outline-danger nav-link d-flex align-items-center" 
-                           style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
-                            <i class="fas fa-sign-out-alt mr-2" style="font-size: 1.1em;"></i>
-                            <span class="d-none d-sm-inline" style="font-weight: 500;">CERRAR SESIÓN</span>
-                            <span class="d-inline d-sm-none" style="font-weight: 500;">SALIR</span>
-                        </a>
-                        <form id="logout-form-alt" action="{{ route('logout') }}" method="POST" style="display: none;">
-                            @csrf
-                        </form>
-                    </li>
-                @endif
+            @if($cajaAbierta)
+                {{-- Botón de cierre de caja para todos los usuarios --}}
+                <li class="nav-item">
+                    <form action="{{ route('show-closing-card') }}" method="POST" style="display: inline;">
+                        @csrf
+                        <button type="submit" class="btn btn-outline-danger nav-link d-flex align-items-center" 
+                                style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
+                            <i class="fas fa-cash-register mr-2" style="font-size: 1.1em;"></i>
+                            <span class="d-none d-sm-inline" style="font-weight: 500;">CERRAR CAJA</span>
+                            <span class="d-inline d-sm-none" style="font-weight: 500;">CERRAR</span>
+                        </button>
+                    </form>
+                </li>
+            @else
+                {{-- Botón de cierre de sesión cuando no hay caja abierta --}}
+                <li class="nav-item">
+                    <a href="{{ route('logout') }}" 
+                       onclick="event.preventDefault(); document.getElementById('logout-form-alt').submit();"
+                       class="btn btn-outline-danger nav-link d-flex align-items-center" 
+                       style="border-radius: 20px; padding: 8px 20px; transition: all 0.3s ease;">
+                        <i class="fas fa-sign-out-alt mr-2" style="font-size: 1.1em;"></i>
+                        <span class="d-none d-sm-inline" style="font-weight: 500;">CERRAR SESIÓN</span>
+                        <span class="d-inline d-sm-none" style="font-weight: 500;">SALIR</span>
+                    </a>
+                    <form id="logout-form-alt" action="{{ route('logout') }}" method="POST" style="display: none;">
+                        @csrf
+                    </form>
+                </li>
             @endif
         @else
             {{-- Botón para usuarios no autenticados --}}

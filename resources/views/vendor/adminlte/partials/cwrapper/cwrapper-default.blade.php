@@ -10,7 +10,7 @@
     $aperturaAutomatica = false;
     $cajasAbiertas = 0;
     $hayCajasPendientesCierre = false;
-    $cajasAbriertasHoy = false;
+    $ultimaCajaAbierta = null; // Para preseleccionar la última caja abierta
     
     if ($currentUser) {
         // Obtener empresas según el tipo de usuario
@@ -28,6 +28,20 @@
             $userEmpresas = $currentUser->todasLasEmpresas();
         }
         
+        // Obtener la última caja abierta para preseleccionar
+        if ($currentUser->is_admin) {
+            $ultimaCajaAbierta = \App\Models\CashHistory::with('empresa')
+                                                       ->where('estado', 'Apertura')
+                                                       ->latest()
+                                                       ->first();
+        } else {
+            $ultimaCajaAbierta = \App\Models\CashHistory::with('empresa')
+                                                       ->whereIn('empresa_id', $userEmpresas->pluck('id'))
+                                                       ->where('estado', 'Apertura')
+                                                       ->latest()
+                                                       ->first();
+        }
+        
         if ($userEmpresas->count() > 0) {
             $today = now()->format('Y-m-d');
             
@@ -42,7 +56,7 @@
                                                          ->latest()
                                                          ->first();
                 
-                // Verificar si hay apertura de hoy
+                // Verificar si hay apertura de hoy (solo para información)
                 $aperturaHoy = \App\Models\CashHistory::where('empresa_id', $empresa->id)
                                                      ->where('estado', 'Apertura')
                                                      ->whereDate('created_at', $today)
@@ -56,18 +70,10 @@
                     $cajaAbiertaAnterior = $lastHistory;
                 }
                 
-                $isCajaClosedOrOpenToday = !$lastHistory || 
-                                         $lastHistory->estado === 'Cierre' || 
-                                         ($aperturaHoy && $lastHistory->estado === 'Apertura');
-                
                 $needsClosure = $cajaAbiertaAnterior !== null;
                 
                 if ($needsClosure) {
                     $hayCajasPendientesCierre = true;
-                }
-                
-                if ($aperturaHoy) {
-                    $cajasAbriertasHoy = true;
                 }
                 
                 $empresasCaja[] = [
@@ -76,24 +82,31 @@
                     'previousHistory' => $previousHistory,
                     'aperturaHoy' => $aperturaHoy,
                     'cajaAbiertaAnterior' => $cajaAbiertaAnterior,
-                    'isClosed' => !$isCajaClosedOrOpenToday,
+                    'isClosed' => !$lastHistory || $lastHistory->estado !== 'Apertura', // Simple: cerrada si no hay historial o último estado es Cierre
                     'needsClosure' => $needsClosure,
-                    'sumCaja' => \App\Models\Caja::where('empresa_id', $empresa->id)->sum('valor')
+                    'sumCaja' => \App\Models\Caja::where('empresa_id', $empresa->id)->sum('valor'),
+                    'isUltimaCajaAbierta' => $ultimaCajaAbierta && $ultimaCajaAbierta->empresa_id == $empresa->id
                 ];
             }
             
             // Lógica para determinar qué mostrar:
             // 1. Si hay cajas pendientes de cierre del día anterior, mostrar cierre forzoso
-            // 2. Si ya se abrieron cajas hoy, no mostrar apertura
-            // 3. Si hay cajas cerradas, mostrar apertura normal
+            // 2. Si hay cajas abiertas actualmente, no mostrar apertura
+            // 3. Si NO hay cajas abiertas, mostrar apertura (sin importar historial del día)
             
             if ($hayCajasPendientesCierre) {
                 $isClosed = false; // No mostrar apertura, mostrar cierre pendiente
-            } else if ($cajasAbriertasHoy) {
-                $isClosed = false; // Ya se abrieron cajas hoy, no mostrar apertura
             } else {
-                // Verificar si hay alguna caja que necesite apertura
-                $isClosed = collect($empresasCaja)->contains('isClosed', true);
+                // Verificar si hay alguna caja ACTUALMENTE abierta (estado = 'Apertura')
+                $hayAperturasActivas = collect($empresasCaja)->contains(function ($empresaData) {
+                    return $empresaData['lastHistory'] && $empresaData['lastHistory']->estado === 'Apertura';
+                });
+                
+                if ($hayAperturasActivas) {
+                    $isClosed = false; // Hay cajas abiertas, no mostrar apertura
+                } else {
+                    $isClosed = true; // No hay cajas abiertas, mostrar apertura
+                }
             }
             
             // Si solo hay una empresa, usar la lógica anterior
@@ -106,10 +119,10 @@
                 // Para una empresa, ajustar la lógica de $isClosed
                 if ($empresasCaja[0]['needsClosure']) {
                     $isClosed = false; // Mostrar cierre pendiente
-                } else if ($empresasCaja[0]['aperturaHoy']) {
-                    $isClosed = false; // Ya se abrió hoy
                 } else {
-                    $isClosed = $empresasCaja[0]['isClosed'];
+                    // Verificar si la caja está actualmente abierta
+                    $cajaActualmenteAbierta = $lastCashHistory && $lastCashHistory->estado === 'Apertura';
+                    $isClosed = !$cajaActualmenteAbierta; // Mostrar apertura solo si la caja NO está abierta
                 }
             }
         }
@@ -174,8 +187,8 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text">$</span>
                                 </div>
-                                <input type="number" step="1" min="0" class="form-control form-control-lg" 
-                                       name="monto" id="monto_cierre_pendiente" value="{{ intval($sumCaja) }}" readonly>
+                                <input type="number" step="0.01" min="0" class="form-control form-control-lg" 
+                                       name="monto" id="monto_cierre_pendiente" value="{{ number_format($sumCaja, 2, '.', '') }}" readonly>
                             </div>
                         </div>
                         <input type="hidden" name="estado" value="Cierre">
@@ -226,7 +239,7 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text">$</span>
                                 </div>
-                                <input type="number" step="1" min="0" class="form-control form-control-lg" 
+                                <input type="number" step="0.01" min="0" class="form-control form-control-lg" 
                                        name="monto" id="monto_pendiente_multi" value="0" readonly>
                             </div>
                         </div>
@@ -319,8 +332,8 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text">$</span>
                                 </div>
-                                <input type="number" step="1" min="0" class="form-control form-control-lg" 
-                                       name="monto" id="monto" value="{{ intval($sumCaja) }}" readonly>
+                                <input type="number" step="0.01" min="0" class="form-control form-control-lg" 
+                                       name="monto" id="monto" value="{{ number_format($sumCaja, 2, '.', '') }}" readonly>
                             </div>
                         </div>
                         <input type="hidden" name="estado" value="Apertura">
@@ -341,22 +354,28 @@
                     <form id="multiEmpresaForm" action="{{ route('cash-histories.store') }}" method="POST">
                         @csrf
                         <div class="form-group">
-                            <label for="empresa_select">Seleccionar Sucursal:</label>
-                            <select id="empresa_select" name="empresa_id" class="form-control form-control-lg" required>
-                                <option value="">-- Seleccione una sucursal --</option>
+                            <label>Seleccionar Sucursal:</label>
+                            <div class="row">
                                 @foreach($empresasCaja as $index => $empresaData)
                                     @if($empresaData['isClosed'])
-                                        <option value="{{ $empresaData['empresa']->id }}" 
-                                                data-monto="{{ intval($empresaData['sumCaja']) }}"
-                                                data-last-close="{{ $empresaData['previousHistory'] ? $empresaData['previousHistory']->created_at->format('d/m/Y H:i') : 'Sin cierres anteriores' }}"
-                                                data-last-user="{{ $empresaData['previousHistory'] ? $empresaData['previousHistory']->user->name : 'N/A' }}"
-                                                data-last-amount="{{ $empresaData['previousHistory'] ? number_format($empresaData['previousHistory']->monto, 2) : '0.00' }}">
-                                            {{ strtoupper($empresaData['empresa']->nombre) }} 
-                                            (Caja Cerrada - ${{ number_format($empresaData['sumCaja'], 0, ',', '.') }})
-                                        </option>
+                                        <div class="col-md-6 mb-2">
+                                            <button type="button" class="btn btn-outline-primary btn-block empresa-btn" 
+                                                    data-empresa-id="{{ $empresaData['empresa']->id }}"
+                                                    data-monto="{{ number_format($empresaData['sumCaja'], 2, '.', '') }}"
+                                                    data-last-close="{{ $empresaData['previousHistory'] ? $empresaData['previousHistory']->created_at->format('d/m/Y H:i') : 'Sin cierres anteriores' }}"
+                                                    data-last-user="{{ $empresaData['previousHistory'] ? $empresaData['previousHistory']->user->name : 'N/A' }}"
+                                                    data-last-amount="{{ $empresaData['previousHistory'] ? number_format($empresaData['previousHistory']->monto, 2) : '0.00' }}">
+                                                <i class="fas fa-building mr-2"></i>
+                                                <div class="text-left">
+                                                    <div><strong>{{ strtoupper($empresaData['empresa']->nombre) }}</strong></div>
+                                                    <small>Caja Cerrada - ${{ number_format($empresaData['sumCaja'], 2, '.', ',') }}</small>
+                                                </div>
+                                            </button>
+                                        </div>
                                     @endif
                                 @endforeach
-                            </select>
+                            </div>
+                            <input type="hidden" id="empresa_id_hidden" name="empresa_id" required>
                         </div>
 
                         <div id="empresa_info" class="alert alert-info" style="display: none;">
@@ -372,8 +391,8 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text">$</span>
                                 </div>
-                                <input type="number" step="1" min="0" class="form-control form-control-lg" 
-                                       name="monto" id="monto_multi" value="0" readonly>
+                                <input type="number" step="0.01" min="0" class="form-control form-control-lg" 
+                                       name="monto" id="monto_multi" value="{{ number_format($sumCaja, 2, '.', '') }}" readonly>
                             </div>
                         </div>
                         <input type="hidden" name="estado" value="Apertura">
@@ -390,29 +409,37 @@
                     </form>
 
                     <script>
-                        document.getElementById('empresa_select').addEventListener('change', function() {
-                            const selectedOption = this.options[this.selectedIndex];
-                            const montoInput = document.getElementById('monto_multi');
-                            const btnAbrir = document.getElementById('btn_abrir');
-                            const empresaInfo = document.getElementById('empresa_info');
-                            
-                            if (selectedOption.value) {
-                                // Actualizar monto
-                                montoInput.value = selectedOption.getAttribute('data-monto') || 0;
+                        document.querySelectorAll('.empresa-btn').forEach(button => {
+                            button.addEventListener('click', function() {
+                                // Remover selección anterior
+                                document.querySelectorAll('.empresa-btn').forEach(btn => {
+                                    btn.classList.remove('btn-primary');
+                                    btn.classList.add('btn-outline-primary');
+                                });
+                                
+                                // Marcar como seleccionado
+                                this.classList.remove('btn-outline-primary');
+                                this.classList.add('btn-primary');
+                                
+                                // Actualizar campos
+                                const empresaId = this.getAttribute('data-empresa-id');
+                                const monto = this.getAttribute('data-monto');
+                                const lastUser = this.getAttribute('data-last-user');
+                                const lastClose = this.getAttribute('data-last-close');
+                                const lastAmount = this.getAttribute('data-last-amount');
+                                
+                                document.getElementById('empresa_id_hidden').value = empresaId;
+                                document.getElementById('monto_multi').value = monto;
                                 
                                 // Mostrar información del último cierre
-                                document.getElementById('info_user').textContent = selectedOption.getAttribute('data-last-user');
-                                document.getElementById('info_date').textContent = selectedOption.getAttribute('data-last-close');
-                                document.getElementById('info_amount').textContent = selectedOption.getAttribute('data-last-amount');
-                                empresaInfo.style.display = 'block';
+                                document.getElementById('info_user').textContent = lastUser;
+                                document.getElementById('info_date').textContent = lastClose;
+                                document.getElementById('info_amount').textContent = lastAmount;
+                                document.getElementById('empresa_info').style.display = 'block';
                                 
                                 // Habilitar botón
-                                btnAbrir.disabled = false;
-                            } else {
-                                montoInput.value = 0;
-                                empresaInfo.style.display = 'none';
-                                btnAbrir.disabled = true;
-                            }
+                                document.getElementById('btn_abrir').disabled = false;
+                            });
                         });
                     </script>
                 @endif
@@ -444,7 +471,7 @@
             <p>Usuario actual: {{ auth()->user()->name }}</p>
             <div class="alert alert-info">
                 <i class="fas fa-info-circle mr-2"></i>
-                Puede cerrar múltiples cajas y luego cerrar sesión, o cancelar para continuar trabajando.
+                Al confirmar el cierre de caja, su sesión se cerrará automáticamente. Use "Cancelar" si desea continuar trabajando.
             </div>
         </div>
 
@@ -460,8 +487,8 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text">$</span>
                                 </div>
-                                <input type="number" step="1" min="0" class="form-control form-control-lg" 
-                                       id="monto_cierre" name="monto" value="{{ intval($sumCaja) }}" readonly>
+                                <input type="number" step="0.01" min="0" class="form-control form-control-lg" 
+                                       id="monto_cierre" name="monto" value="{{ number_format($sumCaja, 2, '.', '') }}" readonly>
                             </div>
                         </div>
                         <input type="hidden" name="estado" value="Cierre">
@@ -471,13 +498,9 @@
                             <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg mr-2">
                                 <i class="fas fa-times mr-2"></i>Cancelar
                             </a>
-                            <button type="submit" class="btn btn-danger btn-lg mr-2">
-                                <i class="fas fa-door-closed mr-2"></i>Confirmar Cierre
+                            <button type="submit" class="btn btn-danger btn-lg flex-grow-1">
+                                <i class="fas fa-door-closed mr-2"></i>Confirmar Cierre y Salir
                             </button>
-                            <a href="{{ route('logout') }}" class="btn btn-warning btn-lg" 
-                               onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
-                            </a>
                         </div>
                     </form>
                 @else
@@ -485,19 +508,30 @@
                     <form id="closeCashFormMulti" action="{{ route('cash-histories.store') }}" method="POST">
                         @csrf
                         <div class="form-group">
-                            <label for="empresa_select_close">Seleccionar Sucursal:</label>
-                            <select id="empresa_select_close" name="empresa_id" class="form-control form-control-lg" required>
-                                <option value="">-- Seleccione una sucursal --</option>
+                            <label>Seleccionar Sucursal:</label>
+                            <div class="row">
                                 @foreach($empresasCaja as $index => $empresaData)
                                     @if(!$empresaData['isClosed'])
-                                        <option value="{{ $empresaData['empresa']->id }}" 
-                                                data-monto="{{ intval($empresaData['sumCaja']) }}">
-                                            {{ strtoupper($empresaData['empresa']->nombre) }} 
-                                            (Caja Abierta - ${{ number_format($empresaData['sumCaja'], 0, ',', '.') }})
-                                        </option>
+                                        <div class="col-md-6 mb-2">
+                                            <button type="button" class="btn {{ $empresaData['isUltimaCajaAbierta'] ? 'btn-danger' : 'btn-outline-danger' }} btn-block empresa-close-btn" 
+                                                    data-empresa-id="{{ $empresaData['empresa']->id }}"
+                                                    data-monto="{{ number_format($empresaData['sumCaja'], 2, '.', '') }}">
+                                                <i class="fas fa-cash-register mr-2"></i>
+                                                <div class="text-left">
+                                                    <div><strong>{{ strtoupper($empresaData['empresa']->nombre) }}</strong></div>
+                                                    <small>
+                                                        Caja Abierta - ${{ number_format($empresaData['sumCaja'], 2, '.', ',') }}
+                                                        @if($empresaData['isUltimaCajaAbierta'])
+                                                            <br><span class="badge badge-warning">ÚLTIMA ABIERTA</span>
+                                                        @endif
+                                                    </small>
+                                                </div>
+                                            </button>
+                                        </div>
                                     @endif
                                 @endforeach
-                            </select>
+                            </div>
+                            <input type="hidden" id="empresa_id_close_hidden" name="empresa_id" required>
                         </div>
 
                         <div class="form-group">
@@ -506,7 +540,7 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text">$</span>
                                 </div>
-                                <input type="number" step="1" min="0" class="form-control form-control-lg" 
+                                <input type="number" step="0.01" min="0" class="form-control form-control-lg" 
                                        id="monto_cierre_multi" name="monto" value="0" readonly>
                             </div>
                         </div>
@@ -516,29 +550,45 @@
                             <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg mr-2">
                                 <i class="fas fa-times mr-2"></i>Cancelar
                             </a>
-                            <button type="submit" class="btn btn-danger btn-lg mr-2" id="btn_cerrar" disabled>
-                                <i class="fas fa-door-closed mr-2"></i>Confirmar Cierre
+                            <button type="submit" class="btn btn-danger btn-lg flex-grow-1" id="btn_cerrar" disabled>
+                                <i class="fas fa-door-closed mr-2"></i>Confirmar Cierre y Salir
                             </button>
-                            <a href="{{ route('logout') }}" class="btn btn-warning btn-lg" 
-                               onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
-                            </a>
                         </div>
                     </form>
 
                     <script>
-                        document.getElementById('empresa_select_close').addEventListener('change', function() {
-                            const selectedOption = this.options[this.selectedIndex];
-                            const montoInput = document.getElementById('monto_cierre_multi');
-                            const btnCerrar = document.getElementById('btn_cerrar');
-                            
-                            if (selectedOption.value) {
-                                montoInput.value = selectedOption.getAttribute('data-monto') || 0;
-                                btnCerrar.disabled = false;
-                            } else {
-                                montoInput.value = 0;
-                                btnCerrar.disabled = true;
+                        document.addEventListener('DOMContentLoaded', function() {
+                            // Buscar si hay un botón de última caja abierta y seleccionarlo automáticamente
+                            const ultimaCajaBtn = document.querySelector('.empresa-close-btn.btn-danger');
+                            if (ultimaCajaBtn) {
+                                ultimaCajaBtn.click(); // Simular click para seleccionar automáticamente
                             }
+                        });
+
+                        document.querySelectorAll('.empresa-close-btn').forEach(button => {
+                            button.addEventListener('click', function() {
+                                // Remover selección anterior
+                                document.querySelectorAll('.empresa-close-btn').forEach(btn => {
+                                    if (btn.classList.contains('btn-danger')) {
+                                        btn.classList.remove('btn-danger');
+                                        btn.classList.add('btn-outline-danger');
+                                    }
+                                });
+                                
+                                // Marcar como seleccionado
+                                this.classList.remove('btn-outline-danger');
+                                this.classList.add('btn-danger');
+                                
+                                // Actualizar campos
+                                const empresaId = this.getAttribute('data-empresa-id');
+                                const monto = this.getAttribute('data-monto');
+                                
+                                document.getElementById('empresa_id_close_hidden').value = empresaId;
+                                document.getElementById('monto_cierre_multi').value = monto;
+                                
+                                // Habilitar botón
+                                document.getElementById('btn_cerrar').disabled = false;
+                            });
                         });
                     </script>
                 @endif
@@ -561,7 +611,7 @@
                         e.preventDefault();
                         
                         @if($userEmpresas->count() > 1)
-                            empresaId = document.getElementById('empresa_select_close').value;
+                            empresaId = document.getElementById('empresa_id_close_hidden').value;
                             if (!empresaId) {
                                 alert('Por favor seleccione una sucursal');
                                 return;
@@ -611,19 +661,32 @@
                         .then(data => {
                             console.log('Response data:', data);
                             if (data.success) {
-                                // Mostrar éxito
-                                submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Caja Cerrada';
+                                // Mostrar éxito temporalmente
+                                submitBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Cerrando sesión...';
                                 
                                 // Mostrar mensaje de éxito
                                 const alertDiv = document.createElement('div');
                                 alertDiv.className = 'alert alert-success mt-3';
-                                alertDiv.innerHTML = '<i class="fas fa-check mr-2"></i>Caja cerrada exitosamente. Puede cerrar otra caja o cerrar sesión.';
+                                alertDiv.innerHTML = '<i class="fas fa-check mr-2"></i>Caja cerrada exitosamente. Cerrando sesión automáticamente...';
                                 submitBtn.parentNode.parentNode.appendChild(alertDiv);
                                 
-                                // Recargar la página después de 3 segundos para actualizar el estado
+                                // Cerrar sesión automáticamente después de 2 segundos
                                 setTimeout(() => {
-                                    window.location.reload();
-                                }, 3000);
+                                    // Crear y enviar formulario de logout
+                                    const logoutForm = document.createElement('form');
+                                    logoutForm.method = 'POST';
+                                    logoutForm.action = '{{ route("logout") }}';
+                                    logoutForm.style.display = 'none';
+                                    
+                                    const csrfInput = document.createElement('input');
+                                    csrfInput.type = 'hidden';
+                                    csrfInput.name = '_token';
+                                    csrfInput.value = token;
+                                    
+                                    logoutForm.appendChild(csrfInput);
+                                    document.body.appendChild(logoutForm);
+                                    logoutForm.submit();
+                                }, 2000);
                             } else {
                                 throw new Error(data.message || 'Error desconocido');
                             }
