@@ -9,6 +9,8 @@
     $empresasCaja = [];
     $aperturaAutomatica = false;
     $cajasAbiertas = 0;
+    $hayCajasPendientesCierre = false;
+    $cajasAbriertasHoy = false;
     
     if ($currentUser) {
         // Obtener empresas según el tipo de usuario
@@ -27,6 +29,8 @@
         }
         
         if ($userEmpresas->count() > 0) {
+            $today = now()->format('Y-m-d');
+            
             // Preparar información de caja para cada empresa
             foreach ($userEmpresas as $empresa) {
                 $lastHistory = \App\Models\CashHistory::where('empresa_id', $empresa->id)
@@ -38,25 +42,75 @@
                                                          ->latest()
                                                          ->first();
                 
+                // Verificar si hay apertura de hoy
+                $aperturaHoy = \App\Models\CashHistory::where('empresa_id', $empresa->id)
+                                                     ->where('estado', 'Apertura')
+                                                     ->whereDate('created_at', $today)
+                                                     ->first();
+                
+                // Verificar si hay cajas abiertas de días anteriores (sin cerrar)
+                $cajaAbiertaAnterior = null;
+                if ($lastHistory && $lastHistory->estado === 'Apertura' && 
+                    $lastHistory->created_at->format('Y-m-d') < $today) {
+                    // La última acción fue apertura y fue en un día anterior
+                    $cajaAbiertaAnterior = $lastHistory;
+                }
+                
+                $isCajaClosedOrOpenToday = !$lastHistory || 
+                                         $lastHistory->estado === 'Cierre' || 
+                                         ($aperturaHoy && $lastHistory->estado === 'Apertura');
+                
+                $needsClosure = $cajaAbiertaAnterior !== null;
+                
+                if ($needsClosure) {
+                    $hayCajasPendientesCierre = true;
+                }
+                
+                if ($aperturaHoy) {
+                    $cajasAbriertasHoy = true;
+                }
+                
                 $empresasCaja[] = [
                     'empresa' => $empresa,
                     'lastHistory' => $lastHistory,
                     'previousHistory' => $previousHistory,
-                    'isClosed' => !$lastHistory || $lastHistory->estado !== 'Apertura',
+                    'aperturaHoy' => $aperturaHoy,
+                    'cajaAbiertaAnterior' => $cajaAbiertaAnterior,
+                    'isClosed' => !$isCajaClosedOrOpenToday,
+                    'needsClosure' => $needsClosure,
                     'sumCaja' => \App\Models\Caja::where('empresa_id', $empresa->id)->sum('valor')
                 ];
             }
             
-            // Verificar si hay alguna caja que necesite apertura
-            $isClosed = collect($empresasCaja)->contains('isClosed', true);
+            // Lógica para determinar qué mostrar:
+            // 1. Si hay cajas pendientes de cierre del día anterior, mostrar cierre forzoso
+            // 2. Si ya se abrieron cajas hoy, no mostrar apertura
+            // 3. Si hay cajas cerradas, mostrar apertura normal
+            
+            if ($hayCajasPendientesCierre) {
+                $isClosed = false; // No mostrar apertura, mostrar cierre pendiente
+            } else if ($cajasAbriertasHoy) {
+                $isClosed = false; // Ya se abrieron cajas hoy, no mostrar apertura
+            } else {
+                // Verificar si hay alguna caja que necesite apertura
+                $isClosed = collect($empresasCaja)->contains('isClosed', true);
+            }
             
             // Si solo hay una empresa, usar la lógica anterior
             if ($userEmpresas->count() == 1) {
                 $userEmpresa = $userEmpresas->first();
                 $lastCashHistory = $empresasCaja[0]['lastHistory'];
                 $previousCashHistory = $empresasCaja[0]['previousHistory'];
-                $isClosed = $empresasCaja[0]['isClosed'];
                 $sumCaja = $empresasCaja[0]['sumCaja'];
+                
+                // Para una empresa, ajustar la lógica de $isClosed
+                if ($empresasCaja[0]['needsClosure']) {
+                    $isClosed = false; // Mostrar cierre pendiente
+                } else if ($empresasCaja[0]['aperturaHoy']) {
+                    $isClosed = false; // Ya se abrió hoy
+                } else {
+                    $isClosed = $empresasCaja[0]['isClosed'];
+                }
             }
         }
     }
@@ -83,6 +137,147 @@
         $('.alert-dismissible').fadeOut('slow');
     }, 5000);
 </script>
+@endif
+
+{{-- Tarjeta de Cierre Pendiente (cajas del día anterior sin cerrar) --}}
+@if($currentUser && $hayCajasPendientesCierre && $userEmpresas->count() > 0)
+<div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center" 
+     style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;">
+    <div class="text-white" style="max-width: 700px;">
+        <div class="text-center mb-4">
+            <h1><i class="fas fa-exclamation-triangle fa-3x mb-3 text-warning"></i></h1>
+            <h2 class="text-danger">CAJAS PENDIENTES DE CIERRE</h2>
+            <h3 class="text-warning">Debe cerrar las cajas del día anterior</h3>
+            <div class="alert alert-warning">
+                <i class="fas fa-info-circle mr-2"></i>
+                Se detectaron cajas abiertas de días anteriores que no fueron cerradas. 
+                Debe cerrarlas antes de poder trabajar normalmente.
+            </div>
+        </div>
+
+        <div class="card shadow">
+            <div class="card-body bg-light">
+                @if($userEmpresas->count() == 1 && $empresasCaja[0]['needsClosure'])
+                    {{-- Una sola empresa con caja pendiente --}}
+                    <div class="alert alert-info mb-3">
+                        <h5><strong>Caja pendiente de cierre:</strong></h5>
+                        <p class="mb-1">Empresa: {{ $userEmpresa->nombre }}</p>
+                        <p class="mb-1">Fecha de apertura: {{ $empresasCaja[0]['cajaAbiertaAnterior']->created_at->format('d/m/Y H:i') }}</p>
+                        <p class="mb-0">Usuario que abrió: {{ $empresasCaja[0]['cajaAbiertaAnterior']->user->name }}</p>
+                    </div>
+
+                    <form action="{{ route('cash-histories.store') }}" method="POST">
+                        @csrf
+                        <div class="form-group">
+                            <label for="monto_cierre_pendiente">Monto de Cierre ({{ $userEmpresa->nombre }})</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">$</span>
+                                </div>
+                                <input type="number" step="1" min="0" class="form-control form-control-lg" 
+                                       name="monto" id="monto_cierre_pendiente" value="{{ intval($sumCaja) }}" readonly>
+                            </div>
+                        </div>
+                        <input type="hidden" name="estado" value="Cierre">
+                        <input type="hidden" name="empresa_id" value="{{ $userEmpresa->id }}">
+                        <input type="hidden" name="cierre_pendiente" value="1">
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="submit" class="btn btn-warning btn-lg flex-grow-1 mr-2">
+                                <i class="fas fa-door-closed mr-2"></i>Cerrar Caja Pendiente
+                            </button>
+                            <a href="{{ route('logout') }}" class="btn btn-danger btn-lg" 
+                               onclick="event.preventDefault(); document.getElementById('logout-form-pendiente').submit();">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </a>
+                        </div>
+                    </form>
+                @else
+                    {{-- Múltiples empresas con cajas pendientes --}}
+                    <form action="{{ route('cash-histories.store') }}" method="POST">
+                        @csrf
+                        <div class="form-group">
+                            <label for="empresa_select_pendiente">Seleccionar Sucursal con Caja Pendiente:</label>
+                            <select id="empresa_select_pendiente" name="empresa_id" class="form-control form-control-lg" required>
+                                <option value="">-- Seleccione una sucursal --</option>
+                                @foreach($empresasCaja as $empresaData)
+                                    @if($empresaData['needsClosure'])
+                                        <option value="{{ $empresaData['empresa']->id }}" 
+                                                data-monto="{{ intval($empresaData['sumCaja']) }}"
+                                                data-fecha-apertura="{{ $empresaData['cajaAbiertaAnterior']->created_at->format('d/m/Y H:i') }}"
+                                                data-usuario-apertura="{{ $empresaData['cajaAbiertaAnterior']->user->name }}">
+                                            {{ strtoupper($empresaData['empresa']->nombre) }} 
+                                            (Pendiente desde {{ $empresaData['cajaAbiertaAnterior']->created_at->format('d/m/Y') }})
+                                        </option>
+                                    @endif
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div id="info_caja_pendiente" class="alert alert-info" style="display: none;">
+                            <h6><strong>Información de la caja pendiente:</strong></h6>
+                            <p class="mb-1">Fecha de apertura: <span id="info_fecha_apertura">N/A</span></p>
+                            <p class="mb-0">Usuario que abrió: <span id="info_usuario_apertura">N/A</span></p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="monto_pendiente_multi">Monto de Cierre:</label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">$</span>
+                                </div>
+                                <input type="number" step="1" min="0" class="form-control form-control-lg" 
+                                       name="monto" id="monto_pendiente_multi" value="0" readonly>
+                            </div>
+                        </div>
+                        <input type="hidden" name="estado" value="Cierre">
+                        <input type="hidden" name="cierre_pendiente" value="1">
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="submit" class="btn btn-warning btn-lg flex-grow-1 mr-2" id="btn_cerrar_pendiente" disabled>
+                                <i class="fas fa-door-closed mr-2"></i>Cerrar Caja Pendiente
+                            </button>
+                            <a href="{{ route('logout') }}" class="btn btn-danger btn-lg" 
+                               onclick="event.preventDefault(); document.getElementById('logout-form-pendiente').submit();">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </a>
+                        </div>
+                    </form>
+
+                    <script>
+                        document.getElementById('empresa_select_pendiente').addEventListener('change', function() {
+                            const selectedOption = this.options[this.selectedIndex];
+                            const montoInput = document.getElementById('monto_pendiente_multi');
+                            const btnCerrar = document.getElementById('btn_cerrar_pendiente');
+                            const infoCaja = document.getElementById('info_caja_pendiente');
+                            
+                            if (selectedOption.value) {
+                                // Actualizar monto
+                                montoInput.value = selectedOption.getAttribute('data-monto') || 0;
+                                
+                                // Mostrar información de la caja pendiente
+                                document.getElementById('info_fecha_apertura').textContent = selectedOption.getAttribute('data-fecha-apertura');
+                                document.getElementById('info_usuario_apertura').textContent = selectedOption.getAttribute('data-usuario-apertura');
+                                infoCaja.style.display = 'block';
+                                
+                                // Habilitar botón
+                                btnCerrar.disabled = false;
+                            } else {
+                                montoInput.value = 0;
+                                infoCaja.style.display = 'none';
+                                btnCerrar.disabled = true;
+                            }
+                        });
+                    </script>
+                @endif
+
+                <form id="logout-form-pendiente" action="{{ route('logout') }}" method="POST" style="display: none;">
+                    @csrf
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 @endif
 
 {{-- Tarjeta de Apertura de Caja (para todos los usuarios con empresas asignadas) --}}
@@ -465,7 +660,8 @@
 {{-- Content Wrapper --}}
 <div class="content-wrapper {{ config('adminlte.classes_content_wrapper', '') }}" 
      @if(($currentUser && $isClosed && $userEmpresas->count() > 0) || 
-         ($showClosingCard && $currentUser && $userEmpresas->count() > 0)) style="filter: blur(5px);" @endif>
+         ($showClosingCard && $currentUser && $userEmpresas->count() > 0) ||
+         ($hayCajasPendientesCierre && $currentUser && $userEmpresas->count() > 0)) style="filter: blur(5px);" @endif>
     {{-- Content Header --}}
     @hasSection('content_header')
         <div class="content-header">
