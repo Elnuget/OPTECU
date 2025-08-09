@@ -228,6 +228,13 @@
 @section('js')
 
 <script>
+// Preseleccionar la sucursal activa desde localStorage
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof SucursalCache !== 'undefined') {
+        SucursalCache.preseleccionarEnSelect('empresa_id', false);
+    }
+});
+
 // Agrega un 'event listener' al documento para escuchar eventos de teclado
 document.addEventListener('keydown', function(event) {
     if (event.key === "Home") { // Verifica si la tecla presionada es 'Inicio'
