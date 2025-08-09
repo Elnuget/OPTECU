@@ -257,5 +257,12 @@
             color: #6c757d;
             margin-top: 0.25rem;
         }
+
+        /* Estilo para el filtro de empresa activo */
+        .filtro-empresa-activo,
+        #empresa_id[style*="border-color: #28a745"] {
+            border-color: #28a745 !important;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+        }
     </style>
 @endpush 

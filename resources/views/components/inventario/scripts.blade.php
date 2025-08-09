@@ -302,6 +302,42 @@
                 scrollTimeout = setTimeout(saveState, 100);
             });
 
+            // Auto-submit cuando cambie el filtro de empresa
+            $('#empresa_id').change(function() {
+                $(this).closest('form').submit();
+            });
+
+            // Función para cargar sucursal por defecto desde localStorage
+            function cargarSucursalPorDefecto() {
+                // Usar la nueva clase SucursalCache si está disponible
+                if (window.SucursalCache) {
+                    SucursalCache.preseleccionarEnSelect('empresa_id', true);
+                } else {
+                    // Fallback al método anterior
+                    try {
+                        const sucursalData = localStorage.getItem('sucursal_abierta');
+                        if (sucursalData && !window.location.search.includes('empresa_id=')) {
+                            const sucursal = JSON.parse(sucursalData);
+                            const empresaSelect = document.getElementById('empresa_id');
+                            if (empresaSelect) {
+                                const option = empresaSelect.querySelector(`option[value="${sucursal.id}"]`);
+                                if (option) {
+                                    empresaSelect.value = sucursal.id;
+                                    empresaSelect.style.borderColor = '#28a745';
+                                    empresaSelect.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                                    $(empresaSelect).closest('form').submit();
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error al cargar sucursal por defecto:', e);
+                    }
+                }
+            }
+
+            // Cargar sucursal por defecto al inicializar
+            cargarSucursalPorDefecto();
+
             // Funciones de navegación
             window.crearArticulo = function() {
                 window.location.href = "{{ route('inventario.create') }}";
