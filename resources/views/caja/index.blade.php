@@ -65,6 +65,14 @@
     .dataTables_filter input::placeholder {
         text-transform: uppercase !important;
     }
+
+    /* Estilo para el filtro de empresa activo */
+    .filtro-empresa-activo,
+    select[name="empresa_filtro"][style*="border-color: #28a745"],
+    select[name="empresa_id"][style*="border-color: #28a745"] {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+    }
 </style>
 
     <div class="card">
@@ -403,6 +411,104 @@
                 }
                 return true;
             });
+
+            // Función para cargar sucursal por defecto desde localStorage
+            function cargarSucursalPorDefecto() {
+                // Verificar si ya hay el parámetro empresa_filtro en la URL para evitar bucle infinito
+                const urlParams = new URLSearchParams(window.location.search);
+                const tieneEmpresaEnUrl = urlParams.has('empresa_filtro');
+                
+                // Usar la nueva clase SucursalCache si está disponible
+                if (window.SucursalCache) {
+                    // El filtro tiene el nombre "empresa_filtro", no un ID específico
+                    const sucursal = SucursalCache.obtener();
+                    if (sucursal && !tieneEmpresaEnUrl) {
+                        const filtroEmpresa = document.querySelector('select[name="empresa_filtro"]');
+                        if (filtroEmpresa) {
+                            const option = filtroEmpresa.querySelector(`option[value="${sucursal.id}"]`);
+                            if (option) {
+                                filtroEmpresa.value = sucursal.id;
+                                filtroEmpresa.style.borderColor = '#28a745';
+                                filtroEmpresa.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                                // Auto-submit del formulario de filtro
+                                filtroEmpresa.closest('form').submit();
+                            }
+                        }
+                    }
+                    
+                    // Preseleccionar en los formularios de retiro y cuadre (sin auto-submit)
+                    preseleccionarEnFormularios();
+                } else {
+                    // Fallback al método anterior
+                    try {
+                        const sucursalData = localStorage.getItem('sucursal_abierta');
+                        if (sucursalData) {
+                            const sucursal = JSON.parse(sucursalData);
+                            
+                            // Preseleccionar en filtro con auto-submit solo si no hay empresa en URL
+                            if (!tieneEmpresaEnUrl) {
+                                const filtroEmpresa = document.querySelector('select[name="empresa_filtro"]');
+                                if (filtroEmpresa) {
+                                    const option = filtroEmpresa.querySelector(`option[value="${sucursal.id}"]`);
+                                    if (option) {
+                                        filtroEmpresa.value = sucursal.id;
+                                        filtroEmpresa.style.borderColor = '#28a745';
+                                        filtroEmpresa.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                                        console.log('Filtro de sucursal preseleccionado:', sucursal.nombre);
+                                        // Auto-submit del formulario de filtro
+                                        filtroEmpresa.closest('form').submit();
+                                    }
+                                }
+                            }
+                            
+                            // Preseleccionar en formularios sin auto-submit
+                            preseleccionarEnFormularios(sucursal);
+                        }
+                    } catch (e) {
+                        console.error('Error al cargar sucursal por defecto:', e);
+                    }
+                }
+            }
+
+            // Función para preseleccionar empresa en los formularios
+            function preseleccionarEnFormularios(sucursalData = null) {
+                let sucursal = sucursalData;
+                
+                if (!sucursal && window.SucursalCache) {
+                    sucursal = SucursalCache.obtener();
+                }
+                
+                if (sucursal) {
+                    // Preseleccionar en formulario de retiro
+                    const empresaRetiro = document.querySelector('select[name="empresa_id"]');
+                    if (empresaRetiro) {
+                        const optionRetiro = empresaRetiro.querySelector(`option[value="${sucursal.id}"]`);
+                        if (optionRetiro) {
+                            empresaRetiro.value = sucursal.id;
+                            empresaRetiro.style.borderColor = '#28a745';
+                            empresaRetiro.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                        }
+                    }
+                    
+                    @can('admin')
+                    // Preseleccionar en formulario de cuadrar caja (solo para admin)
+                    const empresaCuadre = document.querySelector('#formCuadrarCaja select[name="empresa_id"]');
+                    if (empresaCuadre) {
+                        const optionCuadre = empresaCuadre.querySelector(`option[value="${sucursal.id}"]`);
+                        if (optionCuadre) {
+                            empresaCuadre.value = sucursal.id;
+                            empresaCuadre.style.borderColor = '#28a745';
+                            empresaCuadre.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                        }
+                    }
+                    @endcan
+                    
+                    console.log('Sucursal preseleccionada en formularios de caja:', sucursal.nombre);
+                }
+            }
+
+            // Cargar sucursal por defecto al inicializar
+            cargarSucursalPorDefecto();
         });
 
         // Función para editar movimiento
