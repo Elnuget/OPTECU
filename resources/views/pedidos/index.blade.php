@@ -1126,6 +1126,37 @@
             $('#filterForm').submit();
         });
 
+        // Cargar sucursal por defecto desde localStorage
+        function cargarSucursalPorDefecto() {
+            // Usar la nueva clase SucursalCache si está disponible
+            if (window.SucursalCache) {
+                SucursalCache.preseleccionarEnSelect('filtroEmpresa', true);
+            } else {
+                // Fallback al método anterior
+                try {
+                    const sucursalData = localStorage.getItem('sucursal_abierta');
+                    if (sucursalData && !window.location.search.includes('empresa_id=')) {
+                        const sucursal = JSON.parse(sucursalData);
+                        const empresaSelect = document.getElementById('filtroEmpresa');
+                        if (empresaSelect) {
+                            const option = empresaSelect.querySelector(`option[value="${sucursal.id}"]`);
+                            if (option) {
+                                empresaSelect.value = sucursal.id;
+                                empresaSelect.style.borderColor = '#28a745';
+                                empresaSelect.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                                $('#filterForm').submit();
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error al cargar sucursal por defecto:', e);
+                }
+            }
+        }
+
+        // Cargar sucursal por defecto al inicializar
+        cargarSucursalPorDefecto();
+
         // Auto-submit cuando cambien los filtros de año y mes
         $('#filtroAno, #filtroMes').change(function() {
             $('#filterForm').submit();

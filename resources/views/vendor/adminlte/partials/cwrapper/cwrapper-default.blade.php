@@ -195,7 +195,7 @@
                         <input type="hidden" name="cierre_pendiente" value="1">
                         
                         <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
-                            <button type="submit" class="btn btn-warning btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1">
+                            <button type="submit" class="btn btn-warning btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1" onclick="SucursalCache.limpiar()">
                                 <i class="fas fa-door-closed mr-2"></i>Cerrar Caja Pendiente
                             </button>
                             <a href="{{ route('logout') }}" class="btn btn-danger btn-lg" 
@@ -247,7 +247,7 @@
                         <input type="hidden" name="cierre_pendiente" value="1">
                         
                         <div class="d-flex justify-content-between mt-4">
-                            <button type="submit" class="btn btn-warning btn-lg flex-grow-1 mr-2" id="btn_cerrar_pendiente" disabled>
+                            <button type="submit" class="btn btn-warning btn-lg flex-grow-1 mr-2" id="btn_cerrar_pendiente" disabled onclick="SucursalCache.limpiar()">
                                 <i class="fas fa-door-closed mr-2"></i>Cerrar Caja Pendiente
                             </button>
                             <a href="{{ route('logout') }}" class="btn btn-danger btn-lg" 
@@ -339,7 +339,7 @@
                         <input type="hidden" name="empresa_id" value="{{ $userEmpresa->id }}">
                         
                         <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
-                            <button type="submit" class="btn btn-success btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1">
+                            <button type="submit" class="btn btn-success btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1" onclick="SucursalCache.guardar('{{ $userEmpresa->id }}', '{{ $userEmpresa->nombre }}')">
                                 <i class="fas fa-door-open mr-2"></i>Abrir Caja
                             </button>
                             <a href="{{ route('logout') }}" class="btn btn-danger btn-lg" 
@@ -402,7 +402,7 @@
                         <input type="hidden" name="estado" value="Apertura">
                         
                         <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
-                            <button type="submit" class="btn btn-success btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1" id="btn_abrir" disabled>
+                            <button type="submit" class="btn btn-success btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1" id="btn_abrir" disabled onclick="guardarSucursalCacheMulti()">
                                 <i class="fas fa-door-open mr-2"></i>Abrir Caja
                             </button>
                             <a href="{{ route('logout') }}" class="btn btn-danger btn-lg" 
@@ -521,7 +521,7 @@
                             <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg mb-2 mb-md-0 mr-md-2">
                                 <i class="fas fa-times mr-2"></i>Cancelar
                             </a>
-                            <button type="submit" class="btn btn-danger btn-lg flex-grow-1">
+                            <button type="submit" class="btn btn-danger btn-lg flex-grow-1" onclick="SucursalCache.limpiar()">
                                 <i class="fas fa-door-closed mr-2"></i>
                                 <span class="d-none d-md-inline">Confirmar Cierre y Salir</span>
                                 <span class="d-md-none">Cerrar y Salir</span>
@@ -577,7 +577,7 @@
                             <a href="{{ route('cancel-closing-card') }}" class="btn btn-secondary btn-lg mb-2 mb-md-0 mr-md-2">
                                 <i class="fas fa-times mr-2"></i>Cancelar
                             </a>
-                            <button type="submit" class="btn btn-danger btn-lg flex-grow-1" id="btn_cerrar" disabled>
+                            <button type="submit" class="btn btn-danger btn-lg flex-grow-1" id="btn_cerrar" disabled onclick="SucursalCache.limpiar()">
                                 <i class="fas fa-door-closed mr-2"></i>
                                 <span class="d-none d-md-inline">Confirmar Cierre y Salir</span>
                                 <span class="d-md-none">Cerrar y Salir</span>
@@ -980,4 +980,19 @@
         font-size: 16px !important;
     }
 </style>
+
+<script>
+    // Función para guardar la sucursal en localStorage cuando se abre caja (múltiples empresas)
+    function guardarSucursalCacheMulti() {
+        const empresaSelect = document.getElementById('empresa_id_hidden');
+        if (empresaSelect && empresaSelect.value) {
+            const empresaId = empresaSelect.value;
+            const empresaBtn = document.querySelector(`.empresa-btn[data-empresa-id="${empresaId}"]`);
+            if (empresaBtn) {
+                const empresaNombre = empresaBtn.querySelector('.empresa-nombre').textContent.trim();
+                SucursalCache.guardar(empresaId, empresaNombre);
+            }
+        }
+    }
+</script>
 

@@ -575,6 +575,21 @@ return [
                 ],
             ],
         ],
+        'SucursalCache' => [
+            'active' => true,
+            'files' => [
+                [
+                    'type' => 'css',
+                    'asset' => true,
+                    'location' => 'css/sucursal-cache.css',
+                ],
+                [
+                    'type' => 'js',
+                    'asset' => true,
+                    'location' => 'js/sucursal-cache.js',
+                ],
+            ],
+        ],
     ],
 
     /*

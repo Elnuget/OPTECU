@@ -1,0 +1,58 @@
+/* Estilos para sucursal activa en el navbar */
+.sucursal-badge.badge-success {
+    background-color: #28a745 !important;
+    color: white !important;
+    font-weight: bold !important;
+    animation: pulseGreen 2s infinite;
+    position: relative;
+}
+
+.sucursal-badge.badge-success::before {
+    content: '●';
+    color: #ffffff;
+    margin-right: 4px;
+    font-size: 0.8em;
+}
+
+/* Animación para destacar la sucursal activa */
+@keyframes pulseGreen {
+    0% { 
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); 
+    }
+    70% { 
+        box-shadow: 0 0 0 8px rgba(40, 167, 69, 0); 
+    }
+    100% { 
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); 
+    }
+}
+
+/* Estilo para el select de empresa cuando se selecciona automáticamente */
+.filtro-empresa-activo {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+    transition: all 0.3s ease;
+}
+
+/* Tooltip personalizado para sucursal activa */
+.sucursal-badge[title*="Caja abierta"] {
+    cursor: help;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sucursal-badge.badge-success {
+        animation: none; /* Desactivar animación en móviles para mejor rendimiento */
+    }
+}
+
+/* Estilo adicional para destacar en modales */
+.modal .sucursal-activa-indicator {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.modal .sucursal-activa-indicator::before {
+    content: '●';
+    margin-right: 4px;
+}

@@ -58,7 +58,7 @@
                 @endphp
                 
                 @foreach($empresasLimitadas as $index => $empresa)
-                    <span class="badge badge-info mr-1 mr-md-2" style="font-size: 0.8rem; padding: 6px 8px;" title="{{ $empresa->nombre }}">
+                    <span class="badge badge-info mr-1 mr-md-2 sucursal-badge" style="font-size: 0.8rem; padding: 6px 8px;" title="{{ $empresa->nombre }}" data-empresa-id="{{ $empresa->id }}">
                         <span class="d-none d-md-inline" style="font-size: 0.9rem; padding: 8px 12px;">{{ $empresa->nombre }}</span>
                         <span class="d-md-none">{{ $index + 1 }}</span>
                     </span>
@@ -81,7 +81,7 @@
                 @if($todasEmpresasUsuario->count() > 0)
                     {{-- Mostrar hasta 3 empresas --}}
                     @foreach($empresasLimitadas as $index => $empresa)
-                        <span class="badge badge-info mr-1 mr-md-2" style="font-size: 0.8rem; padding: 6px 8px;" title="{{ $empresa->nombre }}">
+                        <span class="badge badge-info mr-1 mr-md-2 sucursal-badge" style="font-size: 0.8rem; padding: 6px 8px;" title="{{ $empresa->nombre }}" data-empresa-id="{{ $empresa->id }}">
                             <span class="d-none d-md-inline" style="font-size: 0.9rem; padding: 8px 12px;">{{ $empresa->nombre }}</span>
                             <span class="d-md-none">{{ $index + 1 }}</span>
                         </span>
@@ -802,5 +802,35 @@ document.addEventListener('DOMContentLoaded', function() {
         div.textContent = text;
         return div.innerHTML;
     }
+
+    // Aplicar estilo verde a la sucursal activa desde localStorage
+    function aplicarEstiloSucursalActiva() {
+        try {
+            const sucursalData = localStorage.getItem('sucursal_abierta');
+            if (sucursalData) {
+                const sucursal = JSON.parse(sucursalData);
+                // Buscar el badge por ID de empresa
+                const badge = document.querySelector(`.sucursal-badge[data-empresa-id="${sucursal.id}"]`);
+                if (badge) {
+                    badge.classList.remove('badge-info');
+                    badge.classList.add('badge-success');
+                    badge.style.fontWeight = 'bold';
+                    badge.title = `Caja abierta en: ${sucursal.nombre}`;
+                    
+                    // Mover el badge de la sucursal activa al inicio
+                    const parent = badge.parentElement;
+                    parent.insertBefore(badge, parent.firstChild);
+                }
+            }
+        } catch (e) {
+            console.error('Error al aplicar estilo de sucursal activa:', e);
+        }
+    }
+
+    // Aplicar estilos cuando el navbar se carge
+    aplicarEstiloSucursalActiva();
+
+    // También aplicar después de un pequeño delay
+    setTimeout(aplicarEstiloSucursalActiva, 300);
 });
 </script>
