@@ -57,6 +57,13 @@
         .info-box span {
             text-transform: uppercase !important;
         }
+
+        /* Estilo para el filtro de empresa activo */
+        .filtro-empresa-activo {
+            background-color: #28a745 !important;
+            color: white !important;
+            font-weight: bold !important;
+        }
     </style>
 
     <div class="card">
@@ -263,8 +270,53 @@
                 }
             });
 
-            // Manejar cambios en los filtros
-            $('#filtroAno, #filtroMes, #filtroEmpresa').change(function() {
+            // Auto-submit cuando cambie el filtro de empresa
+            $('#filtroEmpresa').change(function() {
+                $('#filterForm').submit();
+            });
+
+            // Cargar sucursal por defecto desde localStorage
+            function cargarSucursalPorDefecto() {
+                // Verificar si ya hay el parámetro empresa en la URL para evitar bucle infinito
+                const urlParams = new URLSearchParams(window.location.search);
+                const tieneEmpresaEnUrl = urlParams.has('empresa');
+                
+                // Solo preseleccionar si no hay empresa ya seleccionada en la URL
+                if (tieneEmpresaEnUrl) {
+                    return;
+                }
+
+                // Usar la nueva clase SucursalCache si está disponible
+                if (window.SucursalCache) {
+                    SucursalCache.preseleccionarEnSelect('filtroEmpresa', true);
+                } else {
+                    // Fallback manual si la clase no está disponible
+                    try {
+                        const sucursalData = localStorage.getItem('sucursal_abierta');
+                        if (sucursalData) {
+                            const sucursal = JSON.parse(sucursalData);
+                            const empresaSelect = document.getElementById('filtroEmpresa');
+                            if (empresaSelect) {
+                                const option = empresaSelect.querySelector(`option[value="${sucursal.id}"]`);
+                                if (option) {
+                                    empresaSelect.value = sucursal.id;
+                                    empresaSelect.classList.add('filtro-empresa-activo');
+                                    console.log('Sucursal preseleccionada en egresos:', sucursal.nombre);
+                                    $('#filterForm').submit();
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error al cargar sucursal por defecto:', e);
+                    }
+                }
+            }
+
+            // Cargar sucursal por defecto al inicializar
+            cargarSucursalPorDefecto();
+
+            // Manejar cambios en los filtros de año y mes
+            $('#filtroAno, #filtroMes').change(function() {
                 $('#filterForm').submit();
             });
 
