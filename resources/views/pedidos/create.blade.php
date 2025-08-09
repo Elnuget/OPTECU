@@ -532,6 +532,11 @@
                 });
             });
 
+            // Preseleccionar la sucursal activa desde localStorage
+            if (typeof SucursalCache !== 'undefined') {
+                SucursalCache.preseleccionarEnSelect('empresa_id', false);
+            }
+
             // Manejar la búsqueda unificada de cliente/paciente
             document.getElementById('buscar_cliente_paciente').addEventListener('change', function() {
                 const selectedOption = document.querySelector(`#clientes_pacientes_list option[value="${this.value}"]`);
