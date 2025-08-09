@@ -93,6 +93,13 @@
         .btn-toolbar .btn-group {
             margin-bottom: 0.5rem;
         }
+
+        /* Estilo para el filtro de empresa activo */
+        .filtro-empresa-activo,
+        #filtroEmpresa[style*="border-color: #28a745"] {
+            border-color: #28a745 !important;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+        }
     </style>
 
     <div class="card">
@@ -450,6 +457,48 @@
             $('#filtroAno, #filtroMes, #metodo_pago, #filtroEmpresa').change(function() {
                 $('#filterForm').submit();
             });
+
+            // Función para cargar sucursal por defecto desde localStorage
+            function cargarSucursalPorDefecto() {
+                // Verificar si ya hay el parámetro empresa en la URL para evitar bucle infinito
+                const urlParams = new URLSearchParams(window.location.search);
+                const tieneEmpresaEnUrl = urlParams.has('empresa');
+                
+                // Solo preseleccionar si no hay empresa ya seleccionada en la URL
+                if (tieneEmpresaEnUrl) {
+                    return;
+                }
+
+                // Usar la nueva clase SucursalCache si está disponible
+                if (window.SucursalCache) {
+                    // Usar auto-submit solo si no hay empresa en URL
+                    SucursalCache.preseleccionarEnSelect('filtroEmpresa', true);
+                } else {
+                    // Fallback al método anterior
+                    try {
+                        const sucursalData = localStorage.getItem('sucursal_abierta');
+                        if (sucursalData) {
+                            const sucursal = JSON.parse(sucursalData);
+                            const empresaSelect = document.getElementById('filtroEmpresa');
+                            if (empresaSelect) {
+                                const option = empresaSelect.querySelector(`option[value="${sucursal.id}"]`);
+                                if (option) {
+                                    empresaSelect.value = sucursal.id;
+                                    empresaSelect.style.borderColor = '#28a745';
+                                    empresaSelect.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                                    console.log('Sucursal preseleccionada con auto-submit:', sucursal.nombre);
+                                    $('#filterForm').submit();
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error al cargar sucursal por defecto:', e);
+                    }
+                }
+            }
+
+            // Cargar sucursal por defecto al inicializar
+            cargarSucursalPorDefecto();
 
             // NUEVA FUNCIONALIDAD: Filtro por fecha específica
             $('#filtrarPorFecha').click(function() {
