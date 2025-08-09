@@ -156,25 +156,19 @@
 @if($currentUser && $hayCajasPendientesCierre && $userEmpresas->count() > 0)
 <div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center p-3" 
      style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;">
-    <div class="text-white w-100" style="max-width: 700px;">
-        <div class="text-center mb-4">
-            <h1 class="d-none d-md-block"><i class="fas fa-exclamation-triangle fa-3x mb-3 text-warning"></i></h1>
-            <h3 class="d-md-none"><i class="fas fa-exclamation-triangle fa-2x mb-2 text-warning"></i></h3>
-            <h3 class="text-danger d-none d-md-block">CAJAS PENDIENTES DE CIERRE</h3>
-            <h5 class="text-danger d-md-none">CAJAS PENDIENTES DE CIERRE</h5>
-            <h4 class="text-warning d-none d-md-block">Debe cerrar las cajas del día anterior</h4>
-            <h6 class="text-warning d-md-none">Debe cerrar las cajas del día anterior</h6>
-            <div class="alert alert-warning">
-                <i class="fas fa-info-circle mr-2"></i>
-                <small class="d-md-none">Se detectaron cajas abiertas de días anteriores que no fueron cerradas. 
-                Debe cerrarlas antes de poder trabajar normalmente.</small>
-                <span class="d-none d-md-inline">Se detectaron cajas abiertas de días anteriores que no fueron cerradas. 
-                Debe cerrarlas antes de poder trabajar normalmente.</span>
-            </div>
-        </div>
-
-        <div class="card shadow">
-            <div class="card-body bg-light">
+    <div class="w-100" style="max-width: 700px; max-height: 90vh;">
+        <div class="card shadow" style="max-height: 90vh;">
+            <div class="card-body bg-light" style="max-height: 90vh; overflow-y: auto;">
+                <div class="text-center mb-4">
+                    <h6 class="text-warning"><i class="fas fa-exclamation-triangle fa-lg mr-2"></i></h6>
+                    <h5 class="text-danger mb-2">CAJAS PENDIENTES DE CIERRE</h5>
+                    <h6 class="text-warning mb-3">Debe cerrar las cajas del día anterior</h6>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <small>Se detectaron cajas abiertas de días anteriores que no fueron cerradas. 
+                        Debe cerrarlas antes de poder trabajar normalmente.</small>
+                    </div>
+                </div>
                 @if($userEmpresas->count() == 1 && $empresasCaja[0]['needsClosure'])
                     {{-- Una sola empresa con caja pendiente --}}
                     <div class="alert alert-info mb-3">
@@ -303,26 +297,21 @@
 @if($currentUser && $isClosed && $userEmpresas->count() > 0)
 <div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center p-3" 
      style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;">
-    <div class="text-white w-100" style="max-width: 600px;">
-        <div class="text-center mb-4">
-            <h1 class="d-none d-md-block"><i class="fas fa-cash-register fa-3x mb-3"></i></h1>
-            <h3 class="d-md-none"><i class="fas fa-cash-register fa-2x mb-2"></i></h3>
-            <h3 class="d-none d-md-block">Apertura de Caja</h3>
-            <h5 class="d-md-none">Apertura de Caja</h5>
-            @if($userEmpresas->count() == 1)
-                <h4 class="text-warning d-none d-md-block">{{ strtoupper($userEmpresa->nombre) }}</h4>
-                <h6 class="text-warning d-md-none">{{ strtoupper($userEmpresa->nombre) }}</h6>
-            @else
-                <h4 class="text-info d-none d-md-block">SELECCIONE SUCURSAL</h4>
-                <h6 class="text-info d-md-none">SELECCIONE SUCURSAL</h6>
-                @if($currentUser->is_admin)
-                    <p class="text-muted"><small>Como administrador, puede abrir cualquier caja</small></p>
-                @endif
-            @endif
-        </div>
-
-        <div class="card shadow">
-            <div class="card-body bg-light">
+    <div class="w-100" style="max-width: 600px; max-height: 90vh;">
+        <div class="card shadow" style="max-height: 90vh;">
+            <div class="card-body bg-light" style="max-height: 90vh; overflow-y: auto;">
+                <div class="text-center mb-4">
+                    <h6 class="text-info"><i class="fas fa-cash-register fa-lg mr-2"></i></h6>
+                    <h5 class="mb-2">Apertura de Caja</h5>
+                    @if($userEmpresas->count() == 1)
+                        <h6 class="text-warning">{{ strtoupper($userEmpresa->nombre) }}</h6>
+                    @else
+                        <h6 class="text-info">SELECCIONE SUCURSAL</h6>
+                        @if($currentUser->is_admin)
+                            <p class="text-muted mb-2"><small>Como administrador, puede abrir cualquier caja</small></p>
+                        @endif
+                    @endif
+                </div>
                 @if($userEmpresas->count() == 1)
                     {{-- Una sola empresa - formulario directo --}}
                     @if($previousCashHistory)
@@ -491,32 +480,26 @@
 @if($showClosingCard && $currentUser && $userEmpresas->count() > 0)
 <div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center p-3" 
      style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;">
-    <div class="text-white w-100" style="max-width: 600px;">
-        <div class="text-center mb-4">
-            <h1 class="d-none d-md-block"><i class="fas fa-cash-register fa-3x mb-3 text-danger"></i></h1>
-            <h3 class="d-md-none"><i class="fas fa-cash-register fa-2x mb-2 text-danger"></i></h3>
-            <h3 class="d-none d-md-block">Cierre de Caja</h3>
-            <h5 class="d-md-none">Cierre de Caja</h5>
-            @if($userEmpresas->count() == 1)
-                <h4 class="text-warning d-none d-md-block">{{ strtoupper($userEmpresa->nombre) }}</h4>
-                <h6 class="text-warning d-md-none">{{ strtoupper($userEmpresa->nombre) }}</h6>
-            @else
-                <h4 class="text-info d-none d-md-block">SELECCIONE SUCURSAL</h4>
-                <h6 class="text-info d-md-none">SELECCIONE SUCURSAL</h6>
-                @if($currentUser->is_admin)
-                    <p class="text-muted"><small>Como administrador, puede cerrar cualquier caja</small></p>
-                @endif
-            @endif
-            <p class="mb-2"><small>Usuario actual: {{ auth()->user()->name }}</small></p>
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle mr-2"></i>
-                <small class="d-md-none">Al confirmar el cierre de caja, su sesión se cerrará automáticamente. Use "Cancelar" si desea continuar trabajando.</small>
-                <span class="d-none d-md-inline">Al confirmar el cierre de caja, su sesión se cerrará automáticamente. Use "Cancelar" si desea continuar trabajando.</span>
-            </div>
-        </div>
-
-        <div class="card shadow">
-            <div class="card-body bg-light">
+    <div class="w-100" style="max-width: 600px; max-height: 90vh;">
+        <div class="card shadow" style="max-height: 90vh;">
+            <div class="card-body bg-light" style="max-height: 90vh; overflow-y: auto;">
+                <div class="text-center mb-4">
+                    <h6 class="text-danger"><i class="fas fa-cash-register fa-lg mr-2"></i></h6>
+                    <h5 class="mb-2">Cierre de Caja</h5>
+                    @if($userEmpresas->count() == 1)
+                        <h6 class="text-warning">{{ strtoupper($userEmpresa->nombre) }}</h6>
+                    @else
+                        <h6 class="text-info">SELECCIONE SUCURSAL</h6>
+                        @if($currentUser->is_admin)
+                            <p class="text-muted mb-2"><small>Como administrador, puede cerrar cualquier caja</small></p>
+                        @endif
+                    @endif
+                    <p class="mb-2"><small>Usuario actual: {{ auth()->user()->name }}</small></p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <small>Al confirmar el cierre de caja, su sesión se cerrará automáticamente. Use "Cancelar" si desea continuar trabajando.</small>
+                    </div>
+                </div>
                 @if($userEmpresas->count() == 1)
                     {{-- Una sola empresa - formulario directo --}}
                     <form id="closeCashForm" action="{{ route('cash-histories.store') }}" method="POST">
@@ -811,8 +794,13 @@
     /* Mejoras de responsividad para dispositivos móviles */
     @media (max-width: 768px) {
         .position-fixed .card {
-            max-height: 90vh;
+            max-height: 90vh !important;
             overflow-y: auto;
+        }
+        
+        .card-body {
+            max-height: 90vh !important;
+            overflow-y: auto !important;
         }
         
         .form-control-lg {
@@ -948,6 +936,39 @@
         .btn-lg {
             min-height: 48px; /* Altura mínima para botones táctiles */
         }
+    }
+    
+    /* Scrollbar personalizado para contenido del modal */
+    .card-body::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .card-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .card-body::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+    
+    .card-body::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+    
+    /* Altura máxima fija para todos los modales */
+    .modal-container {
+        max-height: 90vh !important;
+    }
+    
+    .modal-container .card {
+        max-height: 90vh !important;
+    }
+    
+    .modal-container .card-body {
+        max-height: calc(90vh - 60px) !important;
+        overflow-y: auto !important;
     }
     
     /* Fix para iOS Safari zoom prevention */
