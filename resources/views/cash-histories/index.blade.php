@@ -73,6 +73,14 @@
     .dataTables_filter input::placeholder {
         text-transform: uppercase !important;
     }
+
+    /* Estilo para el filtro de empresa activo */
+    .filtro-empresa-activo,
+    select[name="empresa_id"][style*="border-color: #28a745"],
+    #empresa_select[style*="border-color: #28a745"] {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+    }
 </style>
 
 <div class="row mb-3">
@@ -256,6 +264,96 @@
             const estadoSelect = $('#estado_select');
             const montoInput = $('#monto_admin');
             const cajaValueDisplay = $('#caja_value');
+
+            // Función para cargar sucursal por defecto desde localStorage
+            function cargarSucursalPorDefecto() {
+                // Verificar si ya hay el parámetro empresa_id en la URL para evitar bucle infinito
+                const urlParams = new URLSearchParams(window.location.search);
+                const tieneEmpresaEnUrl = urlParams.has('empresa_id');
+                
+                // Usar la nueva clase SucursalCache si está disponible
+                if (window.SucursalCache) {
+                    const sucursal = SucursalCache.obtener();
+                    if (sucursal) {
+                        // Preseleccionar en filtro con auto-submit solo si no hay empresa en URL
+                        if (!tieneEmpresaEnUrl) {
+                            const filtroEmpresa = document.querySelector('select[name="empresa_id"]');
+                            if (filtroEmpresa) {
+                                const option = filtroEmpresa.querySelector(`option[value="${sucursal.id}"]`);
+                                if (option) {
+                                    filtroEmpresa.value = sucursal.id;
+                                    filtroEmpresa.style.borderColor = '#28a745';
+                                    filtroEmpresa.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                                    console.log('Filtro de sucursal preseleccionado en cash histories:', sucursal.nombre);
+                                    // Auto-submit del formulario de filtro
+                                    filtroEmpresa.closest('form').submit();
+                                }
+                            }
+                        }
+                        
+                        // Preseleccionar en modal de admin (sin auto-submit)
+                        preseleccionarEnModal();
+                    }
+                } else {
+                    // Fallback al método anterior
+                    try {
+                        const sucursalData = localStorage.getItem('sucursal_abierta');
+                        if (sucursalData) {
+                            const sucursal = JSON.parse(sucursalData);
+                            
+                            // Preseleccionar en filtro con auto-submit solo si no hay empresa en URL
+                            if (!tieneEmpresaEnUrl) {
+                                const filtroEmpresa = document.querySelector('select[name="empresa_id"]');
+                                if (filtroEmpresa) {
+                                    const option = filtroEmpresa.querySelector(`option[value="${sucursal.id}"]`);
+                                    if (option) {
+                                        filtroEmpresa.value = sucursal.id;
+                                        filtroEmpresa.style.borderColor = '#28a745';
+                                        filtroEmpresa.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                                        console.log('Filtro de sucursal preseleccionado (fallback):', sucursal.nombre);
+                                        // Auto-submit del formulario de filtro
+                                        filtroEmpresa.closest('form').submit();
+                                    }
+                                }
+                            }
+                            
+                            // Preseleccionar en modal sin auto-submit
+                            preseleccionarEnModal(sucursal);
+                        }
+                    } catch (e) {
+                        console.error('Error al cargar sucursal por defecto:', e);
+                    }
+                }
+            }
+
+            // Función para preseleccionar empresa en el modal de admin
+            function preseleccionarEnModal(sucursalData = null) {
+                let sucursal = sucursalData;
+                
+                if (!sucursal && window.SucursalCache) {
+                    sucursal = SucursalCache.obtener();
+                }
+                
+                if (sucursal) {
+                    // Preseleccionar en modal de admin
+                    const modalEmpresa = document.getElementById('empresa_select');
+                    if (modalEmpresa) {
+                        const optionModal = modalEmpresa.querySelector(`option[value="${sucursal.id}"]`);
+                        if (optionModal) {
+                            modalEmpresa.value = sucursal.id;
+                            modalEmpresa.style.borderColor = '#28a745';
+                            modalEmpresa.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                            console.log('Sucursal preseleccionada en modal de cash histories:', sucursal.nombre);
+                            
+                            // Trigger change event para cargar los datos de caja automáticamente
+                            $(modalEmpresa).trigger('change');
+                        }
+                    }
+                }
+            }
+
+            // Cargar sucursal por defecto al inicializar
+            cargarSucursalPorDefecto();
 
             // Cargar el valor de caja cuando se selecciona una empresa
             empresaSelect.on('change', function() {
