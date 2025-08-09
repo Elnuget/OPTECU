@@ -3,9 +3,7 @@
         $(document).ready(function() {
             // Verificar si DataTables está disponible
             if (typeof $.fn.DataTable === 'undefined') {
-                console.warn('DataTables no está cargad            }
-
-            // Función para actualizar contador de resultados;
+                console.warn('DataTables no está cargado');
                 return;
             }
 
