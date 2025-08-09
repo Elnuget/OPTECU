@@ -231,7 +231,7 @@
             // Inicializar DataTable
             $('#tabla-movimientos').DataTable({
                 "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
+                    "url": "{{ asset('js/datatables/Spanish.json') }}"
                 },
                 "order": [[ 0, "desc" ]],
                 "pageLength": 10
@@ -433,7 +433,7 @@
                     
                     $('#tabla-movimientos').DataTable({
                         "language": {
-                            "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Spanish.json"
+                            "url": "{{ asset('js/datatables/Spanish.json') }}"
                         },
                         "order": [[ 0, "desc" ]],
                         "pageLength": 10

@@ -152,7 +152,7 @@
     $(document).ready(function() {
         $('#example').DataTable({
             "language": {
-                "url": "//cdn.datatables.net/plug-ins/9dcbecd42ad/i18n/Spanish.json"
+                "url": "{{ asset('js/datatables/Spanish.json') }}"
             },
             "pageLength": 25,
             "order": [[ 0, "desc" ]]

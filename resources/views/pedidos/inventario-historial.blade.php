@@ -223,7 +223,7 @@ $(document).ready(function() {
     // Inicializar DataTable
     var tabla = $('#tablaInventario').DataTable({
         "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
+            "url": "{{ asset('js/datatables/Spanish.json') }}"
         },
         "order": [[4, "desc"]],
         "pageLength": 25,

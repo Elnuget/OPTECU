@@ -301,7 +301,7 @@
                 }
             ],
             "language": {
-                "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
+                "url": "{{ asset('js/datatables/Spanish.json') }}"
             }
         });
 
@@ -418,7 +418,7 @@
                             "responsive": true,
                             "order": [[0, "desc"]], // Ordenar por ID descendente
                             "language": {
-                                "url": "//cdn.datatables.net/plug-ins/1.10.16/i18n/Spanish.json"
+                                "url": "{{ asset('js/datatables/Spanish.json') }}"
                             },
                             "paging": false,
                             "searching": false,

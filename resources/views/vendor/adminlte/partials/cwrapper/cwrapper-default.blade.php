@@ -217,7 +217,7 @@
                         @csrf
                         <div class="form-group">
                             <label for="empresa_select_pendiente">Seleccionar Sucursal con Caja Pendiente:</label>
-                            <select id="empresa_select_pendiente" name="empresa_id" class="form-control form-control-lg" required>
+                            <select id="empresa_select_pendiente" name="empresa_id" class="form-control form-control-lg" required style="font-size: 16px;">
                                 <option value="">-- Seleccione una sucursal --</option>
                                 @foreach($empresasCaja as $empresaData)
                                     @if($empresaData['needsClosure'])
@@ -369,17 +369,21 @@
                             <div class="row">
                                 @foreach($empresasCaja as $index => $empresaData)
                                     @if($empresaData['isClosed'])
-                                        <div class="col-12 col-md-6 mb-2">
-                                            <button type="button" class="btn btn-outline-primary btn-block empresa-btn py-3" 
+                                        <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                                            <button type="button" class="btn btn-outline-primary btn-block empresa-btn h-100 d-flex flex-column justify-content-center align-items-start p-3" 
                                                     data-empresa-id="{{ $empresaData['empresa']->id }}"
                                                     data-monto="{{ number_format($empresaData['sumCaja'], 2, '.', '') }}"
                                                     data-last-close="{{ $empresaData['previousHistory'] ? $empresaData['previousHistory']->created_at->format('d/m/Y H:i') : 'Sin cierres anteriores' }}"
                                                     data-last-user="{{ $empresaData['previousHistory'] ? $empresaData['previousHistory']->user->name : 'N/A' }}"
-                                                    data-last-amount="{{ $empresaData['previousHistory'] ? number_format($empresaData['previousHistory']->monto, 2) : '0.00' }}">
-                                                <i class="fas fa-building mr-2"></i>
-                                                <div class="text-left">
-                                                    <div class="font-weight-bold">{{ strtoupper($empresaData['empresa']->nombre) }}</div>
-                                                    <small class="text-muted">Caja Cerrada - ${{ number_format($empresaData['sumCaja'], 2, '.', ',') }}</small>
+                                                    data-last-amount="{{ $empresaData['previousHistory'] ? number_format($empresaData['previousHistory']->monto, 2) : '0.00' }}"
+                                                    style="min-height: 80px; border: 2px solid; cursor: pointer; transition: all 0.2s ease;">
+                                                <div class="d-flex align-items-center w-100">
+                                                    <i class="fas fa-building mr-2 flex-shrink-0" style="font-size: 1.1em;"></i>
+                                                    <div class="text-left flex-grow-1">
+                                                        <div class="font-weight-bold empresa-nombre" style="font-size: 0.95em; line-height: 1.2;">{{ strtoupper($empresaData['empresa']->nombre) }}</div>
+                                                        <small class="text-muted d-block" style="font-size: 0.8em;">Caja Cerrada</small>
+                                                        <small class="text-success font-weight-bold" style="font-size: 0.85em;">${{ number_format($empresaData['sumCaja'], 2, '.', ',') }}</small>
+                                                    </div>
                                                 </div>
                                             </button>
                                         </div>
@@ -422,16 +426,26 @@
 
                     <script>
                         document.querySelectorAll('.empresa-btn').forEach(button => {
-                            button.addEventListener('click', function() {
+                            // Usar addEventListener con passive: false para asegurar compatibilidad
+                            button.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                
                                 // Remover selección anterior
                                 document.querySelectorAll('.empresa-btn').forEach(btn => {
                                     btn.classList.remove('btn-primary');
                                     btn.classList.add('btn-outline-primary');
+                                    btn.style.borderColor = '#007bff';
+                                    btn.style.backgroundColor = 'transparent';
+                                    btn.style.color = '#007bff';
                                 });
                                 
-                                // Marcar como seleccionado
+                                // Marcar como seleccionado con estilos más visibles
                                 this.classList.remove('btn-outline-primary');
                                 this.classList.add('btn-primary');
+                                this.style.borderColor = '#0056b3';
+                                this.style.backgroundColor = '#007bff';
+                                this.style.color = 'white';
                                 
                                 // Actualizar campos
                                 const empresaId = this.getAttribute('data-empresa-id');
@@ -451,7 +465,16 @@
                                 
                                 // Habilitar botón
                                 document.getElementById('btn_abrir').disabled = false;
-                            });
+                            }, { passive: false });
+                            
+                            // Agregar eventos táctiles para dispositivos móviles
+                            button.addEventListener('touchstart', function(e) {
+                                this.style.transform = 'scale(0.98)';
+                            }, { passive: true });
+                            
+                            button.addEventListener('touchend', function(e) {
+                                this.style.transform = 'scale(1)';
+                            }, { passive: true });
                         });
                     </script>
                 @endif
@@ -531,19 +554,21 @@
                             <div class="row">
                                 @foreach($empresasCaja as $index => $empresaData)
                                     @if(!$empresaData['isClosed'])
-                                        <div class="col-12 col-md-6 mb-2">
-                                            <button type="button" class="btn {{ $empresaData['isUltimaCajaAbierta'] ? 'btn-danger' : 'btn-outline-danger' }} btn-block empresa-close-btn py-3" 
+                                        <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                                            <button type="button" class="btn {{ $empresaData['isUltimaCajaAbierta'] ? 'btn-danger' : 'btn-outline-danger' }} btn-block empresa-close-btn h-100 d-flex flex-column justify-content-center align-items-start p-3" 
                                                     data-empresa-id="{{ $empresaData['empresa']->id }}"
-                                                    data-monto="{{ number_format($empresaData['sumCaja'], 2, '.', '') }}">
-                                                <i class="fas fa-cash-register mr-2"></i>
-                                                <div class="text-left">
-                                                    <div class="font-weight-bold">{{ strtoupper($empresaData['empresa']->nombre) }}</div>
-                                                    <small class="text-muted">
-                                                        Caja Abierta - ${{ number_format($empresaData['sumCaja'], 2, '.', ',') }}
+                                                    data-monto="{{ number_format($empresaData['sumCaja'], 2, '.', '') }}"
+                                                    style="min-height: 80px; border: 2px solid; cursor: pointer; transition: all 0.2s ease;">
+                                                <div class="d-flex align-items-center w-100">
+                                                    <i class="fas fa-cash-register mr-2 flex-shrink-0" style="font-size: 1.1em;"></i>
+                                                    <div class="text-left flex-grow-1">
+                                                        <div class="font-weight-bold empresa-nombre" style="font-size: 0.95em; line-height: 1.2;">{{ strtoupper($empresaData['empresa']->nombre) }}</div>
+                                                        <small class="d-block" style="font-size: 0.8em;">Caja Abierta</small>
+                                                        <small class="font-weight-bold d-block" style="font-size: 0.85em;">${{ number_format($empresaData['sumCaja'], 2, '.', ',') }}</small>
                                                         @if($empresaData['isUltimaCajaAbierta'])
-                                                            <br><span class="badge badge-warning">ÚLTIMA ABIERTA</span>
+                                                            <span class="badge badge-warning badge-sm mt-1" style="font-size: 0.7em;">ÚLTIMA ABIERTA</span>
                                                         @endif
-                                                    </small>
+                                                    </div>
                                                 </div>
                                             </button>
                                         </div>
@@ -587,18 +612,27 @@
                         });
 
                         document.querySelectorAll('.empresa-close-btn').forEach(button => {
-                            button.addEventListener('click', function() {
+                            button.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                
                                 // Remover selección anterior
                                 document.querySelectorAll('.empresa-close-btn').forEach(btn => {
                                     if (btn.classList.contains('btn-danger')) {
                                         btn.classList.remove('btn-danger');
                                         btn.classList.add('btn-outline-danger');
+                                        btn.style.borderColor = '#dc3545';
+                                        btn.style.backgroundColor = 'transparent';
+                                        btn.style.color = '#dc3545';
                                     }
                                 });
                                 
-                                // Marcar como seleccionado
+                                // Marcar como seleccionado con estilos más visibles
                                 this.classList.remove('btn-outline-danger');
                                 this.classList.add('btn-danger');
+                                this.style.borderColor = '#c82333';
+                                this.style.backgroundColor = '#dc3545';
+                                this.style.color = 'white';
                                 
                                 // Actualizar campos
                                 const empresaId = this.getAttribute('data-empresa-id');
@@ -609,7 +643,16 @@
                                 
                                 // Habilitar botón
                                 document.getElementById('btn_cerrar').disabled = false;
-                            });
+                            }, { passive: false });
+                            
+                            // Agregar eventos táctiles para dispositivos móviles
+                            button.addEventListener('touchstart', function(e) {
+                                this.style.transform = 'scale(0.98)';
+                            }, { passive: true });
+                            
+                            button.addEventListener('touchend', function(e) {
+                                this.style.transform = 'scale(1)';
+                            }, { passive: true });
                         });
                     </script>
                 @endif
@@ -772,23 +815,8 @@
             overflow-y: auto;
         }
         
-        .empresa-btn, .empresa-close-btn {
-            font-size: 14px !important;
-            padding: 12px 8px !important;
-        }
-        
-        .empresa-btn .text-left div,
-        .empresa-close-btn .text-left div {
-            font-size: 13px;
-        }
-        
-        .empresa-btn small,
-        .empresa-close-btn small {
-            font-size: 11px;
-        }
-        
         .form-control-lg {
-            font-size: 16px; /* Evita zoom en iOS */
+            font-size: 16px !important; /* Evita zoom en iOS */
         }
         
         .btn-lg {
@@ -828,17 +856,107 @@
         }
     }
     
-    /* Botones empresas con mejor espaciado en móvil */
+    /* Botones empresas con mejor interacción */
+    .empresa-btn,
+    .empresa-close-btn {
+        border-width: 2px !important;
+        font-weight: 500;
+        position: relative;
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+    
     .empresa-btn:hover,
     .empresa-close-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.15);
         transition: all 0.2s ease;
+        z-index: 2;
+    }
+    
+    .empresa-btn:active,
+    .empresa-close-btn:active {
+        transform: translateY(0px) scale(0.98);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transition: all 0.1s ease;
+    }
+    
+    /* Estados específicos para botones seleccionados */
+    .empresa-btn.btn-primary {
+        background-color: #007bff !important;
+        border-color: #0056b3 !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    }
+    
+    .empresa-close-btn.btn-danger {
+        background-color: #dc3545 !important;
+        border-color: #c82333 !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+    
+    /* Mejoras para nombres de empresa */
+    .empresa-nombre {
+        word-break: break-word;
+        hyphens: auto;
+        line-height: 1.3;
     }
     
     /* Mejora para alertas en móvil */
     .alert-dismissible .close {
         padding: 8px 12px;
+        font-size: 18px;
+        line-height: 1;
+        color: inherit;
+        opacity: 0.8;
+    }
+    
+    /* Mejoras para badges */
+    .badge-sm {
+        font-size: 0.7em !important;
+        padding: 0.25em 0.4em;
+    }
+    
+    /* Espaciado mejorado en row */
+    .row.empresa-selector {
+        margin-left: -8px;
+        margin-right: -8px;
+    }
+    
+    .row.empresa-selector > [class*="col-"] {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+    
+    /* Animaciones suaves para transiciones */
+    .empresa-btn,
+    .empresa-close-btn {
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* Mejoras para dispositivos táctiles */
+    @media (pointer: coarse) {
+        .empresa-btn,
+        .empresa-close-btn {
+            min-height: 88px; /* Tamaño mínimo recomendado para táctil */
+        }
+        
+        .btn-lg {
+            min-height: 48px; /* Altura mínima para botones táctiles */
+        }
+    }
+    
+    /* Fix para iOS Safari zoom prevention */
+    select,
+    input[type="number"],
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+        font-size: 16px !important;
     }
 </style>
 
