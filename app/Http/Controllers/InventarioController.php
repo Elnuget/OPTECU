@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Inventario; // Asegúrate de importar el modelo Inventario
 use App\Models\Pedido; // Asegúrate de importar el modelo Pedido
+use App\Models\Empresa; // Importar el modelo Empresa
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
@@ -405,8 +406,9 @@ class InventarioController extends Controller
     public function actualizar()
     {
         try {
-            // Obtener artículos cuya cantidad es distinta de 0
-            $inventario = Inventario::where('cantidad', '!=', 0)
+            // Obtener artículos cuya cantidad es distinta de 0 con sus empresas
+            $inventario = Inventario::with('empresa')
+                ->where('cantidad', '!=', 0)
                 ->orderBy('fecha', 'desc')
                 ->get();
             
@@ -414,8 +416,15 @@ class InventarioController extends Controller
             $pedidos = Pedido::orderBy('numero_orden', 'desc')
                 ->where('saldo', '>', 0)
                 ->get();
+
+            // Obtener empresas para el filtro
+            if (auth()->user()->is_admin) {
+                $empresas = Empresa::orderBy('nombre')->get();
+            } else {
+                $empresas = auth()->user()->empresas()->orderBy('nombre')->get();
+            }
             
-            return view('inventario.actualizar', compact('inventario', 'pedidos'));
+            return view('inventario.actualizar', compact('inventario', 'pedidos', 'empresas'));
         } catch (\Exception $e) {
             \Log::error('Error en actualizar', ['error' => $e->getMessage()]);
             return redirect()->route('inventario.index')->with([

@@ -60,6 +60,13 @@
         datalist option {
             text-transform: uppercase !important;
         }
+
+        /* Estilo para el filtro de empresa activo */
+        .filtro-empresa-activo,
+        #empresa_filtro[style*="border-color: #28a745"] {
+            border-color: #28a745 !important;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+        }
     </style>
 
     <div class="row">
@@ -76,17 +83,30 @@
                 </div>
                 <div class="card-body">
                     <div class="row mb-3">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="mes_filtro">FILTRAR POR MES:</label>
                             <input type="month" class="form-control" id="mes_filtro" name="mes_filtro">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <label for="empresa_filtro">FILTRAR POR SUCURSAL:</label>
+                            <select class="form-control" id="empresa_filtro" name="empresa_filtro">
+                                @if(auth()->user()->is_admin)
+                                    <option value="">TODAS LAS SUCURSALES</option>
+                                @else
+                                    <option value="">MIS SUCURSALES</option>
+                                @endif
+                                @foreach($empresas as $empresa)
+                                    <option value="{{ $empresa->id }}">{{ $empresa->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
                             <label for="lugar_filtro">FILTRAR POR LUGAR:</label>
                             <select class="form-control" id="lugar_filtro" name="lugar_filtro">
                                 <option value="">TODOS</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="columna_filtro">FILTRAR POR COLUMNA:</label>
                             <input type="number" class="form-control" id="columna_filtro" name="columna_filtro" placeholder="INGRESE COLUMNA">
                         </div>
@@ -122,6 +142,7 @@
                                         <th>COLUMNA</th>
                                         <th>NUMERO</th>
                                         <th>FECHA</th>
+                                        <th>SUCURSAL</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -129,6 +150,7 @@
                                         <tr data-fecha="{{ $item->fecha }}" 
                                             data-lugar="{{ $item->lugar }}" 
                                             data-columna="{{ $item->columna }}"
+                                            data-empresa="{{ $item->empresa_id }}"
                                             data-id="{{ $item->id }}" 
                                             class="fila-inventario">
                                             <td>
@@ -144,6 +166,7 @@
                                             <td>{{ $item->columna }}</td>
                                             <td>{{ $item->numero ?? 1 }}</td>
                                             <td>{{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}</td>
+                                            <td>{{ $item->empresa ? $item->empresa->nombre : 'N/A' }}</td>
                                         </tr>
                                     @endforeach
                                 </tbody>
@@ -202,7 +225,8 @@
                         lugar: fila.querySelector('td:nth-child(5)').textContent,
                         columna: fila.querySelector('td:nth-child(6)').textContent,
                         numero: parseInt(fila.querySelector('td:nth-child(7)').textContent || '1'),
-                        fecha_original: fila.getAttribute('data-fecha')
+                        fecha_original: fila.getAttribute('data-fecha'),
+                        empresa_id: fila.getAttribute('data-empresa')
                     };
                 });
 
@@ -305,11 +329,13 @@
                 const mes = document.getElementById('mes_filtro').value;
                 const lugar = document.getElementById('lugar_filtro').value;
                 const columna = document.getElementById('columna_filtro').value;
+                const empresa = document.getElementById('empresa_filtro').value;
 
                 console.log('Filtrando con:', {
                     mes: mes,
                     lugar: lugar,
-                    columna: columna
+                    columna: columna,
+                    empresa: empresa
                 });
 
                 const filas = document.querySelectorAll('.fila-inventario');
@@ -334,6 +360,7 @@
                     const fechaFila = fila.getAttribute('data-fecha');
                     const lugarFila = fila.querySelector('td:nth-child(5)').textContent.trim();
                     const columnaFila = fila.querySelector('td:nth-child(6)').textContent.trim();
+                    const empresaFila = fila.getAttribute('data-empresa');
                     const cantidad = parseInt(fila.querySelector('td:nth-child(4)').textContent);
                     const codigo = fila.querySelector('td:nth-child(3)').textContent;
                     
@@ -341,6 +368,7 @@
                     const cumpleMes = mesFila === mes;
                     const cumpleLugar = !lugar || lugarFila.toUpperCase() === lugar.toUpperCase();
                     const cumpleColumna = !columna || columnaFila === columna;
+                    const cumpleEmpresa = !empresa || empresaFila === empresa;
                     const tieneStock = cantidad !== 0;
 
                     // Verificar si existe el mismo código en un mes posterior
@@ -350,15 +378,17 @@
                         return mesFecha > mes;
                     });
 
-                    const debeMostrar = cumpleMes && cumpleLugar && cumpleColumna && tieneStock && !existeEnMesSiguiente;
+                    const debeMostrar = cumpleMes && cumpleLugar && cumpleColumna && cumpleEmpresa && tieneStock && !existeEnMesSiguiente;
                     
                     if (lugarFila.toUpperCase().includes('GOTERO')) {
                         console.log('Fila de GOTERO:', {
                             lugar: lugarFila,
                             cantidad: cantidad,
+                            empresa: empresaFila,
                             cumpleMes: cumpleMes,
                             cumpleLugar: cumpleLugar,
                             cumpleColumna: cumpleColumna,
+                            cumpleEmpresa: cumpleEmpresa,
                             tieneStock: tieneStock,
                             existeEnMesSiguiente: existeEnMesSiguiente,
                             debeMostrar: debeMostrar
@@ -381,8 +411,40 @@
                 actualizarLugares(this.value);
                 filtrarTabla();
             });
+            document.getElementById('empresa_filtro').addEventListener('change', filtrarTabla);
             document.getElementById('lugar_filtro').addEventListener('change', filtrarTabla);
             document.getElementById('columna_filtro').addEventListener('input', filtrarTabla);
+
+            // Función para cargar sucursal por defecto desde localStorage
+            function cargarSucursalPorDefecto() {
+                // Usar la nueva clase SucursalCache si está disponible
+                if (window.SucursalCache) {
+                    SucursalCache.preseleccionarEnSelect('empresa_filtro', false);
+                } else {
+                    // Fallback al método anterior
+                    try {
+                        const sucursalData = localStorage.getItem('sucursal_abierta');
+                        if (sucursalData) {
+                            const sucursal = JSON.parse(sucursalData);
+                            const empresaSelect = document.getElementById('empresa_filtro');
+                            if (empresaSelect) {
+                                const option = empresaSelect.querySelector(`option[value="${sucursal.id}"]`);
+                                if (option) {
+                                    empresaSelect.value = sucursal.id;
+                                    empresaSelect.style.borderColor = '#28a745';
+                                    empresaSelect.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                                    filtrarTabla();
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error al cargar sucursal por defecto:', e);
+                    }
+                }
+            }
+
+            // Cargar sucursal por defecto al inicializar
+            cargarSucursalPorDefecto();
 
             // Inicialización
             actualizarLugares(mesAnteriorStr);
