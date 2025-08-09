@@ -103,37 +103,7 @@
             @endif
         </li>
 
-        {{-- Mensaje de advertencia de cierre de caja --}}
-        @if(Auth::user())
-            @php
-                $cajaAbiertaAdvertencia = null;
-                if(Auth::user()->is_admin) {
-                    // Para administradores, mostrar advertencia si hay alguna caja abierta
-                    $cajaAbiertaAdvertencia = \App\Models\CashHistory::with('empresa')
-                                                                   ->where('estado', 'Apertura')
-                                                                   ->latest()
-                                                                   ->first();
-                } else if(Auth::user()->empresa_id) {
-                    // Para usuarios normales, verificar su empresa
-                    $cajaAbiertaAdvertencia = \App\Models\CashHistory::where('empresa_id', Auth::user()->empresa_id)
-                                                                    ->where('estado', 'Apertura')
-                                                                    ->latest()
-                                                                    ->first();
-                }
-            @endphp
-            @if($cajaAbiertaAdvertencia)
-                <li class="nav-item d-none d-md-block">
-                    <div class="alert alert-danger py-1 px-3 mb-0 ml-3 d-flex align-items-center" style="font-size: 0.9rem;">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>
-                        @if(Auth::user()->is_admin)
-                            Hay cajas abiertas - {{ $cajaAbiertaAdvertencia->empresa ? $cajaAbiertaAdvertencia->empresa->nombre : 'EMPRESA DESCONOCIDA' }} y otras
-                        @else
-                            Debe cerrar caja de {{ \App\Models\Empresa::find($cajaAbiertaAdvertencia->empresa_id)->nombre ?? 'EMPRESA' }} antes de salir
-                        @endif
-                    </div>
-                </li>
-            @endif
-        @endif
+
 
         {{-- Notificaciones ahora están en el icono de campana en la derecha --}}
 
