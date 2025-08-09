@@ -49,6 +49,13 @@
             content: ' *';
             color: red;
         }
+
+        /* Estilo para sucursal preseleccionada desde caché */
+        .sucursal-cache-activa {
+            border-color: #28a745 !important;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+            background-color: #f8fff9 !important;
+        }
     </style>
 
     <div class="card">
@@ -150,9 +157,41 @@
 @include('atajos')
     <script>
         $(document).ready(function() {
-            // Auto-seleccionar la empresa del usuario actual
+            // Función para cargar sucursal por defecto desde localStorage
+            function cargarSucursalPorDefecto() {
+                // Usar la nueva clase SucursalCache si está disponible
+                if (window.SucursalCache) {
+                    SucursalCache.preseleccionarEnSelect('empresa_id', false);
+                } else {
+                    // Fallback manual si la clase no está disponible
+                    try {
+                        const sucursalData = localStorage.getItem('sucursal_abierta');
+                        if (sucursalData) {
+                            const sucursal = JSON.parse(sucursalData);
+                            const empresaSelect = document.getElementById('empresa_id');
+                            if (empresaSelect) {
+                                const option = empresaSelect.querySelector(`option[value="${sucursal.id}"]`);
+                                if (option) {
+                                    empresaSelect.value = sucursal.id;
+                                    empresaSelect.classList.add('sucursal-cache-activa');
+                                    console.log('Sucursal preseleccionada en crear egreso:', sucursal.nombre);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error al cargar sucursal por defecto:', e);
+                    }
+                }
+            }
+
+            // Cargar sucursal por defecto primero
+            cargarSucursalPorDefecto();
+
+            // Auto-seleccionar la empresa del usuario actual (solo si no se preseleccionó desde caché)
             @if(auth()->user()->empresa_id)
-                $('#empresa_id').val('{{ auth()->user()->empresa_id }}');
+                if ($('#empresa_id').val() === '') {
+                    $('#empresa_id').val('{{ auth()->user()->empresa_id }}');
+                }
             @endif
 
             // Validación del formulario
