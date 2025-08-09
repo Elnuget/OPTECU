@@ -439,6 +439,13 @@
     .text-danger {
         font-weight: bold;
     }
+    
+    /* Estilo para el filtro de empresa activo */
+    .filtro-empresa-activo,
+    #empresa_id[style*="border-color: #28a745"] {
+        border-color: #28a745 !important;
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+    }
 </style>
 @stop
 
@@ -715,6 +722,37 @@
                     }
                 });
         }
+
+        // Función para cargar sucursal por defecto desde localStorage
+        function cargarSucursalPorDefecto() {
+            // Usar la nueva clase SucursalCache si está disponible
+            if (window.SucursalCache) {
+                SucursalCache.preseleccionarEnSelect('empresa_id', false);
+            } else {
+                // Fallback al método anterior
+                try {
+                    const sucursalData = localStorage.getItem('sucursal_abierta');
+                    if (sucursalData) {
+                        const sucursal = JSON.parse(sucursalData);
+                        const empresaSelect = document.getElementById('empresa_id');
+                        if (empresaSelect) {
+                            const option = empresaSelect.querySelector(`option[value="${sucursal.id}"]`);
+                            if (option) {
+                                empresaSelect.value = sucursal.id;
+                                empresaSelect.style.borderColor = '#28a745';
+                                empresaSelect.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+                                console.log('Empresa preseleccionada:', sucursal.nombre);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error al cargar sucursal por defecto:', e);
+                }
+            }
+        }
+
+        // Cargar sucursal por defecto al inicializar
+        cargarSucursalPorDefecto();
 
         // Eventos para autocompletado eliminados
         // $('#cedula').on('change', function() {
