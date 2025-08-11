@@ -117,8 +117,9 @@ class PedidosController extends Controller
         $currentYear = date('Y');
         $currentMonth = date('m');
         
-        // Obtener armazones y accesorios del mes actual (solo con cantidad > 0)
-        $inventario = Inventario::where('cantidad', '>', 0)
+        // Obtener armazones y accesorios del mes actual (solo con cantidad > 0) con información de empresa
+        $inventario = Inventario::with('empresa:id,nombre')
+            ->where('cantidad', '>', 0)
             ->whereYear('fecha', $currentYear)
             ->whereMonth('fecha', $currentMonth)
             ->get();

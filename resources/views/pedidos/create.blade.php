@@ -262,7 +262,7 @@
                                         <option value="">Seleccione un armazón</option>
                                         @foreach($armazones as $armazon)
                                             <option value="{{ $armazon->id }}">
-                                                {{ $armazon->codigo }} - {{ $armazon->lugar }} - N°{{ $armazon->numero }} - {{ $armazon->fecha ? \Carbon\Carbon::parse($armazon->fecha)->format('d/m/Y') : 'Sin fecha' }}
+                                                {{ $armazon->codigo }} - {{ $armazon->lugar }} - N°{{ $armazon->numero }} - {{ $armazon->fecha ? \Carbon\Carbon::parse($armazon->fecha)->format('d/m/Y') : 'Sin fecha' }} - {{ $armazon->empresa->nombre ?? 'Sin empresa' }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -392,7 +392,7 @@
                                         <option value="">Seleccione un Item del Inventario</option>
                                         @foreach ($accesorios as $item)
                                             <option value="{{ $item->id }}">
-                                                {{ $item->codigo }} - {{ $item->lugar }} - N°{{ $item->numero }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}
+                                                {{ $item->codigo }} - {{ $item->lugar }} - N°{{ $item->numero }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }} - {{ $item->empresa->nombre ?? 'Sin empresa' }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -517,6 +517,27 @@
 @stop
 
 @section('js')
+    <script>
+        // Datos de inventario para uso en JavaScript
+        window.inventarioData = {
+            armazones: [
+                @foreach($armazones as $item)
+                {
+                    id: {{ $item->id }},
+                    display: "{!! addslashes($item->codigo . ' - ' . $item->lugar . ' - N°' . $item->numero . ' - ' . ($item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha') . ' - ' . ($item->empresa->nombre ?? 'Sin empresa')) !!}"
+                }@if(!$loop->last),@endif
+                @endforeach
+            ],
+            accesorios: [
+                @foreach($accesorios as $item)
+                {
+                    id: {{ $item->id }},
+                    display: "{!! addslashes($item->codigo . ' - ' . $item->lugar . ' - N°' . $item->numero . ' - ' . ($item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha') . ' - ' . ($item->empresa->nombre ?? 'Sin empresa')) !!}"
+                }@if(!$loop->last),@endif
+                @endforeach
+            ]
+        };
+    </script>
     <script>
         // Hacer que todo el header sea clickeable
         document.addEventListener('DOMContentLoaded', function() {
@@ -742,6 +763,12 @@
             const index = document.querySelectorAll(`[data-${type}-section]`).length;
             
             if (type === 'armazon') {
+                // Generar opciones desde los datos de JavaScript
+                let armazonOptions = '<option value="">Seleccione un armazón</option>';
+                window.inventarioData.armazones.forEach(item => {
+                    armazonOptions += `<option value="${item.id}">${item.display}</option>`;
+                });
+                
                 html = `
                     <div data-armazon-section class="mt-4">
                         <hr>
@@ -754,12 +781,7 @@
                             <div class="col-md-12">
                                 <label class="form-label">Armazón (Inventario)</label>
                                 <select class="form-control selectpicker" data-live-search="true" name="a_inventario_id[]">
-                                    <option value="">Seleccione un armazón</option>
-                                    @foreach($armazones as $armazon)
-                                        <option value="{{ $armazon->id }}">
-                                            {{ $armazon->codigo }} - {{ $armazon->lugar }} - N°{{ $armazon->numero }} - {{ $armazon->fecha ? \Carbon\Carbon::parse($armazon->fecha)->format('d/m/Y') : 'Sin fecha' }}
-                                        </option>
-                                    @endforeach
+                                    ${armazonOptions}
                                 </select>
                             </div>
                         </div>
@@ -827,6 +849,12 @@
                 `;
             }
             else if (type === 'accesorios') {
+                // Generar opciones desde los datos de JavaScript
+                let accesorioOptions = '<option value="" selected>Seleccione un Item del Inventario</option>';
+                window.inventarioData.accesorios.forEach(item => {
+                    accesorioOptions += `<option value="${item.id}">${item.display}</option>`;
+                });
+                
                 html = `
                     <div data-accesorios-section class="mt-4">
                         <hr>
@@ -839,12 +867,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">Accesorio (Inventario)</label>
                                 <select class="form-control selectpicker" data-live-search="true" name="d_inventario_id[]">
-                                    <option value="" selected>Seleccione un Item del Inventario</option>
-                                    @foreach ($accesorios as $item)
-                                        <option value="{{ $item->id }}">
-                                            {{ $item->codigo }} - {{ $item->lugar }} - N°{{ $item->numero }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}
-                                        </option>
-                                    @endforeach
+                                    ${accesorioOptions}
                                 </select>
                             </div>
                             <div class="col-md-3">
