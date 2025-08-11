@@ -27,6 +27,22 @@
         .btn {
             text-transform: uppercase !important;
         }
+        
+        /* Estilos para el botón mostrar todos */
+        #mostrarTodosButton {
+            position: relative;
+        }
+        
+        .modo-todos-activo #mostrarTodosButton {
+            background-color: #28a745 !important;
+            border-color: #28a745 !important;
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.5);
+        }
+        
+        .filtro-empresa-activo {
+            border-color: #28a745 !important;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+        }
     </style>
 
 <div class="card">
@@ -97,6 +113,20 @@
                 <button type="button" class="btn btn-success" id="mostrarTodosButton">Mostrar Todos los Pedidos</button>
             </div>
         </form>
+
+        {{-- Indicador de modo "Mostrar todos" --}}
+        @if(request('todos') == '1')
+        <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+            <i class="fas fa-info-circle mr-2"></i>
+            <strong>Modo: Mostrar Todos los Pedidos</strong> - Estás viendo todos los pedidos sin filtros de fecha.
+            <a href="{{ route('pedidos.index') }}" class="btn btn-sm btn-outline-primary ml-3">
+                <i class="fas fa-filter"></i> Volver a Filtros
+            </a>
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        @endif
 
         {{-- Botones de acción --}}
         <div class="btn-group mb-3">
@@ -1118,16 +1148,38 @@
 
         // Botón "Mostrar Todos los Pedidos"
         $('#mostrarTodosButton').click(function() {
+            // Limpiar todos los filtros antes de redirigir
+            $('#filtroAno').val('');
+            $('#filtroMes').val('');
+            $('#filtroEmpresa').val('');
+            
+            // Redirigir a la página con parámetro todos=1
             window.location.href = '{{ route("pedidos.index", ["todos" => "1"]) }}';
         });
 
         // Auto-submit cuando cambie el filtro de empresa
         $('#filtroEmpresa').change(function() {
-            $('#filterForm').submit();
+            // Si estamos en modo "mostrar todos", mantener ese parámetro
+            if (window.location.search.includes('todos=1')) {
+                const empresaId = $(this).val();
+                let url = '{{ route("pedidos.index") }}?todos=1';
+                if (empresaId) {
+                    url += '&empresa_id=' + empresaId;
+                }
+                window.location.href = url;
+            } else {
+                $('#filterForm').submit();
+            }
         });
 
         // Cargar sucursal por defecto desde localStorage
         function cargarSucursalPorDefecto() {
+            // No cargar sucursal por defecto si estamos en modo "mostrar todos"
+            if (window.location.search.includes('todos=1')) {
+                console.log('Modo "mostrar todos" activo, no se carga sucursal por defecto');
+                return;
+            }
+            
             // Usar la nueva clase SucursalCache si está disponible
             if (window.SucursalCache) {
                 SucursalCache.preseleccionarEnSelect('filtroEmpresa', true);
@@ -1156,9 +1208,23 @@
 
         // Cargar sucursal por defecto al inicializar
         cargarSucursalPorDefecto();
+        
+        // Marcar visualmente si estamos en modo "mostrar todos"
+        if (window.location.search.includes('todos=1')) {
+            $('body').addClass('modo-todos-activo');
+            $('#mostrarTodosButton')
+                .removeClass('btn-success')
+                .addClass('btn-warning')
+                .html('<i class="fas fa-check-circle"></i> Mostrando Todos');
+        }
 
         // Auto-submit cuando cambien los filtros de año y mes
         $('#filtroAno, #filtroMes').change(function() {
+            // Si estamos en modo "mostrar todos" y se selecciona año o mes, 
+            // salir del modo "todos" y aplicar filtros normales
+            if (window.location.search.includes('todos=1')) {
+                $('#filterForm').attr('action', '{{ route("pedidos.index") }}');
+            }
             $('#filterForm').submit();
         });
 

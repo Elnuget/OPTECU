@@ -117,6 +117,12 @@ class SucursalCache {
 
         // Solo seleccionar si no hay parámetros GET que indiquen filtro manual
         if (window.location.search.includes('empresa_id=')) return;
+        
+        // No preseleccionar ni hacer autoSubmit si estamos en modo "mostrar todos"
+        if (this.esModoMostrarTodos()) {
+            console.log('Modo "mostrar todos" detectado, no se preselecciona sucursal');
+            return;
+        }
 
         select.value = sucursal.id;
         select.classList.add('filtro-empresa-activo');
@@ -126,6 +132,14 @@ class SucursalCache {
         if (autoSubmit && select.form) {
             select.form.submit();
         }
+    }
+
+    /**
+     * Verifica si estamos en modo "mostrar todos"
+     * @returns {boolean} true si estamos en modo mostrar todos
+     */
+    static esModoMostrarTodos() {
+        return window.location.search.includes('todos=1');
     }
 
     /**
