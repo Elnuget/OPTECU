@@ -192,41 +192,46 @@ window.addArmazon = function() {
                       ${text}
                    </a>`;
         }).join('');
-    } else {
-        console.log('No se encontró dropdown existente, usando datos de window.inventarioData');
-        
-        // Usar los nuevos datos con información de empresa
-        if (window.inventarioData && window.inventarioData.items && window.inventarioData.items.length > 0) {
-            options = window.inventarioData.items.map(item => {
-                return `<a class="dropdown-item armazon-option" href="#" 
-                          data-id="${item.id}">
-                          ${item.display}
-                       </a>`;
-            }).join('');
-        } else if (window.inventarioItems && window.inventarioItems.length > 0) {
-            // Fallback a los datos originales (sin empresa)
-            console.log('Usando fallback a inventarioItems sin empresa');
-            options = window.inventarioItems.map(item => {
-                const fecha = item.fecha ? new Date(item.fecha).toLocaleDateString('es-ES') : 'Sin fecha';
-                const empresa = item.empresa ? item.empresa.nombre : 'Sin empresa';
-                const text = `${item.codigo} - ${item.lugar} - ${fecha} - ${empresa}`;
-                
-                return `<a class="dropdown-item armazon-option" href="#" 
-                          data-id="${item.id}" 
-                          data-code="${item.codigo}"
-                          data-place="${item.lugar}"
-                          data-date="${fecha}"
-                          data-empresa="${empresa}">
-                          ${text}
-                       </a>`;
-            }).join('');
         } else {
-            console.warn('No hay items de inventario disponibles');
-            options = '<a class="dropdown-item disabled" href="#">No hay artículos disponibles</a>';
-        }
-    }
-    
-    // Obtener información del mes y año
+            console.log('No se encontró dropdown existente, usando datos de window.inventarioData');
+            
+            // Usar los datos filtrados si están disponibles (modo edición con empresa seleccionada)
+            let datosParaUsar = window.inventarioData?.items || [];
+            if (window.inventarioData?.itemsFiltrados) {
+                datosParaUsar = window.inventarioData.itemsFiltrados;
+                console.log('Usando datos filtrados:', datosParaUsar.length, 'items');
+            }
+            
+            // Usar los nuevos datos con información de empresa
+            if (datosParaUsar.length > 0) {
+                options = datosParaUsar.map(item => {
+                    return `<a class="dropdown-item armazon-option" href="#" 
+                              data-id="${item.id}">
+                              ${item.display}
+                           </a>`;
+                }).join('');
+            } else if (window.inventarioItems && window.inventarioItems.length > 0) {
+                // Fallback a los datos originales (sin empresa)
+                console.log('Usando fallback a inventarioItems sin empresa');
+                options = window.inventarioItems.map(item => {
+                    const fecha = item.fecha ? new Date(item.fecha).toLocaleDateString('es-ES') : 'Sin fecha';
+                    const empresa = item.empresa ? item.empresa.nombre : 'Sin empresa';
+                    const text = `${item.codigo} - ${item.lugar} - ${fecha} - ${empresa}`;
+                    
+                    return `<a class="dropdown-item armazon-option" href="#" 
+                              data-id="${item.id}" 
+                              data-code="${item.codigo}"
+                              data-place="${item.lugar}"
+                              data-date="${fecha}"
+                              data-empresa="${empresa}">
+                              ${text}
+                           </a>`;
+                }).join('');
+            } else {
+                console.warn('No hay items de inventario disponibles');
+                options = '<a class="dropdown-item disabled" href="#">No hay artículos disponibles</a>';
+            }
+        }    // Obtener información del mes y año
     const nombresMeses = [
         'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
@@ -242,8 +247,18 @@ window.addArmazon = function() {
         anoTexto = currentDate.getFullYear();
     }
     
-    const hasOptions = window.inventarioItems && window.inventarioItems.length > 0;
-    const optionsCount = hasOptions ? window.inventarioItems.length : 0;
+    // Determinar qué datos usar
+    let datosParaUsar = [];
+    if (window.inventarioData?.itemsFiltrados) {
+        datosParaUsar = window.inventarioData.itemsFiltrados;
+    } else if (window.inventarioData?.items) {
+        datosParaUsar = window.inventarioData.items;
+    } else if (window.inventarioItems) {
+        datosParaUsar = window.inventarioItems;
+    }
+    
+    const hasOptions = datosParaUsar.length > 0;
+    const optionsCount = hasOptions ? datosParaUsar.length : 0;
 
     const template = `
         <div class="armazon-section mb-3">

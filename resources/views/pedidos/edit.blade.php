@@ -5,7 +5,82 @@
 @section('content_header')
     @if (session('error'))
         <div class="alert {{ session('tipo') }} alert-dismissible fade show" role="alert">
-            <strong>{{ session('error') }}</strong> {{ session('mensaje') }}
+            <strong>{{ session('error') }}</strong>        // Calcular el total inicial
+        if (typeof calculateTotal === 'function') {
+            calculateTotal();
+            console.log('Total inicial calculado');
+        } else {
+            console.warn('calculateTotal no está disponible');
+        }
+        
+        // Configurar filtrado por empresa
+        $('#empresa_id').on('change', function() {
+            const empresaId = $(this).val();
+            console.log('Empresa cambiada:', empresaId);
+            filtrarInventarioPorEmpresa(empresaId);
+        });
+        
+        // Aplicar filtro inicial si hay empresa seleccionada
+        const empresaInicialId = $('#empresa_id').val();
+        if (empresaInicialId) {
+            setTimeout(() => {
+                filtrarInventarioPorEmpresa(empresaInicialId);
+            }, 500);
+        }
+        
+        console.log('=== Inicialización completada ===');
+    });
+    
+    // Función para filtrar inventario por empresa en modo edición
+    function filtrarInventarioPorEmpresa(empresaId) {
+        console.log('Filtrando inventario por empresa (edit mode):', empresaId);
+        
+        if (!window.inventarioData || !window.inventarioData.items) {
+            console.warn('No hay datos de inventario disponibles');
+            return;
+        }
+        
+        // Filtrar items por empresa
+        const itemsFiltrados = window.inventarioData.items.filter(item => {
+            if (!empresaId) return true; // Si no hay empresa seleccionada, mostrar todos
+            return item.empresa_id == empresaId;
+        });
+        
+        console.log('Items filtrados:', itemsFiltrados.length, 'de', window.inventarioData.items.length);
+        
+        // Actualizar los dropdowns existentes de armazones
+        document.querySelectorAll('.armazon-dropdown').forEach(dropdown => {
+            actualizarDropdownConDatos(dropdown, itemsFiltrados);
+        });
+        
+        // Guardar datos filtrados para uso en addArmazon
+        window.inventarioData.itemsFiltrados = itemsFiltrados;
+    }
+    
+    // Función auxiliar para actualizar dropdown con datos filtrados
+    function actualizarDropdownConDatos(dropdown, datos) {
+        // Limpiar opciones actuales
+        dropdown.innerHTML = '';
+        
+        // Agregar opciones filtradas
+        datos.forEach(item => {
+            const option = document.createElement('a');
+            option.className = 'dropdown-item armazon-option';
+            option.href = '#';
+            option.setAttribute('data-id', item.id);
+            option.textContent = item.display;
+            dropdown.appendChild(option);
+        });
+        
+        // Si no hay opciones, mostrar mensaje
+        if (datos.length === 0) {
+            const noOption = document.createElement('a');
+            noOption.className = 'dropdown-item disabled';
+            noOption.href = '#';
+            noOption.textContent = 'No hay artículos disponibles para esta empresa';
+            dropdown.appendChild(noOption);
+        }
+    }on('mensaje') }}
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
@@ -212,11 +287,15 @@
             @foreach($inventarioItems as $item)
             {
                 id: {{ $item->id }},
+                empresa_id: {{ $item->empresa_id ?? 'null' }},
                 display: "{!! addslashes($item->codigo . ' - ' . $item->lugar . ' - ' . ($item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha') . ' - ' . ($item->empresa->nombre ?? 'Sin empresa')) !!}"
             }@if(!$loop->last),@endif
             @endforeach
         ]
     };
+    
+    // También pasar datos de empresas para el filtrado
+    window.empresasData = @json($empresas ?? []);
     
     console.log('Datos pasados a JavaScript:');
     console.log('- inventarioItems:', window.inventarioItems.length, 'items');

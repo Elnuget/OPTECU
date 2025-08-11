@@ -558,6 +558,20 @@
                 SucursalCache.preseleccionarEnSelect('empresa_id', false);
             }
 
+            // Manejar cambio de empresa para filtrar inventario
+            document.getElementById('empresa_id').addEventListener('change', function() {
+                const empresaId = this.value;
+                filtrarInventarioPorEmpresa(empresaId);
+            });
+
+            // Inicializar filtro si hay empresa preseleccionada
+            const empresaPreseleccionada = document.getElementById('empresa_id').value;
+            if (empresaPreseleccionada) {
+                setTimeout(() => {
+                    filtrarInventarioPorEmpresa(empresaPreseleccionada);
+                }, 100);
+            }
+
             // Manejar la búsqueda unificada de cliente/paciente
             document.getElementById('buscar_cliente_paciente').addEventListener('change', function() {
                 const selectedOption = document.querySelector(`#clientes_pacientes_list option[value="${this.value}"]`);
@@ -763,9 +777,12 @@
             const index = document.querySelectorAll(`[data-${type}-section]`).length;
             
             if (type === 'armazon') {
+                // Usar datos filtrados si están disponibles
+                const datosArmazones = window.inventarioData.armazonesFiltrados || window.inventarioData.armazones;
+                
                 // Generar opciones desde los datos de JavaScript
                 let armazonOptions = '<option value="">Seleccione un armazón</option>';
-                window.inventarioData.armazones.forEach(item => {
+                datosArmazones.forEach(item => {
                     armazonOptions += `<option value="${item.id}">${item.display}</option>`;
                 });
                 
@@ -849,9 +866,12 @@
                 `;
             }
             else if (type === 'accesorios') {
+                // Usar datos filtrados si están disponibles
+                const datosAccesorios = window.inventarioData.accesoriosFiltrados || window.inventarioData.accesorios;
+                
                 // Generar opciones desde los datos de JavaScript
                 let accesorioOptions = '<option value="" selected>Seleccione un Item del Inventario</option>';
-                window.inventarioData.accesorios.forEach(item => {
+                datosAccesorios.forEach(item => {
                     accesorioOptions += `<option value="${item.id}">${item.display}</option>`;
                 });
                 
@@ -910,6 +930,82 @@
         function duplicateAccesorios() {
             createNewFields('accesorios');
             calculateTotal(); // recalcular total con el nuevo accesorio
+        }
+
+        // Función para filtrar inventario por empresa
+        function filtrarInventarioPorEmpresa(empresaId) {
+            console.log('Filtrando inventario por empresa:', empresaId);
+            
+            // Filtrar armazones
+            const armazonesFiltrados = window.inventarioData.armazones.filter(item => {
+                if (!empresaId) return true; // Si no hay empresa seleccionada, mostrar todos
+                
+                // Extraer el nombre de la empresa del display
+                const partes = item.display.split(' - ');
+                const empresaItem = partes[partes.length - 1]; // La empresa es la última parte
+                
+                // Buscar la empresa por ID en la lista de empresas
+                const empresaSeleccionada = @json($empresas).find(emp => emp.id == empresaId);
+                const nombreEmpresaSeleccionada = empresaSeleccionada ? empresaSeleccionada.nombre : '';
+                
+                return empresaItem === nombreEmpresaSeleccionada;
+            });
+            
+            // Filtrar accesorios
+            const accesoriosFiltrados = window.inventarioData.accesorios.filter(item => {
+                if (!empresaId) return true; // Si no hay empresa seleccionada, mostrar todos
+                
+                // Extraer el nombre de la empresa del display
+                const partes = item.display.split(' - ');
+                const empresaItem = partes[partes.length - 1]; // La empresa es la última parte
+                
+                // Buscar la empresa por ID en la lista de empresas
+                const empresaSeleccionada = @json($empresas).find(emp => emp.id == empresaId);
+                const nombreEmpresaSeleccionada = empresaSeleccionada ? empresaSeleccionada.nombre : '';
+                
+                return empresaItem === nombreEmpresaSeleccionada;
+            });
+            
+            console.log('Armazones filtrados:', armazonesFiltrados.length);
+            console.log('Accesorios filtrados:', accesoriosFiltrados.length);
+            
+            // Actualizar selects de armazones existentes
+            document.querySelectorAll('select[name="a_inventario_id[]"]').forEach(select => {
+                actualizarSelectConDatos(select, armazonesFiltrados, 'Seleccione un armazón');
+            });
+            
+            // Actualizar selects de accesorios existentes
+            document.querySelectorAll('select[name="d_inventario_id[]"]').forEach(select => {
+                actualizarSelectConDatos(select, accesoriosFiltrados, 'Seleccione un Item del Inventario');
+            });
+            
+            // Actualizar los datos globales para futuras adiciones
+            window.inventarioData.armazonesFiltrados = armazonesFiltrados;
+            window.inventarioData.accesoriosFiltrados = accesoriosFiltrados;
+        }
+        
+        // Función auxiliar para actualizar un select con datos filtrados
+        function actualizarSelectConDatos(select, datos, placeholder) {
+            const valorActual = select.value;
+            
+            // Limpiar opciones actuales
+            select.innerHTML = `<option value="">${placeholder}</option>`;
+            
+            // Agregar opciones filtradas
+            datos.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.display;
+                if (item.id == valorActual) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            
+            // Refrescar selectpicker si existe
+            if ($(select).hasClass('selectpicker')) {
+                $(select).selectpicker('refresh');
+            }
         }
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/css/bootstrap-select.min.css">
