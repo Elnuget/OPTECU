@@ -68,6 +68,12 @@
             option.className = 'dropdown-item armazon-option';
             option.href = '#';
             option.setAttribute('data-id', item.id);
+            
+            // Extraer empresa del display para el atributo data-empresa
+            const partes = item.display.split(' - ');
+            const empresa = partes[partes.length - 1] || 'Sin empresa';
+            option.setAttribute('data-empresa', empresa);
+            
             option.textContent = item.display;
             dropdown.appendChild(option);
         });
@@ -79,6 +85,13 @@
             noOption.href = '#';
             noOption.textContent = 'No hay artículos disponibles para esta empresa';
             dropdown.appendChild(noOption);
+        }
+        
+        // Actualizar búsqueda activa si existe
+        const searchInput = dropdown.closest('.input-group').querySelector('.armazon-search');
+        if (searchInput && searchInput.value.trim()) {
+            // Trigger búsqueda para aplicar filtros inmediatamente
+            $(searchInput).trigger('input');
         }
     }on('mensaje') }}
             <button type="button" class="close" data-dismiss="alert" aria-label="Close">

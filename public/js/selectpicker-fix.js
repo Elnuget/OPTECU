@@ -83,9 +83,33 @@ $(document).ready(function() {
         const $dropdown = $(this).closest('.input-group').find('.armazon-dropdown');
         const $options = $dropdown.find('.armazon-option');
         
+        // Obtener la empresa seleccionada
+        const empresaSeleccionada = $('#empresa_id').val();
+        
         $options.each(function() {
             const text = $(this).text().toLowerCase();
-            if (text.includes(searchTerm)) {
+            const empresaItem = $(this).data('empresa') || $(this).text().split(' - ').pop(); // Obtener empresa del data-attribute o del texto
+            
+            let mostrar = true;
+            
+            // Filtrar por término de búsqueda
+            if (searchTerm.length > 0 && !text.includes(searchTerm)) {
+                mostrar = false;
+            }
+            
+            // Filtrar por empresa si hay una seleccionada
+            if (empresaSeleccionada && window.empresasData) {
+                const empresaSeleccionadaObj = window.empresasData.find(emp => emp.id == empresaSeleccionada);
+                if (empresaSeleccionadaObj) {
+                    const nombreEmpresaSeleccionada = empresaSeleccionadaObj.nombre;
+                    // Si el item no pertenece a la empresa seleccionada, no mostrar
+                    if (empresaItem !== nombreEmpresaSeleccionada && empresaItem !== 'Sin empresa') {
+                        mostrar = false;
+                    }
+                }
+            }
+            
+            if (mostrar) {
                 $(this).show();
             } else {
                 $(this).hide();

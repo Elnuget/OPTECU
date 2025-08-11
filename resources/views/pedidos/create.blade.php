@@ -527,6 +527,7 @@
                 @foreach($armazones as $item)
                 {
                     id: {{ $item->id }},
+                    empresa_id: {{ $item->empresa_id ?? 'null' }},
                     display: "{!! addslashes($item->codigo . ' - ' . $item->lugar . ' - N°' . $item->numero . ' - ' . ($item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha') . ' - ' . ($item->empresa->nombre ?? 'Sin empresa')) !!}"
                 }@if(!$loop->last),@endif
                 @endforeach
@@ -535,11 +536,15 @@
                 @foreach($accesorios as $item)
                 {
                     id: {{ $item->id }},
+                    empresa_id: {{ $item->empresa_id ?? 'null' }},
                     display: "{!! addslashes($item->codigo . ' - ' . $item->lugar . ' - N°' . $item->numero . ' - ' . ($item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha') . ' - ' . ($item->empresa->nombre ?? 'Sin empresa')) !!}"
                 }@if(!$loop->last),@endif
                 @endforeach
             ]
         };
+        
+        // Datos de empresas para filtrado
+        window.empresasData = @json($empresas);
     </script>
     <script>
         // Hacer que todo el header sea clickeable
@@ -569,6 +574,14 @@
                     }
                 }, 200);
             }
+
+            // Manejar búsqueda en selectpicker para respetar filtro por empresa
+            $(document).on('shown.bs.select', '.selectpicker', function(e) {
+                const selectElement = e.target;
+                if (selectElement.name.includes('inventario_id')) {
+                    aplicarFiltroEmpresaEnSelectpicker(selectElement);
+                }
+            });
 
             // Manejar cambio de empresa para filtrar inventario y actualizar número de orden
             document.getElementById('empresa_id').addEventListener('change', function() {
@@ -1096,6 +1109,33 @@
                     numeroOrdenInput.style.border = '';
                 }, 3000);
             }
+        }
+
+        // Función para aplicar filtro de empresa en selectpicker
+        function aplicarFiltroEmpresaEnSelectpicker(selectElement) {
+            const empresaId = document.getElementById('empresa_id').value;
+            if (!empresaId) return;
+            
+            // Obtener la empresa seleccionada
+            const empresaSeleccionada = @json($empresas).find(emp => emp.id == empresaId);
+            if (!empresaSeleccionada) return;
+            
+            const nombreEmpresaSeleccionada = empresaSeleccionada.nombre;
+            
+            // Obtener el dropdown del selectpicker
+            const $selectpicker = $(selectElement);
+            const dropdownMenu = $selectpicker.next('.bootstrap-select').find('.dropdown-menu');
+            
+            // Filtrar opciones visualmente en el dropdown
+            dropdownMenu.find('li').each(function() {
+                const texto = $(this).find('a .text').text() || $(this).find('a').text();
+                
+                if (texto.includes(nombreEmpresaSeleccionada) || texto === 'Seleccione una opción' || texto === 'Seleccione un armazón' || texto === 'Seleccione un Item del Inventario') {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
         }
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.18/dist/css/bootstrap-select.min.css">
