@@ -85,7 +85,7 @@
                 <tbody>
                     @foreach ($historiales as $index => $historial)
                     <tr>
-                        <td>{{ $index + 1 }}</td>
+                        <td>{{ $historial->id }}</td>
                         <td>{{ strtoupper($historial->nombres) }}</td>
                         <td>{{ strtoupper($historial->apellidos) }}</td>
                         <td>{{ \Carbon\Carbon::parse($historial->fecha)->format('d/m/Y') }}</td>
@@ -269,11 +269,17 @@
         // Inicializar DataTable
         $('#historialesTable').DataTable({
             "order": [[0, "desc"]],
-            "columnDefs": [{
-                "targets": [2],
-                "visible": true,
-                "searchable": true,
-            }],
+            "columnDefs": [
+                {
+                    "targets": [0],
+                    "type": "num"
+                },
+                {
+                    "targets": [2],
+                    "visible": true,
+                    "searchable": true,
+                }
+            ],
             "dom": 'Bfrtip',
             "paging": false,
             "lengthChange": false,
