@@ -165,4 +165,38 @@ class PedidoController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtiene el siguiente número de orden para una empresa específica
+     * 
+     * @param int $empresaId ID de la empresa
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSiguienteNumeroOrden($empresaId)
+    {
+        try {
+            // Obtener el último número de orden de la empresa
+            $ultimoPedido = Pedido::where('empresa_id', $empresaId)
+                ->orderBy('numero_orden', 'desc')
+                ->first();
+            
+            // Calcular el siguiente número
+            $siguienteNumero = $ultimoPedido ? $ultimoPedido->numero_orden + 1 : 1;
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'siguiente_numero_orden' => $siguienteNumero,
+                    'ultimo_numero_orden' => $ultimoPedido ? $ultimoPedido->numero_orden : 0,
+                    'empresa_id' => $empresaId
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener siguiente número de orden: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 } 

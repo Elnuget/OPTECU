@@ -14,6 +14,9 @@
 @stop
 
 @section('content')
+    {{-- Meta tag para CSRF --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
     <style>
         /* Convertir todo el texto a mayúsculas */
         .card-title,
@@ -556,12 +559,28 @@
             // Preseleccionar la sucursal activa desde localStorage
             if (typeof SucursalCache !== 'undefined') {
                 SucursalCache.preseleccionarEnSelect('empresa_id', false);
+                
+                // Después de preseleccionar, obtener el valor y actualizar número de orden
+                setTimeout(() => {
+                    const empresaPreseleccionadaCache = document.getElementById('empresa_id').value;
+                    if (empresaPreseleccionadaCache) {
+                        actualizarNumeroOrden(empresaPreseleccionadaCache);
+                        filtrarInventarioPorEmpresa(empresaPreseleccionadaCache);
+                    }
+                }, 200);
             }
 
-            // Manejar cambio de empresa para filtrar inventario
+            // Manejar cambio de empresa para filtrar inventario y actualizar número de orden
             document.getElementById('empresa_id').addEventListener('change', function() {
                 const empresaId = this.value;
+                
+                // Filtrar inventario
                 filtrarInventarioPorEmpresa(empresaId);
+                
+                // Actualizar número de orden si hay empresa seleccionada
+                if (empresaId) {
+                    actualizarNumeroOrden(empresaId);
+                }
             });
 
             // Inicializar filtro si hay empresa preseleccionada
@@ -569,6 +588,7 @@
             if (empresaPreseleccionada) {
                 setTimeout(() => {
                     filtrarInventarioPorEmpresa(empresaPreseleccionada);
+                    actualizarNumeroOrden(empresaPreseleccionada);
                 }, 100);
             }
 
@@ -1005,6 +1025,76 @@
             // Refrescar selectpicker si existe
             if ($(select).hasClass('selectpicker')) {
                 $(select).selectpicker('refresh');
+            }
+        }
+
+        // Función para actualizar el número de orden basado en la empresa seleccionada
+        async function actualizarNumeroOrden(empresaId) {
+            const numeroOrdenInput = document.getElementById('numero_orden');
+            if (!numeroOrdenInput) {
+                console.error('Campo numero_orden no encontrado');
+                return;
+            }
+
+            try {
+                // Mostrar indicador de carga
+                numeroOrdenInput.style.backgroundColor = '#fff3cd';
+                numeroOrdenInput.style.border = '1px solid #ffeaa7';
+                numeroOrdenInput.disabled = true;
+
+                // Realizar petición AJAX
+                const response = await fetch(`/api/pedidos/siguiente-numero-orden/${empresaId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Actualizar el campo con el siguiente número de orden
+                    numeroOrdenInput.value = data.data.siguiente_numero_orden;
+                    
+                    // Mostrar indicador de éxito
+                    numeroOrdenInput.style.backgroundColor = '#d4edda';
+                    numeroOrdenInput.style.border = '1px solid #c3e6cb';
+                    
+                    console.log(`Número de orden actualizado: ${data.data.siguiente_numero_orden} (empresa: ${empresaId})`);
+                    
+                    // Remover indicadores después de 2 segundos
+                    setTimeout(() => {
+                        numeroOrdenInput.style.backgroundColor = '';
+                        numeroOrdenInput.style.border = '';
+                        numeroOrdenInput.disabled = false;
+                    }, 2000);
+                    
+                } else {
+                    throw new Error(data.message || 'Error al obtener número de orden');
+                }
+
+            } catch (error) {
+                console.error('Error al actualizar número de orden:', error);
+                
+                // Mostrar indicador de error
+                numeroOrdenInput.style.backgroundColor = '#f8d7da';
+                numeroOrdenInput.style.border = '1px solid #f5c6cb';
+                numeroOrdenInput.disabled = false;
+                
+                // Mostrar mensaje de error al usuario
+                alert(`Error al obtener el número de orden: ${error.message}`);
+                
+                // Remover indicador de error después de 3 segundos
+                setTimeout(() => {
+                    numeroOrdenInput.style.backgroundColor = '';
+                    numeroOrdenInput.style.border = '';
+                }, 3000);
             }
         }
     </script>

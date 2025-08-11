@@ -36,6 +36,9 @@ Route::get('/pedidos/buscar-rut/{cedula}', [PedidoController::class, 'buscarPorR
 // Ruta para buscar pedidos por cualquier campo de datos personales
 Route::get('/pedidos/buscar-por/{campo}/{valor}', [PedidoController::class, 'buscarPedidoPorCampo']);
 
+// Ruta para obtener el siguiente número de orden por empresa
+Route::get('/pedidos/siguiente-numero-orden/{empresa_id}', [PedidoController::class, 'getSiguienteNumeroOrden']);
+
 // Ruta para generar Excel de pedidos
 Route::post('/pedidos/generar-excel', [PedidoController::class, 'generarExcel']);
 
