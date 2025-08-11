@@ -34,7 +34,7 @@
                                 class="form-control armazon-search" 
                                 placeholder="Buscar armazón o accesorio..." 
                                 data-selected-id="{{ $inventario->id }}"
-                                value="{{ $inventario->codigo }} - {{ $inventario->lugar }} - {{ $inventario->fecha ? \Carbon\Carbon::parse($inventario->fecha)->format('d/m/Y') : 'Sin fecha' }}">
+                                value="{{ $inventario->codigo }} - {{ $inventario->lugar }} - {{ $inventario->fecha ? \Carbon\Carbon::parse($inventario->fecha)->format('d/m/Y') : 'Sin fecha' }} - {{ $inventario->empresa->nombre ?? 'Sin empresa' }}">
                                 
                             <input type="hidden" 
                                 name="a_inventario_id[]" 
@@ -52,8 +52,9 @@
                                            data-id="{{ $item->id }}" 
                                            data-code="{{ $item->codigo }}"
                                            data-place="{{ $item->lugar }}"
-                                           data-date="{{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}">
-                                            {{ $item->codigo }} - {{ $item->lugar }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}
+                                           data-date="{{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }}"
+                                           data-empresa="{{ $item->empresa->nombre ?? 'Sin empresa' }}">
+                                            {{ $item->codigo }} - {{ $item->lugar }} - {{ $item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha' }} - {{ $item->empresa->nombre ?? 'Sin empresa' }}
                                         </a>
                                     @endforeach
                                 </div>

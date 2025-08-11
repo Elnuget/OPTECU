@@ -206,8 +206,21 @@
     window.filtroMes = @json($filtroMes ?? null);
     window.filtroAno = @json($filtroAno ?? null);
     
+    // Datos de inventario para uso en funciones de duplicación (con información de empresa)
+    window.inventarioData = {
+        items: [
+            @foreach($inventarioItems as $item)
+            {
+                id: {{ $item->id }},
+                display: "{!! addslashes($item->codigo . ' - ' . $item->lugar . ' - ' . ($item->fecha ? \Carbon\Carbon::parse($item->fecha)->format('d/m/Y') : 'Sin fecha') . ' - ' . ($item->empresa->nombre ?? 'Sin empresa')) !!}"
+            }@if(!$loop->last),@endif
+            @endforeach
+        ]
+    };
+    
     console.log('Datos pasados a JavaScript:');
     console.log('- inventarioItems:', window.inventarioItems.length, 'items');
+    console.log('- inventarioData:', window.inventarioData.items.length, 'items con empresa');
     console.log('- filtroMes:', window.filtroMes);
     console.log('- filtroAno:', window.filtroAno);
 </script>

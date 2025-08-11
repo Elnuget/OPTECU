@@ -348,14 +348,15 @@ class PedidosController extends Controller
     public function edit($id)
     {
         try {
-            $pedido = Pedido::with(['inventarios', 'lunas', 'pagos'])->findOrFail($id);
+            $pedido = Pedido::with(['inventarios.empresa', 'lunas', 'pagos'])->findOrFail($id);
             
             // Obtener el año y mes actual
             $currentYear = date('Y');
             $currentMonth = date('m');
             
             // Primer intento: Filtrar inventario por mes y año actual con cantidad > 0
-            $inventarioItems = Inventario::where('cantidad', '>', 0)
+            $inventarioItems = Inventario::with('empresa:id,nombre')
+                ->where('cantidad', '>', 0)
                 ->whereYear('fecha', $currentYear)
                 ->whereMonth('fecha', $currentMonth)
                 ->get();
@@ -369,7 +370,8 @@ class PedidosController extends Controller
                     
                 if ($ultimoArticulo) {
                     $lastItemDate = \Carbon\Carbon::parse($ultimoArticulo->fecha);
-                    $inventarioItems = Inventario::where('cantidad', '>', 0)
+                    $inventarioItems = Inventario::with('empresa:id,nombre')
+                        ->where('cantidad', '>', 0)
                         ->whereYear('fecha', $lastItemDate->year)
                         ->whereMonth('fecha', $lastItemDate->month)
                         ->get();
@@ -379,14 +381,15 @@ class PedidosController extends Controller
                     $currentMonth = $lastItemDate->month;
                 } else {
                     // Tercer intento: Si no hay ningún artículo con cantidad > 0, mostrar todos los artículos
-                    $inventarioItems = Inventario::all();
+                    $inventarioItems = Inventario::with('empresa:id,nombre')->get();
                 }
             }
                 
             // Agregar también los items que ya están en este pedido (para que no desaparezcan al editar)
             $pedidoInventarioIds = $pedido->inventarios->pluck('id')->toArray();
             if (!empty($pedidoInventarioIds)) {
-                $inventarioItemsPedido = Inventario::whereIn('id', $pedidoInventarioIds)->get();
+                $inventarioItemsPedido = Inventario::with('empresa:id,nombre')
+                    ->whereIn('id', $pedidoInventarioIds)->get();
                 // Combinar las colecciones y eliminar duplicados
                 $inventarioItems = $inventarioItems->concat($inventarioItemsPedido)->unique('id');
             }

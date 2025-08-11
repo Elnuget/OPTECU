@@ -23,7 +23,16 @@ $(document).ready(function() {
         const code = $this.data('code');
         const place = $this.data('place');
         const date = $this.data('date');
-        const text = `${code} - ${place} - ${date}`;
+        const empresa = $this.data('empresa') || 'Sin empresa';
+        
+        // Construir el texto incluyendo la empresa, o usar el texto completo del elemento si no hay datos individuales
+        let text;
+        if (code && place && date) {
+            text = `${code} - ${place} - ${date} - ${empresa}`;
+        } else {
+            // Usar el texto completo del elemento (para casos donde se usa inventarioData.items)
+            text = $this.text().trim();
+        }
         
         // Obtener el grupo de entrada al que pertenece esta opción
         const $inputGroup = $this.closest('.input-group');
@@ -171,30 +180,43 @@ window.addArmazon = function() {
             const code = opt.getAttribute('data-code');
             const place = opt.getAttribute('data-place');
             const date = opt.getAttribute('data-date');
+            const empresa = opt.getAttribute('data-empresa') || 'Sin empresa';
             const text = opt.textContent.trim();
             
             return `<a class="dropdown-item armazon-option" href="#" 
                       data-id="${id}" 
                       data-code="${code}"
                       data-place="${place}"
-                      data-date="${date}">
+                      data-date="${date}"
+                      data-empresa="${empresa}">
                       ${text}
                    </a>`;
         }).join('');
     } else {
-        console.log('No se encontró dropdown existente, usando datos de window.inventarioItems');
+        console.log('No se encontró dropdown existente, usando datos de window.inventarioData');
         
-        // Si no hay dropdown existente, usar los datos pasados desde PHP
-        if (window.inventarioItems && window.inventarioItems.length > 0) {
+        // Usar los nuevos datos con información de empresa
+        if (window.inventarioData && window.inventarioData.items && window.inventarioData.items.length > 0) {
+            options = window.inventarioData.items.map(item => {
+                return `<a class="dropdown-item armazon-option" href="#" 
+                          data-id="${item.id}">
+                          ${item.display}
+                       </a>`;
+            }).join('');
+        } else if (window.inventarioItems && window.inventarioItems.length > 0) {
+            // Fallback a los datos originales (sin empresa)
+            console.log('Usando fallback a inventarioItems sin empresa');
             options = window.inventarioItems.map(item => {
                 const fecha = item.fecha ? new Date(item.fecha).toLocaleDateString('es-ES') : 'Sin fecha';
-                const text = `${item.codigo} - ${item.lugar} - ${fecha}`;
+                const empresa = item.empresa ? item.empresa.nombre : 'Sin empresa';
+                const text = `${item.codigo} - ${item.lugar} - ${fecha} - ${empresa}`;
                 
                 return `<a class="dropdown-item armazon-option" href="#" 
                           data-id="${item.id}" 
                           data-code="${item.codigo}"
                           data-place="${item.lugar}"
-                          data-date="${fecha}">
+                          data-date="${fecha}"
+                          data-empresa="${empresa}">
                           ${text}
                        </a>`;
             }).join('');
