@@ -10,7 +10,16 @@
     <strong>{{ strtoupper(session('mensaje')) }}</strong>
     <button type="button" class="close" data-dismiss="alert" aria-label="Close">
         <span aria-hidden="true">&times;</span>
-    </button>
+                      $('#historialesLoader').hide();
+                    $('#historialesRelacionadosContent').show();
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error en la petición AJAX:', status, error);
+                    console.error('Respuesta del servidor:', xhr.responseText);
+                    $('#historialesRelacionadosBody').html('<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS HISTORIALES</td></tr>');
+                    $('#historialesLoader').hide();
+                    $('#historialesRelacionadosContent').show();
+                }on>
 </div>
 @endif
 @stop
@@ -266,8 +275,12 @@
 @section('js')
 <script>
     $(document).ready(function() {
+        // Debug: contar filas en la tabla
+        var totalFilas = $('#historialesTable tbody tr').length;
+        console.log('Total de filas en la tabla HTML:', totalFilas);
+        
         // Inicializar DataTable
-        $('#historialesTable').DataTable({
+        var table = $('#historialesTable').DataTable({
             "order": [[0, "desc"]],
             "columnDefs": [
                 {
@@ -283,7 +296,7 @@
             "dom": 'Bfrtip',
             "paging": false,
             "lengthChange": false,
-            "info": false,
+            "info": true,  // Cambiado a true para mostrar información
             "processing": false,
             "serverSide": false,
             "buttons": [
@@ -396,6 +409,9 @@
             const nombres = $(this).data('nombres');
             const apellidos = $(this).data('apellidos');
             
+            // Debug: imprimir los datos que se van a enviar
+            console.log('Buscando historiales para:', nombres, apellidos);
+            
             $('#pacienteNombre').text(nombres.toUpperCase() + ' ' + apellidos.toUpperCase());
             $('#historialesLoader').show();
             $('#historialesRelacionadosContent').hide();
@@ -409,6 +425,9 @@
                     apellidos: apellidos
                 },
                 success: function(response) {
+                    console.log('Respuesta del servidor:', response);
+                    console.log('Número de historiales encontrados:', response.historiales.length);
+                    
                     // Llenar la tabla con los datos recibidos
                     const historialesBody = $('#historialesRelacionadosBody');
                     historialesBody.empty();

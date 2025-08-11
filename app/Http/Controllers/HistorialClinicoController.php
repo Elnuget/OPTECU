@@ -650,11 +650,23 @@ class HistorialClinicoController extends Controller
             $nombres = $request->get('nombres');
             $apellidos = $request->get('apellidos');
 
-            // Buscar historiales con el mismo nombre y apellido, ordenados por fecha descendente
-            $historiales = HistorialClinico::where('nombres', 'like', "%{$nombres}%")
-                                         ->where('apellidos', 'like', "%{$apellidos}%")
-                                         ->orderBy('fecha', 'desc')
-                                         ->get();
+            // Buscar historiales con el mismo nombre y apellido exactos, ordenados por fecha descendente
+            $historiales = HistorialClinico::where(function($query) use ($nombres, $apellidos) {
+                    // Búsqueda exacta
+                    $query->where('nombres', $nombres)
+                          ->where('apellidos', $apellidos);
+                })
+                ->orWhere(function($query) use ($nombres, $apellidos) {
+                    // Búsqueda con LIKE para variaciones
+                    $query->where('nombres', 'like', "%{$nombres}%")
+                          ->where('apellidos', 'like', "%{$apellidos}%");
+                })
+                ->orderBy('fecha', 'desc')
+                ->get();
+
+            // Log para debug
+            Log::info("Buscando historiales para: {$nombres} {$apellidos}");
+            Log::info("Encontrados: " . $historiales->count() . " historiales");
 
             // Retornar los historiales en formato JSON
             return response()->json([
