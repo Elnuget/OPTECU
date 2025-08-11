@@ -111,9 +111,9 @@
                         <option value="">SELECCIONAR EL PEDIDO</option>
                         @foreach($pedidos as $pedido)
                             <option value="{{ $pedido->id }}" 
-                                   data-saldo="{{ number_format($pedido->saldo, 0, '.', '') }}" 
+                                   data-saldo="{{ number_format($pedido->saldo, 2, '.', '') }}" 
                                    {{ (isset($selectedPedidoId) && $selectedPedidoId == $pedido->id) || old('pedido_id') == $pedido->id ? 'selected' : '' }}>
-                                ORDEN: {{ $pedido->numero_orden }} - CLIENTE: {{ $pedido->cliente }} - SALDO: ${{ number_format($pedido->saldo, 0, ',', '.') }}
+                                ORDEN: {{ $pedido->numero_orden }} - CLIENTE: {{ $pedido->cliente }} - SALDO: ${{ number_format($pedido->saldo, 2, ',', '.') }}
                             </option>
                         @endforeach
                     </select>
@@ -141,13 +141,14 @@
                            class="form-control {{ $errors->has('pago') ? 'is-invalid' : '' }}" 
                            placeholder="0.00"
                            value="{{ old('pago') }}"
-                           onblur="validarMonto(this)">
+                           onblur="validarMonto(this)"
+                           oninput="formatearDecimales(this)">
                     @if($errors->has('pago'))
                         <div class="invalid-feedback">
                             {{ $errors->first('pago') }}
                         </div>
                     @endif
-                    <small class="form-text text-muted">INGRESE EL MONTO DEL PAGO (ACEPTA DECIMALES)</small>
+                    <small class="form-text text-muted">INGRESE EL MONTO DEL PAGO (ACEPTA DECIMALES HASTA 2 POSICIONES)</small>
                 </div>
                 
                 <div class="form-group">
@@ -243,32 +244,57 @@
         updateSaldo();
     });
 
+    // Formatear decimales mientras se escribe
+    function formatearDecimales(element) {
+        let valor = element.value;
+        
+        // Si está vacío, no hacer nada
+        if (!valor) return;
+        
+        // Remover caracteres no numéricos excepto punto
+        valor = valor.replace(/[^0-9.]/g, '');
+        
+        // Asegurar que solo haya un punto decimal
+        const partes = valor.split('.');
+        if (partes.length > 2) {
+            valor = partes[0] + '.' + partes.slice(1).join('');
+        }
+        
+        // Limitar decimales a 2 posiciones
+        if (partes.length === 2 && partes[1].length > 2) {
+            valor = partes[0] + '.' + partes[1].substring(0, 2);
+        }
+        
+        element.value = valor;
+    }
+
     // Validar el monto del pago contra el saldo
     function validarMonto(element) {
         const saldoInput = document.getElementById('saldo');
         const montoInput = element;
         
         // Limpiar y convertir a números
-        const saldo = parseFloat(saldoInput.value) || 0;
+        const saldoTexto = saldoInput.value.replace(/[^0-9.]/g, '');
+        const saldo = parseFloat(saldoTexto) || 0;
         const monto = parseFloat(montoInput.value) || 0;
         
-        // Formatear con 2 decimales
-        if (montoInput.value) {
+        // Formatear con 2 decimales si hay valor
+        if (montoInput.value && monto > 0) {
             montoInput.value = monto.toFixed(2);
-        }
-        
-        // Validar que el monto no sea mayor al saldo
-        if (monto > saldo) {
-            alert('ADVERTENCIA: EL MONTO DEL PAGO NO PUEDE SER MAYOR AL SALDO PENDIENTE');
-            montoInput.value = saldo.toFixed(2); // Asignar el máximo (saldo)
-            return false;
         }
         
         // Validar que el monto sea mayor a cero
         if (monto <= 0 && montoInput.value) {
             alert('ADVERTENCIA: EL MONTO DEL PAGO DEBE SER MAYOR A CERO');
-            montoInput.value = ''; // Limpiar el campo
+            montoInput.value = '';
             montoInput.focus();
+            return false;
+        }
+        
+        // Validar que el monto no sea mayor al saldo
+        if (monto > saldo && saldo > 0) {
+            alert('ADVERTENCIA: EL MONTO DEL PAGO ($' + monto.toFixed(2) + ') NO PUEDE SER MAYOR AL SALDO PENDIENTE ($' + saldo.toFixed(2) + ')');
+            montoInput.value = saldo.toFixed(2);
             return false;
         }
         

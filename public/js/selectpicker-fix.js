@@ -70,7 +70,7 @@ $(document).ready(function() {
         $menu.toggleClass('show');
     });
     
-    // Cerrar los dropdowns cuando se hace clic fuera de ellos
+    // Cerrar los dropdowns cuando se hace clic fuera de ellosks
     $(document).on('click', function(e) {
         if (!$(e.target).closest('.input-group').length) {
             $('.armazon-dropdown').removeClass('show');

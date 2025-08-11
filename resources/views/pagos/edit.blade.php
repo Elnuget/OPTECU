@@ -72,20 +72,27 @@
                 @method('put')
                 
                 <div class="form-group">
-                    <label>SELECCIONE UN PEDIDO</label>
-                    <select name="pedido_id" id="pedido_id" required class="form-control">
+                    <label>SELECCIONE UN PEDIDO <span class="text-danger">*</span></label>
+                    <select name="pedido_id" id="pedido_id" required class="form-control {{ $errors->has('pedido_id') ? 'is-invalid' : '' }}">
                         <option value="">SELECCIONAR EL PEDIDO</option>
                         @foreach($pedidos as $pedido)
-                            <option value="{{ $pedido->id }}" data-saldo="{{ number_format($pedido->saldo, 2, '.', '') }}" {{ $pedido->id == $pago->pedido_id ? 'selected' : '' }}>
-                                ORDEN: {{ $pedido->numero_orden }} - CLIENTE: {{ $pedido->cliente }}
+                            <option value="{{ $pedido->id }}" 
+                                   data-saldo="{{ number_format($pedido->saldo + ($pedido->id == $pago->pedido_id ? $pago->pago : 0), 2, '.', '') }}" 
+                                   {{ $pedido->id == $pago->pedido_id ? 'selected' : '' }}>
+                                ORDEN: {{ $pedido->numero_orden }} - CLIENTE: {{ $pedido->cliente }} - SALDO: ${{ number_format($pedido->saldo + ($pedido->id == $pago->pedido_id ? $pago->pago : 0), 2, ',', '.') }}
                             </option>
                         @endforeach
                     </select>
+                    @if($errors->has('pedido_id'))
+                        <div class="invalid-feedback">
+                            {{ $errors->first('pedido_id') }}
+                        </div>
+                    @endif
                 </div>
                 
                 <div class="form-group">
-                    <label>SELECCIONE UN MEDIO DE PAGO</label>
-                    <select name="mediodepago_id" class="form-control">
+                    <label>SELECCIONE UN MEDIO DE PAGO <span class="text-danger">*</span></label>
+                    <select name="mediodepago_id" required class="form-control {{ $errors->has('mediodepago_id') ? 'is-invalid' : '' }}">
                         <option value="">SELECCIONAR EL MÉTODO DE PAGO</option>
                         @foreach($mediosdepago as $medioDePago)
                             <option value="{{ $medioDePago->id }}" @if($medioDePago->id == $pago->mediodepago_id) selected @endif>
@@ -93,31 +100,53 @@
                             </option>
                         @endforeach
                     </select>
+                    @if($errors->has('mediodepago_id'))
+                        <div class="invalid-feedback">
+                            {{ $errors->first('mediodepago_id') }}
+                        </div>
+                    @endif
                 </div>
                 
                 <div class="form-group">
-                    <label>SALDO</label>
-                    <input name="saldo" id="saldo" type="text" class="form-control" value="${{ number_format($pago->pedido->saldo + $pago->pago, 2, ',', '.') }}" readonly>
+                    <label>SALDO <span class="text-danger">*</span></label>
+                    <input name="saldo" id="saldo" type="text" class="form-control" 
+                           value="{{ number_format($pago->pedido->saldo + $pago->pago, 2, '.', '') }}" readonly>
+                    <small class="form-text text-muted">SALDO DISPONIBLE DEL PEDIDO SELECCIONADO</small>
                 </div>
                 
                 <div class="form-group">
-                    <label>PAGO</label>
+                    <label>PAGO <span class="text-danger">*</span></label>
                     <input name="pago" 
+                           id="pago"
                            required 
                            type="number" 
                            step="0.01"
                            min="0.01"
-                           class="form-control" 
+                           class="form-control {{ $errors->has('pago') ? 'is-invalid' : '' }}" 
                            value="{{ number_format($pago->pago, 2, '.', '') }}"
-                           placeholder="INGRESE EL MONTO DEL PAGO">
+                           placeholder="INGRESE EL MONTO DEL PAGO"
+                           onblur="validarMonto(this)"
+                           oninput="formatearDecimales(this)">
+                    @if($errors->has('pago'))
+                        <div class="invalid-feedback">
+                            {{ $errors->first('pago') }}
+                        </div>
+                    @endif
+                    <small class="form-text text-muted">INGRESE EL MONTO DEL PAGO (ACEPTA DECIMALES HASTA 2 POSICIONES)</small>
                 </div>
 
                 <div class="form-group">
-                    <label>FECHA DE CREACIÓN</label>
+                    <label>FECHA DE CREACIÓN <span class="text-danger">*</span></label>
                     <input name="created_at" 
                            type="datetime-local" 
-                           class="form-control" 
+                           class="form-control {{ $errors->has('created_at') ? 'is-invalid' : '' }}" 
                            value="{{ \Carbon\Carbon::parse($pago->created_at)->format('Y-m-d\TH:i') }}">
+                    @if($errors->has('created_at'))
+                        <div class="invalid-feedback">
+                            {{ $errors->first('created_at') }}
+                        </div>
+                    @endif
+                    <small class="form-text text-muted">FECHA Y HORA DEL PAGO</small>
                 </div>
 
                 <div class="form-group">
@@ -128,7 +157,15 @@
                             <p class="text-muted">FOTO ACTUAL</p>
                         </div>
                     @endif
-                    <input name="foto" type="file" class="form-control-file" accept="image/*">
+                    <input name="foto" 
+                           type="file" 
+                           class="form-control-file {{ $errors->has('foto') ? 'is-invalid' : '' }}" 
+                           accept="image/*">
+                    @if($errors->has('foto'))
+                        <div class="invalid-feedback">
+                            {{ $errors->first('foto') }}
+                        </div>
+                    @endif
                     <small class="form-text text-muted">FORMATOS PERMITIDOS: JPEG, PNG, JPG, GIF. TAMAÑO MÁXIMO: 2MB</small>
                 </div>
 
@@ -179,25 +216,80 @@
 
 @section('js')
 <script>
-    const csrfToken = document.head.querySelector("[name~=csrf-token][content]").content;
-    document.getElementById('region').addEventListener('change', (e) => {
-        fetch('../GetComunasPorRegion', {
-            method: 'POST',
-            body: JSON.stringify({ region: e.target.value }),
-            headers: {
-                'Content-Type': 'application/json',
-                "X-CSRF-Token": csrfToken
-            }
-        }).then(response => {
-            return response.json()
-        }).then(data => {
-            var opciones = "<option value=''>Elegir</option>";
-            for (let i in data.lista) {
-                opciones += '<option value="' + data.lista[i].id + '">' + data.lista[i].comuna + '</option>';
-            }
-            document.getElementById("comuna").innerHTML = opciones;
-        }).catch(error => console.error(error));
-    })
+    document.addEventListener('DOMContentLoaded', function() {
+        const pedidoSelect = document.getElementById('pedido_id');
+        const saldoInput = document.getElementById('saldo');
+
+        // Function to update saldo based on selected pedido
+        function updateSaldo() {
+            const selectedOption = pedidoSelect.options[pedidoSelect.selectedIndex];
+            const saldo = selectedOption.getAttribute('data-saldo') || '';
+            saldoInput.value = saldo;
+        }
+
+        // Event listener for changes in pedido selection
+        pedidoSelect.addEventListener('change', updateSaldo);
+
+        // Initialize saldo if a pedido is pre-selected
+        updateSaldo();
+    });
+
+    // Formatear decimales mientras se escribe
+    function formatearDecimales(element) {
+        let valor = element.value;
+        
+        // Si está vacío, no hacer nada
+        if (!valor) return;
+        
+        // Remover caracteres no numéricos excepto punto
+        valor = valor.replace(/[^0-9.]/g, '');
+        
+        // Asegurar que solo haya un punto decimal
+        const partes = valor.split('.');
+        if (partes.length > 2) {
+            valor = partes[0] + '.' + partes.slice(1).join('');
+        }
+        
+        // Limitar decimales a 2 posiciones
+        if (partes.length === 2 && partes[1].length > 2) {
+            valor = partes[0] + '.' + partes[1].substring(0, 2);
+        }
+        
+        element.value = valor;
+    }
+
+    // Validar el monto del pago contra el saldo
+    function validarMonto(element) {
+        const saldoInput = document.getElementById('saldo');
+        const montoInput = element;
+        
+        // Limpiar y convertir a números
+        const saldoTexto = saldoInput.value.replace(/[^0-9.]/g, '');
+        const saldo = parseFloat(saldoTexto) || 0;
+        const monto = parseFloat(montoInput.value) || 0;
+        
+        // Formatear con 2 decimales si hay valor
+        if (montoInput.value && monto > 0) {
+            montoInput.value = monto.toFixed(2);
+        }
+        
+        // Validar que el monto sea mayor a cero
+        if (monto <= 0 && montoInput.value) {
+            alert('ADVERTENCIA: EL MONTO DEL PAGO DEBE SER MAYOR A CERO');
+            montoInput.value = '';
+            montoInput.focus();
+            return false;
+        }
+        
+        // Validar que el monto no sea mayor al saldo
+        if (monto > saldo && saldo > 0) {
+            alert('ADVERTENCIA: EL MONTO DEL PAGO ($' + monto.toFixed(2) + ') NO PUEDE SER MAYOR AL SALDO DISPONIBLE ($' + saldo.toFixed(2) + ')');
+            montoInput.value = saldo.toFixed(2);
+            return false;
+        }
+        
+        return true;
+    }
 </script>
 @stop
 

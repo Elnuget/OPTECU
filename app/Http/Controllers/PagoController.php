@@ -325,21 +325,37 @@ class PagoController extends Controller
     {
         try {
             $validatedData = $request->validate([
-                'pedido_id' => 'nullable|exists:pedidos,id',
-                'mediodepago_id' => 'nullable|exists:mediosdepagos,id',
-                'pago' => 'nullable|numeric|min:0.01|regex:/^\d+(\.\d{1,2})?$/',
+                'pedido_id' => 'required|exists:pedidos,id',
+                'mediodepago_id' => 'required|exists:mediosdepagos,id',
+                'pago' => 'required|numeric|min:0.01|regex:/^\d+(\.\d{1,2})?$/',
                 'created_at' => 'sometimes|nullable|date',
                 'TC' => 'sometimes|nullable|boolean',
                 'foto' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:1048576',
             ]);
 
-            // Format pago to ensure exact decimal
-            if (isset($validatedData['pago'])) {
-                $validatedData['pago'] = number_format((float)$validatedData['pago'], 2, '.', '');
+            // Verificar que el pedido existe
+            $pedido = Pedido::findOrFail($validatedData['pedido_id']);
+            
+            if (!$pedido) {
+                throw new \Exception('El pedido seleccionado no existe');
             }
+
+            // Format pago to ensure exact decimal
+            $pagoAmount = (float)$validatedData['pago'];
+            $validatedData['pago'] = number_format($pagoAmount, 2, '.', '');
 
             $pago = Pago::findOrFail($id);
             $oldPagoAmount = $pago->pago;
+
+            // Verificar que el nuevo pago no sea mayor al saldo disponible (incluyendo el pago anterior)
+            $saldoDisponible = $pedido->saldo + $oldPagoAmount;
+            if ($pagoAmount > $saldoDisponible) {
+                throw new \Exception('El monto del pago no puede ser mayor al saldo disponible del pedido');
+            }
+
+            if ($pagoAmount <= 0) {
+                throw new \Exception('El monto del pago debe ser mayor a cero');
+            }
 
             // Create uploads directory if it doesn't exist
             $uploadsPath = public_path('uploads/pagos');
@@ -381,30 +397,28 @@ class PagoController extends Controller
             // Comenzar transacción
             DB::beginTransaction();
 
+            // Actualizar el pago
             $pago->update($validatedData);
             
-            // Actualizar saldo del pedido si se proporciona pedido_id
-            if (isset($validatedData['pedido_id'])) {
-                $pedido = Pedido::find($validatedData['pedido_id']);
-                if ($pedido) {
-                    $pedido->saldo += $oldPagoAmount; // Revert the old payment amount
-                    $pedido->saldo -= $validatedData['pago']; // Apply the new payment amount
-                    
-                    if (!$pedido->save()) {
-                        throw new \Exception('Error al actualizar el saldo del pedido');
-                    }
+            // Actualizar saldo del pedido
+            if ($pago->pedido_id != $validatedData['pedido_id']) {
+                // Si cambió el pedido, revertir el pago del pedido anterior
+                $pedidoAnterior = Pedido::find($pago->pedido_id);
+                if ($pedidoAnterior) {
+                    $pedidoAnterior->saldo += $oldPagoAmount;
+                    $pedidoAnterior->save();
                 }
+                
+                // Aplicar el nuevo pago al nuevo pedido
+                $pedido->saldo -= $validatedData['pago'];
             } else {
-                // If pedido_id is not provided, update the saldo of the existing pedido
-                $pedido = $pago->pedido;
-                if ($pedido) {
-                    $pedido->saldo += $oldPagoAmount; // Revert the old payment amount
-                    $pedido->saldo -= $validatedData['pago']; // Apply the new payment amount
-                    
-                    if (!$pedido->save()) {
-                        throw new \Exception('Error al actualizar el saldo del pedido');
-                    }
-                }
+                // Mismo pedido, ajustar la diferencia
+                $diferencia = $validatedData['pago'] - $oldPagoAmount;
+                $pedido->saldo -= $diferencia;
+            }
+            
+            if (!$pedido->save()) {
+                throw new \Exception('Error al actualizar el saldo del pedido');
             }
 
             // Confirmar transacción
