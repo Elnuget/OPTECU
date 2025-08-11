@@ -44,7 +44,38 @@
             // Restaurar estado después de cargar
             restoreState();
 
-            // Función para inicializar DataTables de forma segura
+            // Función para limpiar completamente las DataTables
+            function clearAllDataTables() {
+                $('.inventario-table').each(function() {
+                    const $table = $(this);
+                    
+                    // Si hay una instancia de DataTable
+                    if ($.fn.DataTable.isDataTable(this)) {
+                        try {
+                            const dt = $table.DataTable();
+                            // No llamar a clear() para preservar el contenido original
+                            dt.destroy(); // Sin parámetro true para mantener el DOM original
+                        } catch (e) {
+                            console.warn('Error limpiando DataTable:', e);
+                        }
+                    }
+                    
+                    // Limpiar solo referencias y clases, no el contenido
+                    $table.removeData();
+                    $table.removeClass('dataTable');
+                    
+                    // Solo remover wrappers específicos, no el contenido de la tabla
+                    const $searchWrapper = $table.siblings('.dataTables_filter');
+                    const $infoWrapper = $table.siblings('.dataTables_info');
+                    const $pagingWrapper = $table.siblings('.dataTables_paginate');
+                    
+                    $searchWrapper.remove();
+                    $infoWrapper.remove();
+                    $pagingWrapper.remove();
+                });
+            }
+
+            // Función para inicializar DataTables de forma segura y conservadora
             function initializeDataTables() {
                 // Verificar que DataTables esté disponible
                 if (typeof $.fn.DataTable === 'undefined') {
@@ -52,99 +83,114 @@
                     return;
                 }
 
-                // Destruir instancias existentes de DataTables antes de reinicializar
                 $('.inventario-table').each(function() {
+                    const $table = $(this);
+                    
+                    // Solo procesar si la tabla es visible
+                    if (!$table.is(':visible')) {
+                        return;
+                    }
+                    
+                    // Verificar que la tabla tenga contenido
+                    if ($table.find('thead tr th').length === 0 || $table.find('tbody tr').length === 0) {
+                        return;
+                    }
+                    
+                    // Si ya está inicializada, verificar si funciona correctamente
                     if ($.fn.DataTable.isDataTable(this)) {
                         try {
-                            $(this).DataTable().destroy();
+                            // Intentar acceder a la instancia para verificar que funciona
+                            const dt = $table.DataTable();
+                            dt.rows().count(); // Simple verificación
+                            return; // Si funciona, no hacer nada
                         } catch (e) {
-                            console.warn('Error destruyendo DataTable:', e);
-                        }
-                    }
-                });
-
-                // Esperar un momento para que el DOM se estabilice
-                setTimeout(function() {
-                    $('.inventario-table').each(function() {
-                        const $table = $(this);
-                        
-                        // Verificar que la tabla tenga la estructura correcta
-                        if ($table.find('thead tr th').length > 0 && $table.find('tbody tr').length > 0) {
+                            // Si hay error, destruir y reinicializar
                             try {
-                                // Asegurar que todas las filas tengan el mismo número de celdas
-                                const expectedCols = $table.find('thead tr th').length;
-                                $table.find('tbody tr').each(function() {
-                                    const actualCols = $(this).find('td').length;
-                                    if (actualCols !== expectedCols) {
-                                        // Agregar celdas vacías si faltan
-                                        for (let i = actualCols; i < expectedCols; i++) {
-                                            $(this).append('<td></td>');
-                                        }
-                                    }
-                                });
-
-                                // Inicializar DataTable solo si la estructura es válida
-                                $table.DataTable({
-                                    dom: '<"row"<"col-12"f>>' +
-                                         '<"row"<"col-12"t>>',
-                                    ordering: true,
-                                    searching: true,
-                                    paging: false,
-                                    info: false,
-                                    responsive: false, // Desactivar responsive para evitar conflictos
-                                    autoWidth: false,
-                                    language: {
-                                        search: "Buscar en esta tabla:",
-                                        zeroRecords: "No se encontraron registros coincidentes",
-                                        searchPlaceholder: "Buscar número, código, lugar, empresa..."
-                                    },
-                                    columnDefs: [
-                                        {
-                                            targets: 0, // Primera columna (NÚMERO)
-                                            type: 'num',
-                                        },
-                                        {
-                                            targets: 4, // Columna empresa
-                                            type: 'string',
-                                        }
-                                    ],
-                                    // Mejorar búsqueda para incluir todos los campos
-                                    searchCols: [
-                                        null, // Número
-                                        null, // Lugar  
-                                        null, // Columna
-                                        null, // Código
-                                        null, // Empresa
-                                        null, // Cantidad
-                                        null  // Acciones
-                                    ],
-                                    // Guardar estado cuando se dibuja la tabla
-                                    drawCallback: function() {
-                                        saveState();
-                                        
-                                        // Actualizar contador de resultados si hay búsqueda activa
-                                        const searchTerm = $('#busquedaGlobal').val();
-                                        if (searchTerm && searchTerm.length > 0) {
-                                            updateSearchResultsCounter();
-                                        }
-                                    }
-                                });
-                            } catch (error) {
-                                console.warn('Error inicializando DataTable:', error);
+                                $(this).DataTable().destroy(false);
+                            } catch (e2) {
+                                console.warn('Error destruyendo DataTable problemática:', e2);
                             }
                         }
-                    });
-                }, 100);
+                    }
+                    
+                    // Inicializar DataTable solo si no está inicializada o después de destruir una problemática
+                    try {
+                        $table.DataTable({
+                            dom: '<"row"<"col-12"f>>' +
+                                 '<"row"<"col-12"t>>',
+                            ordering: true,
+                            searching: true,
+                            paging: false,
+                            info: false,
+                            responsive: false,
+                            autoWidth: false,
+                            language: {
+                                search: "Buscar en esta tabla:",
+                                zeroRecords: "No se encontraron registros coincidentes",
+                                searchPlaceholder: "Buscar número, código, lugar, empresa..."
+                            },
+                            columnDefs: [
+                                {
+                                    targets: 0,
+                                    type: 'num',
+                                },
+                                {
+                                    targets: 4,
+                                    type: 'string',
+                                }
+                            ],
+                            searchCols: [
+                                null, // Número
+                                null, // Lugar  
+                                null, // Columna
+                                null, // Código
+                                null, // Empresa
+                                null, // Cantidad
+                                null  // Acciones
+                            ],
+                            drawCallback: function() {
+                                saveState();
+                                
+                                const searchTerm = $('#busquedaGlobal').val();
+                                if (searchTerm && searchTerm.length > 0) {
+                                    updateSearchResultsCounter();
+                                }
+                            }
+                        });
+                    } catch (error) {
+                        console.warn('Error inicializando DataTable:', error);
+                    }
+                });
             }
 
             // Inicializar DataTables
             initializeDataTables();
 
-            // Reinicializar DataTables cuando se muestran los collapse
-            $('.collapse').on('shown.bs.collapse', function () {
+            // Variable para controlar si se está procesando inicialización
+            let isInitializing = false;
+
+            // Función mejorada para reinicializar DataTables
+            function reinitializeDataTables() {
+                if (isInitializing) {
+                    console.log('Inicialización en progreso, omitiendo...');
+                    return;
+                }
+                
+                isInitializing = true;
                 setTimeout(function() {
                     initializeDataTables();
-                }, 150);
+                    isInitializing = false;
+                }, 200);
+            }
+
+            // Reinicializar DataTables cuando se muestran los collapse (solo una vez por evento)
+            // Usar un debounce para evitar múltiples reinicializaciones
+            let collapseTimeout;
+            $('.collapse').on('shown.bs.collapse', function () {
+                clearTimeout(collapseTimeout);
+                collapseTimeout = setTimeout(function() {
+                    reinitializeDataTables();
+                }, 100);
             });
 
             // Variable para controlar el estado de expansión
@@ -152,14 +198,19 @@
 
             // Función para expandir/contraer todas las tarjetas
             $('#toggleAll').on('click', function() {
+                // Evitar múltiples clics rápidos
+                if (isInitializing) {
+                    return;
+                }
+                
                 allExpanded = !allExpanded;
                 if (allExpanded) {
                     $('.collapse').collapse('show');
                     $('.transition-icon').addClass('fa-rotate-180');
-                    // Reinicializar DataTables después de expandir
+                    // Reinicializar DataTables después de expandir con un delay más largo
                     setTimeout(function() {
-                        initializeDataTables();
-                    }, 500);
+                        reinitializeDataTables();
+                    }, 600);
                 } else {
                     $('.collapse').collapse('hide');
                     $('.transition-icon').removeClass('fa-rotate-180');
@@ -185,50 +236,57 @@
                 $('.transition-icon').addClass('fa-rotate-180');
                 allExpanded = true;
                 
-                // Reinicializar DataTables después de expandir
+                // Reinicializar DataTables después de expandir con la función mejorada
                 setTimeout(function() {
-                    initializeDataTables();
-                    
-                    // Realizar la búsqueda después de reinicializar
-                    let totalMatches = 0;
-                    $('.inventario-table').each(function() {
-                        if ($.fn.DataTable.isDataTable(this)) {
-                            const table = $(this).DataTable();
-                            table.search(searchTerm).draw();
+                    if (!isInitializing) {
+                        isInitializing = true;
+                        initializeDataTables();
+                        
+                        setTimeout(function() {
+                            // Realizar la búsqueda después de reinicializar
+                            let totalMatches = 0;
+                            $('.inventario-table').each(function() {
+                                if ($.fn.DataTable.isDataTable(this)) {
+                                    const table = $(this).DataTable();
+                                    table.search(searchTerm).draw();
+                                    
+                                    // Contar coincidencias visibles
+                                    const visibleRows = table.rows({search: 'applied'}).count();
+                                    totalMatches += visibleRows;
+                                }
+                            });
                             
-                            // Contar coincidencias visibles
-                            const visibleRows = table.rows({search: 'applied'}).count();
-                            totalMatches += visibleRows;
-                        }
-                    });
-                    
-                    // Resaltar resultados
-                    $('.inventario-table tbody tr').removeClass('highlight-search');
-                    $('.inventario-table tbody tr:visible').each(function() {
-                        let row = $(this);
-                        let rowText = row.text().toLowerCase();
-                        if (rowText.includes(searchTerm)) {
-                            row.addClass('highlight-search');
-                        }
-                    });
-                    
-                    // Mostrar resultado de la búsqueda
-                    if (totalMatches > 0) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Búsqueda completada',
-                            text: `Se encontraron ${totalMatches} coincidencias para "${searchTerm}"`,
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Sin resultados',
-                            text: `No se encontraron coincidencias para "${searchTerm}"`
-                        });
+                            // Resaltar resultados
+                            $('.inventario-table tbody tr').removeClass('highlight-search');
+                            $('.inventario-table tbody tr:visible').each(function() {
+                                let row = $(this);
+                                let rowText = row.text().toLowerCase();
+                                if (rowText.includes(searchTerm)) {
+                                    row.addClass('highlight-search');
+                                }
+                            });
+                            
+                            // Mostrar resultado de la búsqueda
+                            if (totalMatches > 0) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Búsqueda completada',
+                                    text: `Se encontraron ${totalMatches} coincidencias para "${searchTerm}"`,
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Sin resultados',
+                                    text: `No se encontraron coincidencias para "${searchTerm}"`
+                                });
+                            }
+                            
+                            isInitializing = false;
+                        }, 200);
                     }
-                }, 500);
+                }, 600);
                 
                 saveState();
             });
