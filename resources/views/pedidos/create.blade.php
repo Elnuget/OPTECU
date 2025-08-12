@@ -184,10 +184,12 @@
                                            list="clientes_pacientes_list">
                                     <datalist id="clientes_pacientes_list">
                                         @foreach($clientes as $cliente)
-                                            <option value="{{ $cliente }}" data-tipo="cliente">
+                                            <option value="{{ $cliente }}" data-tipo="cliente">{{ $cliente }} - CLIENTE</option>
                                         @endforeach
                                         @foreach($pacientes as $paciente)
-                                            <option value="{{ $paciente }}" data-tipo="paciente">
+                                            <option value="{{ $paciente['nombre'] }}" data-tipo="{{ $paciente['tipo'] }}">
+                                                {{ $paciente['nombre'] }} - {{ strtoupper($paciente['tipo'] === 'historial_clinico' ? 'HISTORIAL CLÍNICO' : $paciente['tipo']) }}
+                                            </option>
                                         @endforeach
                                     </datalist>
                                 </div>
@@ -615,9 +617,12 @@
                     if (tipo === 'cliente') {
                         document.getElementById('cliente').value = valor;
                         cargarDatosPersonales('cliente', valor);
-                    } else if (tipo === 'paciente') {
+                    } else if (tipo === 'pedido') {
                         document.getElementById('paciente').value = valor;
                         cargarDatosPersonales('paciente', valor);
+                    } else if (tipo === 'historial_clinico') {
+                        document.getElementById('paciente').value = valor;
+                        cargarDatosHistorialClinico(valor);
                     }
                 }
             });            // Autocompletado eliminado para cédula, celular y correo_electronico
@@ -695,6 +700,215 @@
                             loadingIndicator.remove();
                         }
                     });
+            }
+
+            // Función para cargar datos desde historial clínico
+            function cargarDatosHistorialClinico(nombreCompleto) {
+                if (!nombreCompleto) return;
+
+                // Mostrar indicador de carga
+                const elemento = document.getElementById('buscar_cliente_paciente');
+                const loadingIndicator = document.createElement('small');
+                loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
+                loadingIndicator.textContent = 'Cargando historial clínico...';
+                elemento.parentNode.appendChild(loadingIndicator);
+
+                // Hacer petición AJAX para obtener datos del historial clínico
+                fetch(`/api/historiales-clinicos/buscar-nombre-completo/${encodeURIComponent(nombreCompleto)}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Error al obtener datos del historial clínico');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Remover indicador de carga
+                        if (loadingIndicator) {
+                            loadingIndicator.remove();
+                        }
+
+                        if (data.success && data.historial) {
+                            const historial = data.historial;
+                            
+                            // Cargar datos personales si están vacíos
+                            if (!document.getElementById('cliente').value.trim()) {
+                                document.getElementById('cliente').value = `${historial.nombres || ''} ${historial.apellidos || ''}`.trim();
+                            }
+                            if (!document.getElementById('cedula').value.trim()) {
+                                document.getElementById('cedula').value = historial.cedula || '';
+                            }
+                            if (!document.getElementById('celular').value.trim()) {
+                                document.getElementById('celular').value = historial.celular || '';
+                            }
+                            if (!document.getElementById('correo_electronico').value.trim()) {
+                                document.getElementById('correo_electronico').value = historial.correo_electronico || '';
+                            }
+
+                            // Si tiene recetas, cargar las medidas de las lunas
+                            if (historial.todasLasRecetas && historial.todasLasRecetas.length > 0) {
+                                cargarMedidasLunas(historial);
+                                
+                                // Mostrar mensaje de éxito
+                                mostrarMensajeExito(`Historial clínico cargado correctamente - Empresa: ${historial.empresa?.nombre || 'N/A'} - Fecha: ${formatearFecha(historial.fecha)} - ${historial.cantidadRecetas} receta(s) encontrada(s)`);
+                            } else {
+                                // Solo datos personales, sin recetas
+                                mostrarMensajeInfo('Datos personales cargados del historial clínico (sin recetas de medidas)');
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // Remover indicador de carga en caso de error
+                        if (loadingIndicator) {
+                            loadingIndicator.remove();
+                        }
+                        mostrarMensajeError('Error al cargar datos del historial clínico');
+                    });
+            }
+
+            // Función para cargar las medidas de las lunas desde el historial clínico
+            function cargarMedidasLunas(historial) {
+                const recetas = historial.todasLasRecetas;
+                if (!recetas || recetas.length === 0) return;
+
+                // Abrir la sección de lunas si está cerrada
+                const lunasCard = document.querySelector('#lunas-container');
+                if (lunasCard && lunasCard.classList.contains('collapsed-card')) {
+                    const collapseButton = lunasCard.querySelector('[data-card-widget="collapse"]');
+                    if (collapseButton) {
+                        collapseButton.click();
+                    }
+                }
+
+                // Cargar la primera receta en la sección existente
+                const primeraReceta = recetas[0];
+                cargarRecetaEnSeccion(primeraReceta, 'primera', historial);
+
+                // Si hay más recetas, crear secciones adicionales
+                for (let i = 1; i < recetas.length; i++) {
+                    setTimeout(() => {
+                        duplicateLunas();
+                        // Esperar un poco para que se cree la sección y luego cargar la receta
+                        setTimeout(() => {
+                            cargarRecetaEnSeccion(recetas[i], 'adicional', historial, i);
+                        }, 100);
+                    }, 100 * i);
+                }
+            }
+
+            // Función para cargar una receta en una sección específica
+            function cargarRecetaEnSeccion(receta, tipo, historial, indice = 0) {
+                let medidaInput, detalleInput, tipoLenteInput, materialInput, filtroInput;
+
+                if (tipo === 'primera') {
+                    // Primera sección (la que ya existe)
+                    medidaInput = document.getElementById('l_medida');
+                    detalleInput = document.getElementById('l_detalle');
+                    tipoLenteInput = document.getElementById('tipo_lente');
+                    materialInput = document.getElementById('material');
+                    filtroInput = document.getElementById('filtro');
+                } else {
+                    // Secciones adicionales (recién creadas)
+                    const secciones = document.querySelectorAll('[data-lunas-section]');
+                    const seccionActual = secciones[indice - 1]; // indice-1 porque la primera sección no tiene data-lunas-section
+                    if (!seccionActual) return;
+
+                    medidaInput = seccionActual.querySelector('input[name="l_medida[]"]');
+                    detalleInput = seccionActual.querySelector('input[name="l_detalle[]"]');
+                    tipoLenteInput = seccionActual.querySelector('input[name="tipo_lente[]"]');
+                    materialInput = seccionActual.querySelector('input[name="material[]"]');
+                    filtroInput = seccionActual.querySelector('input[name="filtro[]"]');
+                }
+
+                // Formatear las medidas de la receta
+                const medida = formatearMedidasReceta(receta);
+                
+                if (medidaInput && !medidaInput.value.trim()) {
+                    medidaInput.value = medida;
+                }
+                if (detalleInput && !detalleInput.value.trim()) {
+                    detalleInput.value = `Receta ${indice + 1} - ${formatearFecha(receta.created_at)}`;
+                }
+                if (tipoLenteInput && !tipoLenteInput.value.trim()) {
+                    tipoLenteInput.value = receta.tipo || historial.tipo || '';
+                }
+                if (materialInput && !materialInput.value.trim()) {
+                    materialInput.value = historial.material_od || historial.material_oi || '';
+                }
+                if (filtroInput && !filtroInput.value.trim()) {
+                    filtroInput.value = historial.filtro_od || historial.filtro_oi || '';
+                }
+            }
+
+            // Función para formatear las medidas de una receta
+            function formatearMedidasReceta(receta) {
+                const od = [
+                    receta.od_esfera ? `OD: ${receta.od_esfera}` : '',
+                    receta.od_cilindro ? `${receta.od_cilindro}` : '',
+                    receta.od_eje ? `x${receta.od_eje}` : '',
+                    receta.od_adicion ? `ADD: ${receta.od_adicion}` : ''
+                ].filter(Boolean).join(' ');
+
+                const oi = [
+                    receta.oi_esfera ? `OI: ${receta.oi_esfera}` : '',
+                    receta.oi_cilindro ? `${receta.oi_cilindro}` : '',
+                    receta.oi_eje ? `x${receta.oi_eje}` : '',
+                    receta.oi_adicion ? `ADD: ${receta.oi_adicion}` : ''
+                ].filter(Boolean).join(' ');
+
+                const dp = receta.dp ? `DP: ${receta.dp}` : '';
+
+                return [od, oi, dp].filter(Boolean).join(' | ');
+            }
+
+            // Funciones para mostrar mensajes al usuario
+            function mostrarMensajeExito(mensaje) {
+                mostrarMensaje(mensaje, 'success');
+            }
+
+            function mostrarMensajeInfo(mensaje) {
+                mostrarMensaje(mensaje, 'info');
+            }
+
+            function mostrarMensajeError(mensaje) {
+                mostrarMensaje(mensaje, 'danger');
+            }
+
+            function mostrarMensaje(mensaje, tipo) {
+                // Remover mensajes anteriores
+                const mensajesAnteriores = document.querySelectorAll('.mensaje-temporal');
+                mensajesAnteriores.forEach(m => m.remove());
+
+                // Crear nuevo mensaje
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${tipo} alert-dismissible fade show mensaje-temporal`;
+                alert.innerHTML = `
+                    <strong>${mensaje}</strong>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                `;
+
+                // Insertar al inicio del contenido
+                const content = document.querySelector('.card-body');
+                content.insertBefore(alert, content.firstChild);
+
+                // Auto-remover después de 5 segundos
+                setTimeout(() => {
+                    if (alert) {
+                        alert.remove();
+                    }
+                }, 5000);
+            }
+
+            // Función para formatear fechas
+            function formatearFecha(fecha) {
+                if (!fecha) return 'Sin fecha';
+                try {
+                    return new Date(fecha).toLocaleDateString('es-EC');
+                } catch (e) {
+                    return 'Sin fecha';
+                }
             }
         });
 

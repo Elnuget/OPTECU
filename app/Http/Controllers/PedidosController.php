@@ -9,6 +9,7 @@ use App\Models\PedidoLuna; // Add this line
 use App\Models\Declarante;
 use App\Models\Factura;
 use App\Models\Empresa;
+use App\Models\HistorialClinico;
 
 class PedidosController extends Controller
 {    public function __construct()
@@ -142,12 +143,38 @@ class PedidosController extends Controller
             ->pluck('cedula')
             ->toArray();
             
-        // Obtener lista de pacientes únicos existentes
-        $pacientes = Pedido::select('paciente')
+        // Obtener lista de pacientes únicos existentes de pedidos
+        $pacientesPedidos = Pedido::select('paciente')
             ->whereNotNull('paciente')
             ->distinct()
             ->pluck('paciente')
+            ->filter()
+            ->map(function($nombre) {
+                return [
+                    'nombre' => $nombre,
+                    'tipo' => 'pedido'
+                ];
+            })->values()->toArray();
+            
+        // Obtener lista de pacientes únicos de historiales clínicos
+        $pacientesHistoriales = HistorialClinico::select('nombres', 'apellidos')
+            ->whereNotNull('nombres')
+            ->whereNotNull('apellidos')
+            ->distinct()
+            ->get()
+            ->map(function($historial) {
+                $nombreCompleto = trim($historial->nombres . ' ' . $historial->apellidos);
+                return [
+                    'nombre' => $nombreCompleto,
+                    'tipo' => 'historial_clinico'
+                ];
+            })
+            ->unique('nombre')
+            ->values()
             ->toArray();
+            
+        // Combinar pacientes de pedidos e historiales
+        $pacientes = array_merge($pacientesPedidos, $pacientesHistoriales);
             
         // Obtener lista de celulares únicos existentes
         $celulares = Pedido::select('celular')
