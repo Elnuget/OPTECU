@@ -512,20 +512,24 @@
         function cargarDatosPersonales(campo, valor) {
             if (!valor) return;
 
-            // Mostrar indicador de carga
+            // Limpiar cualquier indicador de carga previo
             const elemento = document.getElementById(campo);
-            if (!elemento.nextElementSibling || !elemento.nextElementSibling.classList.contains('loading-indicator')) {
-                const loadingIndicator = document.createElement('small');
-                loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
-                loadingIndicator.textContent = 'Cargando datos...';
-                elemento.parentNode.appendChild(loadingIndicator);
+            const loadingIndicatorPrevio = elemento.parentNode.querySelector('.loading-indicator');
+            if (loadingIndicatorPrevio) {
+                loadingIndicatorPrevio.remove();
             }
+
+            // Mostrar indicador de carga
+            const loadingIndicator = document.createElement('small');
+            loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
+            loadingIndicator.textContent = 'Cargando datos...';
+            elemento.parentNode.appendChild(loadingIndicator);
 
             // Hacer petición AJAX para obtener datos del último historial
             fetch(`/api/historiales-clinicos/buscar-por/${campo}/${encodeURIComponent(valor)}`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Error al obtener datos');
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
                     return response.json();
                 })
@@ -537,13 +541,24 @@
                     }
 
                     if (data.success && data.historial) {
+                        // Mostrar indicador de éxito temporal
+                        const successIndicator = document.createElement('small');
+                        successIndicator.classList.add('text-success', 'ml-2');
+                        successIndicator.innerHTML = '<i class="fas fa-check"></i> Datos cargados';
+                        elemento.parentNode.appendChild(successIndicator);
+                        setTimeout(() => {
+                            if (successIndicator.parentNode) {
+                                successIndicator.remove();
+                            }
+                        }, 2000);
+
                         // Cargar todos los datos del historial, excepto la fecha
                         const historial = data.historial;
                         
                         // Autocompletar campos excepto el que generó la búsqueda y la fecha
                         // Datos personales
-                        if (campo !== 'nombres') document.getElementById('nombres').value = historial.nombres || '';
-                        if (campo !== 'apellidos') document.getElementById('apellidos').value = historial.apellidos || '';
+                        if (campo !== 'nombres') document.getElementById('nombres').value = (historial.nombres || '').toUpperCase();
+                        if (campo !== 'apellidos') document.getElementById('apellidos').value = (historial.apellidos || '').toUpperCase();
                         if (campo !== 'cedula') document.getElementById('cedula').value = historial.cedula || '';
                         if (campo !== 'celular') document.getElementById('celular').value = historial.celular || '';
                         document.getElementById('edad').value = historial.edad || '';
@@ -560,17 +575,17 @@
                             document.getElementById('fecha_nacimiento').value = '';
                         }
                         
-                        document.getElementById('ocupacion').value = historial.ocupacion || '';
+                        document.getElementById('ocupacion').value = (historial.ocupacion || '').toUpperCase();
                         
                         // Motivo de consulta y enfermedad actual
-                        document.getElementsByName('motivo_consulta')[0].value = historial.motivo_consulta || '';
-                        document.getElementsByName('enfermedad_actual')[0].value = historial.enfermedad_actual || '';
+                        document.getElementsByName('motivo_consulta')[0].value = (historial.motivo_consulta || '').toUpperCase();
+                        document.getElementsByName('enfermedad_actual')[0].value = (historial.enfermedad_actual || '').toUpperCase();
                         
                         // Antecedentes
-                        document.getElementsByName('antecedentes_personales_oculares')[0].value = historial.antecedentes_personales_oculares || '';
-                        document.getElementsByName('antecedentes_personales_generales')[0].value = historial.antecedentes_personales_generales || '';
-                        document.getElementsByName('antecedentes_familiares_oculares')[0].value = historial.antecedentes_familiares_oculares || '';
-                        document.getElementsByName('antecedentes_familiares_generales')[0].value = historial.antecedentes_familiares_generales || '';
+                        document.getElementsByName('antecedentes_personales_oculares')[0].value = (historial.antecedentes_personales_oculares || '').toUpperCase();
+                        document.getElementsByName('antecedentes_personales_generales')[0].value = (historial.antecedentes_personales_generales || '').toUpperCase();
+                        document.getElementsByName('antecedentes_familiares_oculares')[0].value = (historial.antecedentes_familiares_oculares || '').toUpperCase();
+                        document.getElementsByName('antecedentes_familiares_generales')[0].value = (historial.antecedentes_familiares_generales || '').toUpperCase();
                         
                         // Agudeza visual y PH
                         document.getElementsByName('agudeza_visual_vl_sin_correccion_od')[0].value = historial.agudeza_visual_vl_sin_correccion_od || '';
@@ -581,15 +596,15 @@
                         document.getElementsByName('agudeza_visual_vp_sin_correccion_ao')[0].value = historial.agudeza_visual_vp_sin_correccion_ao || '';
                         document.getElementsByName('ph_od')[0].value = historial.ph_od || '';
                         document.getElementsByName('ph_oi')[0].value = historial.ph_oi || '';
-                        document.getElementsByName('optotipo')[0].value = historial.optotipo || '';
+                        document.getElementsByName('optotipo')[0].value = (historial.optotipo || '').toUpperCase();
                         
                         // Lensometría
                         document.getElementsByName('lensometria_od')[0].value = historial.lensometria_od || '';
                         document.getElementsByName('lensometria_oi')[0].value = historial.lensometria_oi || '';
-                        document.getElementsByName('tipo_lente')[0].value = historial.tipo_lente || '';
-                        document.getElementsByName('material')[0].value = historial.material || '';
-                        document.getElementsByName('filtro')[0].value = historial.filtro || '';
-                        document.getElementsByName('tiempo_uso')[0].value = historial.tiempo_uso || '';
+                        document.getElementsByName('tipo_lente')[0].value = (historial.tipo_lente || '').toUpperCase();
+                        document.getElementsByName('material')[0].value = (historial.material || '').toUpperCase();
+                        document.getElementsByName('filtro')[0].value = (historial.filtro || '').toUpperCase();
+                        document.getElementsByName('tiempo_uso')[0].value = (historial.tiempo_uso || '').toUpperCase();
                         
                         // RX Final
                         document.getElementsByName('refraccion_od')[0].value = historial.refraccion_od || '';
@@ -603,18 +618,33 @@
                         document.getElementsByName('add')[0].value = historial.add || '';
                         
                         // Diagnóstico y tratamiento
-                        document.getElementsByName('diagnostico')[0].value = historial.diagnostico || '';
-                        document.getElementsByName('tratamiento')[0].value = historial.tratamiento || '';
-                        document.getElementsByName('cotizacion')[0].value = historial.cotizacion || '';
+                        document.getElementsByName('diagnostico')[0].value = (historial.diagnostico || '').toUpperCase();
+                        document.getElementsByName('tratamiento')[0].value = (historial.tratamiento || '').toUpperCase();
+                        document.getElementsByName('cotizacion')[0].value = (historial.cotizacion || '').toUpperCase();
+                        
+                        console.log(`Datos cargados exitosamente para ${campo}: ${valor}`);
+                    } else {
+                        console.log(`No se encontraron datos para ${campo}: ${valor}`);
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    console.error('Error al cargar datos:', error);
                     // Remover indicador de carga en caso de error
                     const loadingIndicator = elemento.parentNode.querySelector('.loading-indicator');
                     if (loadingIndicator) {
                         loadingIndicator.remove();
                     }
+                    
+                    // Mostrar indicador de error temporal
+                    const errorIndicator = document.createElement('small');
+                    errorIndicator.classList.add('text-danger', 'ml-2');
+                    errorIndicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error al cargar datos';
+                    elemento.parentNode.appendChild(errorIndicator);
+                    setTimeout(() => {
+                        if (errorIndicator.parentNode) {
+                            errorIndicator.remove();
+                        }
+                    }, 3000);
                 });
         }
 
@@ -622,20 +652,24 @@
         function cargarDatosPorNombreCompleto(nombres, apellidos) {
             if (!nombres || !apellidos) return;
 
-            // Mostrar indicador de carga
+            // Limpiar cualquier indicador de carga previo
             const elementoNombre = document.getElementById('nombres');
-            if (!elementoNombre.nextElementSibling || !elementoNombre.nextElementSibling.classList.contains('loading-indicator')) {
-                const loadingIndicator = document.createElement('small');
-                loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
-                loadingIndicator.textContent = 'Cargando datos...';
-                elementoNombre.parentNode.appendChild(loadingIndicator);
+            const loadingIndicatorPrevio = elementoNombre.parentNode.querySelector('.loading-indicator');
+            if (loadingIndicatorPrevio) {
+                loadingIndicatorPrevio.remove();
             }
+
+            // Mostrar indicador de carga
+            const loadingIndicator = document.createElement('small');
+            loadingIndicator.classList.add('loading-indicator', 'text-muted', 'ml-2');
+            loadingIndicator.textContent = 'Cargando datos...';
+            elementoNombre.parentNode.appendChild(loadingIndicator);
 
             // Hacer petición AJAX para obtener datos del último historial por nombre y apellido
             fetch(`/api/historiales-clinicos/buscar-por-nombre/${encodeURIComponent(nombres)}/${encodeURIComponent(apellidos)}`)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Error al obtener datos');
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                     }
                     return response.json();
                 })
@@ -647,6 +681,17 @@
                     }
 
                     if (data.success && data.historial) {
+                        // Mostrar indicador de éxito temporal
+                        const successIndicator = document.createElement('small');
+                        successIndicator.classList.add('text-success', 'ml-2');
+                        successIndicator.innerHTML = '<i class="fas fa-check"></i> Datos cargados';
+                        elementoNombre.parentNode.appendChild(successIndicator);
+                        setTimeout(() => {
+                            if (successIndicator.parentNode) {
+                                successIndicator.remove();
+                            }
+                        }, 2000);
+
                         // Cargar todos los datos del historial, excepto la fecha
                         const historial = data.historial;
                         
@@ -665,17 +710,17 @@
                             document.getElementById('fecha_nacimiento').value = '';
                         }
                         
-                        document.getElementById('ocupacion').value = historial.ocupacion || '';
+                        document.getElementById('ocupacion').value = (historial.ocupacion || '').toUpperCase();
                         
                         // Motivo de consulta y enfermedad actual
-                        document.getElementsByName('motivo_consulta')[0].value = historial.motivo_consulta || '';
-                        document.getElementsByName('enfermedad_actual')[0].value = historial.enfermedad_actual || '';
+                        document.getElementsByName('motivo_consulta')[0].value = (historial.motivo_consulta || '').toUpperCase();
+                        document.getElementsByName('enfermedad_actual')[0].value = (historial.enfermedad_actual || '').toUpperCase();
                         
                         // Antecedentes
-                        document.getElementsByName('antecedentes_personales_oculares')[0].value = historial.antecedentes_personales_oculares || '';
-                        document.getElementsByName('antecedentes_personales_generales')[0].value = historial.antecedentes_personales_generales || '';
-                        document.getElementsByName('antecedentes_familiares_oculares')[0].value = historial.antecedentes_familiares_oculares || '';
-                        document.getElementsByName('antecedentes_familiares_generales')[0].value = historial.antecedentes_familiares_generales || '';
+                        document.getElementsByName('antecedentes_personales_oculares')[0].value = (historial.antecedentes_personales_oculares || '').toUpperCase();
+                        document.getElementsByName('antecedentes_personales_generales')[0].value = (historial.antecedentes_personales_generales || '').toUpperCase();
+                        document.getElementsByName('antecedentes_familiares_oculares')[0].value = (historial.antecedentes_familiares_oculares || '').toUpperCase();
+                        document.getElementsByName('antecedentes_familiares_generales')[0].value = (historial.antecedentes_familiares_generales || '').toUpperCase();
                         
                         // Agudeza visual y PH
                         document.getElementsByName('agudeza_visual_vl_sin_correccion_od')[0].value = historial.agudeza_visual_vl_sin_correccion_od || '';
@@ -686,15 +731,15 @@
                         document.getElementsByName('agudeza_visual_vp_sin_correccion_ao')[0].value = historial.agudeza_visual_vp_sin_correccion_ao || '';
                         document.getElementsByName('ph_od')[0].value = historial.ph_od || '';
                         document.getElementsByName('ph_oi')[0].value = historial.ph_oi || '';
-                        document.getElementsByName('optotipo')[0].value = historial.optotipo || '';
+                        document.getElementsByName('optotipo')[0].value = (historial.optotipo || '').toUpperCase();
                         
                         // Lensometría
                         document.getElementsByName('lensometria_od')[0].value = historial.lensometria_od || '';
                         document.getElementsByName('lensometria_oi')[0].value = historial.lensometria_oi || '';
-                        document.getElementsByName('tipo_lente')[0].value = historial.tipo_lente || '';
-                        document.getElementsByName('material')[0].value = historial.material || '';
-                        document.getElementsByName('filtro')[0].value = historial.filtro || '';
-                        document.getElementsByName('tiempo_uso')[0].value = historial.tiempo_uso || '';
+                        document.getElementsByName('tipo_lente')[0].value = (historial.tipo_lente || '').toUpperCase();
+                        document.getElementsByName('material')[0].value = (historial.material || '').toUpperCase();
+                        document.getElementsByName('filtro')[0].value = (historial.filtro || '').toUpperCase();
+                        document.getElementsByName('tiempo_uso')[0].value = (historial.tiempo_uso || '').toUpperCase();
                         
                         // RX Final
                         document.getElementsByName('refraccion_od')[0].value = historial.refraccion_od || '';
@@ -708,18 +753,33 @@
                         document.getElementsByName('add')[0].value = historial.add || '';
                         
                         // Diagnóstico y tratamiento
-                        document.getElementsByName('diagnostico')[0].value = historial.diagnostico || '';
-                        document.getElementsByName('tratamiento')[0].value = historial.tratamiento || '';
-                        document.getElementsByName('cotizacion')[0].value = historial.cotizacion || '';
+                        document.getElementsByName('diagnostico')[0].value = (historial.diagnostico || '').toUpperCase();
+                        document.getElementsByName('tratamiento')[0].value = (historial.tratamiento || '').toUpperCase();
+                        document.getElementsByName('cotizacion')[0].value = (historial.cotizacion || '').toUpperCase();
+                        
+                        console.log(`Datos cargados exitosamente para ${nombres} ${apellidos}`);
+                    } else {
+                        console.log(`No se encontraron datos para ${nombres} ${apellidos}`);
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    console.error('Error al cargar datos por nombre:', error);
                     // Remover indicador de carga en caso de error
                     const loadingIndicator = elementoNombre.parentNode.querySelector('.loading-indicator');
                     if (loadingIndicator) {
                         loadingIndicator.remove();
                     }
+                    
+                    // Mostrar indicador de error temporal
+                    const errorIndicator = document.createElement('small');
+                    errorIndicator.classList.add('text-danger', 'ml-2');
+                    errorIndicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Error al cargar datos';
+                    elementoNombre.parentNode.appendChild(errorIndicator);
+                    setTimeout(() => {
+                        if (errorIndicator.parentNode) {
+                            errorIndicator.remove();
+                        }
+                    }, 3000);
                 });
         }
 
@@ -754,18 +814,67 @@
         // Cargar sucursal por defecto al inicializar
         cargarSucursalPorDefecto();
 
-        // Eventos para autocompletado eliminados
-        // $('#cedula').on('change', function() {
-        //     if (this.value.trim()) {
-        //         cargarDatosPersonales('cedula', this.value);
-        //     }
-        // });
+        // Eventos para autocompletado por cédula
+        $('#cedula').on('change', function() {
+            if (this.value.trim()) {
+                cargarDatosPersonales('cedula', this.value);
+            }
+        });
 
-        // $('#celular').on('change', function() {
-        //     if (this.value.trim()) {
-        //         cargarDatosPersonales('celular', this.value);
-        //     }
-        // });
+        // Eventos para autocompletado por celular
+        $('#celular').on('change', function() {
+            if (this.value.trim()) {
+                cargarDatosPersonales('celular', this.value);
+            }
+        });
+
+        // Autocompletado cuando se pierde el foco (blur) para mayor comodidad
+        $('#cedula').on('blur', function() {
+            if (this.value.trim() && !$(this).data('cargado')) {
+                cargarDatosPersonales('cedula', this.value);
+                $(this).data('cargado', true);
+            }
+        });
+
+        $('#celular').on('blur', function() {
+            if (this.value.trim() && !$(this).data('cargado')) {
+                cargarDatosPersonales('celular', this.value);
+                $(this).data('cargado', true);
+            }
+        });
+
+        // Limpiar la marca de cargado cuando se modifica el campo
+        $('#cedula, #celular').on('input', function() {
+            $(this).removeData('cargado');
+        });
+
+        // Autocompletado por nombres y apellidos cuando se pierde el foco
+        $('#nombres, #apellidos').on('blur', function() {
+            const nombres = $('#nombres').val().trim();
+            const apellidos = $('#apellidos').val().trim();
+            
+            if (nombres && apellidos && !$('#nombres').data('cargado-nombre')) {
+                cargarDatosPorNombreCompleto(nombres, apellidos);
+                $('#nombres').data('cargado-nombre', true);
+                $('#apellidos').data('cargado-nombre', true);
+            }
+        });
+
+        // Limpiar la marca de cargado para nombres cuando se modifican
+        $('#nombres, #apellidos').on('input', function() {
+            $('#nombres').removeData('cargado-nombre');
+            $('#apellidos').removeData('cargado-nombre');
+        });
+
+        // Inicializar todas las secciones como expandidas por defecto
+        $('.collapse').addClass('show');
+        
+        // Manejar el toggle de las secciones
+        $('[data-toggle="collapse"]').on('click', function(e) {
+            e.preventDefault();
+            const target = $($(this).data('target'));
+            target.collapse('toggle');
+        });
     });
 </script>
 @stop

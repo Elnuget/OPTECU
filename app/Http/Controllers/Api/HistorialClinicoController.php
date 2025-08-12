@@ -197,4 +197,102 @@ class HistorialClinicoController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Busca historiales clínicos por nombres y apellidos separados
+     * 
+     * @param string $nombres Nombres a buscar
+     * @param string $apellidos Apellidos a buscar
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function buscarPorNombresApellidos($nombres, $apellidos)
+    {
+        try {
+            // Decodificar los valores (ya que vienen de una URL)
+            $nombresDecodificados = urldecode($nombres);
+            $apellidosDecodificados = urldecode($apellidos);
+            
+            // Buscar por nombres y apellidos exactos
+            $historial = HistorialClinico::with(['recetas' => function($query) {
+                $query->orderBy('created_at', 'desc');
+            }, 'empresa'])
+            ->where('nombres', $nombresDecodificados)
+            ->where('apellidos', $apellidosDecodificados)
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+            // Si no se encuentra exacto, buscar con LIKE para coincidencias parciales
+            if (!$historial) {
+                $historial = HistorialClinico::with(['recetas' => function($query) {
+                    $query->orderBy('created_at', 'desc');
+                }, 'empresa'])
+                ->where('nombres', 'LIKE', "%$nombresDecodificados%")
+                ->where('apellidos', 'LIKE', "%$apellidosDecodificados%")
+                ->orderBy('created_at', 'desc')
+                ->first();
+            }
+                
+            if (!$historial) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "No se encontraron historiales para: $nombresDecodificados $apellidosDecodificados"
+                ], 404);
+            }
+
+            // Si tiene recetas, agregar todas las recetas y los datos de la última al objeto historial
+            if ($historial->recetas && $historial->recetas->count() > 0) {
+                $ultimaReceta = $historial->recetas->first();
+                
+                // Agregar los campos de la receta más reciente directamente al historial para compatibilidad
+                $historial->od_esfera = $ultimaReceta->od_esfera;
+                $historial->od_cilindro = $ultimaReceta->od_cilindro;
+                $historial->od_eje = $ultimaReceta->od_eje;
+                $historial->od_adicion = $ultimaReceta->od_adicion;
+                $historial->oi_esfera = $ultimaReceta->oi_esfera;
+                $historial->oi_cilindro = $ultimaReceta->oi_cilindro;
+                $historial->oi_eje = $ultimaReceta->oi_eje;
+                $historial->oi_adicion = $ultimaReceta->oi_adicion;
+                $historial->tipo = $ultimaReceta->tipo;
+                
+                // Asegurarse de que ADD solo se asigna una vez
+                if (!$historial->add && $ultimaReceta->od_adicion) {
+                    $historial->add = $ultimaReceta->od_adicion;
+                }
+                
+                $historial->dp = $ultimaReceta->dp;
+                $historial->observaciones = $ultimaReceta->observaciones;
+                
+                // Agregar array con todas las recetas para múltiples recetas
+                $historial->todasLasRecetas = $historial->recetas->map(function($receta) {
+                    return [
+                        'id' => $receta->id,
+                        'tipo' => $receta->tipo,
+                        'od_esfera' => $receta->od_esfera,
+                        'od_cilindro' => $receta->od_cilindro,
+                        'od_eje' => $receta->od_eje,
+                        'od_adicion' => $receta->od_adicion,
+                        'oi_esfera' => $receta->oi_esfera,
+                        'oi_cilindro' => $receta->oi_cilindro,
+                        'oi_eje' => $receta->oi_eje,
+                        'oi_adicion' => $receta->oi_adicion,
+                        'dp' => $receta->dp,
+                        'observaciones' => $receta->observaciones,
+                        'created_at' => $receta->created_at
+                    ];
+                });
+                
+                $historial->cantidadRecetas = $historial->recetas->count();
+            }
+            
+            return response()->json([
+                'success' => true,
+                'historial' => $historial
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al buscar historial por nombres y apellidos: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
