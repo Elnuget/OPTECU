@@ -750,8 +750,12 @@
                                 
                                 // Mostrar mensaje de éxito
                                 mostrarMensajeExito(`Historial clínico cargado correctamente - Empresa: ${historial.empresa?.nombre || 'N/A'} - Fecha: ${formatearFecha(historial.fecha)} - ${historial.cantidadRecetas} receta(s) encontrada(s)`);
+                            } else if (historial.refraccion_od || historial.refraccion_oi) {
+                                // Si no tiene recetas pero tiene campos de refracción directos, cargarlos
+                                cargarMedidasDirectasHistorial(historial);
+                                mostrarMensajeExito(`Historial clínico cargado correctamente - Empresa: ${historial.empresa?.nombre || 'N/A'} - Fecha: ${formatearFecha(historial.fecha)} - Medidas cargadas desde historial`);
                             } else {
-                                // Solo datos personales, sin recetas
+                                // Solo datos personales, sin recetas ni medidas
                                 mostrarMensajeInfo('Datos personales cargados del historial clínico (sin recetas de medidas)');
                             }
                         }
@@ -840,25 +844,89 @@
                 }
             }
 
-            // Función para formatear las medidas de una receta
+            // Función para formatear las medidas de una receta o historial clínico
             function formatearMedidasReceta(receta) {
-                const od = [
-                    receta.od_esfera ? `OD: ${receta.od_esfera}` : '',
-                    receta.od_cilindro ? `${receta.od_cilindro}` : '',
-                    receta.od_eje ? `x${receta.od_eje}` : '',
-                    receta.od_adicion ? `ADD: ${receta.od_adicion}` : ''
-                ].filter(Boolean).join(' ');
+                // Si es una receta individual (de recetas table)
+                if (receta.od_esfera !== undefined) {
+                    const od = [
+                        receta.od_esfera ? `OD: ${receta.od_esfera}` : '',
+                        receta.od_cilindro ? `${receta.od_cilindro}` : '',
+                        receta.od_eje ? `x${receta.od_eje}` : '',
+                        receta.od_adicion ? `ADD: ${receta.od_adicion}` : ''
+                    ].filter(Boolean).join(' ');
 
-                const oi = [
-                    receta.oi_esfera ? `OI: ${receta.oi_esfera}` : '',
-                    receta.oi_cilindro ? `${receta.oi_cilindro}` : '',
-                    receta.oi_eje ? `x${receta.oi_eje}` : '',
-                    receta.oi_adicion ? `ADD: ${receta.oi_adicion}` : ''
-                ].filter(Boolean).join(' ');
+                    const oi = [
+                        receta.oi_esfera ? `OI: ${receta.oi_esfera}` : '',
+                        receta.oi_cilindro ? `${receta.oi_cilindro}` : '',
+                        receta.oi_eje ? `x${receta.oi_eje}` : '',
+                        receta.oi_adicion ? `ADD: ${receta.oi_adicion}` : ''
+                    ].filter(Boolean).join(' ');
 
-                const dp = receta.dp ? `DP: ${receta.dp}` : '';
+                    const dp = receta.dp ? `DP: ${receta.dp}` : '';
 
-                return [od, oi, dp].filter(Boolean).join(' | ');
+                    return [od, oi, dp].filter(Boolean).join(' | ');
+                }
+                
+                // Si es del historial clínico directo (campos refraccion_od, refraccion_oi, etc.)
+                const odRefraccion = receta.refraccion_od || '';
+                const oiRefraccion = receta.refraccion_oi || '';
+                const dp = receta.rx_final_dp_od || receta.rx_final_dp_oi || '';
+                const add = receta.add || '';
+
+                let medidas = [];
+                
+                if (odRefraccion) {
+                    medidas.push(`OD: ${odRefraccion}`);
+                }
+                if (oiRefraccion) {
+                    medidas.push(`OI: ${oiRefraccion}`);
+                }
+                if (dp) {
+                    medidas.push(`DP: ${dp}`);
+                }
+                if (add) {
+                    medidas.push(`ADD: ${add}`);
+                }
+
+                return medidas.length > 0 ? medidas.join(' | ') : 'Sin medidas específicas';
+            }
+
+            // Función para cargar medidas directamente del historial clínico (cuando no hay tabla recetas)
+            function cargarMedidasDirectasHistorial(historial) {
+                // Abrir la sección de lunas si está cerrada
+                const lunasCard = document.querySelector('#lunas-container');
+                if (lunasCard && lunasCard.classList.contains('collapsed-card')) {
+                    const collapseButton = lunasCard.querySelector('[data-card-widget="collapse"]');
+                    if (collapseButton) {
+                        collapseButton.click();
+                    }
+                }
+
+                // Cargar las medidas en la primera sección de lunas
+                const medidaInput = document.getElementById('l_medida');
+                const detalleInput = document.getElementById('l_detalle');
+                const tipoLenteInput = document.getElementById('tipo_lente');
+                const materialInput = document.getElementById('material');
+                const filtroInput = document.getElementById('filtro');
+
+                // Formatear las medidas del historial clínico
+                const medida = formatearMedidasReceta(historial);
+                
+                if (medidaInput && !medidaInput.value.trim()) {
+                    medidaInput.value = medida;
+                }
+                if (detalleInput && !detalleInput.value.trim()) {
+                    detalleInput.value = `Historial - ${formatearFecha(historial.fecha)}`;
+                }
+                if (tipoLenteInput && !tipoLenteInput.value.trim()) {
+                    tipoLenteInput.value = historial.tipo_lente || '';
+                }
+                if (materialInput && !materialInput.value.trim()) {
+                    materialInput.value = historial.material || '';
+                }
+                if (filtroInput && !filtroInput.value.trim()) {
+                    filtroInput.value = historial.filtro || '';
+                }
             }
 
             // Funciones para mostrar mensajes al usuario
