@@ -95,11 +95,13 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('asistencias/mi-qr', [AsistenciaController::class, 'miQr'])->name('asistencias.mi-qr');
     
     // Rutas para Sueldos (accesible para todos los usuarios autenticados)
-    Route::resource('sueldos', SueldoController::class);
+    // IMPORTANTE: Las rutas específicas deben ir ANTES de la ruta resource
     Route::post('sueldos/guardar-valor', [SueldoController::class, 'guardarValor'])->name('sueldos.guardar-valor');
     Route::get('sueldos/registros-cobro', [SueldoController::class, 'getRegistrosCobro'])->name('sueldos.registros-cobro');
-    Route::get('sueldos/total-registros-cobro', [SueldoController::class, 'getTotalRegistrosCobro'])->name('sueldos.total-registros-cobro');
+    Route::get('sueldos/pedidos-usuario', [SueldoController::class, 'getPedidosUsuario'])->name('sueldos.pedidos-usuario');
     Route::get('sueldos/datos-rol-pagos', [SueldoController::class, 'getDatosRolPagos'])->name('sueldos.datos-rol-pagos');
+    Route::resource('sueldos', SueldoController::class);
+    Route::get('sueldos/total-registros-cobro', [SueldoController::class, 'getTotalRegistrosCobro'])->name('sueldos.total-registros-cobro');
 
     // Medios de Pago
     Route::get('Configuración/MediosDePago', [mediosdepagoController::class, 'index'])->name('configuracion.mediosdepago.index');

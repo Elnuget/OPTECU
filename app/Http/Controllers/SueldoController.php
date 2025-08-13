@@ -367,8 +367,9 @@ class SueldoController extends Controller
             $empresaId = $request->empresa_id;
 
             // Obtener datos de pedidos locales
+            // IMPORTANTE: En la tabla pedidos, el campo que identifica al vendedor es 'usuario' (no user_id)
             $pedidosQuery = DB::table('pedidos')
-                ->where('user_id', $userId)
+                ->where('usuario', $userId) // El usuario corresponde al vendedor del pedido
                 ->whereYear('fecha', $ano)
                 ->whereMonth('fecha', $mes);
             
@@ -377,19 +378,17 @@ class SueldoController extends Controller
             }
             
             $pedidos = $pedidosQuery->leftJoin('empresas', 'pedidos.empresa_id', '=', 'empresas.id')
-                ->leftJoin('clientes', 'pedidos.cliente_id', '=', 'clientes.id')
                 ->select(
                     'pedidos.*',
-                    'empresas.nombre as empresa',
-                    'clientes.nombres as cliente'
+                    'empresas.nombre as empresa'
                 )
                 ->get();
 
             // Obtener datos de egresos/retiros locales
             $retirosQuery = DB::table('egresos')
                 ->where('user_id', $userId)
-                ->whereYear('created_at', $ano)
-                ->whereMonth('created_at', $mes)
+                ->whereYear('egresos.created_at', $ano)
+                ->whereMonth('egresos.created_at', $mes)
                 ->where(function($query) {
                     $query->where('motivo', 'NOT LIKE', '%deposito%')
                           ->where('motivo', 'NOT LIKE', '%depósito%');
@@ -414,8 +413,8 @@ class SueldoController extends Controller
             if (DB::getSchemaBuilder()->hasTable('cash_history')) {
                 $movimientosQuery = DB::table('cash_history')
                     ->where('user_id', $userId)
-                    ->whereYear('created_at', $ano)
-                    ->whereMonth('created_at', $mes);
+                    ->whereYear('cash_history.created_at', $ano)
+                    ->whereMonth('cash_history.created_at', $mes);
                 
                 if ($empresaId) {
                     $movimientosQuery->where('empresa_id', $empresaId);
@@ -485,6 +484,54 @@ class SueldoController extends Controller
             return response()->json([
                 'success' => false,
                 'mensaje' => 'ERROR AL OBTENER LOS DATOS DEL ROL DE PAGOS: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Obtiene solo los pedidos de un usuario en un mes y año específicos
+     * Método simplificado para evitar problemas con joins complejos
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPedidosUsuario(Request $request)
+    {
+        try {
+            $request->validate([
+                'user_id' => 'required|exists:users,id',
+                'ano' => 'required|integer',
+                'mes' => 'required|string|size:2'
+            ]);
+
+            $userId = $request->user_id;
+            $ano = $request->ano;
+            $mes = $request->mes;
+
+            // Consulta simple solo para pedidos, sin joins complejos
+            $pedidos = DB::table('pedidos')
+                ->where('usuario', $userId)
+                ->whereYear('fecha', $ano)
+                ->whereMonth('fecha', $mes)
+                ->select('pedidos.*')
+                ->get();
+
+            // Calcular el total de pedidos
+            $pedidos_total = $pedidos->sum('total');
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'pedidos' => $pedidos,
+                    'pedidos_total' => $pedidos_total
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener pedidos de usuario: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'ERROR AL OBTENER PEDIDOS: ' . $e->getMessage()
             ], 500);
         }
     }
