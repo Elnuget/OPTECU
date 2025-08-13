@@ -588,6 +588,7 @@ El equipo de [EMPRESA]</textarea>
 
 @section('js')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+<script src="{{ asset('js/sucursal-cache.js') }}"></script>
 <script>
 // Función para detectar si es dispositivo móvil
 function isMobileDevice() {
@@ -1222,6 +1223,42 @@ $(document).ready(function() {
         $('head').append('<meta name="csrf-token" content="{{ csrf_token() }}">');
     }
     
+    // Preseleccionar sucursal desde caché y aplicar automáticamente
+    if (window.SucursalCache) {
+        // Verificar si ya hay parámetros de filtro en la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const filtrosAplicados = urlParams.has('empresa_id') || urlParams.has('tipo_cliente') || 
+                                urlParams.has('fecha_inicio') || urlParams.has('fecha_fin');
+        
+        if (!filtrosAplicados) {
+            // Solo preseleccionar y aplicar si no hay filtros previos
+            const sucursal = SucursalCache.obtener();
+            if (sucursal) {
+                $('#empresa_id').val(sucursal.id);
+                
+                // Solo aplicar automáticamente si:
+                // 1. Existe la sucursal en el caché
+                // 2. No venimos de una búsqueda anterior (evita bucle de recargas)
+                // 3. No estamos en modo "mostrar todos"
+                if (!document.referrer.includes(window.location.pathname) && 
+                    !SucursalCache.esModoMostrarTodos()) {
+                    console.log("Aplicando filtro de sucursal automáticamente:", sucursal.nombre);
+                    
+                    // Marcar que este submit es automático para evitar problemas
+                    sessionStorage.setItem('filtro_auto_aplicado', 'true');
+                    $('#filtroForm').submit();
+                    return; // Importante: detenemos la ejecución aquí para evitar doble carga
+                }
+            }
+        }
+    }
+    
+    // Evitar bucle de recargas al volver atrás
+    $('#empresa_id').on('change', function() {
+        // Al cambiar manualmente, NO enviar el formulario automáticamente
+        // El usuario debe hacer clic en el botón FILTRAR
+    });
+    
     // Inicializar DataTable
     $('#clientesTable').DataTable({
         "order": [[0, "asc"]],
@@ -1247,10 +1284,27 @@ $(document).ready(function() {
 
     // Botón Limpiar Filtros
     $('#limpiarFiltrosButton').click(function() {
+        $('#empresa_id').val(''); // Limpiar también la empresa seleccionada
         $('#tipo_cliente').val('');
         $('#fecha_inicio').val('');
         $('#fecha_fin').val('');
+        // Eliminar el indicador visual si existe
+        $('.auto-filter-indicator').remove();
     });
+    
+    // Agregar un indicador visual si se ha preseleccionado la sucursal automáticamente
+    if (window.SucursalCache && SucursalCache.obtener()) {
+        const empresaSelect = $('#empresa_id');
+        if (empresaSelect.val()) {
+            const label = empresaSelect.parent().find('label');
+            if (label.length) {
+                // Agregar un indicador visual en el label
+                if (!label.find('.auto-filter-indicator').length) {
+                    label.append(' <span class="auto-filter-indicator badge badge-pill badge-success" style="font-size: 0.7rem;" title="Sucursal preseleccionada automáticamente">Auto</span>');
+                }
+            }
+        }
+    }
 
     // Validación de fechas (sin auto-submit)
     $('#fecha_inicio, #fecha_fin').on('change', function() {

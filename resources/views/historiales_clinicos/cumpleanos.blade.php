@@ -299,6 +299,7 @@ use App\Models\MensajePredeterminado;
 @stop
 
 @section('js')
+<script src="{{ asset('js/sucursal-cache.js') }}"></script>
 <script>
 // Función mejorada para envío seguro de WhatsApp
 function enviarWhatsAppSeguro(telefono, mensaje, callback) {
@@ -605,9 +606,44 @@ function enviarMensaje() {
 $(document).ready(function() {
     // No necesitamos verificar mensajes enviados aquí ya que lo hacemos en el servidor con @php
     
+    // Preseleccionar sucursal desde caché y aplicar automáticamente
+    if (window.SucursalCache) {
+        // Verificar si ya hay parámetros de filtro en la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const filtrosAplicados = urlParams.has('empresa_id') || urlParams.has('mes') || urlParams.has('año');
+        
+        if (!filtrosAplicados) {
+            // Solo preseleccionar y aplicar si no hay filtros previos
+            const sucursal = SucursalCache.obtener();
+            if (sucursal) {
+                $('#empresa_id').val(sucursal.id);
+                
+                // Solo aplicar automáticamente si:
+                // 1. Existe la sucursal en el caché
+                // 2. No venimos de una búsqueda anterior (evita bucle de recargas)
+                // 3. No estamos en modo "mostrar todos"
+                if (!document.referrer.includes(window.location.pathname) && 
+                    !SucursalCache.esModoMostrarTodos()) {
+                    console.log("Aplicando filtro de sucursal automáticamente:", sucursal.nombre);
+                    
+                    // Marcar que este submit es automático para evitar problemas
+                    sessionStorage.setItem('filtro_auto_aplicado', 'true');
+                    $('#filtroForm').submit();
+                    return; // Importante: detenemos la ejecución aquí para evitar doble carga
+                }
+            }
+        }
+    }
+    
+    // Evitar bucle de recargas al volver atrás
+    $('#empresa_id').on('change', function() {
+        // Al cambiar manualmente, NO enviar el formulario automáticamente
+        // El usuario debe hacer clic en el botón FILTRAR
+    });
+    
     // Botón Mostrar Todos
     $('#mostrarTodosButton').click(function() {
-        window.location.href = '{{ route("historiales_clinicos.cumpleanos") }}';
+        window.location.href = '{{ route("historiales_clinicos.cumpleanos") }}?todos=1';
     });
 
     // Botón Limpiar Filtros
@@ -615,8 +651,24 @@ $(document).ready(function() {
         $('#empresa_id').val('');
         $('#mes').val('{{ date("n") }}'); // Establecer mes actual como predeterminado
         $('#año').val('');
+        // Eliminar el indicador visual si existe
+        $('.auto-filter-indicator').remove();
         $('#filtroForm').submit();
     });
+    
+    // Agregar un indicador visual si se ha preseleccionado la sucursal automáticamente
+    if (window.SucursalCache && SucursalCache.obtener()) {
+        const empresaSelect = $('#empresa_id');
+        if (empresaSelect.val()) {
+            const label = empresaSelect.parent().find('label');
+            if (label.length) {
+                // Agregar un indicador visual en el label
+                if (!label.find('.auto-filter-indicator').length) {
+                    label.append(' <span class="auto-filter-indicator badge badge-pill badge-success" style="font-size: 0.7rem;" title="Sucursal preseleccionada automáticamente">Auto</span>');
+                }
+            }
+        }
+    }
 });
 </script>
 @stop 
