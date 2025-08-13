@@ -18,38 +18,8 @@ class TelemarketingController extends Controller
     public function index(Request $request)
     {
 
-        // Unión de clientes y pacientes
-        $clientesQuery = DB::table('pedidos')
-            ->select(
-                'cliente as nombre',
-                DB::raw('NULL as apellidos'),
-                'celular',
-                DB::raw("'cliente' as tipo"),
-                'empresa_id',
-                DB::raw('MAX(fecha) as ultimo_pedido'),
-                'id'
-            )
-            ->whereNotNull('cliente')
-            ->where('cliente', '!=', '')
-            ->whereNotNull('celular')
-            ->where('celular', '!=', '')
-            ->groupBy('cliente', 'celular', 'empresa_id', 'id');
-
-        $pacientesQuery = DB::table('historiales_clinicos')
-            ->select(
-                'nombres as nombre',
-                'apellidos',
-                'celular',
-                DB::raw("'paciente' as tipo"),
-                'empresa_id',
-                DB::raw('MAX(fecha) as ultimo_pedido'),
-                'id'
-            )
-            ->whereNotNull('nombres')
-            ->where('nombres', '!=', '')
-            ->whereNotNull('celular')
-            ->where('celular', '!=', '')
-            ->groupBy('nombres', 'apellidos', 'celular', 'empresa_id', 'id');
+        // Obtener todas las empresas para el filtro
+        $empresas = Empresa::orderBy('nombre')->get();
 
         // Obtener clientes únicos de pedidos
         $clientes = DB::table('pedidos')
@@ -68,6 +38,11 @@ class TelemarketingController extends Controller
             ->where('pedidos.cliente', '!=', '')
             ->whereNotNull('pedidos.celular')
             ->where('pedidos.celular', '!=', '');
+
+        // Aplicar filtro de empresa para clientes
+        if ($request->filled('empresa_id')) {
+            $clientes = $clientes->where('pedidos.empresa_id', $request->get('empresa_id'));
+        }
 
         // Aplicar filtros de fecha para clientes
         if ($request->filled('fecha_inicio')) {
@@ -96,6 +71,11 @@ class TelemarketingController extends Controller
             ->where('historiales_clinicos.nombres', '!=', '')
             ->whereNotNull('historiales_clinicos.celular')
             ->where('historiales_clinicos.celular', '!=', '');
+
+        // Aplicar filtro de empresa para pacientes
+        if ($request->filled('empresa_id')) {
+            $pacientes = $pacientes->where('historiales_clinicos.empresa_id', $request->get('empresa_id'));
+        }
 
         // Aplicar filtros de fecha para pacientes
         if ($request->filled('fecha_inicio')) {
@@ -168,12 +148,13 @@ class TelemarketingController extends Controller
 
         // Preparar información de filtros para la vista
         $filtrosActivos = [
+            'empresa_id' => $request->get('empresa_id'),
             'tipo_cliente' => $request->get('tipo_cliente'),
             'fecha_inicio' => $request->get('fecha_inicio'),
             'fecha_fin' => $request->get('fecha_fin'),
         ];
 
-        return view('telemarketing.index', compact('clientes', 'filtrosActivos'));
+        return view('telemarketing.index', compact('clientes', 'filtrosActivos', 'empresas'));
     }
 
     public function enviarMensaje(Request $request, $clienteId)

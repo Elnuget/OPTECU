@@ -43,6 +43,17 @@ use App\Models\MensajePredeterminado;
                         <form method="GET" id="filtroForm">
                             <div class="row">
                                 <div class="col-md-3 mb-3">
+                                    <label for="empresa_id" class="form-label">SUCURSAL:</label>
+                                    <select name="empresa_id" id="empresa_id" class="form-control">
+                                        <option value="">TODAS LAS SUCURSALES</option>
+                                        @foreach($empresas ?? [] as $empresa)
+                                            <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                                                {{ strtoupper($empresa->nombre) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-3 mb-3">
                                     <label for="tipo_cliente" class="form-label">TIPO DE CLIENTE:</label>
                                     <select name="tipo_cliente" id="tipo_cliente" class="form-control">
                                         <option value="">TODOS</option>
@@ -60,6 +71,8 @@ use App\Models\MensajePredeterminado;
                                     <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" value="{{ request('fecha_fin') }}">
                                     <small class="text-muted">Hasta esta fecha</small>
                                 </div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-3 mb-3 d-flex align-items-end">
                                     <div class="btn-group w-100" role="group">
                                         <button type="submit" class="btn btn-primary">
@@ -144,11 +157,16 @@ use App\Models\MensajePredeterminado;
         </div>
 
         {{-- Indicador de resultados y filtros activos --}}
-        @if(request()->hasAny(['tipo_cliente', 'fecha_inicio', 'fecha_fin']))
+        @if(request()->hasAny(['empresa_id', 'tipo_cliente', 'fecha_inicio', 'fecha_fin']))
         <div class="row mb-3">
             <div class="col-md-12">
                 <div class="alert alert-info">
                     <i class="fas fa-filter"></i> <strong>FILTROS ACTIVOS:</strong>
+                    @if(request('empresa_id'))
+                        <span class="badge badge-info ml-1">
+                            SUCURSAL: {{ strtoupper($empresas->firstWhere('id', request('empresa_id'))->nombre ?? 'DESCONOCIDA') }}
+                        </span>
+                    @endif
                     @if(request('tipo_cliente'))
                         <span class="badge badge-primary ml-1">
                             TIPO: {{ strtoupper(request('tipo_cliente')) }}
@@ -175,7 +193,7 @@ use App\Models\MensajePredeterminado;
         @if($clientes->isEmpty())
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i> 
-                @if(request()->hasAny(['tipo_cliente', 'fecha_inicio', 'fecha_fin']))
+                @if(request()->hasAny(['empresa_id', 'tipo_cliente', 'fecha_inicio', 'fecha_fin']))
                     NO SE ENCONTRARON CLIENTES CON LOS FILTROS APLICADOS. 
                     <a href="{{ route('telemarketing.index') }}" class="btn btn-sm btn-primary ml-2">
                         <i class="fas fa-refresh"></i> VER TODOS

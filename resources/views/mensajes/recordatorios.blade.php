@@ -32,9 +32,110 @@ use App\Models\MensajePredeterminado;
         </button>
     </div>
     <div class="card-body">
+        {{-- Filtros --}}
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-filter"></i> FILTROS DE BÚSQUEDA</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="GET" id="filtroForm">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="empresa_id" class="form-label">SUCURSAL:</label>
+                                    <select name="empresa_id" id="empresa_id" class="form-control">
+                                        <option value="">TODAS LAS SUCURSALES</option>
+                                        @foreach($empresas ?? [] as $empresa)
+                                            <option value="{{ $empresa->id }}" {{ request('empresa_id') == $empresa->id ? 'selected' : '' }}>
+                                                {{ strtoupper($empresa->nombre) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="mes" class="form-label">MES:</label>
+                                    <select name="mes" id="mes" class="form-control">
+                                        <option value="">TODOS LOS MESES</option>
+                                        @for($i = 1; $i <= 12; $i++)
+                                            <option value="{{ $i }}" {{ request('mes', date('n')) == $i ? 'selected' : '' }}>
+                                                {{ strtoupper(\Carbon\Carbon::create(null, $i, 1)->locale('es')->format('F')) }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="anio" class="form-label">AÑO:</label>
+                                    <select name="anio" id="anio" class="form-control">
+                                        @for($anio = now()->addYear()->year; $anio >= now()->subYears(2)->year; $anio--)
+                                            <option value="{{ $anio }}" {{ request('anio', date('Y')) == $anio ? 'selected' : '' }}>
+                                                {{ $anio }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 mb-3 d-flex align-items-end">
+                                    <div class="btn-group w-100" role="group">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-search"></i> FILTRAR
+                                        </button>
+                                        <button type="button" class="btn btn-success" id="mostrarTodosButton">
+                                            <i class="fas fa-list"></i> TODOS
+                                        </button>
+                                        <button type="button" class="btn btn-info" id="limpiarFiltrosButton">
+                                            <i class="fas fa-eraser"></i> LIMPIAR
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Indicador de resultados y filtros activos --}}
+        @if(request()->hasAny(['empresa_id', 'mes', 'anio']))
+        <div class="row mb-3">
+            <div class="col-md-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-filter"></i> <strong>FILTROS ACTIVOS:</strong>
+                    @if(request('empresa_id'))
+                        <span class="badge badge-info ml-1">
+                            SUCURSAL: {{ strtoupper($empresas->firstWhere('id', request('empresa_id'))->nombre ?? 'DESCONOCIDA') }}
+                        </span>
+                    @endif
+                    @if(request('mes'))
+                        <span class="badge badge-primary ml-1">
+                            MES: {{ strtoupper(\Carbon\Carbon::create(null, request('mes'), 1)->locale('es')->format('F')) }}
+                        </span>
+                    @endif
+                    @if(request('anio'))
+                        <span class="badge badge-warning ml-1">
+                            AÑO: {{ request('anio') }}
+                        </span>
+                    @endif
+                    <span class="float-right">
+                        <strong>{{ $consultas->count() }} resultado(s) encontrado(s)</strong>
+                    </span>
+                </div>
+            </div>
+        </div>
+        @endif
+        
         @if($consultas->isEmpty())
             <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> NO HAY CONSULTAS PROGRAMADAS PARA {{ $mes_actual }}.
+                <i class="fas fa-info-circle"></i> 
+                @if(request()->hasAny(['empresa_id', 'mes', 'anio']))
+                    NO SE ENCONTRARON CONSULTAS PROGRAMADAS CON LOS FILTROS APLICADOS.
+                    <a href="{{ route('mensajes.recordatorios') }}" class="btn btn-sm btn-primary ml-2">
+                        <i class="fas fa-refresh"></i> VER TODOS
+                    </a>
+                @else
+                    NO HAY CONSULTAS PROGRAMADAS PARA {{ $mes_actual }}.
+                @endif
             </div>
         @else
             <div class="table-responsive">
@@ -480,6 +581,19 @@ $(document).ready(function() {
     if (!$('meta[name="csrf-token"]').length) {
         $('head').append('<meta name="csrf-token" content="{{ csrf_token() }}">');
     }
+    
+    // Botón Mostrar Todos
+    $('#mostrarTodosButton').click(function() {
+        window.location.href = '{{ route("mensajes.recordatorios") }}';
+    });
+
+    // Botón Limpiar Filtros
+    $('#limpiarFiltrosButton').click(function() {
+        $('#empresa_id').val('');
+        $('#mes').val('{{ date("n") }}'); // Establecer mes actual como predeterminado
+        $('#anio').val('{{ date("Y") }}'); // Establecer año actual como predeterminado
+        $('#filtroForm').submit();
+    });
 });
 </script>
 @stop 

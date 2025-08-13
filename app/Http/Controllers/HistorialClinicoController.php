@@ -420,17 +420,26 @@ class HistorialClinicoController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function cumpleanos()
+    public function cumpleanos(\Illuminate\Http\Request $request)
     {
-        // Obtener mes actual
-        $mes_actual = now()->translatedFormat('F');
+        // Obtener todas las empresas para el filtro
+        $empresas = \App\Models\Empresa::orderBy('nombre')->get();
         
-        // Obtener los pacientes que cumplen años este mes
-        $cumpleaneros = $this->obtenerCumpleanerosMes();
+        // Determinar el mes a mostrar (mes actual por defecto o el seleccionado)
+        $mesSeleccionado = $request->get('mes', now()->format('n'));
+        $añoSeleccionado = $request->get('año');
+        
+        // Formatear el nombre del mes
+        $fecha = \Carbon\Carbon::create(null, $mesSeleccionado, 1);
+        $mes_actual = $fecha->translatedFormat('F');
+        
+        // Obtener los pacientes que cumplen años según filtros
+        $cumpleaneros = $this->obtenerCumpleanerosMes($request->get('empresa_id'), $mesSeleccionado, $añoSeleccionado);
         
         return view('historiales_clinicos.cumpleanos', [
             'cumpleaneros' => $cumpleaneros,
-            'mes_actual' => $mes_actual
+            'mes_actual' => $mes_actual,
+            'empresas' => $empresas
         ]);
     }
 
@@ -596,24 +605,37 @@ class HistorialClinicoController extends Controller
         }
     }
 
-    public function recordatoriosConsulta()
+    public function recordatoriosConsulta(\Illuminate\Http\Request $request)
     {
-        // Obtener el mes y año actuales
-        $fechaActual = now();
-        $mesActual = $fechaActual->format('m');
-        $anoActual = $fechaActual->format('Y');
+        // Obtener todas las empresas para el filtro
+        $empresas = \App\Models\Empresa::orderBy('nombre')->get();
         
-        // Obtener el nombre del mes en español
-        $mes_actual = $fechaActual->locale('es')->format('F Y');
+        // Determinar el mes y año a mostrar (actual por defecto o el seleccionado)
+        $mesSeleccionado = $request->get('mes', now()->format('n'));
+        $anioSeleccionado = $request->get('anio', now()->format('Y'));
         
-        // Obtener todas las consultas programadas para el mes actual
-        $proximasConsultas = HistorialClinico::whereNotNull('proxima_consulta')
-            ->whereMonth('proxima_consulta', $mesActual)
-            ->whereYear('proxima_consulta', $anoActual)
-            ->orderBy('proxima_consulta', 'asc')
-            ->get();
+        // Formatear la fecha para la consulta
+        $mesFormateado = str_pad($mesSeleccionado, 2, '0', STR_PAD_LEFT);
+        
+        // Obtener el nombre del mes y año en español
+        $fechaFormato = \Carbon\Carbon::create($anioSeleccionado, $mesSeleccionado, 1);
+        $mes_actual = $fechaFormato->locale('es')->format('F Y');
+        
+        // Crear la consulta base
+        $query = HistorialClinico::whereNotNull('proxima_consulta')
+            ->whereMonth('proxima_consulta', $mesFormateado)
+            ->whereYear('proxima_consulta', $anioSeleccionado);
+        
+        // Aplicar filtro por empresa si está presente
+        if ($request->filled('empresa_id')) {
+            $query->where('empresa_id', $request->get('empresa_id'));
+        }
+        
+        // Obtener las consultas programadas
+        $proximasConsultas = $query->orderBy('proxima_consulta', 'asc')->get();
             
         // Estructurar datos para la vista
+        $fechaActual = now();
         $consultas = $proximasConsultas->map(function($consulta) use ($fechaActual) {
             $fechaConsulta = \Carbon\Carbon::parse($consulta->proxima_consulta);
             $diasRestantes = $fechaActual->diffInDays($fechaConsulta, false);
@@ -632,7 +654,7 @@ class HistorialClinicoController extends Controller
         // Obtener mensajes predeterminados usando el modelo
         $mensajePredeterminado = \App\Models\MensajePredeterminado::obtenerMensaje('consulta');
 
-        return view('mensajes.recordatorios', compact('consultas', 'mes_actual', 'mensajePredeterminado'));
+        return view('mensajes.recordatorios', compact('consultas', 'mes_actual', 'mensajePredeterminado', 'empresas'));
     }
 
     /**
@@ -683,18 +705,32 @@ class HistorialClinicoController extends Controller
     }
 
     /**
-     * Obtiene los pacientes que cumplen años en el mes actual.
+     * Obtiene los pacientes que cumplen años en el mes especificado.
      *
+     * @param int|null $empresaId ID de la empresa (sucursal) para filtrar
+     * @param string|null $mes Mes para filtrar (1-12)
+     * @param string|null $año Año de nacimiento para filtrar
      * @return \Illuminate\Support\Collection
      */
-    private function obtenerCumpleanerosMes()
+    private function obtenerCumpleanerosMes($empresaId = null, $mes = null, $año = null)
     {
         try {
-            $mesActual = now()->format('m');
+            $mesActual = $mes ? str_pad($mes, 2, '0', STR_PAD_LEFT) : now()->format('m');
             $añoActual = now()->format('Y');
             
-            $cumpleaneros = HistorialClinico::whereRaw('MONTH(fecha_nacimiento) = ?', [$mesActual])
-                ->orderByRaw('DAY(fecha_nacimiento)')
+            $query = HistorialClinico::whereRaw('MONTH(fecha_nacimiento) = ?', [$mesActual]);
+            
+            // Filtrar por empresa si se proporciona un ID
+            if ($empresaId) {
+                $query->where('empresa_id', $empresaId);
+            }
+            
+            // Filtrar por año de nacimiento si se proporciona
+            if ($año) {
+                $query->whereYear('fecha_nacimiento', $año);
+            }
+            
+            $cumpleaneros = $query->orderByRaw('DAY(fecha_nacimiento)')
                 ->get()
                 ->map(function ($paciente) use ($añoActual) {
                     $fechaNacimiento = \Carbon\Carbon::parse($paciente->fecha_nacimiento);
