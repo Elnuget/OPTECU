@@ -149,7 +149,7 @@
                     </thead>
                     <tbody>
                         @foreach ($prestamos as $prestamo)
-                            <tr data-prestamo-id="{{ $prestamo->id }}" data-original-valor="{{ $prestamo->valor }}" data-valor-neto="{{ $prestamo->valor_neto }}" data-cuotas="{{ $prestamo->cuotas }}" data-empresa-id="{{ $prestamo->empresa_id }}">
+                            <tr data-prestamo-id="{{ $prestamo->id }}" data-original-valor="{{ $prestamo->valor }}" data-valor-neto="{{ $prestamo->valor_neto }}" data-cuotas="{{ $prestamo->cuotas }}" data-empresa-id="{{ $prestamo->empresa_id }}" data-saldo-pendiente="{{ $prestamo->saldo_pendiente }}" data-valor-cuota="{{ $prestamo->valor_cuota }}">
                                 <td>{{ $prestamo->created_at->format('Y-m-d') }}</td>
                                 <td class="prestamo-usuario">{{ $prestamo->user->name }}</td>
                                 <td class="prestamo-motivo">{{ $prestamo->motivo }}</td>
@@ -163,27 +163,37 @@
                                 <td class="prestamo-cuotas">{{ $prestamo->cuotas }}</td>
                                 <td class="prestamo-empresa">{{ $prestamo->empresa->nombre ?? 'N/A' }}</td>
                                 <td>
-                                    <button type="button" 
-                                        class="btn btn-xs btn-default text-info mx-1 shadow" 
-                                        title="Ver"
-                                        onclick="window.location.href='{{ route('prestamos.show', $prestamo->id) }}'">
-                                        <i class="fa fa-lg fa-fw fa-eye"></i>
-                                    </button>
-                                    @can('admin')
-                                    <button type="button"
-                                        class="btn btn-xs btn-default text-primary mx-1 shadow"
-                                        title="Editar"
-                                        onclick="window.location.href='{{ route('prestamos.edit', $prestamo->id) }}'">
-                                        <i class="fa fa-lg fa-fw fa-pen"></i>
-                                    </button>
+                                    <div class="btn-group">
+                                        <button type="button" 
+                                            class="btn btn-xs btn-default text-info mx-1 shadow" 
+                                            title="Ver"
+                                            onclick="window.location.href='{{ route('prestamos.show', $prestamo->id) }}'">
+                                            <i class="fa fa-lg fa-fw fa-eye"></i>
+                                        </button>
+                                        <button type="button"
+                                            class="btn btn-xs btn-default text-success mx-1 shadow"
+                                            title="Añadir Pago"
+                                            onclick="abrirModalPago({{ $prestamo->id }}, '{{ $prestamo->user->name }}', {{ $prestamo->saldo_pendiente ?: 0 }}, {{ $prestamo->valor_cuota ?: 0 }})"
+                                            data-toggle="modal" 
+                                            data-target="#crearPagoModal">
+                                            <i class="fa fa-lg fa-fw fa-money-bill"></i>
+                                        </button>
+                                        @can('admin')
+                                        <button type="button"
+                                            class="btn btn-xs btn-default text-primary mx-1 shadow"
+                                            title="Editar"
+                                            onclick="window.location.href='{{ route('prestamos.edit', $prestamo->id) }}'">
+                                            <i class="fa fa-lg fa-fw fa-pen"></i>
+                                        </button>
 
-                                    <button type="button"
-                                        class="btn btn-xs btn-default text-danger mx-1 shadow"
-                                        onclick="eliminarPrestamo({{ $prestamo->id }})"
-                                        title="Eliminar">
-                                        <i class="fa fa-lg fa-fw fa-trash"></i>
-                                    </button>
-                                    @endcan
+                                        <button type="button"
+                                            class="btn btn-xs btn-default text-danger mx-1 shadow"
+                                            onclick="eliminarPrestamo({{ $prestamo->id }})"
+                                            title="Eliminar">
+                                            <i class="fa fa-lg fa-fw fa-trash"></i>
+                                        </button>
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -262,6 +272,66 @@
                         <button type="submit" class="btn btn-danger">ELIMINAR</button>
                     </form>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Crear Pago de Préstamo -->
+    <div class="modal fade" id="crearPagoModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">REGISTRAR PAGO DE PRÉSTAMO</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="{{ route('pago-prestamos.store') }}" method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <input type="hidden" name="prestamo_id" id="pago_prestamo_id">
+                        <input type="hidden" name="empresa_id" id="pago_empresa_id" value="{{ auth()->user()->empresa_id }}">
+                        <input type="hidden" name="user_id" id="pago_user_id" value="{{ auth()->id() }}">
+                        
+                        <div class="alert alert-info">
+                            <p class="mb-0"><strong>USUARIO:</strong> <span id="pago_nombre_usuario"></span></p>
+                            <p class="mb-0"><strong>SALDO PENDIENTE:</strong> <span id="pago_saldo_pendiente"></span></p>
+                            <p class="mb-0"><strong>VALOR SUGERIDO DE CUOTA:</strong> <span id="pago_valor_cuota"></span></p>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="valor">VALOR DEL PAGO:</label>
+                            <input type="number" class="form-control" id="pago_valor" name="valor" required step="0.01" min="0.01">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="fecha_pago">FECHA DE PAGO:</label>
+                            <input type="date" class="form-control" id="fecha_pago" name="fecha_pago" required value="{{ date('Y-m-d') }}">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="motivo">MOTIVO/DESCRIPCIÓN:</label>
+                            <input type="text" class="form-control" id="pago_motivo" name="motivo" required maxlength="255" placeholder="ABONO A PRÉSTAMO">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="observaciones">OBSERVACIONES (OPCIONAL):</label>
+                            <textarea class="form-control" id="pago_observaciones" name="observaciones" rows="2"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="estado">ESTADO:</label>
+                            <select name="estado" id="pago_estado" class="form-control" required>
+                                <option value="pagado">PAGADO</option>
+                                <option value="pendiente">PENDIENTE</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">CANCELAR</button>
+                        <button type="submit" class="btn btn-success">REGISTRAR PAGO</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -555,6 +625,33 @@
                 form.appendChild(methodField);
                 document.body.appendChild(form);
                 form.submit();
+            }
+        }
+        
+        // Función para abrir el modal de pago y configurar los valores iniciales
+        function abrirModalPago(prestamoId, nombreUsuario, saldoPendiente, valorCuota) {
+            // Usar el valor del atributo data-saldo-pendiente si está disponible
+            const $fila = $(`tr[data-prestamo-id="${prestamoId}"]`);
+            const saldoPendienteActual = $fila.data('saldo-pendiente') || saldoPendiente || 0;
+            const valorCuotaActual = $fila.data('valor-cuota') || valorCuota || saldoPendienteActual;
+            
+            $('#pago_prestamo_id').val(prestamoId);
+            $('#pago_nombre_usuario').text(nombreUsuario);
+            $('#pago_saldo_pendiente').text(formatCurrency(saldoPendienteActual));
+            $('#pago_valor_cuota').text(formatCurrency(valorCuotaActual));
+            
+            // Establecer el valor del pago como el valor de la cuota, limitado al saldo pendiente
+            const valorPagoSugerido = Math.min(valorCuotaActual, saldoPendienteActual);
+            $('#pago_valor').attr('max', saldoPendienteActual).val(valorPagoSugerido);
+            $('#pago_motivo').val('ABONO A PRÉSTAMO - CUOTA');
+            
+            // Si está seleccionada una empresa específica, usarla
+            if (empresaIdSeleccionada !== 'todas') {
+                $('#pago_empresa_id').val(empresaIdSeleccionada);
+            } else {
+                // Obtener el ID de la empresa del préstamo
+                const empresaId = $fila.data('empresa-id');
+                $('#pago_empresa_id').val(empresaId);
             }
         }
     </script>

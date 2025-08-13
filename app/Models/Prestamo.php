@@ -78,4 +78,23 @@ class Prestamo extends Model
             return 'pendiente';
         }
     }
+    
+    public function getValorCuotaAttribute()
+    {
+        if ($this->cuotas <= 0) {
+            return $this->valor_neto;
+        }
+        
+        // Cálculo básico: valor neto dividido por número de cuotas
+        $valorCuotaBase = $this->valor_neto / $this->cuotas;
+        
+        // Para la última cuota, devolver el saldo pendiente exacto
+        $cuotasPendientes = $this->cuotas_pendientes;
+        
+        if ($cuotasPendientes == 1) {
+            return $this->saldo_pendiente;
+        }
+        
+        return round($valorCuotaBase, 2);
+    }
 } 

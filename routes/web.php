@@ -14,6 +14,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EgresoController;
 use App\Http\Controllers\PrestamoController;
+use App\Http\Controllers\PagoPrestamoController;
 use App\Http\Controllers\SueldoController;
 use App\Http\Controllers\DetalleSueldoController;
 use App\Http\Controllers\AsistenciaController;
@@ -294,6 +295,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::get('/configuraciones/mensajes-predeterminados/{tipo}', [TelemarketingController::class, 'obtenerMensajePredeterminado'])->name('configuraciones.mensajes-predeterminados.tipo');
 
     Route::resource('prestamos', PrestamoController::class);
+    Route::resource('pago-prestamos', PagoPrestamoController::class);
 
     // Rutas para detalles de sueldos
     Route::post('/detalles-sueldos', [DetalleSueldoController::class, 'store'])->name('detalles-sueldos.store');
