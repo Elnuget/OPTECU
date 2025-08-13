@@ -622,7 +622,8 @@ class HistorialClinicoController extends Controller
         $mes_actual = $fechaFormato->locale('es')->format('F Y');
         
         // Crear la consulta base
-        $query = HistorialClinico::whereNotNull('proxima_consulta')
+        $query = HistorialClinico::with('empresa')
+            ->whereNotNull('proxima_consulta')
             ->whereMonth('proxima_consulta', $mesFormateado)
             ->whereYear('proxima_consulta', $anioSeleccionado);
         
@@ -647,6 +648,8 @@ class HistorialClinicoController extends Controller
                 'celular' => $consulta->celular,
                 'fecha_consulta' => $fechaConsulta->format('d/m/Y'),
                 'dias_restantes' => $diasRestantes,
+                'empresa_id' => $consulta->empresa_id,
+                'empresa_nombre' => $consulta->empresa ? $consulta->empresa->nombre : null,
                 'ultima_consulta' => $consulta->fecha ? \Carbon\Carbon::parse($consulta->fecha)->format('d/m/Y') : 'SIN CONSULTAS'
             ];
         });
@@ -718,7 +721,8 @@ class HistorialClinicoController extends Controller
             $mesActual = $mes ? str_pad($mes, 2, '0', STR_PAD_LEFT) : now()->format('m');
             $añoActual = now()->format('Y');
             
-            $query = HistorialClinico::whereRaw('MONTH(fecha_nacimiento) = ?', [$mesActual]);
+            $query = HistorialClinico::with('empresa')
+                ->whereRaw('MONTH(fecha_nacimiento) = ?', [$mesActual]);
             
             // Filtrar por empresa si se proporciona un ID
             if ($empresaId) {
@@ -750,6 +754,8 @@ class HistorialClinicoController extends Controller
                         'edad_actual' => $edadActual,
                         'edad_cumplir' => $edadCumplir,
                         'celular' => $paciente->celular,
+                        'empresa_id' => $paciente->empresa_id,
+                        'empresa_nombre' => $paciente->empresa ? $paciente->empresa->nombre : null,
                         'ultima_consulta' => $paciente->fecha ? \Carbon\Carbon::parse($paciente->fecha)->format('d/m/Y') : 'SIN CONSULTAS'
                     ];
                 });

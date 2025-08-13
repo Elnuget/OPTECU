@@ -145,6 +145,7 @@ use App\Models\MensajePredeterminado;
                             <th>DÍA</th>
                             <th>NOMBRES</th>
                             <th>APELLIDOS</th>
+                            <th>SUCURSAL</th>
                             <th>EDAD</th>
                             <th>CELULAR</th>
                             <th>ÚLTIMA CONSULTA</th>
@@ -163,6 +164,15 @@ use App\Models\MensajePredeterminado;
                             </td>
                             <td>{{ strtoupper($paciente['nombres']) }}</td>
                             <td>{{ strtoupper($paciente['apellidos']) }}</td>
+                            <td>
+                                @if(isset($paciente['empresa_nombre']))
+                                    <span class="badge badge-secondary">
+                                        {{ strtoupper($paciente['empresa_nombre']) }}
+                                    </span>
+                                @else
+                                    <span class="badge badge-light">NO ASIGNADA</span>
+                                @endif
+                            </td>
                             <td>
                                 <span class="badge badge-info" style="font-size: 0.9em;">
                                     CUMPLE {{ $paciente['edad_cumplir'] }}

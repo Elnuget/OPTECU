@@ -145,6 +145,7 @@ use App\Models\MensajePredeterminado;
                             <th>FECHA CONSULTA</th>
                             <th>NOMBRES</th>
                             <th>APELLIDOS</th>
+                            <th>SUCURSAL</th>
                             <th>DÍAS RESTANTES</th>
                             <th>CELULAR</th>
                             <th>ÚLTIMA CONSULTA</th>
@@ -161,6 +162,15 @@ use App\Models\MensajePredeterminado;
                             </td>
                             <td>{{ strtoupper($consulta['nombres']) }}</td>
                             <td>{{ strtoupper($consulta['apellidos']) }}</td>
+                            <td>
+                                @if(isset($consulta['empresa_nombre']))
+                                    <span class="badge badge-secondary">
+                                        {{ strtoupper($consulta['empresa_nombre']) }}
+                                    </span>
+                                @else
+                                    <span class="badge badge-light">NO ASIGNADA</span>
+                                @endif
+                            </td>
                             <td>
                                 <span class="badge {{ $consulta['dias_restantes'] <= 3 ? 'badge-danger' : 'badge-info' }}" style="font-size: 0.9em;">
                                     {{ $consulta['dias_restantes'] }} DÍAS
