@@ -108,10 +108,11 @@
                             <th>MOTIVO</th>
                             <th>VALOR</th>
                             <th>EMPRESA</th>
+                            <th>ACCIONES</th>
                         </tr>
                     </thead>
                     <tbody id="desglose-pagos-prestamos">
-                        <tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>
+                        <tr><td colspan="6" class="text-center">CARGANDO DATOS...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -388,10 +389,26 @@
                             <td>${pago.motivo}</td>
                             <td>$${parseFloat(pago.valor).toFixed(2)}</td>
                             <td>${pago.empresa || 'N/A'}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <button type="button" 
+                                        class="btn btn-xs btn-default text-primary mx-1 shadow" 
+                                        title="Editar Pago"
+                                        onclick="abrirModalEditarPago(${pago.id}, ${pago.prestamo_id})">
+                                        <i class="fa fa-lg fa-fw fa-pen"></i>
+                                    </button>
+                                    <button type="button" 
+                                        class="btn btn-xs btn-default text-danger mx-1 shadow" 
+                                        title="Eliminar Pago"
+                                        onclick="confirmarEliminarPago(${pago.id})">
+                                        <i class="fa fa-lg fa-fw fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                     `).join('');
                 } else {
-                    desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">NO HAY PAGOS DE PRÉSTAMOS PARA LA EMPRESA SELECCIONADA.</td></tr>';
+                    desgloseBody.innerHTML = '<tr><td colspan="6" class="text-center">NO HAY PAGOS DE PRÉSTAMOS PARA LA EMPRESA SELECCIONADA.</td></tr>';
                 }
             }
 
@@ -413,7 +430,8 @@
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
 
@@ -427,7 +445,9 @@
                 todosLosPagos = todosLosPagos.map(pago => ({
                     ...pago,
                     empresa: pago.empresa || 'N/A',
-                    valorAbs: parseFloat(pago.valor || 0)
+                    valorAbs: parseFloat(pago.valor || 0),
+                    id: pago.id || 0,
+                    prestamo_id: pago.prestamo_id || 0
                 }));
 
                 detallesPagosGlobal = todosLosPagos;
@@ -610,6 +630,14 @@
             $('.modal').on('hidden.bs.modal', function () {
                 $(this).find('form').trigger('reset');
                 $(this).find('select').val('').trigger('change');
+                $(this).find('input[name="_method"]').remove();
+                
+                // Restaurar action por defecto para el modal de pago
+                if ($(this).attr('id') === 'crearPagoModal') {
+                    $(this).find('form').attr('action', '{{ route('pago-prestamos.store') }}');
+                    $(this).find('.modal-title').text('REGISTRAR PAGO DE PRÉSTAMO');
+                    $(this).find('button[type="submit"]').text('REGISTRAR PAGO');
+                }
             });
 
             if (window.SucursalCache) {
@@ -648,6 +676,11 @@
             const saldoPendienteActual = $fila.data('saldo-pendiente') || saldoPendiente || 0;
             const valorCuotaActual = $fila.data('valor-cuota') || valorCuota || saldoPendienteActual;
             
+            // Configurar modal para nuevo pago
+            $('#crearPagoModal').find('form').attr('action', '{{ route('pago-prestamos.store') }}');
+            $('#crearPagoModal').find('.modal-title').text('REGISTRAR PAGO DE PRÉSTAMO');
+            $('#crearPagoModal').find('button[type="submit"]').text('REGISTRAR PAGO');
+            
             $('#pago_prestamo_id').val(prestamoId);
             $('#pago_nombre_usuario').text(nombreUsuario);
             $('#pago_saldo_pendiente').text(formatCurrency(saldoPendienteActual));
@@ -657,6 +690,12 @@
             const valorPagoSugerido = Math.min(valorCuotaActual, saldoPendienteActual);
             $('#pago_valor').attr('max', saldoPendienteActual).val(valorPagoSugerido);
             $('#pago_motivo').val('ABONO A PRÉSTAMO - CUOTA');
+            $('#fecha_pago').val('{{ date('Y-m-d') }}');
+            $('#pago_observaciones').val('');
+            $('#pago_estado').val('pagado');
+            
+            // Remover cualquier campo _method que pudiera existir de una edición anterior
+            $('#crearPagoModal form').find('input[name="_method"]').remove();
             
             // Si está seleccionada una empresa específica, usarla
             if (empresaIdSeleccionada !== 'todas') {
@@ -665,6 +704,83 @@
                 // Obtener el ID de la empresa del préstamo
                 const empresaId = $fila.data('empresa-id');
                 $('#pago_empresa_id').val(empresaId);
+            }
+        }
+        
+        // Función para abrir el modal de edición de pago
+        async function abrirModalEditarPago(pagoId, prestamoId) {
+            try {
+                // Mostrar loader
+                $('#loading-overlay-pagos').show();
+                
+                // Obtener datos del pago
+                const response = await fetch(`/pago-prestamos/${pagoId}/edit`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al obtener datos del pago');
+                }
+                
+                const pago = await response.json();
+                
+                // Configurar modal para edición
+                const $modal = $('#crearPagoModal');
+                $modal.find('form').attr('action', `/pago-prestamos/${pagoId}`);
+                $modal.find('form').append('<input type="hidden" name="_method" value="PUT">');
+                $modal.find('.modal-title').text('EDITAR PAGO DE PRÉSTAMO');
+                $modal.find('button[type="submit"]').text('ACTUALIZAR PAGO');
+                
+                // Rellenar datos del pago
+                $('#pago_prestamo_id').val(pago.prestamo_id);
+                $('#pago_empresa_id').val(pago.empresa_id);
+                $('#pago_nombre_usuario').text(pago.usuario || 'N/A');
+                $('#pago_saldo_pendiente').text('PAGO EXISTENTE');
+                $('#pago_valor_cuota').text('EDITANDO PAGO EXISTENTE');
+                $('#pago_valor').val(pago.valor);
+                $('#pago_motivo').val(pago.motivo);
+                $('#fecha_pago').val(pago.fecha_pago);
+                $('#pago_observaciones').val(pago.observaciones || '');
+                $('#pago_estado').val(pago.estado || 'pagado');
+                
+                // Abrir el modal
+                $modal.modal('show');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar los datos del pago');
+            } finally {
+                $('#loading-overlay-pagos').hide();
+            }
+        }
+        
+        // Función para confirmar eliminación de un pago
+        function confirmarEliminarPago(pagoId) {
+            if (confirm('¿ESTÁ SEGURO DE ELIMINAR ESTE PAGO DE PRÉSTAMO?')) {
+                // Crear formulario para enviar
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/pago-prestamos/${pagoId}`;
+                form.style.display = 'none';
+                
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+                
+                const methodField = document.createElement('input');
+                methodField.type = 'hidden';
+                methodField.name = '_method';
+                methodField.value = 'DELETE';
+                
+                form.appendChild(csrfToken);
+                form.appendChild(methodField);
+                document.body.appendChild(form);
+                form.submit();
             }
         }
     </script>

@@ -98,8 +98,22 @@ class PagoPrestamoController extends Controller
      */
     public function edit($id)
     {
-        $pago = PagoPrestamo::findOrFail($id);
+        $pago = PagoPrestamo::with(['prestamo', 'prestamo.user'])->findOrFail($id);
         $empresas = Empresa::orderBy('nombre')->get();
+        
+        if (request()->ajax()) {
+            return response()->json([
+                'id' => $pago->id,
+                'prestamo_id' => $pago->prestamo_id,
+                'empresa_id' => $pago->empresa_id,
+                'valor' => $pago->valor,
+                'fecha_pago' => $pago->fecha_pago->format('Y-m-d'),
+                'motivo' => $pago->motivo,
+                'observaciones' => $pago->observaciones,
+                'estado' => $pago->estado,
+                'usuario' => $pago->prestamo->user->name ?? 'N/A'
+            ]);
+        }
         
         return view('pago-prestamos.edit', compact('pago', 'empresas'));
     }
@@ -137,6 +151,14 @@ class PagoPrestamoController extends Controller
             'estado' => $request->estado,
         ]);
         
+        // Si es una solicitud AJAX o proviene de la vista de préstamos, redirigir de vuelta
+        if (request()->ajax() || request()->header('referer') && strpos(request()->header('referer'), 'prestamos') !== false) {
+            return redirect()->back()
+                ->with('error', true)
+                ->with('tipo', 'alert-success')
+                ->with('mensaje', 'Pago actualizado correctamente');
+        }
+        
         return redirect()->route('pago-prestamos.index')
             ->with('error', true)
             ->with('tipo', 'alert-success')
@@ -153,6 +175,14 @@ class PagoPrestamoController extends Controller
     {
         $pago = PagoPrestamo::findOrFail($id);
         $pago->delete();
+        
+        // Si es una solicitud AJAX o proviene de la vista de préstamos, redirigir de vuelta
+        if (request()->ajax() || request()->header('referer') && strpos(request()->header('referer'), 'prestamos') !== false) {
+            return redirect()->back()
+                ->with('error', true)
+                ->with('tipo', 'alert-success')
+                ->with('mensaje', 'Pago eliminado correctamente');
+        }
         
         return redirect()->route('pago-prestamos.index')
             ->with('error', true)
