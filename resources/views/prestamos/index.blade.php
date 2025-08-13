@@ -226,12 +226,19 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="valor">VALOR:</label>
-                            <input type="number" class="form-control" id="valor" name="valor" required step="0.01" min="0">
+                            <label for="empresa_id">SUCURSAL:</label>
+                            <select name="empresa_id" id="empresa_id" class="form-control" required>
+                                <option value="">SELECCIONE UNA SUCURSAL</option>
+                                @foreach(\App\Models\Empresa::orderBy('nombre')->get() as $empresa)
+                                    <option value="{{ $empresa->id }}" {{ auth()->user()->empresa_id == $empresa->id ? 'selected' : '' }}>{{ $empresa->nombre }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="form-group">
-                            <label for="valor_neto">VALOR NETO:</label>
-                            <input type="number" class="form-control" id="valor_neto" name="valor_neto" required step="0.01" min="0">
+                            <label for="valor">VALOR:</label>
+                            <input type="number" class="form-control" id="valor" name="valor" required step="0.01" min="0">
+                            <small class="text-muted">Este valor será utilizado como valor neto.</small>
+                            <input type="hidden" id="valor_neto" name="valor_neto">
                         </div>
                         <div class="form-group">
                             <label for="cuotas">CUOTAS:</label>
@@ -568,8 +575,14 @@
             });
 
             $('#valor').on('input', function() {
-                const valorOriginal = parseFloat($(this).val()) || 0;
-                $('#valor_neto').val(valorOriginal);
+                const valorIngresado = parseFloat($(this).val()) || 0;
+                $('#valor_neto').val(valorIngresado);
+            });
+            
+            // Al enviar el formulario, asegurar que valor_neto = valor
+            $('form[action="{{ route('prestamos.store') }}"]').on('submit', function() {
+                const valor = parseFloat($('#valor').val()) || 0;
+                $('#valor_neto').val(valor);
             });
 
             $('#filtro-empresa').on('change', function() {
@@ -587,9 +600,9 @@
 
             cargarDatosPagos();
 
-            $('#user_id').select2({
+            $('#user_id, #empresa_id').select2({
                 theme: 'bootstrap4',
-                placeholder: 'SELECCIONE UN USUARIO',
+                placeholder: 'SELECCIONE UNA OPCIÓN',
                 allowClear: true,
                 width: '100%'
             });
