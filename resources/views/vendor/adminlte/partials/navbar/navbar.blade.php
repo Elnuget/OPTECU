@@ -7,8 +7,21 @@
     $mesActual = $hoy->format('m');
     $mesAnoActual = $hoy->format('Y-m');
     
+    // Obtener la sucursal seleccionada desde javascript (si existe)
+    $sucursalSeleccionada = null;
+    if (isset($_COOKIE['sucursal_abierta'])) {
+        try {
+            $sucursalData = json_decode($_COOKIE['sucursal_abierta'], true);
+            if (isset($sucursalData['id']) && is_numeric($sucursalData['id'])) {
+                $sucursalSeleccionada = $sucursalData['id'];
+            }
+        } catch (\Exception $e) {
+            // Si hay un error al decodificar el JSON, ignorar
+        }
+    }
+    
     // Consulta para cumpleaños sin mensajes enviados en el mes actual
-    $cumpleañerosPendientes = \App\Models\HistorialClinico::whereRaw('MONTH(fecha_nacimiento) = ?', [$mesActual])
+    $cumpleañerosQuery = \App\Models\HistorialClinico::whereRaw('MONTH(fecha_nacimiento) = ?', [$mesActual])
         ->whereNotNull('celular')
         ->whereRaw('CONCAT(nombres, " ", apellidos) NOT IN (
             SELECT CONCAT(hc.nombres, " ", hc.apellidos) 
@@ -16,14 +29,20 @@
             INNER JOIN mensajes_enviados me ON hc.id = me.historial_id
             WHERE me.tipo = "cumpleanos"
             AND DATE_FORMAT(me.fecha_envio, "%Y-%m") = ?
-        )', [$mesAnoActual])
-        ->count();
+        )', [$mesAnoActual]);
+        
+    // Filtrar por sucursal si hay una seleccionada
+    if ($sucursalSeleccionada) {
+        $cumpleañerosQuery->where('empresa_id', $sucursalSeleccionada);
+    }
+    
+    $cumpleañerosPendientes = $cumpleañerosQuery->count();
 
     // Consulta para recordatorios de consulta sin mensajes enviados en el mes actual
     $inicioMes = $hoy->copy()->startOfMonth();
     $finMes = $hoy->copy()->endOfMonth();
     
-    $consultasPendientes = \App\Models\HistorialClinico::whereNotNull('proxima_consulta')
+    $consultasQuery = \App\Models\HistorialClinico::whereNotNull('proxima_consulta')
         ->whereNotNull('celular')
         ->whereDate('proxima_consulta', '>=', $inicioMes)
         ->whereDate('proxima_consulta', '<=', $finMes)
@@ -33,8 +52,14 @@
             INNER JOIN mensajes_enviados me ON hc.id = me.historial_id
             WHERE me.tipo = "consulta"
             AND DATE_FORMAT(me.fecha_envio, "%Y-%m") = ?
-        )', [$mesAnoActual])
-        ->count();
+        )', [$mesAnoActual]);
+        
+    // Filtrar por sucursal si hay una seleccionada
+    if ($sucursalSeleccionada) {
+        $consultasQuery->where('empresa_id', $sucursalSeleccionada);
+    }
+    
+    $consultasPendientes = $consultasQuery->count();
 @endphp
 
 <nav class="main-header navbar
@@ -130,6 +155,11 @@
                         <div class="dropdown-divider"></div>
                         <a href="{{ route('mensajes.cumpleanos') }}" class="dropdown-item">
                             <i class="fas fa-birthday-cake mr-2"></i> {{ $cumpleañerosPendientes }} CUMPLEAÑEROS PENDIENTES
+                            @if($sucursalSeleccionada)
+                                <small class="badge badge-info ml-1" title="Filtrado por sucursal seleccionada">
+                                    <i class="fas fa-filter"></i> FILTRADO
+                                </small>
+                            @endif
                         </a>
                     @endif
                     
@@ -137,7 +167,21 @@
                         <div class="dropdown-divider"></div>
                         <a href="{{ route('mensajes.recordatorios') }}" class="dropdown-item">
                             <i class="fas fa-calendar-check mr-2"></i> {{ $consultasPendientes }} RECORDATORIOS PENDIENTES
+                            @if($sucursalSeleccionada)
+                                <small class="badge badge-info ml-1" title="Filtrado por sucursal seleccionada">
+                                    <i class="fas fa-filter"></i> FILTRADO
+                                </small>
+                            @endif
                         </a>
+                    @endif
+                    
+                    @if($sucursalSeleccionada)
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-item dropdown-footer">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i> Mostrando notificaciones de la sucursal seleccionada
+                            </small>
+                        </div>
                     @endif
                 </div>
             </li>
@@ -614,6 +658,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const emptyClipboard = document.getElementById('emptyClipboard');
     const clearClipboard = document.getElementById('clearClipboard');
     
+    // Sincronizar SucursalCache con cookie para las notificaciones
+    sincronizarSucursalCache();
+    
     let isModalOpen = false;
 
     // Cargar elementos del localStorage al iniciar
@@ -832,5 +879,35 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // También aplicar después de un pequeño delay
     setTimeout(aplicarEstiloSucursalActiva, 300);
+    
+    // Sincronizar SucursalCache.js con cookie para notificaciones
+    function sincronizarSucursalCache() {
+        // Verificar si existe el objeto SucursalCache
+        if (window.SucursalCache) {
+            // Obtener la sucursal seleccionada
+            const sucursalSeleccionada = SucursalCache.obtener();
+            if (sucursalSeleccionada) {
+                // Crear o actualizar cookie con la sucursal seleccionada
+                document.cookie = 'sucursal_abierta=' + JSON.stringify(sucursalSeleccionada) + '; path=/; max-age=86400';
+            } else {
+                // Si no hay sucursal seleccionada, eliminar la cookie
+                document.cookie = 'sucursal_abierta=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            }
+        }
+    }
+    
+    // Escuchar cambios en LocalStorage para actualizar las notificaciones
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'sucursal_seleccionada') {
+            sincronizarSucursalCache();
+            // Recargar la página para actualizar las notificaciones
+            // solo si estamos en una página que no sea de filtros
+            if (!window.location.href.includes('telemarketing') && 
+                !window.location.href.includes('recordatorios') && 
+                !window.location.href.includes('cumpleanos')) {
+                location.reload();
+            }
+        }
+    });
 });
 </script>
