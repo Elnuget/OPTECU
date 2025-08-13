@@ -16,33 +16,17 @@ class SueldoController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Contracts\View\View
      */
     public function index(Request $request)
     {
-        $ano = $request->input('ano', date('Y'));
-        $mes = $request->input('mes', date('m'));
-        
+        // Obtener todos los sueldos sin filtros
         $query = Sueldo::with(['user', 'empresa']);
-        
-        // Aplicar filtros si están presentes
-        if ($ano) {
-            $query->whereYear('fecha', $ano);
-        }
-        
-        if ($mes) {
-            $query->whereMonth('fecha', $mes);
-        }
-        
-        // Filtro por empresa
-        if ($request->filled('empresa_id')) {
-            $query->where('empresa_id', $request->empresa_id);
-        }
         
         $sueldos = $query->orderBy('fecha', 'desc')->get();
         $totalSueldos = $sueldos->sum('valor');
         
-        // Obtener todas las empresas para el filtro
+        // Obtener todas las empresas para referencia (no se usará para filtros)
         $empresas = Empresa::orderBy('nombre')->get();
         
         return view('sueldos.index', compact('sueldos', 'totalSueldos', 'empresas'));
@@ -51,7 +35,7 @@ class SueldoController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Contracts\View\View
      */
     public function create()
     {
@@ -62,7 +46,7 @@ class SueldoController extends Controller
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
@@ -115,7 +99,7 @@ class SueldoController extends Controller
      * Display the specified resource.
      *
      * @param  \App\Models\Sueldo  $sueldo
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function show(Sueldo $sueldo)
     {
@@ -136,7 +120,7 @@ class SueldoController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  \App\Models\Sueldo  $sueldo
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Contracts\View\View
      */
     public function edit(Sueldo $sueldo)
     {
@@ -147,8 +131,8 @@ class SueldoController extends Controller
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Sueldo  $sueldo
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, $id)
     {
@@ -190,8 +174,8 @@ class SueldoController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\Sueldo  $sueldo
-     * @return \Illuminate\Http\Response
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
      */
     public function destroy($id)
     {
@@ -216,6 +200,9 @@ class SueldoController extends Controller
 
     /**
      * Guarda un valor de sueldo vía AJAX
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function guardarValor(Request $request)
     {
@@ -271,7 +258,8 @@ class SueldoController extends Controller
     /**
      * Obtiene los sueldos con descripción REGISTROCOBRO
      *
-     * @return \Illuminate\Http\Response
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function getRegistrosCobro(Request $request)
     {
@@ -321,7 +309,8 @@ class SueldoController extends Controller
     /**
      * Obtiene el total de registros de cobro para un usuario en un período específico
      *
-     * @return \Illuminate\Http\Response
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function getTotalRegistrosCobro(Request $request)
     {
@@ -360,7 +349,7 @@ class SueldoController extends Controller
     /**
      * Obtiene todos los datos necesarios para el rol de pagos de forma local
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function getDatosRolPagos(Request $request)
     {
@@ -449,10 +438,27 @@ class SueldoController extends Controller
                 ->whereYear('fecha', $ano)
                 ->whereMonth('fecha', $mes)
                 ->get();
+                
+            // Calcular otros sueldos (no REGISTROCOBRO)
+            $otrosSueldos = Sueldo::where('user_id', $userId)
+                ->where('descripcion', '!=', 'REGISTROCOBRO')
+                ->whereYear('fecha', $ano)
+                ->whereMonth('fecha', $mes);
+                
+            if ($empresaId) {
+                $otrosSueldos->where('empresa_id', $empresaId);
+            }
+            
+            $otrosSueldos = $otrosSueldos->with('empresa')->get();
 
             // Calcular totales
             $pedidos_total = $pedidos->sum('total');
             $retiros_total = $retiros->sum('valor');
+            $registros_cobro_total = $registrosCobro->sum('valor');
+            $otros_sueldos_total = $otrosSueldos->sum('valor');
+            
+            // Calcular saldo final
+            $saldo_final = $pedidos_total - $retiros_total - $otros_sueldos_total;
 
             return response()->json([
                 'success' => true,
@@ -466,7 +472,11 @@ class SueldoController extends Controller
                         'ingresos' => $movimientos->where('estado', 'apertura')->sum('monto'),
                         'egresos' => $movimientos->where('estado', '!=', 'apertura')->sum('monto')
                     ],
-                    'registrosCobro' => $registrosCobro
+                    'registros_cobro' => $registrosCobro,
+                    'registros_cobro_total' => $registros_cobro_total,
+                    'otros_sueldos' => $otrosSueldos,
+                    'otros_sueldos_total' => $otros_sueldos_total,
+                    'saldo_final' => $saldo_final
                 ]
             ]);
 
