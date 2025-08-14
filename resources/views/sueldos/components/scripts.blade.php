@@ -25,6 +25,14 @@
             modal.find('#eliminarForm').attr('action', url);
         });
 
+        // Configurar el modal de eliminar detalle antes de mostrarse
+        $('#confirmarEliminarDetalleModal').on('show.bs.modal', function(event) {
+            var button = $(event.relatedTarget);
+            var url = button.data('url');
+            var modal = $(this);
+            modal.find('#eliminarDetalleForm').attr('action', url);
+        });
+
         // Inicializar DataTable
         var sueldosTable = $('#sueldosTable').DataTable({
             "order": [[0, "desc"]],
@@ -52,6 +60,44 @@
                     "extend": 'pdfHtml5',
                     "text": 'PDF',
                     "filename": 'Sueldos.pdf',
+                    "pageSize": 'LETTER',
+                    "exportOptions": {
+                        "columns": [0, 1, 2, 3, 4]
+                    }
+                }
+            ],
+            "language": {
+                "url": "{{ asset('js/datatables/Spanish.json') }}"
+            }
+        });
+
+        // Inicializar DataTable para Detalles de Sueldo
+        var detallesSueldoTable = $('#detallesSueldoTable').DataTable({
+            "order": [[0, "desc"]],
+            "paging": false,
+            "info": false,
+            "dom": 'Bfrt',
+            "buttons": [
+                'excelHtml5',
+                'csvHtml5',
+                {
+                    "extend": 'print',
+                    "text": 'IMPRIMIR DETALLES',
+                    "autoPrint": true,
+                    "exportOptions": {
+                        "columns": [0, 1, 2, 3, 4]
+                    },
+                    "customize": function(win) {
+                        $(win.document.body).css('font-size', '16pt');
+                        $(win.document.body).find('table')
+                            .addClass('compact')
+                            .css('font-size', 'inherit');
+                    }
+                },
+                {
+                    "extend": 'pdfHtml5',
+                    "text": 'PDF DETALLES',
+                    "filename": 'Detalles_Sueldos.pdf',
                     "pageSize": 'LETTER',
                     "exportOptions": {
                         "columns": [0, 1, 2, 3, 4]

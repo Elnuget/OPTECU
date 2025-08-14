@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sueldo;
+use App\Models\DetalleSueldo;
 use App\Models\User;
 use App\Models\Empresa;
 use Illuminate\Http\Request;
@@ -67,7 +68,21 @@ class SueldoController extends Controller
         // Obtener los retiros de caja filtrados
         $retirosCaja = $cajaQuery->orderBy('created_at', 'desc')->get();
         
-        return view('sueldos.index', compact('sueldos', 'usuariosConPedidos', 'pedidos', 'anio', 'mes', 'usuario', 'retirosCaja'));
+        // Obtener detalles de sueldo con filtros
+        $detallesSueldoQuery = DetalleSueldo::with('user')
+            ->where('ano', $anio)
+            ->where('mes', $mes);
+            
+        // Si se seleccionó un usuario específico
+        if ($usuario) {
+            $detallesSueldoQuery->whereHas('user', function($query) use ($usuario) {
+                $query->where('name', 'LIKE', '%' . $usuario . '%');
+            });
+        }
+        
+        $detallesSueldo = $detallesSueldoQuery->orderBy('created_at', 'desc')->get();
+        
+        return view('sueldos.index', compact('sueldos', 'usuariosConPedidos', 'pedidos', 'anio', 'mes', 'usuario', 'retirosCaja', 'detallesSueldo'));
     }
 
     /**

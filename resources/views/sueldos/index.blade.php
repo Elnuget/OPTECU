@@ -31,7 +31,10 @@
 
     @include('sueldos.components.tabla-sueldos')
 
+    @include('sueldos.components.tabla-detalles-sueldo')
+
     @include('sueldos.components.modal-confirmar-eliminar')
+    @include('sueldos.components.modal-confirmar-eliminar-detalle')
 @stop
 
 @section('js')

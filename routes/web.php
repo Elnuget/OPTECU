@@ -19,6 +19,7 @@ use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\TelemarketingController;
 use App\Http\Controllers\SueldoController;
+use App\Http\Controllers\DetalleSueldoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -321,4 +322,14 @@ Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guard
 // Rutas para el controlador de Sueldos
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::resource('sueldos', SueldoController::class);
+    
+    // Rutas para Detalles de Sueldo
+    Route::resource('detalles-sueldo', DetalleSueldoController::class)->names([
+        'create' => 'detalles-sueldo.create',
+        'store' => 'detalles-sueldo.store',
+        'show' => 'detalles-sueldo.show',
+        'edit' => 'detalles-sueldo.edit',
+        'update' => 'detalles-sueldo.update',
+        'destroy' => 'detalles-sueldo.destroy',
+    ]);
 });
