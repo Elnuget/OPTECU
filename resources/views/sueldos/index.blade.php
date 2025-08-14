@@ -4,6 +4,105 @@
 
 @section('content_header')
     <h1>SUELDOS</h1>
+    
+    <!-- Tarjeta de Rol de Pago con Filtros -->
+    <div class="card card-info mb-3">
+        <div class="card-header">
+            <h3 class="card-title">ROL DE PAGO</h3>
+            <div class="card-tools">
+                <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                    <i class="fas fa-minus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <form id="rolDePagoForm" method="GET" action="{{ route('sueldos.index') }}">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="anio">AÑO</label>
+                            <select class="form-control" id="anio" name="anio">
+                                @for ($i = date('Y'); $i >= date('Y')-5; $i--)
+                                    <option value="{{ $i }}" {{ request('anio') == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                @endfor
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="mes">MES</label>
+                            <select class="form-control" id="mes" name="mes">
+                                @for ($i = 1; $i <= 12; $i++)
+                                    <option value="{{ $i }}" {{ request('mes') == $i ? 'selected' : '' }}>{{ strtoupper(date('F', mktime(0, 0, 0, $i, 1))) }}</option>
+                                @endfor
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="usuario">USUARIO</label>
+                            <select class="form-control select2" id="usuario" name="usuario">
+                                <option value="">TODOS LOS USUARIOS</option>
+                                @foreach($usuariosConPedidos ?? [] as $nombreUsuario)
+                                    <option value="{{ $nombreUsuario }}" {{ request('usuario') == $nombreUsuario ? 'selected' : '' }}>{{ $nombreUsuario }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group" style="padding-top: 32px;">
+                            <button type="submit" class="btn btn-primary btn-block">
+                                <i class="fas fa-search"></i> BUSCAR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            
+            @if(isset($pedidos) && count($pedidos) > 0)
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>FECHA</th>
+                                <th>ORDEN</th>
+                                <th>CLIENTE</th>
+                                <th>SUCURSAL</th>
+                                <th>USUARIO</th>
+                                <th>TOTAL</th>
+                                <th>SALDO</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($pedidos as $pedido)
+                                <tr>
+                                    <td>{{ $pedido->fecha->format('Y-m-d') }}</td>
+                                    <td>{{ $pedido->numero_orden }}</td>
+                                    <td>{{ $pedido->cliente }}</td>
+                                    <td>{{ $pedido->empresa ? $pedido->empresa->nombre : 'SIN SUCURSAL' }}</td>
+                                    <td>{{ $pedido->usuario ?: 'N/A' }}</td>
+                                    <td>${{ number_format($pedido->total, 2, ',', '.') }}</td>
+                                    <td>${{ number_format($pedido->saldo, 2, ',', '.') }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr class="bg-secondary">
+                                <th colspan="5">TOTAL</th>
+                                <th>${{ isset($pedidos) ? number_format($pedidos->sum('total'), 2, ',', '.') : '0,00' }}</th>
+                                <th>${{ isset($pedidos) ? number_format($pedidos->sum('saldo'), 2, ',', '.') : '0,00' }}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            @else
+                <div class="alert alert-info mt-3">
+                    NO SE ENCONTRARON PEDIDOS PARA LOS FILTROS SELECCIONADOS
+                </div>
+            @endif
+        </div>
+    </div>
+    
     <p>ADMINISTRACIÓN DE SUELDOS</p>
     @if (session('error'))
         <div class="alert {{ session('tipo') }} alert-dismissible fade show" role="alert">
@@ -162,6 +261,13 @@
     <script>
         $(document).ready(function() {
             console.log('JavaScript cargado correctamente');
+            
+            // Inicializar Select2 para el selector de usuarios
+            $('#usuario').select2({
+                theme: 'bootstrap4',
+                placeholder: "SELECCIONAR USUARIO",
+                allowClear: true
+            });
             
             // Configurar el modal antes de mostrarse
             $('#confirmarEliminarModal').on('show.bs.modal', function(event) {

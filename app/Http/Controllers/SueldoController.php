@@ -17,10 +17,37 @@ class SueldoController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function index()
+    public function index(Request $request)
     {
-        $sueldos = Sueldo::with(['user', 'empresa'])->orderBy('fecha', 'desc')->paginate(10);
-        return view('sueldos.index', compact('sueldos'));
+        // Obtener filtros de la solicitud
+        $anio = $request->get('anio', date('Y'));
+        $mes = $request->get('mes', date('m'));
+        $usuario = $request->get('usuario');
+        
+        // Obtener los sueldos (mantener la funcionalidad original)
+        $sueldos = Sueldo::with(['user', 'empresa'])->orderBy('fecha', 'desc')->get();
+        
+        // Consultar los pedidos según los filtros
+        $pedidosQuery = \App\Models\Pedido::whereYear('fecha', $anio)
+            ->whereMonth('fecha', $mes);
+            
+        // Si se seleccionó un usuario específico
+        if ($usuario) {
+            $pedidosQuery->where('usuario', $usuario);
+        }
+        
+        // Obtener los pedidos filtrados
+        $pedidos = $pedidosQuery->orderBy('fecha', 'desc')->get();
+        
+        // Obtener la lista de usuarios únicos que han realizado pedidos
+        $usuariosConPedidos = \App\Models\Pedido::select('usuario')
+            ->whereNotNull('usuario')
+            ->distinct()
+            ->orderBy('usuario')
+            ->pluck('usuario')
+            ->toArray();
+        
+        return view('sueldos.index', compact('sueldos', 'usuariosConPedidos', 'pedidos', 'anio', 'mes', 'usuario'));
     }
 
     /**
