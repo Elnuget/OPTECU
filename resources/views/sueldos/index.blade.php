@@ -76,7 +76,7 @@
                     </div>
                     
                     <!-- Total de Saldo -->
-                    <div class="col-lg-3 col-6">
+                    <div class="col-lg-2 col-6">
                         <div class="small-box bg-warning">
                             <div class="inner">
                                 <h3>${{ number_format($pedidos->sum('saldo'), 2, ',', '.') }}</h3>
@@ -88,8 +88,21 @@
                         </div>
                     </div>
                     
+                    <!-- Total Retiros de Caja -->
+                    <div class="col-lg-2 col-6">
+                        <div class="small-box bg-danger">
+                            <div class="inner">
+                                <h3>${{ number_format(isset($retirosCaja) ? $retirosCaja->sum('valor') : 0, 2, ',', '.') }}</h3>
+                                <p>RETIROS DE CAJA</p>
+                            </div>
+                            <div class="icon">
+                                <i class="fas fa-cash-register"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Cantidad de Pedidos -->
-                    <div class="col-lg-3 col-6">
+                    <div class="col-lg-2 col-6">
                         <div class="small-box bg-success">
                             <div class="inner">
                                 <h3>{{ $pedidos->count() }}</h3>
@@ -101,15 +114,15 @@
                         </div>
                     </div>
                     
-                    <!-- Promedio por Pedido -->
+                    <!-- Balance Neto (Ventas - Retiros) -->
                     <div class="col-lg-3 col-6">
-                        <div class="small-box bg-danger">
+                        <div class="small-box" style="background-color: #6f42c1; color: white;">
                             <div class="inner">
-                                <h3>${{ number_format($pedidos->count() > 0 ? $pedidos->sum('total') / $pedidos->count() : 0, 2, ',', '.') }}</h3>
-                                <p>PROMEDIO POR PEDIDO</p>
+                                <h3>${{ number_format($pedidos->sum('total') - (isset($retirosCaja) ? $retirosCaja->sum('valor') : 0), 2, ',', '.') }}</h3>
+                                <p>BALANCE NETO</p>
                             </div>
                             <div class="icon">
-                                <i class="fas fa-chart-line"></i>
+                                <i class="fas fa-balance-scale"></i>
                             </div>
                         </div>
                     </div>
@@ -151,6 +164,43 @@
                         </table>
                     </div>
                 </div>
+                
+                <!-- Retiros de Caja -->
+                @if(isset($retirosCaja) && count($retirosCaja) > 0)
+                <div class="card mt-3">
+                    <div class="card-header bg-danger">
+                        <h3 class="card-title">RETIROS DE CAJA</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>FECHA</th>
+                                    <th>SUCURSAL</th>
+                                    <th>MOTIVO</th>
+                                    <th>VALOR</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($retirosCaja as $retiro)
+                                <tr>
+                                    <td>{{ $retiro->created_at->format('Y-m-d H:i') }}</td>
+                                    <td>{{ $retiro->empresa ? $retiro->empresa->nombre : 'SIN SUCURSAL' }}</td>
+                                    <td>{{ $retiro->motivo }}</td>
+                                    <td>${{ number_format($retiro->valor, 2, ',', '.') }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot>
+                                <tr class="bg-secondary">
+                                    <th colspan="3">TOTAL RETIROS</th>
+                                    <th>${{ number_format($retirosCaja->sum('valor'), 2, ',', '.') }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+                @endif
                 
                 <div class="table-responsive mt-3">
                     <table class="table table-sm table-bordered table-striped">

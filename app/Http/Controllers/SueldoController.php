@@ -47,7 +47,27 @@ class SueldoController extends Controller
             ->pluck('usuario')
             ->toArray();
         
-        return view('sueldos.index', compact('sueldos', 'usuariosConPedidos', 'pedidos', 'anio', 'mes', 'usuario'));
+        // Obtener los retiros de caja para el mismo periodo
+        $cajaQuery = \App\Models\Caja::whereYear('created_at', $anio)
+            ->whereMonth('created_at', $mes)
+            ->where(function($query) {
+                // Excluir registros que contengan "abono" o "deposito" en el motivo
+                $query->whereRaw("LOWER(motivo) NOT LIKE ?", ['%abono%'])
+                      ->whereRaw("LOWER(motivo) NOT LIKE ?", ['%deposito%']);
+            });
+            
+        // Si se seleccionó un usuario específico, buscamos su ID en la tabla users
+        if ($usuario) {
+            $user = \App\Models\User::where('name', $usuario)->first();
+            if ($user) {
+                $cajaQuery->where('user_id', $user->id);
+            }
+        }
+        
+        // Obtener los retiros de caja filtrados
+        $retirosCaja = $cajaQuery->orderBy('created_at', 'desc')->get();
+        
+        return view('sueldos.index', compact('sueldos', 'usuariosConPedidos', 'pedidos', 'anio', 'mes', 'usuario', 'retirosCaja'));
     }
 
     /**
