@@ -11,7 +11,7 @@
                     <th>FECHA</th>
                     <th>SUCURSAL</th>
                     <th>USUARIO</th>
-                    <th></th>MOTIVO</th>
+                    <th>MOTIVO</th>
                     <th>VALOR</th>
                 </tr>
             </thead>
