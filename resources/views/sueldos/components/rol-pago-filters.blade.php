@@ -193,6 +193,9 @@
                 </div>
             </div>
 
+            <!-- Historial de Caja (Aperturas y Cierres) -->
+            @include('sueldos.components.historial-caja', ['historialCaja' => $historialCaja ?? null])
+
             @if(isset($pedidos) && count($pedidos) > 0)
                 @include('sueldos.components.estadisticas-resumen', ['pedidos' => $pedidos, 'retirosCaja' => $retirosCaja ?? null])
                 @include('sueldos.components.pedidos-por-sucursal', ['pedidos' => $pedidos])

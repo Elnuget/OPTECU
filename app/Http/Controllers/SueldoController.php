@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Sueldo;
 use App\Models\DetalleSueldo;
+use App\Models\CashHistory;
 use App\Models\User;
 use App\Models\Empresa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class SueldoController extends Controller
 {
@@ -27,6 +30,7 @@ class SueldoController extends Controller
         $pedidos = collect();
         $retirosCaja = collect();
         $detallesSueldo = collect();
+        $historialCaja = collect();
         $usuariosConPedidos = [];
         $anio = $request->get('anio');
         $mes = $request->get('mes');
@@ -93,6 +97,23 @@ class SueldoController extends Controller
             }
             
             $detallesSueldo = $detallesSueldoQuery->orderBy('created_at', 'desc')->get();
+            
+            // Obtener historial de caja (aperturas y cierres)
+            $cashHistoryQuery = CashHistory::with('user')
+                ->whereYear('created_at', $anio)
+                ->whereMonth('created_at', $mes);
+                
+            // Si se seleccionó un usuario específico
+            if ($usuario) {
+                $cashHistoryQuery->whereHas('user', function($query) use ($usuario) {
+                    $query->where('name', 'LIKE', '%' . $usuario . '%');
+                });
+            }
+            
+            $cashHistoryRaw = $cashHistoryQuery->orderBy('created_at', 'asc')->get();
+            
+            // Procesar historial de caja para calcular horas trabajadas
+            $historialCaja = $this->procesarHistorialCaja($cashHistoryRaw);
         } else {
             // Si no hay búsqueda, obtener usuarios para el dropdown
             $usuariosConPedidos = \App\Models\Pedido::select('usuario')
@@ -103,7 +124,7 @@ class SueldoController extends Controller
                 ->toArray();
         }
         
-        return view('sueldos.index', compact('sueldos', 'usuariosConPedidos', 'pedidos', 'anio', 'mes', 'usuario', 'retirosCaja', 'detallesSueldo'));
+        return view('sueldos.index', compact('sueldos', 'usuariosConPedidos', 'pedidos', 'anio', 'mes', 'usuario', 'retirosCaja', 'detallesSueldo', 'historialCaja'));
     }
 
     /**
@@ -199,5 +220,72 @@ class SueldoController extends Controller
 
         return redirect()->route('sueldos.index')
             ->with('success', 'Sueldo eliminado correctamente');
+    }
+
+    /**
+     * Procesar historial de caja para calcular horas trabajadas por día
+     */
+    private function procesarHistorialCaja($cashHistoryRaw)
+    {
+        $historialProcesado = collect();
+        
+        // Agrupar por usuario y fecha
+        $agrupado = $cashHistoryRaw->groupBy(function($item) {
+            return $item->user->name . '_' . $item->created_at->format('Y-m-d');
+        });
+        
+        foreach ($agrupado as $key => $registrosDia) {
+            $partes = explode('_', $key);
+            $usuario = $partes[0];
+            $fecha = $partes[1];
+            
+            // Buscar apertura y cierre
+            $apertura = $registrosDia->where('estado', 'Apertura')->first();
+            $cierre = $registrosDia->where('estado', 'Cierre')->first();
+            
+            // Calcular horas trabajadas
+            $horasTrabajadas = null;
+            $horaApertura = null;
+            $horaCierre = null;
+            $estado = 'Sin registros';
+            
+            if ($apertura) {
+                $horaApertura = $apertura->created_at->format('H:i:s');
+                $estado = 'Solo apertura';
+                
+                if ($cierre) {
+                    $horaCierre = $cierre->created_at->format('H:i:s');
+                    $horasTrabajadas = $apertura->created_at->diffInHours($cierre->created_at);
+                    $minutosTrabajados = $apertura->created_at->diffInMinutes($cierre->created_at) % 60;
+                    $horasFormateadas = $horasTrabajadas . 'h ' . $minutosTrabajados . 'm';
+                    $estado = 'Completo';
+                } else {
+                    $horasFormateadas = 'En progreso';
+                }
+            } elseif ($cierre) {
+                $horaCierre = $cierre->created_at->format('H:i:s');
+                $horasFormateadas = 'Solo cierre';
+                $estado = 'Solo cierre';
+            } else {
+                $horasFormateadas = 'Sin registros';
+            }
+            
+            $historialProcesado->push((object) [
+                'usuario' => $usuario,
+                'fecha' => $fecha,
+                'fecha_formateada' => Carbon::parse($fecha)->format('d/m/Y'),
+                'dia_semana' => Carbon::parse($fecha)->locale('es')->dayName,
+                'hora_apertura' => $horaApertura,
+                'hora_cierre' => $horaCierre,
+                'horas_trabajadas' => $horasTrabajadas,
+                'horas_formateadas' => $horasFormateadas,
+                'estado' => $estado,
+                'monto_apertura' => $apertura ? $apertura->monto : null,
+                'monto_cierre' => $cierre ? $cierre->monto : null,
+                'registros_count' => $registrosDia->count()
+            ]);
+        }
+        
+        return $historialProcesado->sortByDesc('fecha');
     }
 }
