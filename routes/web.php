@@ -18,6 +18,7 @@ use App\Http\Controllers\PagoPrestamoController;
 use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\TelemarketingController;
+use App\Http\Controllers\SueldoController;
 
 /*
 |--------------------------------------------------------------------------
@@ -315,5 +316,9 @@ Route::get('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'califi
     ->name('pedidos.calificar-publico')
     ->middleware('web');
 Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guardarCalificacionPublica'])
-    ->name('pedidos.guardar-calificacion-publica')
-    ->middleware('web');
+    ->name('pedidos.guardar-calificacion-publica');
+
+// Rutas para el controlador de Sueldos
+Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+    Route::resource('sueldos', SueldoController::class);
+});
