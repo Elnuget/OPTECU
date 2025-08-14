@@ -60,6 +60,98 @@
             </form>
             
             @if(isset($pedidos) && count($pedidos) > 0)
+                <!-- Resumen de Estadísticas -->
+                <div class="row mt-3">
+                    <!-- Total de Ventas -->
+                    <div class="col-lg-3 col-6">
+                        <div class="small-box bg-info">
+                            <div class="inner">
+                                <h3>${{ number_format($pedidos->sum('total'), 2, ',', '.') }}</h3>
+                                <p>TOTAL DE VENTAS</p>
+                            </div>
+                            <div class="icon">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Total de Saldo -->
+                    <div class="col-lg-3 col-6">
+                        <div class="small-box bg-warning">
+                            <div class="inner">
+                                <h3>${{ number_format($pedidos->sum('saldo'), 2, ',', '.') }}</h3>
+                                <p>SALDO PENDIENTE</p>
+                            </div>
+                            <div class="icon">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cantidad de Pedidos -->
+                    <div class="col-lg-3 col-6">
+                        <div class="small-box bg-success">
+                            <div class="inner">
+                                <h3>{{ $pedidos->count() }}</h3>
+                                <p>PEDIDOS REALIZADOS</p>
+                            </div>
+                            <div class="icon">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Promedio por Pedido -->
+                    <div class="col-lg-3 col-6">
+                        <div class="small-box bg-danger">
+                            <div class="inner">
+                                <h3>${{ number_format($pedidos->count() > 0 ? $pedidos->sum('total') / $pedidos->count() : 0, 2, ',', '.') }}</h3>
+                                <p>PROMEDIO POR PEDIDO</p>
+                            </div>
+                            <div class="icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pedidos por Sucursal -->
+                <div class="card mt-3">
+                    <div class="card-header bg-secondary">
+                        <h3 class="card-title">PEDIDOS POR SUCURSAL</h3>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>SUCURSAL</th>
+                                    <th>PEDIDOS</th>
+                                    <th>TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @php
+                                    $pedidosPorEmpresa = $pedidos->groupBy('empresa_id');
+                                @endphp
+                                
+                                @foreach($pedidosPorEmpresa as $empresaId => $pedidosEmpresa)
+                                    @php
+                                        $nombreEmpresa = 'SIN SUCURSAL';
+                                        if ($empresaId && $pedidosEmpresa->first()->empresa) {
+                                            $nombreEmpresa = $pedidosEmpresa->first()->empresa->nombre;
+                                        }
+                                    @endphp
+                                    <tr>
+                                        <td>{{ $nombreEmpresa }}</td>
+                                        <td>{{ $pedidosEmpresa->count() }}</td>
+                                        <td>${{ number_format($pedidosEmpresa->sum('total'), 2, ',', '.') }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
                 <div class="table-responsive mt-3">
                     <table class="table table-sm table-bordered table-striped">
                         <thead>
