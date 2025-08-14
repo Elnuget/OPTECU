@@ -3,396 +3,521 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Rol de Pago - {{ str_pad($mes, 2, '0', STR_PAD_LEFT) }}/{{ $anio }}</title>
-    
-    <!-- Bootstrap 4 CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-    
+    <title>ROL DE PAGO - {{ str_pad($mes, 2, '0', STR_PAD_LEFT) }}/{{ $anio }}{{ $usuario ? ' - ' . strtoupper($usuario) : '' }}</title>
     <style>
-        @media print {
-            .no-print {
-                display: none !important;
-            }
-            
-            body {
-                -webkit-print-color-adjust: exact !important;
-                color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-            
-            .page-break {
-                page-break-before: always;
-            }
-            
-            .card {
-                box-shadow: none !important;
-                border: 1px solid #dee2e6 !important;
-            }
-        }
-        
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
+            margin: 20px;
             font-size: 12px;
+            color: #000;
         }
         
-        .header-empresa {
+        .header {
             text-align: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: linear-gradient(45deg, #007bff, #0056b3);
-            color: white;
-            border-radius: 8px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 20px;
         }
         
-        .header-empresa h1 {
-            margin: 0;
+        .header h1 {
+            margin: 0 0 10px 0;
             font-size: 24px;
             font-weight: bold;
+            text-transform: uppercase;
         }
         
-        .header-empresa p {
-            margin: 5px 0 0 0;
+        .header .subtitle {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
+        .header .company-info {
             font-size: 14px;
+            margin: 5px 0;
         }
         
         .periodo-info {
-            background: #f8f9fa;
-            padding: 10px;
-            border-left: 4px solid #007bff;
-            margin-bottom: 20px;
-        }
-        
-        .table-sm th,
-        .table-sm td {
-            padding: 0.3rem;
-            font-size: 11px;
-        }
-        
-        .resumen-box {
-            background: #e9ecef;
+            background-color: #f0f0f0;
             padding: 15px;
-            border-radius: 5px;
+            border: 2px solid #000;
             margin-bottom: 20px;
+            text-align: center;
         }
         
-        .resumen-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 5px 0;
-            border-bottom: 1px dotted #6c757d;
-        }
-        
-        .resumen-item:last-child {
-            border-bottom: none;
+        .periodo-info h2 {
+            margin: 0;
+            font-size: 18px;
             font-weight: bold;
-            font-size: 14px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
         }
         
         .section-title {
-            background: #007bff;
-            color: white;
-            padding: 8px 15px;
-            margin: 20px 0 10px 0;
-            border-radius: 4px;
+            background-color: #000;
+            color: #fff;
+            padding: 10px;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 15px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        
+        .resumen-boxes {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .resumen-box {
+            flex: 1;
+            border: 2px solid #000;
+            padding: 15px;
+            margin: 0 5px 10px 5px;
+            text-align: center;
+            min-width: 200px;
+        }
+        
+        .resumen-box h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            background-color: #f0f0f0;
+            padding: 5px;
+            border: 1px solid #000;
+        }
+        
+        .resumen-box .amount {
+            font-size: 18px;
+            font-weight: bold;
+            color: #000;
+        }
+        
+        .resumen-box .count {
+            font-size: 12px;
+            margin-top: 5px;
+            color: #666;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        table, th, td {
+            border: 1px solid #000;
+        }
+        
+        th {
+            background-color: #f0f0f0;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        
+        td {
+            padding: 6px;
+            font-size: 10px;
+            vertical-align: top;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .total-row {
+            background-color: #f9f9f9;
             font-weight: bold;
         }
         
-        .btn-print {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
+        .total-general {
+            background-color: #000;
+            color: #fff;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 30px;
+            font-style: italic;
+            background-color: #f9f9f9;
+            border: 2px dashed #ccc;
+            margin: 20px 0;
+        }
+        
+        .footer-info {
+            margin-top: 40px;
+            border-top: 2px solid #000;
+            padding-top: 20px;
+            font-size: 10px;
+        }
+        
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 50px;
+        }
+        
+        .signature-box {
+            text-align: center;
+            width: 200px;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+        }
+        
+        @media print {
+            body {
+                margin: 10px;
+            }
+            
+            .section {
+                page-break-inside: avoid;
+            }
+            
+            .resumen-boxes {
+                page-break-inside: avoid;
+            }
+            
+            table {
+                page-break-inside: auto;
+            }
+            
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            
+            .header {
+                page-break-after: avoid;
+            }
+            
+            .periodo-info {
+                page-break-after: avoid;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Botón de impresión -->
-    <div class="no-print">
-        <button class="btn btn-success btn-print" onclick="window.print();">
-            <i class="fas fa-print"></i> Imprimir
-        </button>
+    <!-- Encabezado -->
+    <div class="header">
+        <h1>{{ $empresa->nombre ?? 'ESCLERÓPTICA' }}</h1>
+        <div class="subtitle">ROL DE PAGO</div>
+        <div class="company-info">Reporte generado el {{ date('d/m/Y H:i') }}</div>
     </div>
 
-    <div class="container-fluid">
-        <!-- Encabezado de la empresa -->
-        <div class="header-empresa">
-            <h1>{{ $empresa->nombre ?? 'EMPRESA' }}</h1>
-            <p>ROL DE PAGO - PERÍODO {{ strtoupper(date('F', mktime(0, 0, 0, $mes, 1))) }} {{ $anio }}</p>
+    <!-- Información del Período -->
+    <div class="periodo-info">
+        <h2>
+            PERÍODO: {{ strtoupper(date('F', mktime(0, 0, 0, $mes, 1))) }} {{ $anio }}
             @if($usuario)
-                <p><strong>EMPLEADO: {{ strtoupper($usuario) }}</strong></p>
+                - EMPLEADO: {{ strtoupper($usuario) }}
             @else
-                <p><strong>TODOS LOS EMPLEADOS</strong></p>
+                - TODOS LOS EMPLEADOS
             @endif
-            <small>Generado el: {{ date('d/m/Y H:i') }}</small>
-        </div>
+        </h2>
+    </div>
 
-        <!-- Información del período -->
-        <div class="periodo-info">
-            <div class="row">
-                <div class="col-md-4">
-                    <strong>Período:</strong> {{ str_pad($mes, 2, '0', STR_PAD_LEFT) }}/{{ $anio }}
-                </div>
-                <div class="col-md-4">
-                    <strong>Mes:</strong> {{ strtoupper(date('F', mktime(0, 0, 0, $mes, 1))) }}
-                </div>
-                <div class="col-md-4">
-                    <strong>Año:</strong> {{ $anio }}
-                </div>
-            </div>
-        </div>
-
-        @if(isset($detallesSueldo) && count($detallesSueldo) > 0)
-        <!-- Sección de Detalles de Sueldo -->
-        <div class="section-title">
-            <i class="fas fa-user-tie"></i> DETALLES DE SUELDO
-        </div>
-        
-        <!-- Resumen de detalles -->
+    <!-- Resumen de Estadísticas de Ventas -->
+    <div class="resumen-boxes">
         <div class="resumen-box">
-            <div class="resumen-item">
-                <span>Total de Detalles:</span>
-                <span>{{ $detallesSueldo->count() }}</span>
-            </div>
-            <div class="resumen-item">
-                <span>Valor Total:</span>
-                <span>${{ number_format($detallesSueldo->sum('valor'), 2, ',', '.') }}</span>
-            </div>
-            <div class="resumen-item">
-                <span>Promedio por Detalle:</span>
-                <span>${{ number_format($detallesSueldo->count() > 0 ? $detallesSueldo->sum('valor') / $detallesSueldo->count() : 0, 2, ',', '.') }}</span>
-            </div>
+            <h3>Total de Ventas</h3>
+            <div class="amount">${{ number_format($pedidos->sum('total'), 2, ',', '.') }}</div>
+            <div class="count">{{ $pedidos->count() }} pedidos</div>
         </div>
+        <div class="resumen-box">
+            <h3>Saldo Pendiente</h3>
+            <div class="amount">${{ number_format($pedidos->sum('saldo'), 2, ',', '.') }}</div>
+            <div class="count">Por cobrar</div>
+        </div>
+        <div class="resumen-box">
+            <h3>Retiros de Caja</h3>
+            <div class="amount">$-{{ number_format(abs($retirosCaja->sum('valor')), 2, ',', '.') }}</div>
+            <div class="count">{{ $retirosCaja->count() }} retiros</div>
+        </div>
+        <div class="resumen-box">
+            <h3>Pedidos Realizados</h3>
+            <div class="amount">{{ $pedidos->count() }}</div>
+            <div class="count">Total órdenes</div>
+        </div>
+        <div class="resumen-box">
+            <h3>Balance Neto</h3>
+            <div class="amount">${{ number_format($pedidos->sum('total') + $retirosCaja->sum('valor'), 2, ',', '.') }}</div>
+            <div class="count">Ventas - Retiros</div>
+        </div>
+    </div>
 
-        <!-- Tabla de detalles -->
-        <div class="table-responsive">
-            <table class="table table-bordered table-sm">
-                <thead class="thead-dark">
+    <!-- Pedidos por Sucursal -->
+    <div class="section">
+        <div class="section-title">Pedidos por Sucursal</div>
+        @if($pedidos->count() > 0)
+            <table>
+                <thead>
                     <tr>
-                        <th>FECHA</th>
-                        <th>EMPLEADO</th>
-                        <th>DESCRIPCIÓN</th>
-                        <th>VALOR</th>
+                        <th style="width: 60%;">Sucursal</th>
+                        <th style="width: 20%;">Pedidos</th>
+                        <th style="width: 20%;">Total</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($detallesSueldo as $detalle)
-                    <tr>
-                        <td>{{ $detalle->created_at ? $detalle->created_at->format('d/m/Y') : 'N/A' }}</td>
-                        <td>{{ $detalle->user ? $detalle->user->name : 'N/A' }}</td>
-                        <td>{{ $detalle->descripcion }}</td>
-                        <td class="text-right">${{ number_format($detalle->valor, 2, ',', '.') }}</td>
-                    </tr>
+                    @php
+                        $pedidosPorEmpresa = $pedidos->groupBy('empresa_id');
+                    @endphp
+                    
+                    @foreach($pedidosPorEmpresa as $empresaId => $pedidosEmpresa)
+                        @php
+                            $nombreEmpresa = 'SIN SUCURSAL';
+                            if ($empresaId && $pedidosEmpresa->first()->empresa) {
+                                $nombreEmpresa = $pedidosEmpresa->first()->empresa->nombre;
+                            }
+                        @endphp
+                        <tr>
+                            <td>{{ $nombreEmpresa }}</td>
+                            <td class="text-center">{{ $pedidosEmpresa->count() }}</td>
+                            <td class="text-right">${{ number_format($pedidosEmpresa->sum('total'), 2, ',', '.') }}</td>
+                        </tr>
                     @endforeach
+                    <tr class="total-general">
+                        <td class="text-center">TOTAL GENERAL</td>
+                        <td class="text-center">{{ $pedidos->count() }}</td>
+                        <td class="text-right">${{ number_format($pedidos->sum('total'), 2, ',', '.') }}</td>
+                    </tr>
                 </tbody>
-                <tfoot class="bg-success text-white">
-                    <tr>
-                        <th colspan="3">TOTAL DETALLES</th>
-                        <th class="text-right">${{ number_format($detallesSueldo->sum('valor'), 2, ',', '.') }}</th>
-                    </tr>
-                </tfoot>
             </table>
-        </div>
+        @else
+            <div class="no-data">
+                No se encontraron pedidos para el período seleccionado
+            </div>
         @endif
+    </div>
 
-        @if(isset($retirosCaja) && count($retirosCaja) > 0)
-        <!-- Sección de Retiros de Caja -->
-        <div class="section-title page-break">
-            <i class="fas fa-cash-register"></i> RETIROS DE CAJA
+    @if($detallesSueldo->count() > 0)
+    <!-- Sección: Detalles de Sueldo -->
+    <div class="section">
+        <div class="section-title">Detalles de Sueldo</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Fecha</th>
+                    <th style="width: 20%;">Empleado</th>
+                    <th style="width: 45%;">Descripción</th>
+                    <th style="width: 20%;">Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($detallesSueldo as $detalle)
+                <tr>
+                    <td class="text-center">{{ $detalle->created_at ? $detalle->created_at->format('d/m/Y') : 'N/A' }}</td>
+                    <td>{{ $detalle->user ? $detalle->user->name : 'N/A' }}</td>
+                    <td>{{ $detalle->descripcion }}</td>
+                    <td class="text-right">${{ number_format($detalle->valor, 2, ',', '.') }}</td>
+                </tr>
+                @endforeach
+                <tr class="total-general">
+                    <td colspan="3" class="text-center">TOTAL DETALLES DE SUELDO</td>
+                    <td class="text-right">${{ number_format($detallesSueldo->sum('valor'), 2, ',', '.') }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    @else
+    <div class="section">
+        <div class="section-title">Detalles de Sueldo</div>
+        <div class="no-data">
+            No se encontraron detalles de sueldo para el período seleccionado
         </div>
-        
-        <!-- Resumen de retiros -->
-        <div class="resumen-box">
-            <div class="resumen-item">
-                <span>Total de Retiros:</span>
-                <span>{{ $retirosCaja->count() }}</span>
-            </div>
-            <div class="resumen-item">
-                <span>Monto Total:</span>
-                <span>${{ number_format(abs($retirosCaja->sum('valor')), 2, ',', '.') }}</span>
-            </div>
-            <div class="resumen-item">
-                <span>Promedio por Retiro:</span>
-                <span>${{ number_format($retirosCaja->count() > 0 ? abs($retirosCaja->sum('valor')) / $retirosCaja->count() : 0, 2, ',', '.') }}</span>
-            </div>
-        </div>
+    </div>
+    @endif
 
-        <!-- Tabla de retiros -->
-        <div class="table-responsive">
-            <table class="table table-bordered table-sm">
-                <thead class="thead-dark">
-                    <tr>
-                        <th>FECHA</th>
-                        <th>USUARIO</th>
-                        <th>EMPRESA</th>
-                        <th>MOTIVO</th>
-                        <th>VALOR</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($retirosCaja as $retiro)
-                    <tr>
-                        <td>{{ $retiro->created_at->format('d/m/Y H:i') }}</td>
-                        <td>{{ $retiro->user ? $retiro->user->name : 'N/A' }}</td>
-                        <td>{{ $retiro->empresa ? $retiro->empresa->nombre : 'N/A' }}</td>
-                        <td>{{ $retiro->motivo }}</td>
-                        <td class="text-right">${{ number_format(abs($retiro->valor), 2, ',', '.') }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-                <tfoot class="bg-danger text-white">
-                    <tr>
-                        <th colspan="4">TOTAL RETIROS</th>
-                        <th class="text-right">${{ number_format(abs($retirosCaja->sum('valor')), 2, ',', '.') }}</th>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-        @endif
-
-        @if(isset($historialCaja) && count($historialCaja) > 0)
-        <!-- Sección de Historial de Caja (Control de Horas) -->
-        <div class="section-title page-break">
-            <i class="fas fa-clock"></i> CONTROL DE HORAS TRABAJADAS
-        </div>
-        
+    @if(isset($historialCaja) && count($historialCaja) > 0)
+    <!-- Sección: Historial de Caja (Horas Trabajadas) -->
+    <div class="section">
         @php
-            // Calcular totales de horas
-            $totalMinutosGlobal = $historialCaja->where('total_minutos', '!=', null)->sum('total_minutos');
+            // Calcular totales usando minutos para mayor precisión (como en el componente original)
+            $totalMinutosGlobal = 0;
+            if (isset($historialCaja) && count($historialCaja) > 0) {
+                $totalMinutosGlobal = $historialCaja->where('total_minutos', '!=', null)->sum('total_minutos');
+            }
             $totalHorasCalculadas = intval($totalMinutosGlobal / 60);
             $totalMinutosRestantes = $totalMinutosGlobal % 60;
-            $diasCompletos = $historialCaja->where('estado', 'Completo')->count();
-            $promedioMinutos = $diasCompletos > 0 ? $totalMinutosGlobal / $diasCompletos : 0;
-            $promedioHoras = intval($promedioMinutos / 60);
-            $promedioMinutosRestantes = intval($promedioMinutos % 60);
         @endphp
+        <div class="section-title">Historial de Caja - Control de Horas</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 12%;">Fecha</th>
+                    <th style="width: 18%;">Empleado</th>
+                    <th style="width: 15%;">Empresa</th>
+                    <th style="width: 12%;">Apertura</th>
+                    <th style="width: 12%;">Cierre</th>
+                    <th style="width: 15%;">Horas Trabajadas</th>
+                    <th style="width: 16%;">Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($historialCaja as $historial)
+                <tr>
+                    <td class="text-center">{{ $historial->fecha_formateada ?? 'N/A' }}</td>
+                    <td>{{ $historial->usuario ?? 'N/A' }}</td>
+                    <td>{{ $historial->empresa ?? 'N/A' }}</td>
+                    <td class="text-center">{{ $historial->hora_apertura ?? 'N/A' }}</td>
+                    <td class="text-center">{{ $historial->hora_cierre ?? 'N/A' }}</td>
+                    <td class="text-center">
+                        @if(isset($historial->horas_formateadas))
+                            {{ $historial->horas_formateadas }}
+                        @elseif(isset($historial->horas_trabajadas) && $historial->horas_trabajadas > 0)
+                            {{ $historial->horas_trabajadas }}h
+                            @if(isset($historial->minutos_trabajados) && $historial->minutos_trabajados > 0)
+                                {{ $historial->minutos_trabajados }}m
+                            @endif
+                        @else
+                            Sin registros
+                        @endif
+                    </td>
+                    <td>{{ $historial->estado ?? '' }}</td>
+                </tr>
+                @endforeach
+                <tr class="total-general">
+                    <td colspan="5" class="text-center">TOTAL HORAS TRABAJADAS</td>
+                    <td class="text-center">{{ $totalHorasCalculadas }}h {{ $totalMinutosRestantes }}m</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    @endif
 
-        <!-- Resumen de horas -->
-        <div class="resumen-box">
-            <div class="resumen-item">
-                <span>Total de Días:</span>
-                <span>{{ $historialCaja->count() }}</span>
-            </div>
-            <div class="resumen-item">
-                <span>Días Completos:</span>
-                <span>{{ $diasCompletos }}</span>
-            </div>
-            <div class="resumen-item">
-                <span>Total Horas Trabajadas:</span>
-                <span>{{ $totalHorasCalculadas }}h {{ $totalMinutosRestantes }}m</span>
-            </div>
-            <div class="resumen-item">
-                <span>Promedio por Día:</span>
-                <span>{{ $promedioHoras }}h {{ $promedioMinutosRestantes }}m</span>
-            </div>
+    @if($retirosCaja->count() > 0)
+    <!-- Sección: Retiros de Caja -->
+    <div class="section">
+        <div class="section-title">Retiros de Caja</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 12%;">Fecha</th>
+                    <th style="width: 10%;">Hora</th>
+                    <th style="width: 18%;">Empleado</th>
+                    <th style="width: 15%;">Empresa</th>
+                    <th style="width: 25%;">Motivo</th>
+                    <th style="width: 20%;">Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($retirosCaja as $retiro)
+                <tr>
+                    <td class="text-center">{{ $retiro->created_at ? $retiro->created_at->format('d/m/Y') : 'N/A' }}</td>
+                    <td class="text-center">{{ $retiro->created_at ? $retiro->created_at->format('H:i') : 'N/A' }}</td>
+                    <td>{{ $retiro->user ? $retiro->user->name : 'N/A' }}</td>
+                    <td>{{ $retiro->empresa ? $retiro->empresa->nombre : 'N/A' }}</td>
+                    <td>{{ $retiro->motivo }}</td>
+                    <td class="text-right">${{ number_format(abs($retiro->valor), 2, ',', '.') }}</td>
+                </tr>
+                @endforeach
+                <tr class="total-general">
+                    <td colspan="5" class="text-center">TOTAL RETIROS DE CAJA</td>
+                    <td class="text-right">$-{{ number_format(abs($retirosCaja->sum('valor')), 2, ',', '.') }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    @else
+    <div class="section">
+        <div class="section-title">Retiros de Caja</div>
+        <div class="no-data">
+            No se encontraron retiros de caja para el período seleccionado
         </div>
+    </div>
+    @endif
 
-        <!-- Tabla de control de horas -->
-        <div class="table-responsive">
-            <table class="table table-bordered table-sm">
-                <thead class="thead-dark">
-                    <tr>
-                        <th>FECHA</th>
-                        <th>DÍA</th>
-                        <th>USUARIO</th>
-                        <th>EMPRESA</th>
-                        <th>APERTURA</th>
-                        <th>CIERRE</th>
-                        <th>HORAS TRABAJADAS</th>
-                        <th>ESTADO</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($historialCaja as $dia)
-                    <tr class="{{ $dia->estado == 'Completo' ? 'table-success' : ($dia->estado == 'Solo apertura' ? 'table-warning' : 'table-danger') }}">
-                        <td>{{ $dia->fecha_formateada }}</td>
-                        <td>{{ ucfirst($dia->dia_semana) }}</td>
-                        <td>{{ $dia->usuario }}</td>
-                        <td>{{ $dia->empresa }}</td>
-                        <td>{{ $dia->hora_apertura ?: '-' }}</td>
-                        <td>{{ $dia->hora_cierre ?: '-' }}</td>
-                        <td class="text-center">{{ $dia->horas_formateadas }}</td>
-                        <td>
-                            <span class="badge badge-{{ $dia->estado == 'Completo' ? 'success' : ($dia->estado == 'Solo apertura' ? 'warning' : 'danger') }}">
-                                {{ strtoupper($dia->estado) }}
-                            </span>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-                <tfoot class="bg-primary text-white">
-                    <tr>
-                        <th colspan="6">TOTALES</th>
-                        <th class="text-center">{{ $totalHorasCalculadas }}h {{ $totalMinutosRestantes }}m</th>
-                        <th>{{ $diasCompletos }} DÍAS</th>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-        @endif
+    <!-- Resumen Final -->
+    <div class="section">
+        <div class="section-title">Resumen Final del Rol de Pago</div>
+        <table>
+            <tbody>
+                <tr>
+                    <td style="width: 70%; font-weight: bold; background-color: #f0f0f0;">TOTAL DE VENTAS</td>
+                    <td style="width: 30%; text-align: right; font-weight: bold;">${{ number_format($pedidos->sum('total'), 2, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold; background-color: #f0f0f0;">SALDO PENDIENTE</td>
+                    <td style="text-align: right; font-weight: bold;">${{ number_format($pedidos->sum('saldo'), 2, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold; background-color: #f0f0f0;">TOTAL RETIROS DE CAJA</td>
+                    <td style="text-align: right; font-weight: bold;">$-{{ number_format(abs($retirosCaja->sum('valor')), 2, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold; background-color: #f0f0f0;">TOTAL DETALLES DE SUELDO</td>
+                    <td style="text-align: right; font-weight: bold;">${{ number_format($detallesSueldo->sum('valor'), 2, ',', '.') }}</td>
+                </tr>
+                <tr>
+                    <td style="font-weight: bold; background-color: #f0f0f0;">TOTAL HORAS TRABAJADAS</td>
+                    <td style="text-align: right; font-weight: bold;">
+                        @if(isset($totalHorasCalculadas))
+                            {{ $totalHorasCalculadas }}h {{ $totalMinutosRestantes }}m
+                        @else
+                            0h 0m
+                        @endif
+                    </td>
+                </tr>
+                <tr class="total-general">
+                    <td class="text-center">BALANCE NETO (VENTAS - RETIROS)</td>
+                    <td class="text-right">${{ number_format($pedidos->sum('total') + $retirosCaja->sum('valor'), 2, ',', '.') }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
-        <!-- Resumen General -->
-        <div class="section-title">
-            <i class="fas fa-calculator"></i> RESUMEN GENERAL
-        </div>
-        
-        <div class="row">
-            <div class="col-md-6">
-                <div class="resumen-box">
-                    <h5 class="text-center mb-3">INGRESOS</h5>
-                    <div class="resumen-item">
-                        <span>Detalles de Sueldo:</span>
-                        <span>${{ number_format($detallesSueldo->sum('valor') ?? 0, 2, ',', '.') }}</span>
-                    </div>
-                    <div class="resumen-item">
-                        <span><strong>TOTAL INGRESOS:</strong></span>
-                        <span><strong>${{ number_format($detallesSueldo->sum('valor') ?? 0, 2, ',', '.') }}</strong></span>
-                    </div>
-                </div>
+    <!-- Información del pie -->
+    <div class="footer-info">
+        <div style="display: flex; justify-content: space-between;">
+            <div>
+                <strong>Período:</strong> {{ str_pad($mes, 2, '0', STR_PAD_LEFT) }}/{{ $anio }}<br>
+                @if($usuario)
+                <strong>Empleado:</strong> {{ strtoupper($usuario) }}<br>
+                @endif
+                <strong>Fecha de generación:</strong> {{ date('d/m/Y H:i:s') }}
             </div>
-            <div class="col-md-6">
-                <div class="resumen-box">
-                    <h5 class="text-center mb-3">EGRESOS</h5>
-                    <div class="resumen-item">
-                        <span>Retiros de Caja:</span>
-                        <span>${{ number_format(abs($retirosCaja->sum('valor') ?? 0), 2, ',', '.') }}</span>
-                    </div>
-                    <div class="resumen-item">
-                        <span><strong>TOTAL EGRESOS:</strong></span>
-                        <span><strong>${{ number_format(abs($retirosCaja->sum('valor') ?? 0), 2, ',', '.') }}</strong></span>
-                    </div>
-                </div>
+            <div>
+                <strong>Total de registros:</strong><br>
+                - Pedidos: {{ $pedidos->count() }}<br>
+                - Detalles de sueldo: {{ $detallesSueldo->count() }}<br>
+                - Retiros de caja: {{ $retirosCaja->count() }}<br>
+                - Sesiones de trabajo: {{ count($historialCaja ?? []) }}
             </div>
-        </div>
-        
-        <div class="row mt-3">
-            <div class="col-12">
-                <div class="resumen-box text-center">
-                    @php
-                        $totalIngresos = $detallesSueldo->sum('valor') ?? 0;
-                        $totalEgresos = abs($retirosCaja->sum('valor') ?? 0);
-                        $saldoNeto = $totalIngresos - $totalEgresos;
-                    @endphp
-                    <h4>SALDO NETO: 
-                        <span class="badge badge-{{ $saldoNeto >= 0 ? 'success' : 'danger' }} p-2">
-                            ${{ number_format($saldoNeto, 2, ',', '.') }}
-                        </span>
-                    </h4>
-                </div>
-            </div>
-        </div>
-
-        <!-- Información de generación -->
-        <div class="text-center mt-4 text-muted">
-            <small>
-                Reporte generado automáticamente el {{ date('d/m/Y H:i:s') }} <br>
-                Sistema de Gestión {{ $empresa->nombre ?? 'OPTECU' }}
-            </small>
         </div>
     </div>
 
-    <!-- Font Awesome para iconos -->
-    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+    <!-- Firmas -->
+    <div class="signatures">
+        <div class="signature-box">
+            <div>Elaborado por</div>
+        </div>
+        <div class="signature-box">
+            <div>Revisado por</div>
+        </div>
+        <div class="signature-box">
+            <div>Aprobado por</div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-imprimir cuando la página carga
+        window.addEventListener('load', function() {
+            window.print();
+        });
+    </script>
 </body>
 </html>

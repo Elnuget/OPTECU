@@ -314,6 +314,18 @@ class SueldoController extends Controller
         // Si no se especifica mes, usar el actual
         if (!$mes) $mes = date('m');
         
+        // Obtener pedidos para estadísticas
+        $pedidosQuery = \App\Models\Pedido::with('empresa')
+            ->whereYear('fecha', $anio)
+            ->whereMonth('fecha', $mes);
+            
+        // Si se seleccionó un usuario específico
+        if ($usuario) {
+            $pedidosQuery->where('usuario', $usuario);
+        }
+        
+        $pedidos = $pedidosQuery->orderBy('fecha', 'desc')->get();
+        
         // Obtener detalles de sueldo con filtros
         $detallesSueldoQuery = DetalleSueldo::with('user')
             ->where('ano', $anio)
@@ -369,6 +381,7 @@ class SueldoController extends Controller
         $empresa = \App\Models\Empresa::first();
         
         return view('sueldos.imprimir-rol-pago', compact(
+            'pedidos',
             'detallesSueldo', 
             'retirosCaja', 
             'historialCaja', 
