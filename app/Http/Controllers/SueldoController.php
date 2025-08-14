@@ -99,7 +99,7 @@ class SueldoController extends Controller
             $detallesSueldo = $detallesSueldoQuery->orderBy('created_at', 'desc')->get();
             
             // Obtener historial de caja (aperturas y cierres)
-            $cashHistoryQuery = CashHistory::with('user')
+            $cashHistoryQuery = CashHistory::with(['user', 'empresa'])
                 ->whereYear('created_at', $anio)
                 ->whereMonth('created_at', $mes);
                 
@@ -229,15 +229,17 @@ class SueldoController extends Controller
     {
         $historialProcesado = collect();
         
-        // Agrupar por usuario y fecha
+        // Agrupar por usuario, empresa y fecha
         $agrupado = $cashHistoryRaw->groupBy(function($item) {
-            return $item->user->name . '_' . $item->created_at->format('Y-m-d');
+            $empresaNombre = $item->empresa ? $item->empresa->nombre : 'Sin empresa';
+            return $item->user->name . '_' . $empresaNombre . '_' . $item->created_at->format('Y-m-d');
         });
         
         foreach ($agrupado as $key => $registrosDia) {
-            $partes = explode('_', $key);
+            $partes = explode('_', $key, 3); // Limitar a 3 partes
             $usuario = $partes[0];
-            $fecha = $partes[1];
+            $empresa = $partes[1];
+            $fecha = $partes[2];
             
             // Buscar apertura y cierre
             $apertura = $registrosDia->where('estado', 'Apertura')->first();
@@ -245,6 +247,8 @@ class SueldoController extends Controller
             
             // Calcular horas trabajadas
             $horasTrabajadas = null;
+            $minutosTrabajados = null;
+            $totalMinutos = null;
             $horaApertura = null;
             $horaCierre = null;
             $estado = 'Sin registros';
@@ -255,8 +259,9 @@ class SueldoController extends Controller
                 
                 if ($cierre) {
                     $horaCierre = $cierre->created_at->format('H:i:s');
-                    $horasTrabajadas = $apertura->created_at->diffInHours($cierre->created_at);
-                    $minutosTrabajados = $apertura->created_at->diffInMinutes($cierre->created_at) % 60;
+                    $totalMinutos = $apertura->created_at->diffInMinutes($cierre->created_at);
+                    $horasTrabajadas = intval($totalMinutos / 60);
+                    $minutosTrabajados = $totalMinutos % 60;
                     $horasFormateadas = $horasTrabajadas . 'h ' . $minutosTrabajados . 'm';
                     $estado = 'Completo';
                 } else {
@@ -272,12 +277,15 @@ class SueldoController extends Controller
             
             $historialProcesado->push((object) [
                 'usuario' => $usuario,
+                'empresa' => $empresa,
                 'fecha' => $fecha,
                 'fecha_formateada' => Carbon::parse($fecha)->format('d/m/Y'),
                 'dia_semana' => Carbon::parse($fecha)->locale('es')->dayName,
                 'hora_apertura' => $horaApertura,
                 'hora_cierre' => $horaCierre,
                 'horas_trabajadas' => $horasTrabajadas,
+                'minutos_trabajados' => $minutosTrabajados,
+                'total_minutos' => $totalMinutos,
                 'horas_formateadas' => $horasFormateadas,
                 'estado' => $estado,
                 'monto_apertura' => $apertura ? $apertura->monto : null,

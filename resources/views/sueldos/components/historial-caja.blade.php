@@ -20,17 +20,22 @@
         <!-- Resumen de Horas Trabajadas -->
         <div class="row p-3">
             @php
-                $totalHorasNumericas = $historialCaja->where('horas_trabajadas', '!=', null)->sum('horas_trabajadas');
+                // Calcular totales correctamente sumando minutos
+                $totalMinutosGlobal = $historialCaja->where('total_minutos', '!=', null)->sum('total_minutos');
+                $totalHorasCalculadas = intval($totalMinutosGlobal / 60);
+                $totalMinutosRestantes = $totalMinutosGlobal % 60;
                 $diasCompletos = $historialCaja->where('estado', 'Completo')->count();
                 $diasSoloApertura = $historialCaja->where('estado', 'Solo apertura')->count();
-                $promedioHoras = $diasCompletos > 0 ? $totalHorasNumericas / $diasCompletos : 0;
+                $promedioMinutos = $diasCompletos > 0 ? $totalMinutosGlobal / $diasCompletos : 0;
+                $promedioHoras = intval($promedioMinutos / 60);
+                $promedioMinutosRestantes = intval($promedioMinutos % 60);
             @endphp
             <div class="col-md-3">
                 <div class="info-box bg-success">
                     <span class="info-box-icon"><i class="fas fa-clock"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">TOTAL HORAS</span>
-                        <span class="info-box-number">{{ number_format($totalHorasNumericas, 1) }}H</span>
+                        <span class="info-box-number">{{ $totalHorasCalculadas }}h {{ $totalMinutosRestantes }}m</span>
                     </div>
                 </div>
             </div>
@@ -48,7 +53,7 @@
                     <span class="info-box-icon"><i class="fas fa-chart-line"></i></span>
                     <div class="info-box-content">
                         <span class="info-box-text">PROMEDIO/DÍA</span>
-                        <span class="info-box-number">{{ number_format($promedioHoras, 1) }}H</span>
+                        <span class="info-box-number">{{ $promedioHoras }}h {{ $promedioMinutosRestantes }}m</span>
                     </div>
                 </div>
             </div>
@@ -71,6 +76,7 @@
                         <th>FECHA</th>
                         <th>DÍA</th>
                         <th>EMPLEADO</th>
+                        <th>EMPRESA</th>
                         <th>APERTURA</th>
                         <th>CIERRE</th>
                         <th>HORAS TRABAJADAS</th>
@@ -95,6 +101,9 @@
                             <span class="badge badge-secondary">{{ strtoupper($registro->dia_semana) }}</span>
                         </td>
                         <td>{{ $registro->usuario }}</td>
+                        <td>
+                            <small class="badge badge-info">{{ $registro->empresa }}</small>
+                        </td>
                         <td>
                             @if($registro->hora_apertura)
                                 <i class="fas fa-sign-in-alt text-success"></i> 
@@ -160,9 +169,9 @@
                 </tbody>
                 <tfoot class="bg-light">
                     <tr>
-                        <th colspan="5">TOTALES</th>
+                        <th colspan="6">TOTALES</th>
                         <th>
-                            <span class="badge badge-primary">{{ number_format($totalHorasNumericas, 1) }} HORAS</span>
+                            <span class="badge badge-primary">{{ $totalHorasCalculadas }}h {{ $totalMinutosRestantes }}m</span>
                         </th>
                         <th colspan="2">{{ $historialCaja->count() }} DÍAS REGISTRADOS</th>
                         <th>
