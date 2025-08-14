@@ -33,16 +33,12 @@ class SueldoController extends Controller
         $detallesSueldo = collect();
         $historialCaja = collect();
         $usuariosConPedidos = [];
-        $anio = $request->get('anio');
-        $mes = $request->get('mes');
+        $anio = $request->get('anio', date('Y')); // Por defecto el año actual
+        $mes = $request->get('mes', date('m')); // Por defecto el mes actual
         $usuario = $request->get('usuario');
         
         // Solo ejecutar consultas si se ha realizado una búsqueda
         if ($request->hasAny(['anio', 'mes', 'usuario']) && $request->isMethod('get')) {
-            // Si no se especifica año, usar el actual
-            if (!$anio) $anio = date('Y');
-            // Si no se especifica mes, usar el actual
-            if (!$mes) $mes = date('m');
             
             // Consultar los pedidos según los filtros
             $pedidosQuery = \App\Models\Pedido::whereYear('fecha', $anio)
@@ -133,11 +129,58 @@ class SueldoController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function create()
+    public function create(Request $request)
     {
         $usuarios = User::all();
         $empresas = Empresa::all();
-        return view('sueldos.create', compact('usuarios', 'empresas'));
+        
+        // Debug: mostrar parámetros recibidos
+        if (config('app.debug')) {
+            \Log::info('SueldoController@create - Parámetros recibidos:', [
+                'usuario' => $request->get('usuario'),
+                'mes' => $request->get('mes'),
+                'anio' => $request->get('anio')
+            ]);
+        }
+        
+        // Obtener usuario preseleccionado si viene de los filtros
+        $usuarioPreseleccionado = null;
+        if ($request->get('usuario')) {
+            $nombreUsuario = $request->get('usuario');
+            
+            // Buscar el usuario por nombre (varias estrategias)
+            $usuarioPreseleccionado = User::where('name', $nombreUsuario)->first();
+            
+            // Si no se encuentra, buscar ignorando case
+            if (!$usuarioPreseleccionado) {
+                $usuarioPreseleccionado = User::whereRaw('UPPER(name) = UPPER(?)', [$nombreUsuario])->first();
+            }
+            
+            // Si aún no se encuentra, buscar por coincidencia parcial
+            if (!$usuarioPreseleccionado) {
+                $usuarioPreseleccionado = User::where('name', 'LIKE', '%' . $nombreUsuario . '%')->first();
+            }
+            
+            if (config('app.debug')) {
+                \Log::info('Usuario encontrado:', [
+                    'buscado' => $nombreUsuario,
+                    'encontrado' => $usuarioPreseleccionado ? $usuarioPreseleccionado->name : 'NULL'
+                ]);
+            }
+        }
+        
+        // Obtener empresa Matriz por defecto
+        $empresaMatriz = Empresa::where('nombre', 'Matriz')->first();
+        
+        // Datos preseleccionados
+        $preselectedData = [
+            'usuario' => $usuarioPreseleccionado,
+            'empresa_matriz' => $empresaMatriz,
+            'mes' => $request->get('mes'),
+            'anio' => $request->get('anio'),
+        ];
+        
+        return view('sueldos.create', compact('usuarios', 'empresas', 'preselectedData'));
     }
 
     /**

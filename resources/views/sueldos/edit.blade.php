@@ -6,6 +6,12 @@
 
 @section('title', 'EDITAR SUELDO')
 
+@section('adminlte_css')
+    {{-- Add Select2 CSS from CDN --}}
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap4-theme@1.0.0/dist/select2-bootstrap4.min.css" rel="stylesheet" />
+@stop
+
 @section('content_header')
     <h1>EDITAR SUELDO</h1>
 @stop
@@ -196,12 +202,16 @@
 @stop
 
 @section('js')
+{{-- Add Select2 JS from CDN --}}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <script>
 $(document).ready(function() {
     // Inicializar Select2
     $('.select2').select2({
         placeholder: 'SELECCIONAR...',
-        allowClear: true
+        allowClear: true,
+        theme: 'bootstrap4'
     });
     
     // Mostrar nombre del archivo seleccionado

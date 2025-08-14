@@ -16,7 +16,7 @@
                         <label for="anio">AÑO</label>
                         <select class="form-control" id="anio" name="anio">
                             @for ($i = date('Y'); $i >= date('Y')-5; $i--)
-                                <option value="{{ $i }}" {{ request('anio') == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                <option value="{{ $i }}" {{ (request('anio') ?: date('Y')) == $i ? 'selected' : '' }}>{{ $i }}</option>
                             @endfor
                         </select>
                     </div>
@@ -26,7 +26,7 @@
                         <label for="mes">MES</label>
                         <select class="form-control" id="mes" name="mes">
                             @for ($i = 1; $i <= 12; $i++)
-                                <option value="{{ $i }}" {{ request('mes') == $i ? 'selected' : '' }}>{{ strtoupper(date('F', mktime(0, 0, 0, $i, 1))) }}</option>
+                                <option value="{{ $i }}" {{ (request('mes') ?: date('m')) == $i ? 'selected' : '' }}>{{ strtoupper(date('F', mktime(0, 0, 0, $i, 1))) }}</option>
                             @endfor
                         </select>
                     </div>

@@ -7,7 +7,11 @@
     <div class="card-body">
         {{-- Botón Añadir Sueldo --}}
         <div class="btn-group mb-3">
-            <a type="button" class="btn btn-success" href="{{ route('sueldos.create') }}">REGISTRAR SUELDO</a>
+            <a type="button" class="btn btn-success" href="{{ route('sueldos.create', [
+                'usuario' => request('usuario'),
+                'mes' => request('mes') ?: date('m'),
+                'anio' => request('anio') ?: date('Y')
+            ]) }}">REGISTRAR SUELDO</a>
         </div>
 
         <div class="table-responsive">
