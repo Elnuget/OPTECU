@@ -52,14 +52,20 @@
             </div>
         </form>
 
-        @if(isset($pedidos) && count($pedidos) > 0)
-            @include('sueldos.components.estadisticas-resumen', ['pedidos' => $pedidos, 'retirosCaja' => $retirosCaja ?? null])
-            @include('sueldos.components.pedidos-por-sucursal', ['pedidos' => $pedidos])
-            @include('sueldos.components.retiros-caja', ['retirosCaja' => $retirosCaja ?? null])
-            @include('sueldos.components.tabla-pedidos', ['pedidos' => $pedidos])
+        @if(request()->hasAny(['anio', 'mes', 'usuario']) && request()->isMethod('get') && (request('anio') || request('mes') || request('usuario')))
+            @if(isset($pedidos) && count($pedidos) > 0)
+                @include('sueldos.components.estadisticas-resumen', ['pedidos' => $pedidos, 'retirosCaja' => $retirosCaja ?? null])
+                @include('sueldos.components.pedidos-por-sucursal', ['pedidos' => $pedidos])
+                @include('sueldos.components.retiros-caja', ['retirosCaja' => $retirosCaja ?? null])
+                @include('sueldos.components.tabla-pedidos', ['pedidos' => $pedidos])
+            @else
+                <div class="alert alert-info mt-3">
+                    NO SE ENCONTRARON PEDIDOS PARA LOS FILTROS SELECCIONADOS
+                </div>
+            @endif
         @else
-            <div class="alert alert-info mt-3">
-                NO SE ENCONTRARON PEDIDOS PARA LOS FILTROS SELECCIONADOS
+            <div class="alert alert-secondary mt-3">
+                <i class="fas fa-info-circle"></i> SELECCIONE LOS FILTROS Y PRESIONE "BUSCAR" PARA VER LOS RESULTADOS DEL ROL DE PAGO
             </div>
         @endif
     </div>
