@@ -10,7 +10,8 @@
                 <tr>
                     <th>FECHA</th>
                     <th>SUCURSAL</th>
-                    <th>MOTIVO</th>
+                    <th>USUARIO</th>
+                    <th></th>MOTIVO</th>
                     <th>VALOR</th>
                 </tr>
             </thead>
@@ -19,6 +20,7 @@
                 <tr>
                     <td>{{ $retiro->created_at->format('Y-m-d H:i') }}</td>
                     <td>{{ $retiro->empresa ? $retiro->empresa->nombre : 'SIN SUCURSAL' }}</td>
+                    <td>{{ $retiro->user ? $retiro->user->name : 'N/A' }}</td>
                     <td>{{ $retiro->motivo }}</td>
                     <td>$-{{ number_format(abs($retiro->valor), 2, ',', '.') }}</td>
                 </tr>
@@ -26,7 +28,7 @@
             </tbody>
             <tfoot>
                 <tr class="bg-secondary">
-                    <th colspan="3">TOTAL RETIROS</th>
+                    <th colspan="4">TOTAL RETIROS</th>
                     <th>$-{{ number_format(abs($retirosCaja->sum('valor')), 2, ',', '.') }}</th>
                 </tr>
             </tfoot>

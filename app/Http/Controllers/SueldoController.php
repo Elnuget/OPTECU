@@ -49,7 +49,8 @@ class SueldoController extends Controller
             ->toArray();
         
         // Obtener los retiros de caja para el mismo periodo
-        $cajaQuery = \App\Models\Caja::whereYear('created_at', $anio)
+        $cajaQuery = \App\Models\Caja::with(['user', 'empresa'])
+            ->whereYear('created_at', $anio)
             ->whereMonth('created_at', $mes)
             ->where(function($query) {
                 // Excluir registros que contengan "abono" o "deposito" en el motivo
