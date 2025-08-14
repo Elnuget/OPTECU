@@ -20,10 +20,24 @@ class DetalleSueldoController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(Request $request)
     {
         $usuarios = User::orderBy('name')->get();
-        return view('detalles-sueldo.create', compact('usuarios'));
+        
+        // Obtener datos pre-seleccionados desde la URL
+        $preselectedData = [
+            'usuario' => $request->get('usuario'),
+            'mes' => $request->get('mes', date('m')),
+            'anio' => $request->get('anio', date('Y'))
+        ];
+        
+        // Si hay un usuario preseleccionado, encontrar su ID
+        $usuarioPreseleccionado = null;
+        if ($preselectedData['usuario']) {
+            $usuarioPreseleccionado = User::where('name', $preselectedData['usuario'])->first();
+        }
+        
+        return view('detalles-sueldo.create', compact('usuarios', 'preselectedData', 'usuarioPreseleccionado'));
     }
 
     /**
@@ -39,10 +53,16 @@ class DetalleSueldoController extends Controller
             'valor' => 'required|numeric|min:0',
         ]);
 
-        DetalleSueldo::create($validatedData);
-
-        return redirect()->route('sueldos.index')
-                        ->with('success', 'DETALLE DE SUELDO CREADO EXITOSAMENTE');
+        $detalle = DetalleSueldo::create($validatedData);
+        
+        // Obtener datos del usuario para redireccionar con filtros
+        $usuario = User::find($validatedData['user_id']);
+        
+        return redirect()->route('sueldos.index', [
+            'anio' => $validatedData['ano'],
+            'mes' => $validatedData['mes'],
+            'usuario' => $usuario->name
+        ])->with('success', 'DETALLE DE SUELDO CREADO EXITOSAMENTE');
     }
 
     /**
@@ -76,9 +96,15 @@ class DetalleSueldoController extends Controller
         ]);
 
         $detalleSueldo->update($validatedData);
+        
+        // Obtener datos del usuario para redireccionar con filtros
+        $usuario = User::find($validatedData['user_id']);
 
-        return redirect()->route('sueldos.index')
-                        ->with('success', 'DETALLE DE SUELDO ACTUALIZADO EXITOSAMENTE');
+        return redirect()->route('sueldos.index', [
+            'anio' => $validatedData['ano'],
+            'mes' => $validatedData['mes'],
+            'usuario' => $usuario->name
+        ])->with('success', 'DETALLE DE SUELDO ACTUALIZADO EXITOSAMENTE');
     }
 
     /**
@@ -86,9 +112,23 @@ class DetalleSueldoController extends Controller
      */
     public function destroy(DetalleSueldo $detalleSueldo)
     {
+        // Guardar datos antes de eliminar
+        $usuario = $detalleSueldo->user;
+        $mes = $detalleSueldo->mes;
+        $ano = $detalleSueldo->ano;
+        
         $detalleSueldo->delete();
         
-        return redirect()->route('sueldos.index')
+        $redirectParams = [
+            'anio' => $ano,
+            'mes' => $mes,
+        ];
+        
+        if ($usuario) {
+            $redirectParams['usuario'] = $usuario->name;
+        }
+        
+        return redirect()->route('sueldos.index', $redirectParams)
                         ->with('success', 'DETALLE DE SUELDO ELIMINADO EXITOSAMENTE');
     }
 }
