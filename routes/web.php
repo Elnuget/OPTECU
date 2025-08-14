@@ -15,8 +15,6 @@ use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EgresoController;
 use App\Http\Controllers\PrestamoController;
 use App\Http\Controllers\PagoPrestamoController;
-use App\Http\Controllers\SueldoController;
-use App\Http\Controllers\DetalleSueldoController;
 use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\HorarioController;
 use App\Http\Controllers\TelemarketingController;
@@ -94,15 +92,6 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // También mantener la ruta original por compatibilidad
     Route::get('asistencias/mi-qr', [AsistenciaController::class, 'miQr'])->name('asistencias.mi-qr');
     
-    // Rutas para Sueldos (accesible para todos los usuarios autenticados)
-    // IMPORTANTE: Las rutas específicas deben ir ANTES de la ruta resource
-    Route::post('sueldos/guardar-valor', [SueldoController::class, 'guardarValor'])->name('sueldos.guardar-valor');
-    Route::get('sueldos/registros-cobro', [SueldoController::class, 'getRegistrosCobro'])->name('sueldos.registros-cobro');
-    Route::get('sueldos/pedidos-usuario', [SueldoController::class, 'getPedidosUsuario'])->name('sueldos.pedidos-usuario');
-    Route::get('sueldos/datos-rol-pagos', [SueldoController::class, 'getDatosRolPagos'])->name('sueldos.datos-rol-pagos');
-    Route::resource('sueldos', SueldoController::class);
-    Route::get('sueldos/total-registros-cobro', [SueldoController::class, 'getTotalRegistrosCobro'])->name('sueldos.total-registros-cobro');
-
     // Medios de Pago
     Route::get('Configuración/MediosDePago', [mediosdepagoController::class, 'index'])->name('configuracion.mediosdepago.index');
     Route::get('Configuración/MediosDePago/Crear', [mediosdepagoController::class, 'create'])->name('configuracion.mediosdepago.create'); 
@@ -298,11 +287,6 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
 
     Route::resource('prestamos', PrestamoController::class);
     Route::resource('pago-prestamos', PagoPrestamoController::class);
-
-    // Rutas para detalles de sueldos
-    Route::post('/detalles-sueldos', [DetalleSueldoController::class, 'store'])->name('detalles-sueldos.store');
-    Route::delete('/detalles-sueldos/{detalleSueldo}', [DetalleSueldoController::class, 'destroy'])->name('detalles-sueldos.destroy');
-    Route::get('/detalles-sueldos/periodo', [DetalleSueldoController::class, 'getDetallesPorPeriodo'])->name('detalles-sueldos.periodo');
 
     // Rutas para recetas
     Route::resource('recetas', \App\Http\Controllers\RecetaController::class);

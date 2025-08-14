@@ -6,7 +6,6 @@ use App\Http\Controllers\Api\PagoController;
 use App\Http\Controllers\Api\PedidoController;
 use App\Http\Controllers\Api\CashHistoryController;
 use App\Http\Controllers\Api\HistorialClinicoController;
-use App\Http\Controllers\SueldoController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\PrestamoController;
 
@@ -50,10 +49,6 @@ Route::get('/historiales-clinicos/buscar-nombre-completo/{nombreCompleto}', [His
 
 // Ruta para buscar historiales clínicos por nombres y apellidos separados
 Route::get('/historiales-clinicos/buscar-por-nombre/{nombres}/{apellidos}', [HistorialClinicoController::class, 'buscarPorNombresApellidos']);
-
-Route::get('/sueldos/registros-cobro', [SueldoController::class, 'getRegistrosCobro']);
-Route::get('/sueldos/total-registros-cobro', [SueldoController::class, 'getTotalRegistrosCobro']);
-Route::post('/sueldos/datos-rol-pagos', [SueldoController::class, 'getDatosRolPagos']);
 
 Route::get('/prestamos/pagos-locales', [PrestamoController::class, 'getPagosLocales']);
 Route::post('/prestamos/pagos', [PrestamoController::class, 'storePago']);
