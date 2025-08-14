@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class SueldoController extends Controller
@@ -153,9 +154,20 @@ class SueldoController extends Controller
             'fecha' => 'required|date',
             'descripcion' => 'required|string|max:191',
             'valor' => 'required|numeric|min:0',
+            'documento' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
         ]);
 
-        Sueldo::create($request->all());
+        $data = $request->all();
+        
+        // Manejar la subida del documento
+        if ($request->hasFile('documento')) {
+            $file = $request->file('documento');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('uploads/sueldos', $filename, 'public');
+            $data['documento'] = $path;
+        }
+
+        Sueldo::create($data);
 
         return redirect()->route('sueldos.index')
             ->with('success', 'Sueldo registrado correctamente');
@@ -200,9 +212,25 @@ class SueldoController extends Controller
             'fecha' => 'required|date',
             'descripcion' => 'required|string|max:191',
             'valor' => 'required|numeric|min:0',
+            'documento' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048',
         ]);
 
-        $sueldo->update($request->all());
+        $data = $request->all();
+        
+        // Manejar la subida del documento
+        if ($request->hasFile('documento')) {
+            // Eliminar el archivo anterior si existe
+            if ($sueldo->documento) {
+                \Storage::disk('public')->delete($sueldo->documento);
+            }
+            
+            $file = $request->file('documento');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('uploads/sueldos', $filename, 'public');
+            $data['documento'] = $path;
+        }
+
+        $sueldo->update($data);
 
         return redirect()->route('sueldos.index')
             ->with('success', 'Sueldo actualizado correctamente');
@@ -216,6 +244,11 @@ class SueldoController extends Controller
      */
     public function destroy(Sueldo $sueldo)
     {
+        // Eliminar el archivo asociado si existe
+        if ($sueldo->documento) {
+            Storage::disk('public')->delete($sueldo->documento);
+        }
+        
         $sueldo->delete();
 
         return redirect()->route('sueldos.index')

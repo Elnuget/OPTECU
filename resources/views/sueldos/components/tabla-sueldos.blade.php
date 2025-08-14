@@ -1,3 +1,7 @@
+@php
+    use Illuminate\Support\Facades\Storage;
+@endphp
+
 <!-- Tabla de Sueldos -->
 <div class="card">
     <div class="card-body">
@@ -15,6 +19,7 @@
                         <th>DESCRIPCIÓN</th>
                         <th>VALOR</th>
                         <th>SUCURSAL</th>
+                        <th>DOCUMENTO</th>
                         <th>ACCIONES</th>
                     </tr>
                 </thead>
@@ -26,6 +31,16 @@
                             <td>{{ $sueldo->descripcion }}</td>
                             <td>${{ number_format($sueldo->valor, 2, ',', '.') }}</td>
                             <td>{{ $sueldo->empresa ? $sueldo->empresa->nombre : 'SIN SUCURSAL' }}</td>
+                            <td>
+                                @if($sueldo->documento)
+                                    <a href="{{ Storage::url($sueldo->documento) }}" target="_blank" 
+                                       class="btn btn-xs btn-info" title="Ver documento">
+                                        <i class="fas fa-file"></i> VER
+                                    </a>
+                                @else
+                                    <span class="text-muted">SIN DOCUMENTO</span>
+                                @endif
+                            </td>
                             <td>
                                 <a href="{{ route('sueldos.show', $sueldo->id) }}"
                                     class="btn btn-xs btn-default text-info mx-1 shadow" title="Ver">

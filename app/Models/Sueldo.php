@@ -27,7 +27,8 @@ class Sueldo extends Model
         'empresa_id',
         'fecha',
         'descripcion',
-        'valor'
+        'valor',
+        'documento'
     ];
 
     /**
