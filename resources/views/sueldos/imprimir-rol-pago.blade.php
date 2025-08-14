@@ -213,7 +213,8 @@
 <body>
     <!-- Encabezado -->
     <div class="header">
-        <h1>{{ $empresa->nombre ?? 'ESCLERÓPTICA' }}</h1>
+        <img src="{{ asset('AdminLTELogo.png') }}" alt="Logo" style="width: 80px; height: 80px; margin-bottom: 10px;">
+        <div class="subtitle">ESCLERÓPTICA</div>
         <div class="subtitle">ROL DE PAGO</div>
         <div class="company-info">Reporte generado el {{ date('d/m/Y H:i') }}</div>
     </div>
@@ -422,13 +423,14 @@
     <!-- Firmas -->
     <div class="signatures">
         <div class="signature-box">
-            <div>Elaborado por</div>
+            <div>GERENTE</div>
+            <br><br><br>
+            <div>Rogger Pucuji</div>
         </div>
         <div class="signature-box">
-            <div>Revisado por</div>
-        </div>
-        <div class="signature-box">
-            <div>Aprobado por</div>
+            <div>EMPLEADO</div>
+            <br><br><br>
+            <div>{{ $usuario ? strtoupper($usuario) : '____________________' }}</div>
         </div>
     </div>
 
