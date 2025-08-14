@@ -357,23 +357,28 @@
         <table>
             <thead>
                 <tr>
-                    <th style="width: 12%;">Fecha</th>
-                    <th style="width: 18%;">Empleado</th>
-                    <th style="width: 15%;">Empresa</th>
-                    <th style="width: 12%;">Apertura</th>
-                    <th style="width: 12%;">Cierre</th>
-                    <th style="width: 15%;">Horas Trabajadas</th>
-                    <th style="width: 16%;">Estado</th>
+                    <th style="width: 10%;">Fecha</th>
+                    <th style="width: 8%;">Día</th>
+                    <th style="width: 15%;">Empleado</th>
+                    <th style="width: 10%;">Empresa</th>
+                    <th style="width: 8%;">Apertura</th>
+                    <th style="width: 8%;">Cierre</th>
+                    <th style="width: 12%;">Horas Trabajadas</th>
+                    <th style="width: 8%;">Monto Inicial</th>
+                    <th style="width: 8%;">Monto Final</th>
+                    <th style="width: 8%;">Estado</th>
+                    <th style="width: 5%;">Cobro</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($historialCaja as $historial)
                 <tr>
                     <td class="text-center">{{ $historial->fecha_formateada ?? 'N/A' }}</td>
+                    <td class="text-center">{{ $historial->dia_semana ?? 'N/A' }}</td>
                     <td>{{ $historial->usuario ?? 'N/A' }}</td>
                     <td>{{ $historial->empresa ?? 'N/A' }}</td>
-                    <td class="text-center">{{ $historial->hora_apertura ?? 'N/A' }}</td>
-                    <td class="text-center">{{ $historial->hora_cierre ?? 'N/A' }}</td>
+                    <td class="text-center">{{ $historial->hora_apertura ?? '-' }}</td>
+                    <td class="text-center">{{ $historial->hora_cierre ?? '-' }}</td>
                     <td class="text-center">
                         @if(isset($historial->horas_formateadas))
                             {{ $historial->horas_formateadas }}
@@ -386,13 +391,28 @@
                             Sin registros
                         @endif
                     </td>
-                    <td>{{ $historial->estado ?? '' }}</td>
+                    <td class="text-right">
+                        @if(isset($historial->monto_apertura))
+                            ${{ number_format($historial->monto_apertura, 2, ',', '.') }}
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td class="text-right">
+                        @if(isset($historial->monto_cierre))
+                            ${{ number_format($historial->monto_cierre, 2, ',', '.') }}
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td class="text-center">{{ $historial->estado ?? '' }}</td>
+                    <td class="text-center"><!-- Columna vacía para Corbor --></td>
                 </tr>
                 @endforeach
                 <tr class="total-general">
-                    <td colspan="5" class="text-center">TOTAL HORAS TRABAJADAS</td>
+                    <td colspan="6" class="text-center">TOTAL HORAS TRABAJADAS</td>
                     <td class="text-center">{{ $totalHorasCalculadas }}h {{ $totalMinutosRestantes }}m</td>
-                    <td></td>
+                    <td colspan="4"></td>
                 </tr>
             </tbody>
         </table>
