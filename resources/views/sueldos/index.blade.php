@@ -92,7 +92,7 @@
                     <div class="col-lg-2 col-6">
                         <div class="small-box bg-danger">
                             <div class="inner">
-                                <h3>${{ number_format(isset($retirosCaja) ? $retirosCaja->sum('valor') : 0, 2, ',', '.') }}</h3>
+                                <h3>$-{{ number_format(isset($retirosCaja) ? abs($retirosCaja->sum('valor')) : 0, 2, ',', '.') }}</h3>
                                 <p>RETIROS DE CAJA</p>
                             </div>
                             <div class="icon">
@@ -118,7 +118,7 @@
                     <div class="col-lg-3 col-6">
                         <div class="small-box" style="background-color: #6f42c1; color: white;">
                             <div class="inner">
-                                <h3>${{ number_format($pedidos->sum('total') - (isset($retirosCaja) ? $retirosCaja->sum('valor') : 0), 2, ',', '.') }}</h3>
+                                <h3>${{ number_format($pedidos->sum('total') + (isset($retirosCaja) ? $retirosCaja->sum('valor') : 0), 2, ',', '.') }}</h3>
                                 <p>BALANCE NETO</p>
                             </div>
                             <div class="icon">
@@ -187,14 +187,14 @@
                                     <td>{{ $retiro->created_at->format('Y-m-d H:i') }}</td>
                                     <td>{{ $retiro->empresa ? $retiro->empresa->nombre : 'SIN SUCURSAL' }}</td>
                                     <td>{{ $retiro->motivo }}</td>
-                                    <td>${{ number_format($retiro->valor, 2, ',', '.') }}</td>
+                                    <td>$-{{ number_format(abs($retiro->valor), 2, ',', '.') }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>
                             <tfoot>
                                 <tr class="bg-secondary">
                                     <th colspan="3">TOTAL RETIROS</th>
-                                    <th>${{ number_format($retirosCaja->sum('valor'), 2, ',', '.') }}</th>
+                                    <th>$-{{ number_format(abs($retirosCaja->sum('valor')), 2, ',', '.') }}</th>
                                 </tr>
                             </tfoot>
                         </table>
