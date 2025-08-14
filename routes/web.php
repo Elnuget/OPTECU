@@ -321,6 +321,10 @@ Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guard
 
 // Rutas para el controlador de Sueldos
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
+    // Ruta para imprimir rol de pago (DEBE ir antes del resource)
+    Route::get('sueldos/imprimir-rol-pago', [SueldoController::class, 'imprimirRolPago'])
+        ->name('sueldos.imprimir-rol-pago');
+    
     Route::resource('sueldos', SueldoController::class);
     
     // Rutas para Detalles de Sueldo

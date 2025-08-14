@@ -296,4 +296,86 @@ class SueldoController extends Controller
         
         return $historialProcesado->sortByDesc('fecha');
     }
+
+    /**
+     * Generar vista de impresión del rol de pago
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\View\View
+     */
+    public function imprimirRolPago(Request $request)
+    {
+        $anio = $request->get('anio');
+        $mes = $request->get('mes');
+        $usuario = $request->get('usuario');
+        
+        // Si no se especifica año, usar el actual
+        if (!$anio) $anio = date('Y');
+        // Si no se especifica mes, usar el actual
+        if (!$mes) $mes = date('m');
+        
+        // Obtener detalles de sueldo con filtros
+        $detallesSueldoQuery = DetalleSueldo::with('user')
+            ->where('ano', $anio)
+            ->where('mes', $mes);
+            
+        // Si se seleccionó un usuario específico
+        if ($usuario) {
+            $detallesSueldoQuery->whereHas('user', function($query) use ($usuario) {
+                $query->where('name', 'LIKE', '%' . $usuario . '%');
+            });
+        }
+        
+        $detallesSueldo = $detallesSueldoQuery->orderBy('created_at', 'desc')->get();
+        
+        // Obtener retiros de caja para el mismo periodo
+        $cajaQuery = \App\Models\Caja::with(['user', 'empresa'])
+            ->whereYear('created_at', $anio)
+            ->whereMonth('created_at', $mes)
+            ->where(function($query) {
+                // Excluir registros que contengan "abono" o "deposito" en el motivo
+                $query->whereRaw("LOWER(motivo) NOT LIKE ?", ['%abono%'])
+                      ->whereRaw("LOWER(motivo) NOT LIKE ?", ['%deposito%']);
+            });
+            
+        // Si se seleccionó un usuario específico
+        if ($usuario) {
+            $user = \App\Models\User::where('name', $usuario)->first();
+            if ($user) {
+                $cajaQuery->where('user_id', $user->id);
+            }
+        }
+        
+        $retirosCaja = $cajaQuery->orderBy('created_at', 'desc')->get();
+        
+        // Obtener historial de caja (aperturas y cierres)
+        $cashHistoryQuery = CashHistory::with(['user', 'empresa'])
+            ->whereYear('created_at', $anio)
+            ->whereMonth('created_at', $mes);
+            
+        // Si se seleccionó un usuario específico
+        if ($usuario) {
+            $cashHistoryQuery->whereHas('user', function($query) use ($usuario) {
+                $query->where('name', 'LIKE', '%' . $usuario . '%');
+            });
+        }
+        
+        $cashHistoryRaw = $cashHistoryQuery->orderBy('created_at', 'asc')->get();
+        
+        // Procesar historial de caja para calcular horas trabajadas
+        $historialCaja = $this->procesarHistorialCaja($cashHistoryRaw);
+        
+        // Obtener información de la empresa
+        $empresa = \App\Models\Empresa::first();
+        
+        return view('sueldos.imprimir-rol-pago', compact(
+            'detallesSueldo', 
+            'retirosCaja', 
+            'historialCaja', 
+            'anio', 
+            'mes', 
+            'usuario',
+            'empresa'
+        ));
+    }
 }

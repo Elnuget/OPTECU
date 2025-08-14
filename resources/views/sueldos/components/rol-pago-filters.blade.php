@@ -44,9 +44,18 @@
                 </div>
                 <div class="col-md-2">
                     <div class="form-group" style="padding-top: 32px;">
-                        <button type="submit" class="btn btn-primary btn-block">
+                        <button type="submit" class="btn btn-primary btn-block mb-2">
                             <i class="fas fa-search"></i> BUSCAR
                         </button>
+                        @if(request()->hasAny(['anio', 'mes', 'usuario']) && request()->isMethod('get') && (request('anio') || request('mes') || request('usuario')))
+                        <a href="{{ route('sueldos.imprimir-rol-pago', [
+                            'anio' => request('anio'),
+                            'mes' => request('mes'),
+                            'usuario' => request('usuario')
+                        ]) }}" target="_blank" class="btn btn-success btn-block">
+                            <i class="fas fa-print"></i> IMPRIMIR ROL
+                        </a>
+                        @endif
                     </div>
                 </div>
             </div>
