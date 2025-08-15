@@ -821,12 +821,12 @@
             }
         });
 
-        // Eventos para autocompletado por celular
-        $('#celular').on('change', function() {
-            if (this.value.trim()) {
-                cargarDatosPersonales('celular', this.value);
-            }
-        });
+        // Eventos para autocompletado por celular - DESACTIVADO
+        // $('#celular').on('change', function() {
+        //     if (this.value.trim()) {
+        //         cargarDatosPersonales('celular', this.value);
+        //     }
+        // });
 
         // Autocompletado cuando se pierde el foco (blur) para mayor comodidad
         $('#cedula').on('blur', function() {
@@ -836,15 +836,16 @@
             }
         });
 
-        $('#celular').on('blur', function() {
-            if (this.value.trim() && !$(this).data('cargado')) {
-                cargarDatosPersonales('celular', this.value);
-                $(this).data('cargado', true);
-            }
-        });
+        // Autocompletado por celular al perder el foco - DESACTIVADO
+        // $('#celular').on('blur', function() {
+        //     if (this.value.trim() && !$(this).data('cargado')) {
+        //         cargarDatosPersonales('celular', this.value);
+        //         $(this).data('cargado', true);
+        //     }
+        // });
 
-        // Limpiar la marca de cargado cuando se modifica el campo
-        $('#cedula, #celular').on('input', function() {
+        // Limpiar la marca de cargado cuando se modifica el campo (solo para cédula)
+        $('#cedula').on('input', function() {
             $(this).removeData('cargado');
         });
 
