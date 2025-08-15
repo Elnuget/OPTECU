@@ -95,6 +95,53 @@
             border-color: #007bff;
             box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
         }
+
+        /* Estilos responsivos personalizados */
+        @media (max-width: 576px) {
+            /* En móviles, hacer todos los inputs más pequeños pero legibles */
+            .form-control {
+                font-size: 14px;
+                padding: 0.5rem;
+            }
+            
+            /* Ajustar labels para móviles */
+            .form-label, label {
+                font-size: 12px;
+                margin-bottom: 0.25rem;
+            }
+            
+            /* Espaciado adicional en móviles */
+            .card-body .row.mb-3 {
+                margin-bottom: 1rem !important;
+            }
+        }
+
+        @media (min-width: 577px) and (max-width: 768px) {
+            /* Tabletas - inputs medianos */
+            .form-control {
+                font-size: 15px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            /* Desktop - inputs normales */
+            .form-control {
+                font-size: 16px;
+            }
+        }
+
+        /* Mejorar la visualización del selectpicker en móviles */
+        @media (max-width: 576px) {
+            .bootstrap-select .dropdown-menu {
+                max-height: 200px !important;
+                font-size: 14px;
+            }
+            
+            .bootstrap-select button {
+                font-size: 14px !important;
+                padding: 0.5rem !important;
+            }
+        }
     </style>
 
     {{-- Mostrar mensajes de error --}}
@@ -265,7 +312,7 @@
                         </div>
                         <div class="card-body">
                             <div class="row mb-3">
-                                <div class="col-md-12">
+                                <div class="col-12">
                                     <label>Armazón (Inventario)</label>
                                     <select class="form-control selectpicker" data-live-search="true" name="a_inventario_id[]">
                                         <option value="">Seleccione un armazón</option>
@@ -278,15 +325,15 @@
                                 </div>
                             </div>
 
-                            {{-- Fila 5 --}}
+                            {{-- Fila 5 - Inputs responsivos --}}
                             <div class="row mb-3">
-                                <div class="col-md-3">
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-2 mb-lg-0">
                                     <label for="a_precio" class="form-label">Precio Armazón</label>
-                                    <input type="number" class="form-control form-control-sm precio-armazon" id="a_precio" name="a_precio[]" step="0.01" oninput="calculateTotal()">
+                                    <input type="number" class="form-control precio-armazon" id="a_precio" name="a_precio[]" step="0.01" oninput="calculateTotal()">
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-2 mb-lg-0">
                                     <label for="a_precio_descuento" class="form-label">Desc. Armazón (%)</label>
-                                    <input type="number" class="form-control form-control-sm descuento-armazon" id="a_precio_descuento"
+                                    <input type="number" class="form-control descuento-armazon" id="a_precio_descuento"
                                            name="a_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
                                 </div>
                             </div>
@@ -393,9 +440,9 @@
                             </div>
                         </div>
                         <div class="card-body">
-                            {{-- Fila 7 --}}
+                            {{-- Fila 7 - Layout responsivo para accesorios --}}
                             <div class="row mb-3 accesorio-item">
-                                <div class="col-md-6">
+                                <div class="col-12 mb-2">
                                     <label for="d_inventario_id[]" class="form-label">Accesorio (Inventario)</label>
                                     <select class="form-control selectpicker" data-live-search="true" id="d_inventario_id[]" name="d_inventario_id[]">
                                         <option value="">Seleccione un Item del Inventario</option>
@@ -406,13 +453,13 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-2 mb-lg-0">
                                     <label for="d_precio[]" class="form-label">Precio Accesorio</label>
-                                    <input type="number" class="form-control input-sm" id="d_precio[]" name="d_precio[]" step="0.01" oninput="calculateTotal()">
+                                    <input type="number" class="form-control" id="d_precio[]" name="d_precio[]" step="0.01" oninput="calculateTotal()">
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-2 mb-lg-0">
                                     <label for="d_precio_descuento[]" class="form-label">Desc. Accesorio (%)</label>
-                                    <input type="number" class="form-control input-sm" id="d_precio_descuento[]" name="d_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
+                                    <input type="number" class="form-control" id="d_precio_descuento[]" name="d_precio_descuento[]" min="0" max="100" value="0" oninput="calculateTotal()">
                                 </div>
                             </div>
                         </div>
