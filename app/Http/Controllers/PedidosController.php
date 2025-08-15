@@ -191,12 +191,13 @@ class PedidosController extends Controller
             ->toArray();
 
         $currentDate = date('Y-m-d');
-        $lastOrder = Pedido::orderBy('numero_orden', 'desc')->first();
-        $nextOrderNumber = $lastOrder ? $lastOrder->numero_orden + 1 : 1;
-        $nextInvoiceNumber = 'Pendiente';
-
+        
         // Obtener lista de empresas
         $empresas = Empresa::orderBy('nombre')->get();
+        
+        // Calcular el siguiente número de orden (inicialmente 1, se actualizará por JavaScript cuando se seleccione la empresa)
+        $nextOrderNumber = 1;
+        $nextInvoiceNumber = 'Pendiente';
 
         return view('pedidos.create', compact(
             'armazones', 

@@ -159,6 +159,10 @@
                                     <label for="numero_orden" class="form-label">Orden</label>
                                     <input type="number" class="form-control" id="numero_orden" name="numero_orden"
                                            value="{{ old('numero_orden', $nextOrderNumber) }}">
+                                    <small class="form-text text-muted" id="info_orden_actual">
+                                        <strong>Último número de orden en esta sucursal:</strong> 
+                                        <span id="ultimo_numero_orden">Seleccione una empresa</span>
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -573,8 +577,16 @@
                     if (empresaPreseleccionadaCache) {
                         actualizarNumeroOrden(empresaPreseleccionadaCache);
                         filtrarInventarioPorEmpresa(empresaPreseleccionadaCache);
+                    } else {
+                        // Si no hay empresa preseleccionada, establecer número de orden en 1
+                        document.getElementById('numero_orden').value = 1;
+                        document.getElementById('ultimo_numero_orden').textContent = 'Seleccione una empresa';
                     }
                 }, 200);
+            } else {
+                // Si no existe SucursalCache, establecer número de orden en 1 por defecto
+                document.getElementById('numero_orden').value = 1;
+                document.getElementById('ultimo_numero_orden').textContent = 'Seleccione una empresa';
             }
 
             // Manejar búsqueda en selectpicker para respetar filtro por empresa
@@ -595,6 +607,10 @@
                 // Actualizar número de orden si hay empresa seleccionada
                 if (empresaId) {
                     actualizarNumeroOrden(empresaId);
+                } else {
+                    // Si no hay empresa seleccionada, establecer número de orden en 1
+                    document.getElementById('numero_orden').value = 1;
+                    document.getElementById('ultimo_numero_orden').textContent = 'Seleccione una empresa';
                 }
             });
 
@@ -1326,8 +1342,10 @@
         // Función para actualizar el número de orden basado en la empresa seleccionada
         async function actualizarNumeroOrden(empresaId) {
             const numeroOrdenInput = document.getElementById('numero_orden');
-            if (!numeroOrdenInput) {
-                console.error('Campo numero_orden no encontrado');
+            const ultimoNumeroSpan = document.getElementById('ultimo_numero_orden');
+            
+            if (!numeroOrdenInput || !ultimoNumeroSpan) {
+                console.error('Campos numero_orden o ultimo_numero_orden no encontrados');
                 return;
             }
 
@@ -1336,6 +1354,7 @@
                 numeroOrdenInput.style.backgroundColor = '#fff3cd';
                 numeroOrdenInput.style.border = '1px solid #ffeaa7';
                 numeroOrdenInput.disabled = true;
+                ultimoNumeroSpan.textContent = 'Cargando...';
 
                 // Realizar petición AJAX
                 const response = await fetch(`/api/pedidos/siguiente-numero-orden/${empresaId}`, {
@@ -1357,17 +1376,24 @@
                     // Actualizar el campo con el siguiente número de orden
                     numeroOrdenInput.value = data.data.siguiente_numero_orden;
                     
+                    // Actualizar la información del último número
+                    ultimoNumeroSpan.textContent = data.data.ultimo_numero_orden;
+                    ultimoNumeroSpan.style.color = '#28a745';
+                    ultimoNumeroSpan.style.fontWeight = 'bold';
+                    
                     // Mostrar indicador de éxito
                     numeroOrdenInput.style.backgroundColor = '#d4edda';
                     numeroOrdenInput.style.border = '1px solid #c3e6cb';
                     
-                    console.log(`Número de orden actualizado: ${data.data.siguiente_numero_orden} (empresa: ${empresaId})`);
+                    console.log(`Número de orden actualizado: ${data.data.siguiente_numero_orden} (último: ${data.data.ultimo_numero_orden}, empresa: ${data.data.nombre_empresa})`);
                     
                     // Remover indicadores después de 2 segundos
                     setTimeout(() => {
                         numeroOrdenInput.style.backgroundColor = '';
                         numeroOrdenInput.style.border = '';
                         numeroOrdenInput.disabled = false;
+                        ultimoNumeroSpan.style.color = '';
+                        ultimoNumeroSpan.style.fontWeight = '';
                     }, 2000);
                     
                 } else {
@@ -1381,6 +1407,8 @@
                 numeroOrdenInput.style.backgroundColor = '#f8d7da';
                 numeroOrdenInput.style.border = '1px solid #f5c6cb';
                 numeroOrdenInput.disabled = false;
+                ultimoNumeroSpan.textContent = 'Error al cargar';
+                ultimoNumeroSpan.style.color = '#dc3545';
                 
                 // Mostrar mensaje de error al usuario
                 alert(`Error al obtener el número de orden: ${error.message}`);
@@ -1389,6 +1417,7 @@
                 setTimeout(() => {
                     numeroOrdenInput.style.backgroundColor = '';
                     numeroOrdenInput.style.border = '';
+                    ultimoNumeroSpan.style.color = '';
                 }, 3000);
             }
         }

@@ -175,20 +175,39 @@ class PedidoController extends Controller
     public function getSiguienteNumeroOrden($empresaId)
     {
         try {
-            // Obtener el último número de orden de la empresa
-            $ultimoPedido = Pedido::where('empresa_id', $empresaId)
-                ->orderBy('numero_orden', 'desc')
-                ->first();
+            // Obtener el número de orden más alto de la empresa (usando CAST para asegurar comparación numérica)
+            $maxNumeroOrden = Pedido::where('empresa_id', $empresaId)
+                ->whereNotNull('numero_orden')
+                ->where('numero_orden', '!=', '')
+                ->whereRaw('CAST(numero_orden as UNSIGNED) > 0')
+                ->selectRaw('MAX(CAST(numero_orden as UNSIGNED)) as max_numero')
+                ->value('max_numero');
+            
+            // Obtener el pedido con el número de orden más alto
+            $ultimoPedido = null;
+            if ($maxNumeroOrden !== null) {
+                $ultimoPedido = Pedido::where('empresa_id', $empresaId)
+                    ->whereRaw('CAST(numero_orden as UNSIGNED) = ?', [$maxNumeroOrden])
+                    ->first();
+            }
+            
+            // Obtener información adicional para debugging
+            $totalPedidosEmpresa = Pedido::where('empresa_id', $empresaId)->count();
+            $empresa = \App\Models\Empresa::find($empresaId);
             
             // Calcular el siguiente número
-            $siguienteNumero = $ultimoPedido ? $ultimoPedido->numero_orden + 1 : 1;
+            $siguienteNumero = $maxNumeroOrden ? $maxNumeroOrden + 1 : 1;
             
             return response()->json([
                 'success' => true,
                 'data' => [
                     'siguiente_numero_orden' => $siguienteNumero,
-                    'ultimo_numero_orden' => $ultimoPedido ? $ultimoPedido->numero_orden : 0,
-                    'empresa_id' => $empresaId
+                    'ultimo_numero_orden' => $maxNumeroOrden ?? 0,
+                    'empresa_id' => $empresaId,
+                    'nombre_empresa' => $empresa ? $empresa->nombre : 'Empresa no encontrada',
+                    'total_pedidos_empresa' => $totalPedidosEmpresa,
+                    'ultimo_pedido_id' => $ultimoPedido ? $ultimoPedido->id : null,
+                    'ultimo_pedido_fecha' => $ultimoPedido ? $ultimoPedido->created_at : null
                 ]
             ]);
             
@@ -196,6 +215,102 @@ class PedidoController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener siguiente número de orden: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Método para debugging - obtiene información detallada de números de orden
+     * 
+     * @param int $empresaId ID de la empresa
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function debugNumerosOrden($empresaId)
+    {
+        try {
+            $empresa = \App\Models\Empresa::find($empresaId);
+            
+            // Obtener todos los números de orden de esta empresa ordenados numéricamente
+            $pedidosConNumeros = Pedido::where('empresa_id', $empresaId)
+                ->whereNotNull('numero_orden')
+                ->where('numero_orden', '!=', '')
+                ->whereRaw('CAST(numero_orden as UNSIGNED) > 0')
+                ->orderByRaw('CAST(numero_orden as UNSIGNED) DESC')
+                ->select('id', 'numero_orden', 'cliente', 'created_at')
+                ->limit(20)
+                ->get()
+                ->toArray();
+            
+            // Obtener estadísticas usando casting numérico
+            $maxNumero = Pedido::where('empresa_id', $empresaId)
+                ->whereNotNull('numero_orden')
+                ->where('numero_orden', '!=', '')
+                ->whereRaw('CAST(numero_orden as UNSIGNED) > 0')
+                ->selectRaw('MAX(CAST(numero_orden as UNSIGNED)) as max_numero')
+                ->value('max_numero');
+                
+            $minNumero = Pedido::where('empresa_id', $empresaId)
+                ->whereNotNull('numero_orden')
+                ->where('numero_orden', '!=', '')
+                ->whereRaw('CAST(numero_orden as UNSIGNED) > 0')
+                ->selectRaw('MIN(CAST(numero_orden as UNSIGNED)) as min_numero')
+                ->value('min_numero');
+                
+            $totalPedidos = Pedido::where('empresa_id', $empresaId)->count();
+            $pedidosConNumero = Pedido::where('empresa_id', $empresaId)
+                ->whereNotNull('numero_orden')
+                ->where('numero_orden', '!=', '')
+                ->whereRaw('CAST(numero_orden as UNSIGNED) > 0')
+                ->count();
+            
+            // Buscar posibles duplicados
+            $duplicados = Pedido::where('empresa_id', $empresaId)
+                ->whereNotNull('numero_orden')
+                ->where('numero_orden', '!=', '')
+                ->whereRaw('CAST(numero_orden as UNSIGNED) > 0')
+                ->select('numero_orden', \DB::raw('count(*) as total'))
+                ->groupBy('numero_orden')
+                ->having('total', '>', 1)
+                ->orderByRaw('CAST(numero_orden as UNSIGNED) DESC')
+                ->limit(10)
+                ->get()
+                ->toArray();
+                
+            // Buscar valores problemáticos (no numéricos)
+            $valoresProblematicos = Pedido::where('empresa_id', $empresaId)
+                ->where(function($query) {
+                    $query->whereNull('numero_orden')
+                          ->orWhere('numero_orden', '=', '')
+                          ->orWhereRaw('CAST(numero_orden as UNSIGNED) = 0')
+                          ->orWhereRaw('numero_orden REGEXP \'^[^0-9]+$\'');
+                })
+                ->select('id', 'numero_orden', 'cliente', 'created_at')
+                ->limit(10)
+                ->get()
+                ->toArray();
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'empresa_id' => $empresaId,
+                    'nombre_empresa' => $empresa ? $empresa->nombre : 'Empresa no encontrada',
+                    'estadisticas' => [
+                        'max_numero_orden' => $maxNumero,
+                        'min_numero_orden' => $minNumero,
+                        'total_pedidos' => $totalPedidos,
+                        'pedidos_con_numero_valido' => $pedidosConNumero,
+                    ],
+                    'ultimos_20_pedidos' => $pedidosConNumeros,
+                    'numeros_duplicados' => $duplicados,
+                    'valores_problematicos' => $valoresProblematicos,
+                    'siguiente_numero_calculado' => $maxNumero ? $maxNumero + 1 : 1
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error en debugging: ' . $e->getMessage()
             ], 500);
         }
     }

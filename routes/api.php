@@ -38,6 +38,9 @@ Route::get('/pedidos/buscar-por/{campo}/{valor}', [PedidoController::class, 'bus
 // Ruta para obtener el siguiente número de orden por empresa
 Route::get('/pedidos/siguiente-numero-orden/{empresa_id}', [PedidoController::class, 'getSiguienteNumeroOrden']);
 
+// Ruta para debugging - obtener información detallada de números de orden por empresa
+Route::get('/pedidos/debug-numeros-orden/{empresa_id}', [PedidoController::class, 'debugNumerosOrden']);
+
 // Ruta para generar Excel de pedidos
 Route::post('/pedidos/generar-excel', [PedidoController::class, 'generarExcel']);
 
