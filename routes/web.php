@@ -322,6 +322,7 @@ Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guard
 
     // Rutas para Facturas
     Route::get('facturas', [App\Http\Controllers\FacturaController::class, 'index'])->name('facturas.index');
+    Route::get('facturas/create', [App\Http\Controllers\FacturaController::class, 'create'])->name('facturas.create');
     Route::get('facturas/listar', [App\Http\Controllers\FacturaController::class, 'listar'])->name('facturas.listar');
     Route::post('facturas', [App\Http\Controllers\FacturaController::class, 'store'])->name('facturas.store');
     Route::get('facturas/{id}', [App\Http\Controllers\FacturaController::class, 'show'])->name('facturas.show');

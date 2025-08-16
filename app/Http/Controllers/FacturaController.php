@@ -73,12 +73,20 @@ class FacturaController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
      */
-    public function create()
+    public function create(Request $request)
     {
         $declarantes = Declarante::all();
-        return view('facturas.create', compact('declarantes'));
+        
+        // Verificar si viene un pedido_id en la solicitud
+        $pedido = null;
+        if ($request->has('pedido_id')) {
+            $pedido = \App\Models\Pedido::find($request->pedido_id);
+        }
+        
+        return view('facturas.create', compact('declarantes', 'pedido'));
     }
 
     /**
@@ -107,12 +115,17 @@ class FacturaController extends Controller
             }
             
             $total = floatval($request->total);
-            $iva = $total * 0.12;
-            $monto = $total - $iva;
+            $iva = round($total * 0.12, 2);
+            $monto = round($total - $iva, 2);
             
             $factura = new Factura();
             $factura->declarante_id = $request->declarante_id;
+            // Si viene un pedido_id en la solicitud, guardarlo
+            if ($request->has('pedido_id')) {
+                $factura->pedido_id = $request->pedido_id;
+            }
             $factura->numero = $request->numero;
+            // Los tipos decimales en Laravel se manejan como números
             $factura->monto = $monto;
             $factura->iva = $iva;
             $factura->estado = $request->estado ?? 'pendiente';

@@ -221,9 +221,10 @@
                                 <!-- Botón de Crear Factura -->
                                 @can('admin')
                                     @if(strtoupper($pedido->fact) == 'PENDIENTE')
-                                        <a href="{{ route('facturas.index', ['pedido_id' => $pedido->id]) }}" 
-                                           class="btn btn-warning btn-sm"
-                                           title="Crear Factura">
+                                        <a href="{{ route('facturas.create', ['pedido_id' => $pedido->id]) }}" 
+                                           class="btn btn-warning btn-sm btn-crear-factura"
+                                           title="Crear Factura"
+                                           data-pedido-id="{{ $pedido->id }}">
                                             <i class="fas fa-file-invoice"></i>
                                         </a>
                                     @endif
@@ -1299,21 +1300,16 @@
 
         // Manejar el botón de crear factura
         $(document).on('click', '.btn-crear-factura', function() {
-            // Redireccionar a la página de facturas
-            window.location.href = '{{ route("facturas.index") }}';
-
-            // Limpiar errores previos
-            $('.form-control').removeClass('is-invalid');
-            $('.invalid-feedback').text('');
-
-            // Mostrar modal
-            $('#crearFacturaModal').modal('show');
-
-            // Cargar detalles del pedido
-            cargarDetallesPedido(pedidoId);
-
-            // Cargar declarantes en el select
-            cargarDeclarantesSelect();
+            // Obtener el ID del pedido del botón
+            var pedidoId = $(this).data('pedido-id');
+            
+            // Redireccionar a la página de creación de facturas
+            // Si hay un pedidoId, lo pasamos como parámetro
+            if (pedidoId) {
+                window.location.href = '{{ route("facturas.create") }}?pedido_id=' + pedidoId;
+            } else {
+                window.location.href = '{{ route("facturas.create") }}';
+            }
         });
 
         // Función para cargar los detalles del pedido con cálculos
