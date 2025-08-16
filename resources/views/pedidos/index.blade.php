@@ -132,9 +132,12 @@
         <div class="btn-group mb-3">
             <a href="{{ route('pedidos.create') }}" class="btn btn-primary">Crear Pedido</a>
             @can('admin')
-                <button type="button" class="btn btn-info" id="declarantesButton">
-                    <i class="fas fa-file-alt"></i> Declaraciones
-                </button>
+                <a href="{{ route('declarantes.index') }}" class="btn btn-info">
+                    <i class="fas fa-file-alt"></i> Declarantes
+                </a>
+                <a href="{{ route('facturas.index') }}" class="btn btn-warning">
+                    <i class="fas fa-file-invoice"></i> Facturas
+                </a>
             @endcan
         </div>
 
@@ -215,16 +218,14 @@
                                     class="btn btn-success btn-sm" title="Añadir Pago">
                                     <i class="fas fa-money-bill-wave"></i>
                                 </a>
-                                <!-- Botón de Aprobar -->
+                                <!-- Botón de Crear Factura -->
                                 @can('admin')
                                     @if(strtoupper($pedido->fact) == 'PENDIENTE')
-                                        <button type="button" class="btn btn-warning btn-sm btn-crear-factura" 
-                                                data-pedido-id="{{ $pedido->id }}"
-                                                data-cliente="{{ $pedido->cliente }}"
-                                                data-total="{{ $pedido->total }}"
-                                                title="Crear Factura">
+                                        <a href="{{ route('facturas.index', ['pedido_id' => $pedido->id]) }}" 
+                                           class="btn btn-warning btn-sm"
+                                           title="Crear Factura">
                                             <i class="fas fa-file-invoice"></i>
-                                        </button>
+                                        </a>
                                     @endif
                                 @endcan
                             </div>
@@ -264,488 +265,11 @@
     </div>
 </div>
 
-{{-- Modal para mostrar Declarantes --}}
-<div class="modal fade" id="declarantesModal" tabindex="-1" role="dialog" aria-labelledby="declarantesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="declarantesModalLabel">
-                    <i class="fas fa-file-alt"></i> Gestión de Declarantes
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <!-- Formulario para crear/editar declarante -->
-                <div class="card mb-3">
-                    <div class="card-header bg-light">
-                        <h6 class="card-title mb-0">
-                            <i class="fas fa-plus-circle"></i> 
-                            <span id="formTitle">Agregar Nuevo Declarante</span>
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <form id="declaranteForm" enctype="multipart/form-data">
-                            <input type="hidden" id="declaranteId" name="id">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="nombre">Nombre <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="nombre" name="nombre" required>
-                                        <div class="invalid-feedback"></div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="ruc">RUC <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="ruc" name="ruc" required>
-                                        <div class="invalid-feedback"></div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="firma">Certificado Digital de Firma</label>
-                                        <div class="custom-file">
-                                            <input type="file" class="custom-file-input" id="firma" name="firma" accept=".p12,.pem">
-                                            <label class="custom-file-label" for="firma">Seleccionar certificado...</label>
-                                        </div>
-                                        <small class="form-text text-muted">Formatos permitidos: P12, PEM (certificados digitales)</small>
-                                        <div class="invalid-feedback"></div>
-                                        <!-- Vista previa del archivo -->
-                                        <div id="firmaPreview" class="mt-2" style="display: none;">
-                                            <div class="border rounded p-2" style="max-width: 200px;">
-                                                <div class="text-center">
-                                                    <i class="fas fa-certificate fa-3x text-primary mb-2"></i>
-                                                    <div id="firmaFileName" class="text-center small text-muted"></div>
-                                                    <div class="text-center small text-info">Certificado Digital</div>
-                                                </div>
-                                                <button type="button" class="btn btn-sm btn-danger mt-1 btn-block" id="removeFirma">
-                                                    <i class="fas fa-times"></i> Eliminar
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <!-- Mostrar firma actual al editar -->
-                                        <div id="firmaActual" class="mt-2" style="display: none;">
-                                            <label class="small text-muted">Certificado actual:</label>
-                                            <div class="border rounded p-2" style="max-width: 200px;">
-                                                <div class="text-center">
-                                                    <i class="fas fa-certificate fa-3x text-success mb-2"></i>
-                                                    <div id="firmaActualName" class="text-center small text-muted"></div>
-                                                    <div class="text-center small text-success">Certificado Digital</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-success" id="submitButton">
-                                        <i class="fas fa-save"></i> Guardar
-                                    </button>
-                                    <button type="button" class="btn btn-secondary" id="cancelEditButton" style="display: none;">
-                                        <i class="fas fa-times"></i> Cancelar Edición
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
 
-                <!-- Lista de declarantes -->
-                <div class="card">
-                    <div class="card-header bg-light">
-                        <h6 class="card-title mb-0">
-                            <i class="fas fa-list"></i> Lista de Declarantes
-                        </h6>
-                    </div>
-                    <div class="card-body p-0">
-                        <div id="declarantesLoading" class="text-center p-4">
-                            <i class="fas fa-spinner fa-spin fa-2x"></i>
-                            <p>Cargando declarantes...</p>
-                        </div>
-                        
-                        <div id="declarantesContent" style="display: none;">
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover mb-0" id="declarantesTable">
-                                    <thead class="thead-dark">
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Nombre</th>
-                                            <th>RUC</th>
-                                            <th>Firma</th>
-                                            <th>Base Gravable</th>
-                                            <th>IVA Débito Fiscal</th>
-                                            <th>Total Facturado</th>
-                                            <th>Cant. Facturas</th>
-                                            <th>Fecha Creación</th>
-                                            <th width="140">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="declarantesTableBody">
-                                        <!-- Los datos se cargarán aquí dinámicamente -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-                        <div id="declarantesError" style="display: none;" class="alert alert-danger m-3">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <span id="errorMessage">Error al cargar los declarantes.</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Cerrar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
-{{-- Modal para crear factura --}}
-<div class="modal fade" id="crearFacturaModal" tabindex="-1" role="dialog" aria-labelledby="crearFacturaModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-white">
-                <h5 class="modal-title" id="crearFacturaModalLabel">
-                    <i class="fas fa-file-invoice"></i> Crear Factura
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="crearFacturaForm">
-                    <input type="hidden" id="factPedidoId" name="pedido_id">
-                    
-                    <!-- Información del pedido -->
-                    <div class="card mb-3">
-                        <div class="card-header bg-light">
-                            <h6 class="card-title mb-0">
-                                <i class="fas fa-info-circle"></i> Información del Pedido
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <p><strong>Cliente:</strong> <span id="factCliente"></span></p>
-                                </div>
-                                <div class="col-md-4">
-                                    <p><strong>Total Original:</strong> $<span id="factTotal"></span></p>
-                                </div>
-                                <div class="col-md-4">
-                                    <div id="detallesLoading" class="text-center" style="display: none;">
-                                        <i class="fas fa-spinner fa-spin"></i> Cargando detalles...
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Desglose de productos -->
-                    <div id="detallesProductos" style="display: none;">
-                        <!-- Inventarios/Accesorios -->
-                        <div class="card mb-3" id="cardInventarios" style="display: none;">
-                            <div class="card-header bg-info text-white">
-                                <h6 class="card-title mb-0">
-                                    <i class="fas fa-box"></i> Armazones y Accesorios
-                                </h6>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-striped table-sm mb-0">
-                                        <thead class="thead-dark">
-                                            <tr>
-                                                <th>Código</th>
-                                                <th>Precio Base</th>
-                                                <th>Descuento</th>
-                                                <th>Precio Final</th>
-                                                <th>Base</th>
-                                                <th>IVA</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tablaInventarios">
-                                        </tbody>
-                                        <tfoot class="bg-light">
-                                            <tr class="font-weight-bold">
-                                                <td colspan="4">SUBTOTAL ARMAZONES:</td>
-                                                <td id="subtotalBaseInventarios">$0.00</td>
-                                                <td id="subtotalIvaInventarios">$0.00</td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Lunas -->
-                        <div class="card mb-3" id="cardLunas" style="display: none;">
-                            <div class="card-header bg-success text-white">
-                                <h6 class="card-title mb-0">
-                                    <i class="fas fa-eye"></i> Lunas
-                                </h6>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-striped table-sm mb-0">
-                                        <thead class="thead-dark">
-                                            <tr>
-                                                <th>Medida</th>
-                                                <th>Tipo</th>
-                                                <th>Material</th>
-                                                <th>Precio</th>
-                                                <th>Desc.</th>
-                                                <th>Final</th>
-                                                <th>Base</th>
-                                                <th>IVA</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="tablaLunas">
-                                        </tbody>
-                                        <tfoot class="bg-light">
-                                            <tr class="font-weight-bold">
-                                                <td colspan="6">SUBTOTAL LUNAS:</td>
-                                                <td id="subtotalBaseLunas">$0.00</td>
-                                                <td id="subtotalIvaLunas">$0.00</td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
 
-                        <!-- Totales -->
-                        <div class="card mb-3">
-                            <div class="card-header bg-primary text-white">
-                                <h6 class="card-title mb-0">
-                                    <i class="fas fa-calculator"></i> Totales de la Factura
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="bg-light p-3 rounded text-center">
-                                            <strong>Base Total:</strong><br>
-                                            <span class="h4 text-primary" id="totalBaseCalculado">$0.00</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="bg-light p-3 rounded text-center">
-                                            <strong>IVA Total:</strong><br>
-                                            <span class="h4 text-warning" id="totalIvaCalculado">$0.00</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="bg-light p-3 rounded text-center">
-                                            <strong>Monto Total:</strong><br>
-                                            <span class="h4 text-success" id="montoTotalCalculado">$0.00</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Formulario de factura -->
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="declaranteSelect">Declarante <span class="text-danger">*</span></label>
-                                <select class="form-control" id="declaranteSelect" name="declarante_id" required>
-                                    <option value="">Seleccione un declarante...</option>
-                                </select>
-                                <div class="invalid-feedback"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="tipoFactura">Tipo de Documento <span class="text-danger">*</span></label>
-                                <select class="form-control" id="tipoFactura" name="tipo" required>
-                                    <option value="">Seleccione el tipo...</option>
-                                    <option value="factura">Factura</option>
-                                    <option value="nota_venta">Nota de Venta</option>
-                                </select>
-                                <div class="invalid-feedback"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="montoFactura">Monto (Base) <span class="text-danger">*</span></label>
-                                <input type="number" step="0.01" class="form-control" id="montoFactura" name="monto" required readonly>
-                                <small class="text-muted">Este campo se calcula automáticamente</small>
-                                <div class="invalid-feedback"></div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label for="ivaFactura">IVA <span class="text-danger">*</span></label>
-                                <input type="number" step="0.01" class="form-control" id="ivaFactura" name="iva" required readonly>
-                                <small class="text-muted">Este campo se calcula automáticamente</small>
-                                <div class="invalid-feedback"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="form-group">
-                                <label for="xmlRuta">Ruta del XML (opcional)</label>
-                                <input type="text" class="form-control" id="xmlRuta" name="xml" placeholder="Ej: facturas/factura_123.xml">
-                                <small class="form-text text-muted">Ruta donde se almacenará el archivo XML de la factura</small>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-                <button type="button" class="btn btn-success" id="guardarFacturaBtn">
-                    <i class="fas fa-save"></i> Crear Factura
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Modal para mostrar facturas del declarante --}}
-<div class="modal fade" id="facturasDeclaranteModal" tabindex="-1" role="dialog" aria-labelledby="facturasDeclaranteModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="facturasDeclaranteModalLabel">
-                    <i class="fas fa-file-invoice-dollar"></i> Declaraciones - <span id="nombreDeclarante"></span>
-                </h5>
-                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <!-- Información del declarante -->
-                <div class="card mb-3">
-                    <div class="card-header bg-light">
-                        <h6 class="card-title mb-0">
-                            <i class="fas fa-user-tie"></i> Información del Declarante
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-3">
-                                <p><strong>Nombre:</strong> <span id="infoNombreDeclarante"></span></p>
-                            </div>
-                            <div class="col-md-3">
-                                <p><strong>RUC:</strong> <span id="infoRucDeclarante"></span></p>
-                            </div>
-                            <div class="col-md-3">
-                                <p><strong>Total Facturas:</strong> <span id="infoCantidadFacturas" class="badge badge-info"></span></p>
-                            </div>
-                            <div class="col-md-3">
-                                <div id="facturasLoading" class="text-center" style="display: none;">
-                                    <i class="fas fa-spinner fa-spin text-primary"></i> Cargando...
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Resumen de totales -->
-                <div id="totalesFacturas" class="card mb-3" style="display: none;">
-                    <div class="card-header bg-success text-white">
-                        <h6 class="card-title mb-0">
-                            <i class="fas fa-calculator"></i> Resumen Fiscal
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-2">
-                                <div class="bg-light p-3 rounded text-center">
-                                    <strong>Base Gravable:</strong><br>
-                                    <span class="h6 text-info" id="totalBaseFacturas">$0.00</span>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="bg-light p-3 rounded text-center">
-                                    <strong>IVA Débito Fiscal:</strong><br>
-                                    <span class="h5 text-success" id="totalDebitoFiscal">$0.00</span>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="bg-light p-3 rounded text-center">
-                                    <strong>Total Facturado:</strong><br>
-                                    <span class="h5 text-primary" id="totalFacturadoFacturas">$0.00</span>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="bg-light p-3 rounded text-center">
-                                    <strong>Cantidad:</strong><br>
-                                    <span class="h6 text-secondary" id="cantidadTotalFacturas">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tabla de facturas -->
-                <div id="tablaFacturasContainer" style="display: none;">
-                    <div class="card">
-                        <div class="card-header bg-info text-white">
-                            <h6 class="card-title mb-0">
-                                <i class="fas fa-list"></i> Detalle de Facturas
-                            </h6>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-striped table-hover mb-0" id="tablaFacturasDeclarante">
-                                    <thead class="thead-dark">
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Fecha</th>
-                                            <th>Orden</th>
-                                            <th>Cliente</th>
-                                            <th>Tipo</th>
-                                            <th>Base</th>
-                                            <th>IVA</th>
-                                            <th>Total</th>
-                                            <th>XML</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="facturasTbody">
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mensaje si no hay facturas -->
-                <div id="noFacturasMessage" class="alert alert-info text-center" style="display: none;">
-                    <i class="fas fa-info-circle fa-2x mb-2"></i><br>
-                    <strong>Sin facturas</strong><br>
-                    Este declarante no tiene facturas registradas.
-                </div>
-
-                <!-- Error message -->
-                <div id="errorFacturas" class="alert alert-danger" style="display: none;">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span id="errorFacturasMessage">Error al cargar las facturas.</span>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Cerrar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <div class="mb-3">
     <a href="{{ route('pedidos.inventario-historial') }}" class="btn btn-info">
@@ -792,68 +316,20 @@
     font-size: 0.875rem;
 }
 
-/* Estilos para el modal de declarantes */
-#declarantesModal .modal-header {
-    border-bottom: 2px solid #17a2b8;
-}
+/* Estilos para tablas y formularios */
 
-#declarantesModal .table thead th {
-    background-color: #343a40;
-    color: white;
-    border: none;
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.85rem;
-}
-
-#declarantesModal .table tbody tr:hover {
-    background-color: #f8f9fa;
-    transition: background-color 0.3s ease;
-}
-
-#declarantesModal .table td {
-    vertical-align: middle;
-    border-color: #dee2e6;
-    font-size: 0.9rem;
-}
-
-#declarantesLoading {
-    padding: 40px 0;
-    color: #6c757d;
-}
-
-#declarantesLoading i {
-    color: #17a2b8;
-    margin-bottom: 15px;
-}
-
-.modal-xl {
-    max-width: 1200px;
-}
-
-/* Estilos para el formulario de declarantes */
-#declaranteForm .card {
-    border: 1px solid #dee2e6;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-
-#declaranteForm .card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
-    font-weight: 600;
-}
-
-#declaranteForm .form-control {
+/* Estilos para controles de formulario */
+.form-control {
     border-radius: 0.375rem;
     font-size: 0.9rem;
 }
 
-#declaranteForm .form-control.is-invalid {
+.form-control.is-invalid {
     border-color: #dc3545;
     box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
 }
 
-#declaranteForm .invalid-feedback {
+.invalid-feedback {
     display: block;
     font-size: 0.875em;
     color: #dc3545;
@@ -931,67 +407,32 @@
     background-color: #f8f9fa;
 }
 
-/* Estilos para el modal de crear factura */
-#crearFacturaModal .modal-header {
-    border-bottom: 2px solid #ffc107;
-}
-
-#crearFacturaModal .form-control.is-invalid {
-    border-color: #dc3545;
-    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
-}
-
-#crearFacturaModal .invalid-feedback {
-    display: block;
-    font-size: 0.875em;
-    color: #dc3545;
-}
-
-#crearFacturaModal .card {
+/* Estilos para tarjetas y tablas */
+.card {
     border: 1px solid #dee2e6;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 
-#crearFacturaModal .card-header {
+.card-header {
     background-color: #f8f9fa;
     border-bottom: 1px solid #dee2e6;
     font-weight: 600;
 }
 
-/* Estilos para las tablas de detalles de factura */
-#crearFacturaModal .table-sm td,
-#crearFacturaModal .table-sm th {
+/* Estilos para tablas */
+.table-sm td,
+.table-sm th {
     padding: 0.5rem;
     font-size: 0.875rem;
 }
 
-#crearFacturaModal .table thead th {
+.table thead th {
     border-top: none;
     font-weight: 600;
 }
 
-#crearFacturaModal .table-striped tbody tr:nth-of-type(odd) {
+.table-striped tbody tr:nth-of-type(odd) {
     background-color: rgba(0,0,0,.02);
-}
-
-#crearFacturaModal .bg-light {
-    background-color: #f8f9fa !important;
-}
-
-#crearFacturaModal .font-weight-bold {
-    font-weight: 700 !important;
-}
-
-#crearFacturaModal .text-primary {
-    color: #007bff !important;
-}
-
-#crearFacturaModal .text-warning {
-    color: #ffc107 !important;
-}
-
-#crearFacturaModal .text-success {
-    color: #28a745 !important;
 }
 
 /* Loading state */
@@ -1005,34 +446,13 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-/* Estilos para el modal de facturas del declarante */
-#facturasDeclaranteModal .modal-header {
-    border-bottom: 2px solid #007bff;
-}
-
-#facturasDeclaranteModal .table-sm td,
-#facturasDeclaranteModal .table-sm th {
-    padding: 0.5rem;
-    font-size: 0.875rem;
-}
-
-#facturasDeclaranteModal .table thead th {
-    border-top: none;
-    font-weight: 600;
-    font-size: 0.85rem;
-}
-
-#facturasDeclaranteModal .badge {
+/* Estilos para insignias y componentes de carga */
+.badge {
     font-size: 0.75em;
 }
 
-/* Loading para facturas */
-#facturasLoading i {
-    color: #007bff;
-}
-
-/* Botones de acción en tabla de declarantes */
-.btn-mostrar-facturas:hover:not(:disabled) {
+/* Botones de acción */
+.btn-action:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
@@ -1474,155 +894,10 @@
             });
         });
 
-        // Manejar el botón de Declarantes
-        $('#declarantesButton').click(function() {
-            cargarDeclarantes();
-        });
-
-        // Función para cargar los declarantes
-        function cargarDeclarantes() {
-            // Mostrar modal
-            $('#declarantesModal').modal('show');
-            
-            // Mostrar loading y ocultar contenido
-            $('#declarantesLoading').show();
-            $('#declarantesContent').hide();
-            $('#declarantesError').hide();
-            
-            // Realizar petición AJAX
-            $.ajax({
-                url: '{{ route("pedidos.declarantes.listar") }}',
-                method: 'GET',
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    if (response.success) {
-                        mostrarDeclarantes(response.data);
-                    } else {
-                        mostrarError(response.message || 'Error al cargar los declarantes');
-                    }
-                },
-                error: function(xhr) {
-                    var mensajeError = 'Error al cargar los declarantes';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        mensajeError = xhr.responseJSON.message;
-                    }
-                    mostrarError(mensajeError);
-                }
-            });
-        }
+        // Función que se ha movido a la vista de declarantes
 
         // Función para mostrar los declarantes en la tabla
-        function mostrarDeclarantes(declarantes) {
-            var tbody = $('#declarantesTableBody');
-            tbody.empty();
-            
-            if (declarantes.length === 0) {
-                tbody.html('<tr><td colspan="10" class="text-center">No hay declarantes registrados</td></tr>');
-            } else {
-                $.each(declarantes, function(index, declarante) {
-                    var fechaCreacion = declarante.created_at ? 
-                        new Date(declarante.created_at).toLocaleDateString('es-ES') : 
-                        'No disponible';
-                    
-                    // Manejar la celda de firma
-                    var firmaCell = '';
-                    if (declarante.firma) {
-                        var firmaUrl = declarante.firma.startsWith('http') ? 
-                            declarante.firma : 
-                            `/storage/certificados/${declarante.firma}`;
-                        
-                        var extension = declarante.firma.split('.').pop().toLowerCase();
-                        if (['p12', 'pem'].includes(extension)) {
-                            var iconClass = extension === 'p12' ? 'fa-certificate text-primary' : 'fa-key text-success';
-                            var certType = extension === 'p12' ? 'P12' : 'PEM';
-                            firmaCell = `
-                                <div class="firma-cell">
-                                    <i class="fas ${iconClass} fa-lg"></i>
-                                    <br><small class="cert-type">${certType}</small>
-                                </div>
-                            `;
-                        } else {
-                            firmaCell = `
-                                <div class="firma-cell">
-                                    <i class="fas fa-exclamation-triangle text-warning"></i>
-                                    <br><small class="text-warning">No válido</small>
-                                </div>
-                            `;
-                        }
-                    } else {
-                        firmaCell = '<div class="firma-cell"><span class="sin-archivo">Sin certificado</span></div>';
-                    }
-
-                    // Formatear los valores fiscales
-                    var baseGravable = declarante.total_base || 0;
-                    var ivaDebitoFiscal = declarante.total_iva || 0; // Solo el IVA
-                    var totalFacturado = declarante.total_facturado || 0;
-                    var cantidadFacturas = declarante.cantidad_facturas || 0;
-                    
-                    var baseFormatted = baseGravable > 0 ? 
-                        `<span class="text-primary font-weight-bold">$${parseFloat(baseGravable).toFixed(2)}</span>` : 
-                        `<span class="text-muted">$0.00</span>`;
-                    
-                    var ivaFormatted = ivaDebitoFiscal > 0 ? 
-                        `<span class="text-warning font-weight-bold">$${parseFloat(ivaDebitoFiscal).toFixed(2)}</span>` : 
-                        `<span class="text-muted">$0.00</span>`;
-                    
-                    var totalFormatted = totalFacturado > 0 ? 
-                        `<span class="text-success font-weight-bold">$${parseFloat(totalFacturado).toFixed(2)}</span>` : 
-                        `<span class="text-muted">$0.00</span>`;
-                    
-                    var cantidadFormatted = cantidadFacturas > 0 ? 
-                        `<span class="badge badge-info">${cantidadFacturas}</span>` : 
-                        `<span class="badge badge-secondary">0</span>`;
-                    
-                    var fila = `
-                        <tr>
-                            <td>${declarante.id}</td>
-                            <td>${declarante.nombre || 'N/A'}</td>
-                            <td>${declarante.ruc || 'N/A'}</td>
-                            <td>${firmaCell}</td>
-                            <td class="text-center">${baseFormatted}</td>
-                            <td class="text-center">${ivaFormatted}</td>
-                            <td class="text-center">${totalFormatted}</td>
-                            <td class="text-center">${cantidadFormatted}</td>
-                            <td>${fechaCreacion}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <button type="button" class="btn btn-info btn-mostrar-facturas" 
-                                            data-id="${declarante.id}"
-                                            data-nombre="${declarante.nombre || ''}"
-                                            title="Ver Facturas"
-                                            ${cantidadFacturas == 0 ? 'disabled' : ''}>
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-warning btn-editar-declarante" 
-                                            data-id="${declarante.id}"
-                                            data-nombre="${declarante.nombre || ''}"
-                                            data-ruc="${declarante.ruc || ''}"
-                                            data-firma="${declarante.firma || ''}"
-                                            title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-danger btn-eliminar-declarante" 
-                                            data-id="${declarante.id}"
-                                            data-nombre="${declarante.nombre || ''}"
-                                            title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    `;
-                    tbody.append(fila);
-                });
-            }
-            
-            // Ocultar loading y mostrar contenido
-            $('#declarantesLoading').hide();
-            $('#declarantesContent').show();
-        }
+        // La función para mostrar declarantes se ha movido a la vista de declarantes
 
         // Función para mostrar errores
         function mostrarError(mensaje) {
@@ -1779,13 +1054,8 @@
 
         // Manejar el botón de mostrar facturas
         $(document).on('click', '.btn-mostrar-facturas', function() {
-            var button = $(this);
-            var id = button.data('id');
-            var nombre = button.data('nombre');
-
-            // Configurar modal
-            $('#nombreDeclarante').text(nombre);
-            $('#infoNombreDeclarante').text(nombre);
+            // Redireccionar a la página de facturas
+            window.location.href = '{{ route("facturas.index") }}';
             
             // Mostrar modal
             $('#facturasDeclaranteModal').modal('show');
@@ -2029,15 +1299,8 @@
 
         // Manejar el botón de crear factura
         $(document).on('click', '.btn-crear-factura', function() {
-            var button = $(this);
-            var pedidoId = button.data('pedido-id');
-            var cliente = button.data('cliente');
-            var total = button.data('total');
-
-            // Llenar los datos básicos del pedido en el modal
-            $('#factPedidoId').val(pedidoId);
-            $('#factCliente').text(cliente || 'N/A');
-            $('#factTotal').text(total || '0.00');
+            // Redireccionar a la página de facturas
+            window.location.href = '{{ route("facturas.index") }}';
 
             // Limpiar errores previos
             $('.form-control').removeClass('is-invalid');

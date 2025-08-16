@@ -319,7 +319,15 @@ Route::get('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'califi
 Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guardarCalificacionPublica'])
     ->name('pedidos.guardar-calificacion-publica');
 
-// Rutas para el controlador de Sueldos
+    // Rutas para Facturas
+    Route::get('facturas', [App\Http\Controllers\FacturaController::class, 'index'])->name('facturas.index');
+    Route::get('facturas/listar', [App\Http\Controllers\FacturaController::class, 'listar'])->name('facturas.listar');
+    Route::post('facturas', [App\Http\Controllers\FacturaController::class, 'store'])->name('facturas.store');
+    Route::get('facturas/{id}', [App\Http\Controllers\FacturaController::class, 'show'])->name('facturas.show');
+    Route::put('facturas/{id}', [App\Http\Controllers\FacturaController::class, 'update'])->name('facturas.update');
+    Route::delete('facturas/{id}', [App\Http\Controllers\FacturaController::class, 'destroy'])->name('facturas.destroy');
+    
+    // Rutas para el controlador de Sueldos
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Ruta para imprimir rol de pago (DEBE ir antes del resource)
     Route::get('sueldos/imprimir-rol-pago', [SueldoController::class, 'imprimirRolPago'])
