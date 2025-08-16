@@ -231,6 +231,19 @@
                                 @endif
                             @endif
                         </small>
+                    @elseif(request()->filled('empresa') && request()->filled('ano') && request()->filled('mes'))
+                        @php
+                            $empresaSeleccionada = $empresas->firstWhere('id', request('empresa'));
+                            $nombreMes = strtoupper(date('F', mktime(0, 0, 0, request('mes'), 1)));
+                        @endphp
+                        <small class="text-success d-block mt-2">
+                            <i class="fas fa-building"></i> 
+                            MOSTRANDO PAGOS DE <strong>{{ $empresaSeleccionada ? $empresaSeleccionada->nombre : 'SUCURSAL SELECCIONADA' }}</strong> 
+                            DEL MES {{ $nombreMes }} {{ request('ano') }}
+                            <br>
+                            <i class="fas fa-sync-alt"></i> 
+                            <em>Los totales coinciden con la vista de pedidos del mismo período</em>
+                        </small>
                     @endif
                 </div>
             </div>
@@ -486,7 +499,16 @@
                                     empresaSelect.value = sucursal.id;
                                     empresaSelect.style.borderColor = '#28a745';
                                     empresaSelect.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
-                                    console.log('Sucursal preseleccionada con auto-submit:', sucursal.nombre);
+                                    
+                                    // Aplicar filtro del mes actual automáticamente al seleccionar sucursal
+                                    const currentDate = new Date();
+                                    const currentYear = currentDate.getFullYear();
+                                    const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0');
+                                    
+                                    $('#filtroAno').val(currentYear);
+                                    $('#filtroMes').val(currentMonth);
+                                    
+                                    console.log('Sucursal preseleccionada con filtro de mes actual:', sucursal.nombre);
                                     $('#filterForm').submit();
                                 }
                             }

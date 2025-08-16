@@ -47,15 +47,35 @@ class PagoController extends Controller
             return redirect()->route('pagos.index', $redirectParams);
         }
 
+        // Si se especifica empresa pero no hay filtros de fecha y no se solicitan todos,
+        // aplicar filtro del mes actual para coincidir con la vista de pedidos
+        if ($request->filled('empresa') && !$request->has('todos') && !$request->filled('fecha_especifica') && (!$request->filled('ano') || !$request->filled('mes'))) {
+            $currentDate = now()->setTimezone('America/Guayaquil');
+            $redirectParams = [
+                'ano' => $currentDate->format('Y'),
+                'mes' => $currentDate->format('m'),
+                'empresa' => $request->get('empresa')
+            ];
+            
+            return redirect()->route('pagos.index', $redirectParams);
+        }
+
         // Aplicar filtros de fecha
         if (!$request->has('todos')) {
             // Si hay una fecha específica, filtrar solo por esa fecha
             if ($request->filled('fecha_especifica')) {
                 $query->whereDate('created_at', $request->fecha_especifica);
             } else {
-                // Usar filtros de año y mes como antes
-                $query->whereYear('created_at', '=', $request->get('ano'))
-                      ->whereMonth('created_at', '=', (int)$request->get('mes'));
+                // Si hay filtro de empresa pero no de fecha, aplicar filtro del mes actual
+                if ($request->filled('empresa') && (!$request->filled('ano') || !$request->filled('mes'))) {
+                    $currentDate = now()->setTimezone('America/Guayaquil');
+                    $query->whereYear('created_at', '=', $currentDate->format('Y'))
+                          ->whereMonth('created_at', '=', $currentDate->format('m'));
+                } else {
+                    // Usar filtros de año y mes proporcionados
+                    $query->whereYear('created_at', '=', $request->get('ano'))
+                          ->whereMonth('created_at', '=', (int)$request->get('mes'));
+                }
             }
         }
 
