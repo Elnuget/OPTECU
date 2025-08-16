@@ -94,6 +94,46 @@
                         </div>
                     </div>
                     <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="direccion_matriz">Dirección Matriz</label>
+                                <input type="text" class="form-control" id="direccion_matriz" name="direccion_matriz">
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label for="establecimiento">Establecimiento</label>
+                                <input type="text" class="form-control" id="establecimiento" name="establecimiento" placeholder="001">
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label for="punto_emision">Punto Emisión</label>
+                                <input type="text" class="form-control" id="punto_emision" name="punto_emision" placeholder="001">
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label for="secuencial">Secuencial</label>
+                                <input type="text" class="form-control" id="secuencial" name="secuencial" placeholder="000000001">
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label for="obligado_contabilidad">Obligado Contabilidad</label>
+                                <select class="form-control" id="obligado_contabilidad" name="obligado_contabilidad">
+                                    <option value="1">SÍ</option>
+                                    <option value="0">NO</option>
+                                </select>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
                         <div class="col-12">
                             <button type="submit" class="btn btn-success" id="submitButton">
                                 <i class="fas fa-save"></i> Guardar
@@ -133,6 +173,10 @@
                                     <th>IVA Débito Fiscal</th>
                                     <th>Total Facturado</th>
                                     <th>Cant. Facturas</th>
+                                    <th>Establecimiento</th>
+                                    <th>P. Emisión</th>
+                                    <th>Obligado Cont.</th>
+                                    <th>Secuencial</th>
                                     <th>Fecha Creación</th>
                                     <th width="140">Acciones</th>
                                 </tr>
@@ -386,11 +430,23 @@ function cargarDeclarantes() {
     document.getElementById('declarantesError').style.display = 'none';
     
     // Hacer petición AJAX
-    fetch('/admin/declarantes/listar')
-        .then(response => response.json())
+    fetch('/pedidos/declarantes/listar', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor: ' + response.status);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
-                renderizarDeclarantes(data.declarantes);
+                renderizarDeclarantes(data.declarantes || data.data);
                 document.getElementById('declarantesContent').style.display = 'block';
             } else {
                 document.getElementById('errorMessage').textContent = data.message || 'Error al cargar declarantes';
@@ -399,7 +455,7 @@ function cargarDeclarantes() {
         })
         .catch(error => {
             console.error('Error:', error);
-            document.getElementById('errorMessage').textContent = 'Error de conexión';
+            document.getElementById('errorMessage').textContent = 'Error de conexión: ' + error.message;
             document.getElementById('declarantesError').style.display = 'block';
         })
         .finally(() => {
@@ -412,6 +468,13 @@ function renderizarDeclarantes(declarantes) {
     const tbody = document.getElementById('declarantesTableBody');
     tbody.innerHTML = '';
     
+    if (!declarantes || declarantes.length === 0) {
+        const emptyRow = document.createElement('tr');
+        emptyRow.innerHTML = '<td colspan="13" class="text-center">No hay declarantes registrados</td>';
+        tbody.appendChild(emptyRow);
+        return;
+    }
+    
     declarantes.forEach((declarante, index) => {
         const row = document.createElement('tr');
         
@@ -422,6 +485,11 @@ function renderizarDeclarantes(declarantes) {
         
         // Crear badge para certificado
         const certificadoBadge = declarante.firma 
+            ? `<span class="badge badge-has-cert"><i class="fas fa-check"></i> Sí</span>`
+            : `<span class="badge badge-no-cert"><i class="fas fa-times"></i> No</span>`;
+        
+        // Crear badge para obligado contabilidad
+        const obligadoContabilidadBadge = declarante.obligado_contabilidad 
             ? `<span class="badge badge-has-cert"><i class="fas fa-check"></i> Sí</span>`
             : `<span class="badge badge-no-cert"><i class="fas fa-times"></i> No</span>`;
         
@@ -443,13 +511,17 @@ function renderizarDeclarantes(declarantes) {
         // Construir HTML de la fila
         row.innerHTML = `
             <td>${index + 1}</td>
-            <td>${declarante.nombre}</td>
-            <td>${declarante.ruc}</td>
+            <td>${declarante.nombre || 'N/A'}</td>
+            <td>${declarante.ruc || 'N/A'}</td>
             <td class="text-center">${certificadoBadge}</td>
             <td class="text-right">$${numberFormat(baseGravable)}</td>
             <td class="text-right">$${numberFormat(ivaDebito)}</td>
             <td class="text-right">$${numberFormat(totalFacturado)}</td>
             <td class="text-center">${declarante.cantidad_facturas || 0}</td>
+            <td>${declarante.establecimiento || 'N/A'}</td>
+            <td>${declarante.punto_emision || 'N/A'}</td>
+            <td class="text-center">${obligadoContabilidadBadge}</td>
+            <td>${declarante.secuencial ? ('000' + declarante.secuencial).slice(-9) : '000000000'}</td>
             <td>${formatearFecha(declarante.created_at)}</td>
             <td>${acciones}</td>
         `;
@@ -467,7 +539,7 @@ function guardarDeclarante() {
     const esEdicion = !!declaranteId;
     
     // URL para la petición
-    const url = esEdicion ? `/admin/declarantes/actualizar/${declaranteId}` : '/admin/declarantes/crear';
+    const url = esEdicion ? `/declarantes/${declaranteId}` : '/declarantes';
     
     // Realizar petición
     fetch(url, {
@@ -475,9 +547,16 @@ function guardarDeclarante() {
         body: formData,
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error en la respuesta del servidor: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
             Swal.fire({
@@ -515,7 +594,7 @@ function guardarDeclarante() {
         console.error('Error:', error);
         Swal.fire({
             title: 'Error',
-            text: 'Error de conexión',
+            text: 'Error de conexión: ' + error.message,
             icon: 'error',
             confirmButtonText: 'OK'
         });
@@ -535,8 +614,20 @@ function editarDeclarante(id) {
     });
     
     // Realizar petición
-    fetch(`/admin/declarantes/${id}`)
-        .then(response => response.json())
+    fetch(`/declarantes/${id}`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor: ' + response.status);
+            }
+            return response.json();
+        })
         .then(data => {
             Swal.close();
             if (data.success) {
@@ -545,6 +636,23 @@ function editarDeclarante(id) {
                 document.getElementById('declaranteId').value = declarante.id;
                 document.getElementById('nombre').value = declarante.nombre;
                 document.getElementById('ruc').value = declarante.ruc;
+                
+                // Llenar los campos nuevos
+                if (document.getElementById('direccion_matriz')) {
+                    document.getElementById('direccion_matriz').value = declarante.direccion_matriz || '';
+                }
+                if (document.getElementById('establecimiento')) {
+                    document.getElementById('establecimiento').value = declarante.establecimiento || '';
+                }
+                if (document.getElementById('punto_emision')) {
+                    document.getElementById('punto_emision').value = declarante.punto_emision || '';
+                }
+                if (document.getElementById('secuencial')) {
+                    document.getElementById('secuencial').value = declarante.secuencial || '';
+                }
+                if (document.getElementById('obligado_contabilidad')) {
+                    document.getElementById('obligado_contabilidad').value = declarante.obligado_contabilidad ? '1' : '0';
+                }
                 
                 // Actualizar UI
                 document.getElementById('formTitle').textContent = 'Editar Declarante';
@@ -572,7 +680,7 @@ function editarDeclarante(id) {
             console.error('Error:', error);
             Swal.fire({
                 title: 'Error',
-                text: 'Error de conexión',
+                text: 'Error de conexión: ' + error.message,
                 icon: 'error',
                 confirmButtonText: 'OK'
             });
@@ -594,10 +702,12 @@ function eliminarDeclarante(id) {
     }).then((result) => {
         if (result.isConfirmed) {
             // Realizar petición
-            fetch(`/admin/declarantes/eliminar/${id}`, {
+            fetch(`/declarantes/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 }
             })
             .then(response => response.json())
@@ -650,7 +760,14 @@ function mostrarFacturasDeclarante(id) {
     $('#facturasDeclaranteModal').modal('show');
     
     // Cargar datos
-    fetch(`/admin/declarantes/${id}/facturas`)
+    fetch(`/declarantes/${id}/facturas`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -743,6 +860,20 @@ function resetearFormulario() {
     document.getElementById('cancelEditButton').style.display = 'none';
     document.getElementById('firmaActual').style.display = 'none';
     document.getElementById('firmaPreview').style.display = 'none';
+    
+    // Valores predeterminados para campos nuevos
+    if (document.getElementById('establecimiento')) {
+        document.getElementById('establecimiento').value = '001';
+    }
+    if (document.getElementById('punto_emision')) {
+        document.getElementById('punto_emision').value = '001';
+    }
+    if (document.getElementById('secuencial')) {
+        document.getElementById('secuencial').value = '000000001';
+    }
+    if (document.getElementById('obligado_contabilidad')) {
+        document.getElementById('obligado_contabilidad').value = '1'; // Por defecto "SÍ"
+    }
     
     // Eliminar validaciones
     const invalidInputs = document.querySelectorAll('.is-invalid');
