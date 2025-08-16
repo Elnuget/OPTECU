@@ -41,6 +41,7 @@
             </div>
             <div class="card-body">
                 <form id="declaranteForm" enctype="multipart/form-data">
+                    @csrf
                     <input type="hidden" id="declaranteId" name="id">
                     <div class="row">
                         <div class="col-md-4">
@@ -356,9 +357,13 @@
     max-width: 1200px;
 }
 </style>
+<!-- Incluir SweetAlert2 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.css">
 @stop
 
 @section('js')
+<!-- Incluir SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Cargar declarantes al iniciar la página
@@ -430,7 +435,7 @@ function cargarDeclarantes() {
     document.getElementById('declarantesError').style.display = 'none';
     
     // Hacer petición AJAX
-    fetch('/pedidos/declarantes/listar', {
+    fetch('/declarantes', {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -538,23 +543,62 @@ function guardarDeclarante() {
     const declaranteId = document.getElementById('declaranteId').value;
     const esEdicion = !!declaranteId;
     
+    // Depuración: mostrar todos los datos del FormData
+    console.log('Datos que se enviarán:');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + (pair[1] instanceof File ? pair[1].name : pair[1]));
+    }
+    
     // URL para la petición
     const url = esEdicion ? `/declarantes/${declaranteId}` : '/declarantes';
     
+    // Si es edición, agregar el método PUT en el FormData
+    if (esEdicion) {
+        formData.append('_method', 'PUT');
+    }
+    
+    // Asegurarnos de que el token CSRF esté en el FormData
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    formData.append('_token', csrfToken);
+    
     // Realizar petición
     fetch(url, {
-        method: 'POST',
+        method: 'POST', // Siempre POST, el _method se encarga de la simulación PUT
         body: formData,
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'X-CSRF-TOKEN': csrfToken,
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json'
         }
     })
     .then(response => {
-        if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor: ' + response.status);
+        console.log('Respuesta del servidor:', response);
+        
+        // Para errores 422, queremos obtener los detalles de validación
+        if (response.status === 422) {
+            return response.json().then(errData => {
+                console.log('Datos de error 422:', errData);
+                throw { 
+                    status: 422, 
+                    errors: errData.errors || {}, 
+                    message: 'Error de validación', 
+                    details: errData.message || 'Hay errores en el formulario'
+                };
+            });
         }
+        
+        if (!response.ok) {
+            // Intentar obtener un mensaje detallado si está disponible
+            return response.text().then(text => {
+                try {
+                    const jsonData = JSON.parse(text);
+                    throw new Error(jsonData.message || 'Error en la respuesta del servidor: ' + response.status);
+                } catch (e) {
+                    throw new Error('Error en la respuesta del servidor: ' + response.status);
+                }
+            });
+        }
+        
         return response.json();
     })
     .then(data => {
@@ -591,13 +635,48 @@ function guardarDeclarante() {
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-            title: 'Error',
-            text: 'Error de conexión: ' + error.message,
-            icon: 'error',
-            confirmButtonText: 'OK'
-        });
+        console.error('Error completo:', error);
+        
+        // Si es un error de validación (422)
+        if (error.status === 422 && error.errors) {
+            console.log('Detalles de errores de validación:', error.errors);
+            
+            let errorMessages = '';
+            Object.keys(error.errors).forEach(key => {
+                errorMessages += `• ${key}: ${error.errors[key].join(', ')}\n`;
+            });
+            
+            Swal.fire({
+                title: 'Error de validación',
+                text: 'Hay errores en el formulario. Por favor, revise los campos marcados.',
+                html: `<div class="text-left">Los siguientes campos tienen errores:<br><pre>${errorMessages}</pre></div>`,
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+            
+            // Mostrar errores en el formulario
+            Object.keys(error.errors).forEach(key => {
+                const input = document.getElementById(key);
+                if (input) {
+                    input.classList.add('is-invalid');
+                    const feedback = input.nextElementSibling;
+                    if (feedback && feedback.classList.contains('invalid-feedback')) {
+                        feedback.textContent = error.errors[key][0];
+                    } else {
+                        console.warn(`No se encontró elemento de feedback para el campo ${key}`);
+                    }
+                } else {
+                    console.warn(`No se encontró el elemento de entrada con ID ${key}`);
+                }
+            });
+        } else {
+            Swal.fire({
+                title: 'Error',
+                text: 'Error de conexión: ' + (error.message || 'Desconocido'),
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        }
     });
 }
 
@@ -860,6 +939,17 @@ function resetearFormulario() {
     document.getElementById('cancelEditButton').style.display = 'none';
     document.getElementById('firmaActual').style.display = 'none';
     document.getElementById('firmaPreview').style.display = 'none';
+    
+    // Resetear el campo de archivo (no se resetea automáticamente)
+    const firmaInput = document.getElementById('firma');
+    if (firmaInput) {
+        firmaInput.value = '';
+        // Resetear también la etiqueta del archivo seleccionado
+        const fileLabel = firmaInput.nextElementSibling;
+        if (fileLabel) {
+            fileLabel.textContent = 'Seleccionar certificado...';
+        }
+    }
     
     // Valores predeterminados para campos nuevos
     if (document.getElementById('establecimiento')) {

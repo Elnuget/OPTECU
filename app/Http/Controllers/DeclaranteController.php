@@ -10,11 +10,29 @@ class DeclaranteController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Contracts\View\View
+     * @return \Illuminate\Contracts\View\View|\Illuminate\Http\JsonResponse
      */
     public function index()
     {
         $declarantes = Declarante::all();
+        
+        // Si es una solicitud AJAX o JSON, devolver JSON
+        if (request()->expectsJson() || request()->ajax()) {
+            foreach ($declarantes as $declarante) {
+                // Agregar campos calculados para la vista
+                $facturas = \App\Models\Factura::where('declarante_id', $declarante->id)->get();
+                $declarante->base_gravable = $facturas->sum('monto') ?? 0;
+                $declarante->iva_debito = $facturas->sum('iva') ?? 0;
+                $declarante->total_facturado = $declarante->base_gravable + $declarante->iva_debito;
+                $declarante->cantidad_facturas = $facturas->count();
+            }
+            
+            return response()->json([
+                'success' => true,
+                'declarantes' => $declarantes
+            ]);
+        }
+        
         return view('declarantes.index', compact('declarantes'));
     }
 
@@ -71,17 +89,54 @@ class DeclaranteController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'ruc' => 'required|string|unique:declarante,ruc|max:255',
-            'firma' => 'nullable|string'
-        ]);
+        try {
+            $reglas = [
+                'nombre' => 'required|string|max:255',
+                'ruc' => 'required|string|unique:declarante,ruc|max:255',
+                'direccion_matriz' => 'nullable|string|max:255',
+                'establecimiento' => 'nullable|string|max:3',
+                'punto_emision' => 'nullable|string|max:3',
+                'secuencial' => 'nullable|string|max:9',
+                'obligado_contabilidad' => 'nullable'
+            ];
+            
+            // Solo validar firma si hay un archivo
+            if ($request->hasFile('firma')) {
+                $reglas['firma'] = 'nullable|file|max:2048'; // Permitimos cualquier tipo de archivo para evitar problemas de mimes
+            }
+            
+            $request->validate($reglas);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            throw $e;
+        }
 
-        $declarante = Declarante::create([
+        // Preparar datos para crear el declarante
+        $data = [
             'nombre' => $request->nombre,
             'ruc' => $request->ruc,
-            'firma' => $request->firma
-        ]);
+            'direccion_matriz' => $request->direccion_matriz,
+            'establecimiento' => $request->establecimiento ?: '001',
+            'punto_emision' => $request->punto_emision ?: '001',
+            'secuencial' => $request->secuencial ?: '000000001',
+            'obligado_contabilidad' => $request->has('obligado_contabilidad') && $request->obligado_contabilidad != '0' ? true : false
+        ];
+
+        // Manejar el archivo de firma si se proporciona
+        if ($request->hasFile('firma') && $request->file('firma')->isValid()) {
+            $firma = $request->file('firma');
+            $nombreFirma = time() . '_' . $firma->getClientOriginalName();
+            $firma->move(public_path('uploads/firmas'), $nombreFirma);
+            $data['firma'] = $nombreFirma;
+        }
+
+        $declarante = Declarante::create($data);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -138,17 +193,67 @@ class DeclaranteController extends Controller
     {
         $declarante = Declarante::findOrFail($id);
         
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'ruc' => 'required|string|max:255|unique:declarante,ruc,' . $id,
-            'firma' => 'nullable|string'
-        ]);
+        try {
+            $reglas = [
+                'nombre' => 'required|string|max:255',
+                'ruc' => 'required|string|max:255|unique:declarante,ruc,' . $id,
+                'direccion_matriz' => 'nullable|string|max:255',
+                'establecimiento' => 'nullable|string|max:3',
+                'punto_emision' => 'nullable|string|max:3',
+                'secuencial' => 'nullable|string|max:9',
+                'obligado_contabilidad' => 'nullable'
+            ];
+            
+            // Solo validar firma si hay un archivo
+            if ($request->hasFile('firma')) {
+                $reglas['firma'] = 'nullable|file|max:2048'; // Permitimos cualquier tipo de archivo para evitar problemas de mimes
+            }
+            
+            $request->validate($reglas);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error de validación',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            throw $e;
+        }
 
-        $declarante->update([
+        // Preparar datos para actualizar el declarante
+        $data = [
             'nombre' => $request->nombre,
             'ruc' => $request->ruc,
-            'firma' => $request->firma
-        ]);
+            'direccion_matriz' => $request->direccion_matriz,
+            'establecimiento' => $request->establecimiento ?: '001',
+            'punto_emision' => $request->punto_emision ?: '001',
+            'secuencial' => $request->secuencial ?: '000000001',
+            'obligado_contabilidad' => $request->has('obligado_contabilidad') && $request->obligado_contabilidad != '0' ? true : false
+        ];
+
+        // Manejar el archivo de firma si se proporciona
+        if ($request->hasFile('firma') && $request->file('firma')->isValid()) {
+            // Eliminar firma anterior si existe
+            if ($declarante->firma && file_exists(public_path('uploads/firmas/' . $declarante->firma))) {
+                @unlink(public_path('uploads/firmas/' . $declarante->firma));
+            }
+            
+            $firma = $request->file('firma');
+            $nombreFirma = time() . '_' . $firma->getClientOriginalName();
+            $firma->move(public_path('uploads/firmas'), $nombreFirma);
+            $data['firma'] = $nombreFirma;
+        }
+
+        $declarante->update($data);
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'declarante' => $declarante,
+                'message' => 'Declarante actualizado exitosamente'
+            ]);
+        }
 
         return redirect()->route('declarantes.index')
             ->with('success', 'Declarante actualizado exitosamente');
