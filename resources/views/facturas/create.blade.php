@@ -3,7 +3,7 @@
 
 @section('content_header')
 <h1>Crear Factura</h1>
-<p>Complete los campos para crear una nueva factura</p>
+<p>Seleccione los elementos del pedido que desea incluir en la factura</p>
 @if (session('error'))
     <div class="alert {{ session('tipo') }} alert-dismissible fade show" role="alert">
         <strong>{{ session('mensaje') }}</strong>
@@ -22,13 +22,17 @@
             
             @if(isset($pedido) && $pedido)
             <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> Creando factura para el pedido <strong>#{{ $pedido->num_orden }}</strong>
+                <i class="fas fa-info-circle"></i> Creando factura para el pedido <strong>#{{ $pedido->numero_orden }}</strong> - Cliente: <strong>{{ $pedido->cliente }}</strong>
                 <input type="hidden" name="pedido_id" value="{{ $pedido->id }}">
+            </div>
+            @else
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> No se ha especificado un pedido para facturar.
             </div>
             @endif
             
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-12">
                     <div class="form-group">
                         <label for="declarante_id">Declarante <span class="text-danger">*</span></label>
                         <select id="declarante_id" name="declarante_id" class="form-control" required>
@@ -40,73 +44,93 @@
                         <div class="invalid-feedback" id="declarante_id-error"></div>
                     </div>
                 </div>
-                
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="numero">Número de factura <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="numero" name="numero" required>
-                        <div class="invalid-feedback" id="numero-error"></div>
-                    </div>
-                </div>
             </div>
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="fecha">Fecha <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="fecha" name="fecha" value="{{ date('Y-m-d') }}" required>
-                        <div class="invalid-feedback" id="fecha-error"></div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="total">Total <span class="text-danger">*</span></label>
-                        <div class="input-group">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text">$</span>
-                            </div>
-                            <input type="number" class="form-control" id="total" name="total" step="0.01" min="0" required>
-                        </div>
-                        <div class="invalid-feedback" id="total-error"></div>
-                        <small class="form-text text-muted">El IVA (12%) y el subtotal se calcularán automáticamente</small>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="estado">Estado</label>
-                        <select id="estado" name="estado" class="form-control">
-                            <option value="pendiente">Pendiente</option>
-                            <option value="pagada">Pagada</option>
-                            <option value="anulada">Anulada</option>
-                        </select>
-                        <div class="invalid-feedback" id="estado-error"></div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="tipo">Tipo</label>
-                        <select id="tipo" name="tipo" class="form-control">
-                            <option value="venta">Venta</option>
-                            <option value="compra">Compra</option>
-                        </select>
-                        <div class="invalid-feedback" id="tipo-error"></div>
-                    </div>
-                </div>
-            </div>
-            
+
+            @if(isset($pedido) && $pedido)
+            <!-- Sección para seleccionar elementos del pedido -->
             <div class="row">
                 <div class="col-md-12">
-                    <div class="form-group">
-                        <label for="observaciones">Observaciones</label>
-                        <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Elementos a Facturar</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                @if(!empty($pedido->examen_visual))
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="incluir_examen" name="incluir_examen" onchange="calcularTotales()">
+                                        <label class="form-check-label" for="incluir_examen">
+                                            Examen Visual
+                                        </label>
+                                        <div class="mt-2" id="precio_examen_container" style="display: none;">
+                                            <input type="number" class="form-control form-control-sm" id="precio_examen" name="precio_examen" 
+                                                   placeholder="Precio examen" step="0.01" min="0" onchange="calcularTotales()">
+                                            <small class="form-text text-muted">IVA: 0% (Exento)</small>
+                                            <small class="form-text text-info">{{ $pedido->examen_visual }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endif
+                                
+                                @if($pedido->inventarios && $pedido->inventarios->count() > 0)
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="incluir_armazon" name="incluir_armazon" onchange="calcularTotales()">
+                                        <label class="form-check-label" for="incluir_armazon">
+                                            Armazón/Accesorios
+                                        </label>
+                                        <div class="mt-2" id="precio_armazon_container" style="display: none;">
+                                            <input type="number" class="form-control form-control-sm" id="precio_armazon" name="precio_armazon" 
+                                                   placeholder="Precio armazón" step="0.01" min="0" onchange="calcularTotales()"
+                                                   value="{{ $pedido->inventarios->sum(function($inv) { return $inv->pivot->precio * (1 - ($inv->pivot->descuento / 100)); }) }}">
+                                            <small class="form-text text-muted">IVA: 15%</small>
+                                            <small class="form-text text-info">{{ $pedido->inventarios->count() }} artículo(s)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endif
+                                
+                                @if($pedido->lunas && $pedido->lunas->count() > 0)
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="incluir_luna" name="incluir_luna" onchange="calcularTotales()">
+                                        <label class="form-check-label" for="incluir_luna">
+                                            Lunas
+                                        </label>
+                                        <div class="mt-2" id="precio_luna_container" style="display: none;">
+                                            <input type="number" class="form-control form-control-sm" id="precio_luna" name="precio_luna" 
+                                                   placeholder="Precio luna" step="0.01" min="0" onchange="calcularTotales()"
+                                                   value="{{ $pedido->lunas->sum(function($luna) { return $luna->l_precio * (1 - ($luna->l_precio_descuento / 100)); }) }}">
+                                            <small class="form-text text-muted">IVA: 15%</small>
+                                            <small class="form-text text-info">{{ $pedido->lunas->count() }} luna(s)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endif
+                                
+                                @if($pedido->d_precio && $pedido->d_precio > 0)
+                                <div class="col-md-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="incluir_accesorio" name="incluir_accesorio" onchange="calcularTotales()">
+                                        <label class="form-check-label" for="incluir_accesorio">
+                                            Accesorio Adicional
+                                        </label>
+                                        <div class="mt-2" id="precio_accesorio_container" style="display: none;">
+                                            <input type="number" class="form-control form-control-sm" id="precio_accesorio" name="precio_accesorio" 
+                                                   placeholder="Precio accesorio" step="0.01" min="0" onchange="calcularTotales()"
+                                                   value="{{ $pedido->d_precio }}">
+                                            <small class="form-text text-muted">IVA: 15%</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+            @endif
             
             <div class="row">
                 <div class="col-md-4">
@@ -119,9 +143,9 @@
                 </div>
                 
                 <div class="col-md-4">
-                    <div class="info-box bg-light">
+                    <div class="info-box bg-warning">
                         <div class="info-box-content">
-                            <span class="info-box-text">IVA (12%)</span>
+                            <span class="info-box-text">IVA</span>
                             <span class="info-box-number" id="ivaCalculado">$0.00</span>
                         </div>
                     </div>
@@ -141,7 +165,7 @@
                 <div class="col-md-12">
                     <div class="form-group">
                         <button type="submit" class="btn btn-primary" id="guardarFactura">
-                            <i class="fas fa-save"></i> Guardar Factura
+                            <i class="fas fa-file-alt"></i> Generar Factura (XML)
                         </button>
                         <a href="{{ route('facturas.index') }}" class="btn btn-secondary">
                             <i class="fas fa-times"></i> Cancelar
@@ -159,15 +183,74 @@
 @parent
 <script>
     $(document).ready(function () {
-        // Calcular valores automáticamente cuando cambie el total
-        $('#total').on('input', function() {
-            calcularValores();
+        // Mostrar/ocultar campos de precio según los checkboxes
+        $('#incluir_examen').on('change', function() {
+            $('#precio_examen_container').toggle(this.checked);
+            if (!this.checked) {
+                $('#precio_examen').val('');
+            }
+            calcularTotales();
         });
         
-        function calcularValores() {
-            const total = parseFloat($('#total').val()) || 0;
-            const iva = total * 0.12;
-            const subtotal = total - iva;
+        $('#incluir_armazon').on('change', function() {
+            $('#precio_armazon_container').toggle(this.checked);
+            if (!this.checked) {
+                $('#precio_armazon').val('');
+            }
+            calcularTotales();
+        });
+        
+        $('#incluir_luna').on('change', function() {
+            $('#precio_luna_container').toggle(this.checked);
+            if (!this.checked) {
+                $('#precio_luna').val('');
+            }
+            calcularTotales();
+        });
+        
+        $('#incluir_accesorio').on('change', function() {
+            $('#precio_accesorio_container').toggle(this.checked);
+            if (!this.checked) {
+                $('#precio_accesorio').val('');
+            }
+            calcularTotales();
+        });
+        
+        // Función para calcular totales según las reglas de IVA
+        function calcularTotales() {
+            let subtotal = 0;
+            let iva = 0;
+            let total = 0;
+            
+            // Examen Visual - 0% IVA (exento)
+            const precioExamen = parseFloat($('#precio_examen').val()) || 0;
+            if ($('#incluir_examen').is(':checked') && precioExamen > 0) {
+                subtotal += precioExamen;
+                // No se suma IVA para examen visual (0%)
+            }
+            
+            // Armazón - 15% IVA
+            const precioArmazon = parseFloat($('#precio_armazon').val()) || 0;
+            if ($('#incluir_armazon').is(':checked') && precioArmazon > 0) {
+                subtotal += precioArmazon;
+                iva += precioArmazon * 0.15;
+            }
+            
+            // Luna - 15% IVA
+            const precioLuna = parseFloat($('#precio_luna').val()) || 0;
+            if ($('#incluir_luna').is(':checked') && precioLuna > 0) {
+                subtotal += precioLuna;
+                iva += precioLuna * 0.15;
+            }
+            
+            // Accesorio - 15% IVA
+            const precioAccesorio = parseFloat($('#precio_accesorio').val()) || 0;
+            if ($('#incluir_accesorio').is(':checked') && precioAccesorio > 0) {
+                subtotal += precioAccesorio;
+                iva += precioAccesorio * 0.15;
+            }
+            
+            total = subtotal + iva;
             
             // Mostrar valores calculados
             $('#subtotalCalculado').text('$' + subtotal.toFixed(2));
@@ -179,12 +262,38 @@
         $('#facturaForm').on('submit', function(e) {
             e.preventDefault();
             
+            // Validar que al menos un elemento esté seleccionado
+            if (!$('#incluir_examen').is(':checked') && 
+                !$('#incluir_armazon').is(':checked') && 
+                !$('#incluir_luna').is(':checked') && 
+                !$('#incluir_accesorio').is(':checked')) {
+                
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Debe seleccionar al menos un elemento para facturar.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
+            // Validar que hay un declarante seleccionado
+            if (!$('#declarante_id').val()) {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Debe seleccionar un declarante.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
             // Limpiar errores previos
             $('.form-control').removeClass('is-invalid');
             $('.invalid-feedback').text('');
             
             // Deshabilitar botón de guardar
-            $('#guardarFactura').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Guardando...');
+            $('#guardarFactura').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generando XML...');
             
             // Obtener datos del formulario
             const formData = $(this).serialize();
@@ -197,10 +306,16 @@
                 dataType: "json",
                 success: function(response) {
                     if (response.success) {
-                        // Mostrar mensaje de éxito
+                        // Mostrar mensaje de éxito con información del XML
                         Swal.fire({
                             title: '¡Éxito!',
-                            text: response.message,
+                            html: `
+                                <p>${response.message}</p>
+                                <p><strong>Archivo XML:</strong> ${response.data.xml_path}</p>
+                                <p><strong>Subtotal:</strong> $${response.data.subtotal.toFixed(2)}</p>
+                                <p><strong>IVA:</strong> $${response.data.iva.toFixed(2)}</p>
+                                <p><strong>Total:</strong> $${response.data.total.toFixed(2)}</p>
+                            `,
                             icon: 'success',
                             confirmButtonText: 'OK'
                         }).then((result) => {
@@ -217,7 +332,7 @@
                         });
                         
                         // Habilitar botón de guardar
-                        $('#guardarFactura').prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Factura');
+                        $('#guardarFactura').prop('disabled', false).html('<i class="fas fa-file-alt"></i> Generar Factura (XML)');
                     }
                 },
                 error: function(xhr) {
@@ -234,32 +349,41 @@
                         // Mostrar mensaje de error general
                         Swal.fire({
                             title: 'Error',
-                            text: 'Ha ocurrido un error al guardar la factura.',
+                            text: 'Ha ocurrido un error al generar la factura.',
                             icon: 'error',
                             confirmButtonText: 'OK'
                         });
                     }
                     
                     // Habilitar botón de guardar
-                    $('#guardarFactura').prop('disabled', false).html('<i class="fas fa-save"></i> Guardar Factura');
+                    $('#guardarFactura').prop('disabled', false).html('<i class="fas fa-file-alt"></i> Generar Factura (XML)');
                 }
             });
         });
         
         // Inicializar cálculos
-        calcularValores();
+        calcularTotales();
         
-        // Si hay un pedido_id, cargar los datos del pedido
         @if(isset($pedido) && $pedido)
-        // Si el pedido tiene un total, mostrarlo en el formulario
-        @if(isset($pedido->total) && $pedido->total > 0)
-        $('#total').val({{ $pedido->total }}).trigger('input');
+        // Auto-seleccionar elementos si ya tienen precios predefinidos
+        @if(!empty($pedido->examen_visual))
+        $('#incluir_examen').prop('checked', false); // Dejar sin seleccionar por defecto
         @endif
         
-        // Si el pedido tiene una empresa asociada, seleccionarla
-        @if(isset($pedido->empresa_id) && $pedido->empresa_id)
-        // Aquí se podría implementar la selección de empresa si es necesario
+        @if($pedido->inventarios && $pedido->inventarios->count() > 0)
+        $('#incluir_armazon').prop('checked', true).trigger('change');
         @endif
+        
+        @if($pedido->lunas && $pedido->lunas->count() > 0)
+        $('#incluir_luna').prop('checked', true).trigger('change');
+        @endif
+        
+        @if($pedido->d_precio && $pedido->d_precio > 0)
+        $('#incluir_accesorio').prop('checked', true).trigger('change');
+        @endif
+        
+        // Recalcular después de cargar los datos
+        setTimeout(calcularTotales, 100);
         @endif
     });
 </script>

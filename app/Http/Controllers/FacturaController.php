@@ -93,11 +93,16 @@ class FacturaController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'declarante_id' => 'required|exists:declarantes,id',
-                'numero' => 'required|string|max:50',
-                'fecha' => 'required|date',
-                'total' => 'required|numeric|min:0',
-                'estado' => 'nullable|string|in:pendiente,pagada,anulada',
-                'tipo' => 'nullable|string|in:venta,compra',
+                'pedido_id' => 'required|exists:pedidos,id',
+                // Campos de elementos a facturar
+                'incluir_examen' => 'nullable|boolean',
+                'incluir_armazon' => 'nullable|boolean',
+                'incluir_luna' => 'nullable|boolean',
+                'incluir_accesorio' => 'nullable|boolean',
+                'precio_examen' => 'nullable|numeric|min:0',
+                'precio_armazon' => 'nullable|numeric|min:0',
+                'precio_luna' => 'nullable|numeric|min:0',
+                'precio_accesorio' => 'nullable|numeric|min:0',
             ]);
             
             if ($validator->fails()) {
@@ -107,36 +112,192 @@ class FacturaController extends Controller
                 ], 422);
             }
             
-            $total = floatval($request->total);
-            $iva = round($total * 0.12, 2);
-            $monto = round($total - $iva, 2);
+            // Validar que al menos un elemento esté seleccionado
+            if (!$request->incluir_examen && !$request->incluir_armazon && 
+                !$request->incluir_luna && !$request->incluir_accesorio) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debe seleccionar al menos un elemento para facturar.'
+                ], 422);
+            }
             
+            // Obtener datos del pedido y declarante
+            $pedido = \App\Models\Pedido::findOrFail($request->pedido_id);
+            $declarante = Declarante::findOrFail($request->declarante_id);
+            
+            // Calcular totales según los elementos seleccionados
+            $subtotal = 0;
+            $iva = 0;
+            $elementos = [];
+            
+            // Examen Visual - 0% IVA (exento)
+            if ($request->incluir_examen && $request->precio_examen > 0) {
+                $precioExamen = floatval($request->precio_examen);
+                $subtotal += $precioExamen;
+                $elementos[] = [
+                    'tipo' => 'Examen Visual',
+                    'descripcion' => $pedido->examen_visual ?: 'Examen Visual',
+                    'precio' => $precioExamen,
+                    'iva_porcentaje' => 0,
+                    'iva_valor' => 0
+                ];
+            }
+            
+            // Armazón - 15% IVA
+            if ($request->incluir_armazon && $request->precio_armazon > 0) {
+                $precioArmazon = floatval($request->precio_armazon);
+                $ivaArmazon = $precioArmazon * 0.15;
+                $subtotal += $precioArmazon;
+                $iva += $ivaArmazon;
+                $elementos[] = [
+                    'tipo' => 'Armazón',
+                    'descripcion' => 'Armazón',
+                    'precio' => $precioArmazon,
+                    'iva_porcentaje' => 15,
+                    'iva_valor' => $ivaArmazon
+                ];
+            }
+            
+            // Luna - 15% IVA
+            if ($request->incluir_luna && $request->precio_luna > 0) {
+                $precioLuna = floatval($request->precio_luna);
+                $ivaLuna = $precioLuna * 0.15;
+                $subtotal += $precioLuna;
+                $iva += $ivaLuna;
+                $elementos[] = [
+                    'tipo' => 'Luna',
+                    'descripcion' => 'Luna',
+                    'precio' => $precioLuna,
+                    'iva_porcentaje' => 15,
+                    'iva_valor' => $ivaLuna
+                ];
+            }
+            
+            // Accesorio - 15% IVA
+            if ($request->incluir_accesorio && $request->precio_accesorio > 0) {
+                $precioAccesorio = floatval($request->precio_accesorio);
+                $ivaAccesorio = $precioAccesorio * 0.15;
+                $subtotal += $precioAccesorio;
+                $iva += $ivaAccesorio;
+                $elementos[] = [
+                    'tipo' => 'Accesorio',
+                    'descripcion' => 'Accesorio',
+                    'precio' => $precioAccesorio,
+                    'iva_porcentaje' => 15,
+                    'iva_valor' => $ivaAccesorio
+                ];
+            }
+            
+            $total = $subtotal + $iva;
+            
+            // Generar XML
+            $xmlPath = $this->generarXMLFactura($pedido, $declarante, $elementos, $subtotal, $iva, $total);
+            
+            // Crear la factura
             $factura = new Factura();
             $factura->declarante_id = $request->declarante_id;
-            // Si viene un pedido_id en la solicitud, guardarlo
-            if ($request->has('pedido_id')) {
-                $factura->pedido_id = $request->pedido_id;
-            }
-            $factura->numero = $request->numero;
-            // Los tipos decimales en Laravel se manejan como números
-            $factura->monto = $monto;
-            $factura->iva = $iva;
-            $factura->estado = $request->estado ?? 'pendiente';
-            $factura->tipo = $request->tipo ?? 'venta';
-            $factura->observaciones = $request->observaciones;
-            $factura->created_at = Carbon::parse($request->fecha);
+            $factura->pedido_id = $request->pedido_id;
+            $factura->xml = $xmlPath;
+            $factura->monto = round($subtotal, 2);
+            $factura->iva = round($iva, 2);
+            $factura->tipo = 'comprobante';
+            
             $factura->save();
             
             return response()->json([
                 'success' => true,
                 'message' => 'Factura creada correctamente',
-                'data' => $factura
+                'data' => [
+                    'factura_id' => $factura->id,
+                    'xml_path' => $xmlPath,
+                    'subtotal' => $subtotal,
+                    'iva' => $iva,
+                    'total' => $total
+                ]
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al crear factura: ' . $e->getMessage()
             ], 500);
+        }
+    }
+    
+    /**
+     * Generar XML de la factura
+     */
+    private function generarXMLFactura($pedido, $declarante, $elementos, $subtotal, $iva, $total)
+    {
+        try {
+            // Crear estructura XML
+            $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><factura></factura>');
+            
+            // Información general
+            $info = $xml->addChild('informacion');
+            $info->addChild('numero', 'COMP-' . time());
+            $info->addChild('fecha', date('Y-m-d'));
+            $info->addChild('hora', date('H:i:s'));
+            
+            // Información del declarante (emisor)
+            $emisor = $xml->addChild('emisor');
+            $emisor->addChild('nombre', htmlspecialchars($declarante->nombre));
+            $emisor->addChild('ruc', $declarante->ruc);
+            if ($declarante->direccion_matriz) {
+                $emisor->addChild('direccion', htmlspecialchars($declarante->direccion_matriz));
+            }
+            
+            // Información del cliente
+            $cliente = $xml->addChild('cliente');
+            $cliente->addChild('nombre', htmlspecialchars($pedido->cliente));
+            if ($pedido->cedula) {
+                $cliente->addChild('cedula', $pedido->cedula);
+            }
+            if ($pedido->direccion) {
+                $cliente->addChild('direccion', htmlspecialchars($pedido->direccion));
+            }
+            
+            // Información del pedido
+            $pedidoXml = $xml->addChild('pedido');
+            $pedidoXml->addChild('id', $pedido->id);
+            $pedidoXml->addChild('numero_orden', $pedido->numero_orden);
+            $pedidoXml->addChild('fecha_pedido', $pedido->fecha ? $pedido->fecha->format('Y-m-d') : date('Y-m-d'));
+            
+            // Detalles de elementos facturados
+            $detalles = $xml->addChild('detalles');
+            foreach ($elementos as $elemento) {
+                $detalle = $detalles->addChild('detalle');
+                $detalle->addChild('tipo', $elemento['tipo']);
+                $detalle->addChild('descripcion', htmlspecialchars($elemento['descripcion']));
+                $detalle->addChild('precio', number_format($elemento['precio'], 2));
+                $detalle->addChild('iva_porcentaje', $elemento['iva_porcentaje']);
+                $detalle->addChild('iva_valor', number_format($elemento['iva_valor'], 2));
+                $detalle->addChild('total_item', number_format($elemento['precio'] + $elemento['iva_valor'], 2));
+            }
+            
+            // Totales
+            $totales = $xml->addChild('totales');
+            $totales->addChild('subtotal', number_format($subtotal, 2));
+            $totales->addChild('iva_total', number_format($iva, 2));
+            $totales->addChild('total', number_format($total, 2));
+            
+            // Generar nombre del archivo y ruta
+            $filename = 'factura_' . $pedido->id . '_' . time() . '.xml';
+            $xmlPath = 'facturas/' . $filename;
+            $fullPath = storage_path('app/public/' . $xmlPath);
+            
+            // Crear directorio si no existe
+            $directory = dirname($fullPath);
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+            
+            // Guardar el archivo XML
+            $xml->asXML($fullPath);
+            
+            return $xmlPath;
+            
+        } catch (\Exception $e) {
+            throw new \Exception('Error al generar XML: ' . $e->getMessage());
         }
     }
 

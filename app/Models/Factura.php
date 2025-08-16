@@ -37,8 +37,8 @@ class Factura extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'monto' => 'decimal:2',
-        'iva' => 'decimal:2',
+        'monto' => 'float',
+        'iva' => 'float',
     ];
 
     /**
