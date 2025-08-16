@@ -19,8 +19,7 @@ class Declarante extends Model
         'direccion_matriz',
         'establecimiento',
         'punto_emision',
-        'obligado_contabilidad',
-        'secuencial'
+        'obligado_contabilidad'
     ];
 
     protected $casts = [
@@ -37,23 +36,5 @@ class Declarante extends Model
         return $this->obligado_contabilidad ? 'SI' : 'NO';
     }
 
-    /**
-     * Generar el siguiente secuencial
-     */
-    public function generarSiguienteSecuencial()
-    {
-        $ultimoSecuencial = (int) $this->secuencial;
-        $nuevoSecuencial = $ultimoSecuencial + 1;
-        return str_pad($nuevoSecuencial, 9, '0', STR_PAD_LEFT);
-    }
-
-    /**
-     * Incrementar el secuencial y guardarlo
-     */
-    public function incrementarSecuencial()
-    {
-        $this->secuencial = $this->generarSiguienteSecuencial();
-        $this->save();
-        return $this->secuencial;
-    }
+    // Los métodos relacionados con el secuencial han sido eliminados
 }

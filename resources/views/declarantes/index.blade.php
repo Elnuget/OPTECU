@@ -116,13 +116,7 @@
                                 <div class="invalid-feedback"></div>
                             </div>
                         </div>
-                        <div class="col-md-2">
-                            <div class="form-group">
-                                <label for="secuencial">Secuencial</label>
-                                <input type="text" class="form-control" id="secuencial" name="secuencial" placeholder="000000001">
-                                <div class="invalid-feedback"></div>
-                            </div>
-                        </div>
+
                         <div class="col-md-2">
                             <div class="form-group">
                                 <label for="obligado_contabilidad">Obligado Contabilidad</label>
@@ -152,40 +146,18 @@
         <div class="card">
             <div class="card-header bg-light">
                 <h6 class="card-title mb-0">
-                    <i class="fas fa-list"></i> Lista de Declarantes
+                    <i class="fas fa-id-card"></i> Lista de Declarantes
                 </h6>
             </div>
-            <div class="card-body p-0">
+            <div class="card-body">
                 <div id="declarantesLoading" class="text-center p-4">
                     <i class="fas fa-spinner fa-spin fa-2x"></i>
                     <p>Cargando declarantes...</p>
                 </div>
                 
                 <div id="declarantesContent" style="display: none;">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover mb-0" id="declarantesTable">
-                            <thead class="thead-dark">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Nombre</th>
-                                    <th>RUC</th>
-                                    <th>Firma</th>
-                                    <th>Base Gravable</th>
-                                    <th>IVA Débito Fiscal</th>
-                                    <th>Total Facturado</th>
-                                    <th>Cant. Facturas</th>
-                                    <th>Establecimiento</th>
-                                    <th>P. Emisión</th>
-                                    <th>Obligado Cont.</th>
-                                    <th>Secuencial</th>
-                                    <th>Fecha Creación</th>
-                                    <th width="140">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="declarantesTableBody">
-                                <!-- Los datos se cargarán aquí dinámicamente -->
-                            </tbody>
-                        </table>
+                    <div class="row" id="declarantesCardContainer">
+                        <!-- Los datos de las tarjetas se cargarán aquí dinámicamente -->
                     </div>
                 </div>
                 
@@ -356,6 +328,33 @@
 #facturasDeclaranteModal .modal-xl {
     max-width: 1200px;
 }
+
+/* Estilos para las tarjetas de declarantes */
+#declarantesCardContainer .card {
+    transition: all 0.3s ease;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+#declarantesCardContainer .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.25);
+}
+
+#declarantesCardContainer .border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+
+#declarantesCardContainer .badge {
+    margin-right: 5px;
+    display: inline-block;
+    margin-bottom: 5px;
+    padding: 5px 8px;
+}
+
+#declarantesCardContainer .card-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 0.75rem;
+}
 </style>
 <!-- Incluir SweetAlert2 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.css">
@@ -401,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Delegación de eventos para botones de editar y eliminar
-    document.getElementById('declarantesTableBody').addEventListener('click', function(e) {
+    document.getElementById('declarantesCardContainer').addEventListener('click', function(e) {
         const target = e.target;
         
         // Si se hizo clic en un botón editar
@@ -468,70 +467,68 @@ function cargarDeclarantes() {
         });
 }
 
-// Función para renderizar declarantes en la tabla
+// Función para renderizar declarantes en tarjetas
 function renderizarDeclarantes(declarantes) {
-    const tbody = document.getElementById('declarantesTableBody');
-    tbody.innerHTML = '';
+    const container = document.getElementById('declarantesCardContainer');
+    container.innerHTML = '';
     
     if (!declarantes || declarantes.length === 0) {
-        const emptyRow = document.createElement('tr');
-        emptyRow.innerHTML = '<td colspan="13" class="text-center">No hay declarantes registrados</td>';
-        tbody.appendChild(emptyRow);
+        container.innerHTML = '<div class="col-12 text-center p-4"><div class="alert alert-info">No hay declarantes registrados</div></div>';
         return;
     }
     
     declarantes.forEach((declarante, index) => {
-        const row = document.createElement('tr');
-        
-        // Formatear valores numéricos
-        const baseGravable = parseFloat(declarante.base_gravable || 0).toFixed(2);
-        const ivaDebito = parseFloat(declarante.iva_debito || 0).toFixed(2);
-        const totalFacturado = parseFloat(declarante.total_facturado || 0).toFixed(2);
-        
         // Crear badge para certificado
         const certificadoBadge = declarante.firma 
-            ? `<span class="badge badge-has-cert"><i class="fas fa-check"></i> Sí</span>`
-            : `<span class="badge badge-no-cert"><i class="fas fa-times"></i> No</span>`;
+            ? `<span class="badge badge-has-cert"><i class="fas fa-check"></i> Certificado: Sí</span>`
+            : `<span class="badge badge-no-cert"><i class="fas fa-times"></i> Certificado: No</span>`;
         
         // Crear badge para obligado contabilidad
         const obligadoContabilidadBadge = declarante.obligado_contabilidad 
-            ? `<span class="badge badge-has-cert"><i class="fas fa-check"></i> Sí</span>`
-            : `<span class="badge badge-no-cert"><i class="fas fa-times"></i> No</span>`;
+            ? `<span class="badge badge-has-cert"><i class="fas fa-check"></i> Obligado Contabilidad: Sí</span>`
+            : `<span class="badge badge-no-cert"><i class="fas fa-times"></i> Obligado Contabilidad: No</span>`;
         
-        // Construir botones de acción
-        const acciones = `
-            <div class="btn-group btn-group-sm" role="group">
-                <button type="button" class="btn btn-primary btn-editar" data-id="${declarante.id}" title="Editar">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button type="button" class="btn btn-info btn-facturas" data-id="${declarante.id}" title="Ver facturas">
-                    <i class="fas fa-file-invoice-dollar"></i>
-                </button>
-                <button type="button" class="btn btn-danger btn-eliminar" data-id="${declarante.id}" title="Eliminar">
-                    <i class="fas fa-trash"></i>
-                </button>
+        // Crear columna para la tarjeta
+        const cardCol = document.createElement('div');
+        cardCol.className = 'col-lg-4 col-md-6 mb-4';
+        
+        // Construir HTML de la tarjeta
+        cardCol.innerHTML = `
+            <div class="card h-100 border-left-info">
+                <div class="card-header bg-gradient-light d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-user-tie mr-1"></i> ${declarante.nombre || 'Sin nombre'}
+                    </h6>
+                </div>
+                <div class="card-body pb-0">
+                    <div class="row mb-2">
+                        <div class="col-12">
+                            <p class="mb-1"><strong>RUC:</strong> ${declarante.ruc || 'N/A'}</p>
+                            <p class="mb-1"><strong>Establecimiento:</strong> ${declarante.establecimiento || 'N/A'}</p>
+                            <p class="mb-1"><strong>Punto de Emisión:</strong> ${declarante.punto_emision || 'N/A'}</p>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        ${certificadoBadge} ${obligadoContabilidadBadge}
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-center">
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-primary btn-editar" data-id="${declarante.id}" title="Editar">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button type="button" class="btn btn-sm btn-info btn-facturas" data-id="${declarante.id}" title="Ver facturas">
+                            <i class="fas fa-file-invoice-dollar"></i> Facturas
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger btn-eliminar" data-id="${declarante.id}" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
         
-        // Construir HTML de la fila
-        row.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${declarante.nombre || 'N/A'}</td>
-            <td>${declarante.ruc || 'N/A'}</td>
-            <td class="text-center">${certificadoBadge}</td>
-            <td class="text-right">$${numberFormat(baseGravable)}</td>
-            <td class="text-right">$${numberFormat(ivaDebito)}</td>
-            <td class="text-right">$${numberFormat(totalFacturado)}</td>
-            <td class="text-center">${declarante.cantidad_facturas || 0}</td>
-            <td>${declarante.establecimiento || 'N/A'}</td>
-            <td>${declarante.punto_emision || 'N/A'}</td>
-            <td class="text-center">${obligadoContabilidadBadge}</td>
-            <td>${declarante.secuencial ? ('000' + declarante.secuencial).slice(-9) : '000000000'}</td>
-            <td>${formatearFecha(declarante.created_at)}</td>
-            <td>${acciones}</td>
-        `;
-        
-        tbody.appendChild(row);
+        container.appendChild(cardCol);
     });
 }
 
@@ -726,9 +723,7 @@ function editarDeclarante(id) {
                 if (document.getElementById('punto_emision')) {
                     document.getElementById('punto_emision').value = declarante.punto_emision || '';
                 }
-                if (document.getElementById('secuencial')) {
-                    document.getElementById('secuencial').value = declarante.secuencial || '';
-                }
+
                 if (document.getElementById('obligado_contabilidad')) {
                     document.getElementById('obligado_contabilidad').value = declarante.obligado_contabilidad ? '1' : '0';
                 }

@@ -96,7 +96,6 @@ class DeclaranteController extends Controller
                 'direccion_matriz' => 'nullable|string|max:255',
                 'establecimiento' => 'nullable|string|max:3',
                 'punto_emision' => 'nullable|string|max:3',
-                'secuencial' => 'nullable|string|max:9',
                 'obligado_contabilidad' => 'nullable'
             ];
             
@@ -124,7 +123,6 @@ class DeclaranteController extends Controller
             'direccion_matriz' => $request->direccion_matriz,
             'establecimiento' => $request->establecimiento ?: '001',
             'punto_emision' => $request->punto_emision ?: '001',
-            'secuencial' => $request->secuencial ?: '000000001',
             'obligado_contabilidad' => $request->has('obligado_contabilidad') && $request->obligado_contabilidad != '0' ? true : false
         ];
 
@@ -200,7 +198,6 @@ class DeclaranteController extends Controller
                 'direccion_matriz' => 'nullable|string|max:255',
                 'establecimiento' => 'nullable|string|max:3',
                 'punto_emision' => 'nullable|string|max:3',
-                'secuencial' => 'nullable|string|max:9',
                 'obligado_contabilidad' => 'nullable'
             ];
             
@@ -228,7 +225,6 @@ class DeclaranteController extends Controller
             'direccion_matriz' => $request->direccion_matriz,
             'establecimiento' => $request->establecimiento ?: '001',
             'punto_emision' => $request->punto_emision ?: '001',
-            'secuencial' => $request->secuencial ?: '000000001',
             'obligado_contabilidad' => $request->has('obligado_contabilidad') && $request->obligado_contabilidad != '0' ? true : false
         ];
 
