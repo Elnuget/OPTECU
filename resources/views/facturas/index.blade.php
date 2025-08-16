@@ -2,6 +2,366 @@
 @section('title', 'Facturas')
 
 @section('content_header')
+<h1>Facturas</h1>
+<p>Listado de facturas emitidas</p>
+@if (session('error'))
+    <div class="alert {{ session('tipo') }} alert-dismissible fade show" role="alert">
+        <strong>{{ session('mensaje') }}</strong>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+@endif
+@stop
+
+@section('content')
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h3 class="card-title">Listado de Facturas</h3>
+            <a href="{{ route('facturas.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nueva Factura
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Filtros sencillos -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="filtroDeclarante">Declarante</label>
+                    <select id="filtroDeclarante" class="form-control">
+                        <option value="">Todos los declarantes</option>
+                        @foreach ($declarantes ?? [] as $declarante)
+                            <option value="{{ $declarante->id }}">{{ $declarante->nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="filtroFechaDesde">Desde</label>
+                    <input type="date" id="filtroFechaDesde" class="form-control">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="filtroFechaHasta">Hasta</label>
+                    <input type="date" id="filtroFechaHasta" class="form-control">
+                </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button id="btnFiltrar" class="btn btn-info mr-2">
+                    <i class="fas fa-search"></i> Filtrar
+                </button>
+                <button id="btnLimpiar" class="btn btn-secondary">
+                    <i class="fas fa-sync"></i> Limpiar
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading spinner -->
+        <div id="facturasLoading" class="text-center p-4">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p class="mt-2">Cargando facturas...</p>
+        </div>
+
+        <!-- Mensaje sin facturas -->
+        <div id="noFacturasMessage" class="alert alert-info" style="display: none;">
+            <i class="fas fa-info-circle"></i> No se encontraron facturas con los filtros seleccionados.
+        </div>
+
+        <!-- Mensaje de error -->
+        <div id="facturasError" class="alert alert-danger" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorFacturasMessage">Error al cargar las facturas.</span>
+        </div>
+
+        <!-- Tabla de facturas -->
+        <div id="facturasContent" style="display: none;">
+            <div class="table-responsive">
+                <table id="facturasTable" class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Fecha</th>
+                            <th>Declarante</th>
+                            <th>Número</th>
+                            <th>Cliente</th>
+                            <th>Tipo</th>
+                            <th class="text-right">Subtotal</th>
+                            <th class="text-right">IVA</th>
+                            <th class="text-right">Total</th>
+                            <th class="text-center">XML</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="facturasTableBody">
+                        <!-- Los datos se cargarán aquí dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Resumen de totales -->
+            <div id="totalesFacturasResumen" class="row mt-4" style="display: none;">
+                <div class="col-md-3">
+                    <div class="info-box bg-light">
+                        <div class="info-box-content">
+                            <span class="info-box-text">Total Facturas</span>
+                            <span id="totalFacturas" class="info-box-number">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box bg-light">
+                        <div class="info-box-content">
+                            <span class="info-box-text">Subtotal</span>
+                            <span id="totalSubtotal" class="info-box-number">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box bg-light">
+                        <div class="info-box-content">
+                            <span class="info-box-text">IVA</span>
+                            <span id="totalIVA" class="info-box-number">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-box bg-success">
+                        <div class="info-box-content">
+                            <span class="info-box-text">Total</span>
+                            <span id="granTotal" class="info-box-number">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@stop
+
+@section('js')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Cargar facturas al cargar la página
+    cargarFacturas();
+    
+    // Evento al hacer clic en el botón filtrar
+    document.getElementById('btnFiltrar').addEventListener('click', function() {
+        cargarFacturas();
+    });
+    
+    // Evento al hacer clic en el botón limpiar
+    document.getElementById('btnLimpiar').addEventListener('click', function() {
+        document.getElementById('filtroDeclarante').value = '';
+        document.getElementById('filtroFechaDesde').value = '';
+        document.getElementById('filtroFechaHasta').value = '';
+        cargarFacturas();
+    });
+});
+
+// Función para cargar facturas
+function cargarFacturas() {
+    // Obtener valores de filtros
+    const declaranteId = document.getElementById('filtroDeclarante').value;
+    const fechaDesde = document.getElementById('filtroFechaDesde').value;
+    const fechaHasta = document.getElementById('filtroFechaHasta').value;
+    
+    // Construir URL con parámetros
+    let url = '{{ route("facturas.listar") }}';
+    const params = new URLSearchParams();
+    
+    if (declaranteId) params.append('declarante_id', declaranteId);
+    if (fechaDesde) params.append('fecha_desde', fechaDesde);
+    if (fechaHasta) params.append('fecha_hasta', fechaHasta);
+    
+    if (params.toString()) {
+        url += '?' + params.toString();
+    }
+    
+    // Mostrar indicador de carga
+    document.getElementById('facturasLoading').style.display = 'block';
+    document.getElementById('facturasContent').style.display = 'none';
+    document.getElementById('facturasError').style.display = 'none';
+    document.getElementById('noFacturasMessage').style.display = 'none';
+    document.getElementById('totalesFacturasResumen').style.display = 'none';
+    
+    // Hacer petición
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const facturas = data.data;
+                
+                if (facturas && facturas.length > 0) {
+                    // Renderizar facturas
+                    renderizarFacturas(facturas);
+                    
+                    // Mostrar tabla
+                    document.getElementById('facturasContent').style.display = 'block';
+                    
+                    // Calcular totales
+                    calcularTotalesFacturas(facturas);
+                } else {
+                    // Mostrar mensaje de no facturas
+                    document.getElementById('noFacturasMessage').style.display = 'block';
+                }
+            } else {
+                // Mostrar error
+                document.getElementById('errorFacturasMessage').textContent = data.message || 'Error al cargar facturas';
+                document.getElementById('facturasError').style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('errorFacturasMessage').textContent = 'Error de conexión';
+            document.getElementById('facturasError').style.display = 'block';
+        })
+        .finally(() => {
+            document.getElementById('facturasLoading').style.display = 'none';
+        });
+}
+
+// Función para renderizar facturas en la tabla
+function renderizarFacturas(facturas) {
+    const tbody = document.getElementById('facturasTableBody');
+    tbody.innerHTML = '';
+    
+    facturas.forEach((factura, index) => {
+        const row = document.createElement('tr');
+        
+        // Formatear valores
+        const monto = parseFloat(factura.monto || 0);
+        const iva = parseFloat(factura.iva || 0);
+        const total = monto + iva;
+        
+        // XML badge
+        const xmlBadge = factura.xml 
+            ? `<span class="badge badge-success"><i class="fas fa-check"></i> Sí</span>`
+            : `<span class="badge badge-secondary"><i class="fas fa-times"></i> No</span>`;
+        
+        // Tipo de documento
+        const tipoBadge = factura.tipo === 'venta'
+            ? `<span class="badge badge-primary">Venta</span>`
+            : `<span class="badge badge-info">Compra</span>`;
+        
+        // Acciones
+        const acciones = `
+            <div class="btn-group btn-group-sm" role="group">
+                <a href="{{ url('facturas') }}/${factura.id}" class="btn btn-info" title="Ver detalles">
+                    <i class="fas fa-eye"></i>
+                </a>
+                <button type="button" class="btn btn-danger btn-eliminar" data-id="${factura.id}" title="Eliminar">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${formatearFecha(factura.created_at)}</td>
+            <td>${factura.declarante ? factura.declarante.nombre : 'N/A'}</td>
+            <td>${factura.numero || 'Sin número'}</td>
+            <td>${factura.pedido ? factura.pedido.cliente : 'N/A'}</td>
+            <td>${tipoBadge}</td>
+            <td class="text-right">$${numberFormat(monto)}</td>
+            <td class="text-right">$${numberFormat(iva)}</td>
+            <td class="text-right">$${numberFormat(total)}</td>
+            <td class="text-center">${xmlBadge}</td>
+            <td>${acciones}</td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    // Agregar eventos a los botones de eliminar
+    document.querySelectorAll('.btn-eliminar').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            confirmarEliminar(id);
+        });
+    });
+}
+
+// Función para calcular totales
+function calcularTotalesFacturas(facturas) {
+    let totalSubtotal = 0;
+    let totalIVA = 0;
+    let granTotal = 0;
+    
+    facturas.forEach(factura => {
+        const monto = parseFloat(factura.monto || 0);
+        const iva = parseFloat(factura.iva || 0);
+        
+        totalSubtotal += monto;
+        totalIVA += iva;
+        granTotal += (monto + iva);
+    });
+    
+    // Mostrar totales
+    document.getElementById('totalFacturas').textContent = facturas.length;
+    document.getElementById('totalSubtotal').textContent = '$' + numberFormat(totalSubtotal);
+    document.getElementById('totalIVA').textContent = '$' + numberFormat(totalIVA);
+    document.getElementById('granTotal').textContent = '$' + numberFormat(granTotal);
+    
+    // Mostrar sección de totales
+    document.getElementById('totalesFacturasResumen').style.display = 'block';
+}
+
+// Función para confirmar eliminación
+function confirmarEliminar(id) {
+    if (confirm('¿Estás seguro de que deseas eliminar esta factura?')) {
+        eliminarFactura(id);
+    }
+}
+
+// Función para eliminar factura
+function eliminarFactura(id) {
+    fetch('{{ url("facturas") }}/' + id, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Factura eliminada correctamente');
+            cargarFacturas(); // Recargar facturas
+        } else {
+            alert(data.message || 'Error al eliminar la factura');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error de conexión');
+    });
+}
+
+// Función para formatear números
+function numberFormat(value) {
+    return parseFloat(value).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
+// Función para formatear fechas
+function formatearFecha(fechaStr) {
+    if (!fechaStr) return 'N/A';
+    
+    const fecha = new Date(fechaStr);
+    const dia = fecha.getDate().toString().padStart(2, '0');
+    const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+    const anio = fecha.getFullYear();
+    
+    return `${dia}/${mes}/${anio}`;
+}
+</script>
+@stop
+@section('title', 'Facturas')
+
+@section('content_header')
 <h1>Gestión de Facturas</h1>
 <p>Administración de facturas y documentos fiscales</p>
 @if (session('error'))

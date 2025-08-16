@@ -14,11 +14,12 @@ class FacturaController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
      */
     public function index()
     {
-        return view('facturas.index');
+        $declarantes = Declarante::orderBy('nombre')->get();
+        return view('facturas.index', compact('declarantes'));
     }
 
     /**
@@ -47,20 +48,12 @@ class FacturaController extends Controller
             
             $facturas = $query->orderBy('id', 'desc')->get();
             
-            $data = [];
-            foreach ($facturas as $factura) {
-                $data[] = [
-                    'id' => $factura->id,
-                    'numero' => $factura->numero ?? 'S/N',
-                    'declarante' => $factura->declarante ? $factura->declarante->nombre : 'Sin declarante',
-                    'fecha' => Carbon::parse($factura->created_at)->format('d/m/Y'),
-                    'total' => $factura->monto + $factura->iva,
-                    'estado' => $factura->estado ?? 'pendiente',
-                ];
-            }
+            // Devolvemos las facturas completas para que la vista pueda acceder a todas las propiedades
+            // como declarante.nombre, pedido.cliente, etc.
             
             return response()->json([
-                'data' => $data
+                'success' => true,
+                'data' => $facturas
             ]);
         } catch (\Exception $e) {
             return response()->json([
