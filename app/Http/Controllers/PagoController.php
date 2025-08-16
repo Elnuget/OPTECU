@@ -26,7 +26,9 @@ class PagoController extends Controller
     public function index(Request $request)
     {
         $mediosdepago = mediosdepago::all();
-        $query = Pago::with(['pedido', 'mediodepago']);
+        $query = Pago::with(['pedido' => function($q) {
+            $q->select('id', 'numero_orden', 'cliente', 'saldo', 'empresa_id', 'fecha');
+        }, 'mediodepago']);
         $user = auth()->user();
         $userEmpresaId = $user->empresa_id;
         $isAdmin = $user->is_admin;
@@ -60,21 +62,27 @@ class PagoController extends Controller
             return redirect()->route('pagos.index', $redirectParams);
         }
 
-        // Aplicar filtros de fecha
+        // Aplicar filtros de fecha basados en la fecha del pedido asociado, no del pago
         if (!$request->has('todos')) {
-            // Si hay una fecha específica, filtrar solo por esa fecha
+            // Si hay una fecha específica, filtrar por pedidos de esa fecha
             if ($request->filled('fecha_especifica')) {
-                $query->whereDate('created_at', $request->fecha_especifica);
+                $query->whereHas('pedido', function($q) use ($request) {
+                    $q->whereDate('fecha', $request->fecha_especifica);
+                });
             } else {
                 // Si hay filtro de empresa pero no de fecha, aplicar filtro del mes actual
                 if ($request->filled('empresa') && (!$request->filled('ano') || !$request->filled('mes'))) {
                     $currentDate = now()->setTimezone('America/Guayaquil');
-                    $query->whereYear('created_at', '=', $currentDate->format('Y'))
-                          ->whereMonth('created_at', '=', $currentDate->format('m'));
+                    $query->whereHas('pedido', function($q) use ($currentDate) {
+                        $q->whereYear('fecha', '=', $currentDate->format('Y'))
+                          ->whereMonth('fecha', '=', $currentDate->format('m'));
+                    });
                 } else {
-                    // Usar filtros de año y mes proporcionados
-                    $query->whereYear('created_at', '=', $request->get('ano'))
-                          ->whereMonth('created_at', '=', (int)$request->get('mes'));
+                    // Usar filtros de año y mes proporcionados, basados en la fecha del pedido
+                    $query->whereHas('pedido', function($q) use ($request) {
+                        $q->whereYear('fecha', '=', $request->get('ano'))
+                          ->whereMonth('fecha', '=', (int)$request->get('mes'));
+                    });
                 }
             }
         }

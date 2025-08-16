@@ -5,6 +5,14 @@
 @section('content_header')
     <h1>PAGOS</h1>
     <p>ADMINISTRACIÓN DE PAGOS</p>
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <strong><i class="fas fa-info-circle"></i> IMPORTANTE:</strong>
+        Los pagos se filtran por la fecha del pedido asociado, no por la fecha de creación del pago. 
+        Esto garantiza que los totales coincidan con la vista de pedidos.
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
     @if (session('error'))
         <div class="alert {{ session('tipo') }} alert-dismissible fade show" role="alert">
             <strong> {{ session('mensaje') }}</strong>
@@ -242,7 +250,7 @@
                             DEL MES {{ $nombreMes }} {{ request('ano') }}
                             <br>
                             <i class="fas fa-sync-alt"></i> 
-                            <em>Los totales coinciden con la vista de pedidos del mismo período</em>
+                            <em>Los totales coinciden con la vista de pedidos del mismo período (filtrados por fecha del pedido)</em>
                         </small>
                     @endif
                 </div>
@@ -297,10 +305,10 @@
                         </tr>
                         <tr>
                             <td>ID</td>
-                            <td>FECHA DE PAGO</td> <!-- Nueva columna -->
-                            <td>ORDEN ASOCIADA</td> <!-- Nueva columna -->
-                            <td>CLIENTE ASOCIADO</td> <!-- Nueva columna -->
-                            <td>EMPRESA</td> <!-- Nueva columna para Empresa -->
+                            <td>FECHA DE PEDIDO</td> <!-- Cambiado para mostrar fecha del pedido -->
+                            <td>ORDEN ASOCIADA</td>
+                            <td>CLIENTE ASOCIADO</td>
+                            <td>EMPRESA</td>
                             <!-- Removed Paciente column -->
                             <td>MÉTODO DE PAGO</td>
                             <td>ESTADO TC</td>
@@ -314,7 +322,7 @@
                         @foreach ($pagos as $index => $pago)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
-                                <td>{{ $pago->created_at->format('Y-m-d') }}</td> <!-- Fecha de Pago -->
+                                <td>{{ $pago->pedido->fecha }}</td> <!-- Fecha del Pedido -->
                                 <td>{{ $pago->pedido->numero_orden }}</td> <!-- Orden Asociada -->
                                 <td>{{ $pago->pedido->cliente }}</td> <!-- Cliente Asociado -->
                                 <td>{{ $pago->pedido->empresa ? $pago->pedido->empresa->nombre : 'N/A' }}</td> <!-- Empresa Asociada -->
