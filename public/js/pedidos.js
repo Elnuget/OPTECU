@@ -11,37 +11,38 @@ function calculateTotal() {
         const examenVisualElement = document.getElementById('examen_visual');
         const examenVisualDescuentoElement = document.getElementById('examen_visual_descuento');
         
-        if (examenVisualElement && examenVisualDescuentoElement) {
+        if (examenVisualElement) {
             const examenVisual = parseFloat(examenVisualElement.value) || 0;
-            const examenVisualDescuento = parseFloat(examenVisualDescuentoElement.value) || 0;
+            const examenVisualDescuento = examenVisualDescuentoElement ? parseFloat(examenVisualDescuentoElement.value) || 0 : 0;
             const examenVisualTotal = examenVisual * (1 - (examenVisualDescuento / 100));
             newTotal += examenVisualTotal;
         }
 
-        // Sumar armazones
-        document.querySelectorAll('.armazon-section').forEach(section => {
-            const precioElement = section.querySelector('[name="a_precio[]"]');
-            const descuentoElement = section.querySelector('[name="a_precio_descuento[]"]');
-            
-            if (precioElement && descuentoElement) {
-                const precio = parseFloat(precioElement.value) || 0;
-                const descuento = parseFloat(descuentoElement.value) || 0;
-                const precioFinal = precio * (1 - (descuento / 100));
-                newTotal += precioFinal;
-            }
+        // Sumar armazones - incluir tanto el original como los campos añadidos
+        const armazonPrecios = document.querySelectorAll('[name="a_precio"], [name="a_precio[]"]');
+        const armazonDescuentos = document.querySelectorAll('[name="a_precio_descuento"], [name="a_precio_descuento[]"]');
+        armazonPrecios.forEach((precio, index) => {
+            const precioValue = parseFloat(precio.value) || 0;
+            const descuento = parseFloat(armazonDescuentos[index]?.value) || 0;
+            newTotal += precioValue * (1 - (descuento / 100));
         });
 
-        // Sumar lunas
-        document.querySelectorAll('.luna-section').forEach(section => {
-            const precioElement = section.querySelector('[name="l_precio[]"]');
-            const descuentoElement = section.querySelector('[name="l_precio_descuento[]"]');
-            
-            if (precioElement && descuentoElement) {
-                const precio = parseFloat(precioElement.value) || 0;
-                const descuento = parseFloat(descuentoElement.value) || 0;
-                const precioFinal = precio * (1 - (descuento / 100));
-                newTotal += precioFinal;
-            }
+        // Sumar lunas - incluir tanto el original como los campos añadidos
+        const lunasPrecios = document.querySelectorAll('[name="l_precio"], [name="l_precio[]"]');
+        const lunasDescuentos = document.querySelectorAll('[name="l_precio_descuento"], [name="l_precio_descuento[]"]');
+        lunasPrecios.forEach((precio, index) => {
+            const precioValue = parseFloat(precio.value) || 0;
+            const descuento = parseFloat(lunasDescuentos[index]?.value) || 0;
+            newTotal += precioValue * (1 - (descuento / 100));
+        });
+
+        // Sumar accesorios - incluir tanto el original como los campos añadidos
+        const accesoriosPrecios = document.querySelectorAll('[name="d_precio"], [name="d_precio[]"]');
+        const accesoriosDescuentos = document.querySelectorAll('[name="d_precio_descuento"], [name="d_precio_descuento[]"]');
+        accesoriosPrecios.forEach((precio, index) => {
+            const precioValue = parseFloat(precio.value) || 0;
+            const descuento = parseFloat(accesoriosDescuentos[index]?.value) || 0;
+            newTotal += precioValue * (1 - (descuento / 100));
         });
 
         // Sumar compra rápida
@@ -51,18 +52,20 @@ function calculateTotal() {
             newTotal += valorCompra;
         }
 
-        // Redondear a 2 decimales
-        newTotal = Math.round(newTotal * 100) / 100;
+        // NO redondear para mantener precisión exacta
+        // newTotal = Math.round(newTotal * 100) / 100;
 
         // Calcular saldo pendiente (nuevo total menos pagos realizados)
         const newSaldo = Math.max(0, newTotal - totalPagado);
 
-        // Actualizar los campos
+        // Actualizar los campos SIN redondear
         const totalElement = document.getElementById('total');
         const saldoElement = document.getElementById('saldo');
         
-        if (totalElement) totalElement.value = Math.round(newTotal);
-        if (saldoElement) saldoElement.value = Math.round(newSaldo);
+        if (totalElement) totalElement.value = newTotal;
+        if (saldoElement) saldoElement.value = newSaldo;
+        
+        console.log('Total calculado:', newTotal, 'Total pagado:', totalPagado, 'Saldo:', newSaldo);
     } catch (error) {
         console.error('Error al calcular el total:', error);
     }
@@ -341,6 +344,12 @@ document.addEventListener('DOMContentLoaded', function() {
         'examen_visual',
         'examen_visual_descuento',
         'valor_compra',
+        'a_precio',
+        'a_precio_descuento',
+        'l_precio',
+        'l_precio_descuento',
+        'd_precio',
+        'd_precio_descuento',
         'total'
     ];
     
@@ -349,11 +358,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (element) {
             element.addEventListener('input', function() {
                 if (field === 'total') {
-                    // Si se modifica el total manualmente, recalcular solo el saldo
+                    // Si se modifica el total manualmente, recalcular solo el saldo SIN redondear
                     const total = parseFloat(this.value) || 0;
-                    const totalPagado = parseFloat(document.getElementById('total_pagado').value) || 0;
+                    const totalPagadoElement = document.getElementById('total_pagado');
+                    const totalPagado = totalPagadoElement ? parseFloat(totalPagadoElement.value) || 0 : 0;
                     const newSaldo = Math.max(0, total - totalPagado);
-                    document.getElementById('saldo').value = Math.round(newSaldo);
+                    const saldoElement = document.getElementById('saldo');
+                    if (saldoElement) saldoElement.value = newSaldo;
                 } else {
                     // Para otros campos, calcular todo
                     calculateTotal();
@@ -363,21 +374,39 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Event delegation para precios y descuentos de armazones
-    document.getElementById('armazones-container').addEventListener('input', function(e) {
-        if (e.target.matches('[name="a_precio[]"], [name="a_precio_descuento[]"]')) {
-            calculateTotal();
-        }
-    });
+    const armazonesContainer = document.getElementById('armazones-container');
+    if (armazonesContainer) {
+        armazonesContainer.addEventListener('input', function(e) {
+            if (e.target.matches('[name="a_precio[]"], [name="a_precio_descuento[]"], [name="a_precio"], [name="a_precio_descuento"]')) {
+                calculateTotal();
+            }
+        });
+    }
 
     // Event delegation para precios y descuentos de lunas
-    document.getElementById('lunas-container').addEventListener('input', function(e) {
-        if (e.target.matches('[name="l_precio[]"], [name="l_precio_descuento[]"]')) {
-            calculateTotal();
-        }
-    });
+    const lunasContainer = document.getElementById('lunas-container');
+    if (lunasContainer) {
+        lunasContainer.addEventListener('input', function(e) {
+            if (e.target.matches('[name="l_precio[]"], [name="l_precio_descuento[]"], [name="l_precio"], [name="l_precio_descuento"]')) {
+                calculateTotal();
+            }
+        });
+    }
+
+    // Event delegation para precios y descuentos de accesorios
+    const accesoriosContainer = document.getElementById('accesorios-container');
+    if (accesoriosContainer) {
+        accesoriosContainer.addEventListener('input', function(e) {
+            if (e.target.matches('[name="d_precio[]"], [name="d_precio_descuento[]"], [name="d_precio"], [name="d_precio_descuento"]')) {
+                calculateTotal();
+            }
+        });
+    }
 
     // Calcular total inicial
-    calculateTotal();
+    setTimeout(() => {
+        calculateTotal();
+    }, 100);
 
     // Hacer que todo el header sea clickeable
     document.querySelectorAll('.card-header').forEach(header => {
@@ -482,4 +511,16 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error('No se encontró el contenedor de armazones');
     }
-}); 
+});
+
+// Función para configurar event listeners en elementos dinámicos
+function configurarEventListenersCalculoTotal() {
+    // Escuchar cambios en todos los campos de precio y descuento existentes
+    document.querySelectorAll('[name*="precio"], [name*="descuento"], #examen_visual, #valor_compra').forEach(field => {
+        field.removeEventListener('input', calculateTotal); // Evitar duplicados
+        field.addEventListener('input', calculateTotal);
+    });
+}
+
+// Ejecutar configuración de event listeners periódicamente para campos dinámicos
+setInterval(configurarEventListenersCalculoTotal, 1000);
