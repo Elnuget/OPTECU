@@ -76,12 +76,12 @@
                     <div class="col-md-6">
                         <label>Precio</label>
                         <input type="number" name="a_precio[]" class="form-control" 
-                            value="{{ $inventario->pivot->precio }}" step="0.01" oninput="calculateTotal()">
+                            value="{{ $inventario->pivot->precio }}" step="0.01">
                     </div>
                     <div class="col-md-6">
                         <label>Descuento (%)</label>
                         <input type="number" name="a_precio_descuento[]" class="form-control" 
-                            value="{{ $inventario->pivot->descuento }}" min="0" max="100" oninput="calculateTotal()">
+                            value="{{ $inventario->pivot->descuento }}" min="0" max="100">
                     </div>
                 </div>
                 @if($index > 0)

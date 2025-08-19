@@ -51,7 +51,7 @@
             <div class="col-md-3">
                 <label for="examen_visual" class="form-label">Examen Visual</label>
                 <input type="number" class="form-control form-control-sm" id="examen_visual" name="examen_visual"
-                       value="{{ $pedido->examen_visual }}" step="0.01" oninput="calculateTotal()">
+                       value="{{ $pedido->examen_visual }}" step="0.01">
             </div>
             <div class="col-md-3">
                 <label for="celular" class="form-label">Celular</label>

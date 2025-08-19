@@ -348,7 +348,32 @@ window.addArmazon = function() {
     `;
     
     container.insertAdjacentHTML('beforeend', template);
-    calculateTotal();
+    
+    // Configurar event listeners para los nuevos campos de precio/descuento
+    setTimeout(() => {
+        const newSection = container.lastElementChild;
+        if (newSection) {
+            const precioField = newSection.querySelector('[name="a_precio[]"]');
+            const descuentoField = newSection.querySelector('[name="a_precio_descuento[]"]');
+            
+            if (precioField) {
+                precioField.addEventListener('input', function() {
+                    console.log('Precio armazón nuevo cambiado:', this.value);
+                    calculateTotal();
+                });
+            }
+            
+            if (descuentoField) {
+                descuentoField.addEventListener('input', function() {
+                    console.log('Descuento armazón nuevo cambiado:', this.value);
+                    calculateTotal();
+                });
+            }
+        }
+        
+        // Calcular total después de agregar
+        calculateTotal();
+    }, 100);
 }; 
 
 // Funciones para actualizar el inventario

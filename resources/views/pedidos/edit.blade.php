@@ -325,6 +325,9 @@
     $(document).ready(function() {
         console.log('=== Script inline de edit.blade.php iniciado ===');
         
+        // Marcar que estamos en modo edición
+        window.editMode = true;
+        
         // Verificar que window.addArmazon esté disponible
         if (typeof window.addArmazon === 'function') {
             console.log('✓ window.addArmazon está disponible');
@@ -332,16 +335,11 @@
             console.error('✗ window.addArmazon no está disponible');
         }
         
-        // Remover event listeners previos del botón add-armazon
-        $('#add-armazon').off('click');
-        console.log('Event listeners previos removidos del botón #add-armazon');
-        
-        // Configurar el nuevo event listener para el botón add-armazon
-        $('#add-armazon').on('click', function(e) {
+        // Configurar el event listener para el botón add-armazon (solo en modo edición)
+        $('#add-armazon').off('click').on('click', function(e) {
             e.preventDefault();
             console.log('=== Botón agregar armazón clickeado (edit.blade.php) ===');
             
-            // Verificar nuevamente que la función esté disponible antes de llamarla
             if (typeof window.addArmazon === 'function') {
                 console.log('Llamando a window.addArmazon...');
                 window.addArmazon();
@@ -351,17 +349,32 @@
             }
         });
         
-        console.log('Event listener configurado para #add-armazon');
+        // Configurar filtrado por empresa
+        $('#empresa_id').on('change', function() {
+            const empresaId = $(this).val();
+            console.log('Empresa cambiada:', empresaId);
+            filtrarInventarioPorEmpresa(empresaId);
+        });
         
-        // Calcular el total inicial
-        if (typeof calculateTotal === 'function') {
-            calculateTotal();
-            console.log('Total inicial calculado');
-        } else {
-            console.warn('calculateTotal no está disponible');
+        // Aplicar filtro inicial si hay empresa seleccionada
+        const empresaInicialId = $('#empresa_id').val();
+        if (empresaInicialId) {
+            setTimeout(() => {
+                filtrarInventarioPorEmpresa(empresaInicialId);
+            }, 500);
         }
         
-        console.log('=== Inicialización completada ===');
+        // Calcular el total inicial (con retraso para asegurar que DOM esté listo)
+        setTimeout(() => {
+            if (typeof calculateTotal === 'function') {
+                calculateTotal();
+                console.log('Total inicial calculado en modo edición');
+            } else {
+                console.warn('calculateTotal no está disponible');
+            }
+        }, 200);
+        
+        console.log('=== Inicialización edit mode completada ===');
     });
 </script>
 @stop

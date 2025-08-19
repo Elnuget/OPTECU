@@ -15,7 +15,7 @@
                 @if($index > 0)
                     <hr>
                     <div class="d-flex justify-content-end">
-                        <button type="button" class="btn btn-danger btn-sm remove-luna" onclick="this.closest('.luna-section').remove(); calculateTotal();">
+                        <button type="button" class="btn btn-danger btn-sm remove-luna">
                             <i class="fas fa-times"></i> Eliminar
                         </button>
                     </div>
@@ -57,12 +57,12 @@
                     <div class="col-md-3">
                         <label class="form-label">Precio Lunas</label>
                         <input type="number" class="form-control input-sm" name="l_precio[]"
-                               value="{{ $luna->l_precio }}" step="0.01" oninput="calculateTotal()">
+                               value="{{ $luna->l_precio }}" step="0.01">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Desc. Lunas (%)</label>
                         <input type="number" class="form-control input-sm" name="l_precio_descuento[]"
-                               value="{{ $luna->l_precio_descuento }}" min="0" max="100" oninput="calculateTotal()">
+                               value="{{ $luna->l_precio_descuento }}" min="0" max="100">
                     </div>
                 </div>
             </div>
