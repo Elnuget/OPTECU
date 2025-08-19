@@ -10,19 +10,17 @@
         </div>
     </div>
     <div class="card-body">
+        {{-- Fila Total --}}
         <div class="row mb-3">
             <div class="col-md-6">
                 <label for="total" class="form-label" style="color: red;">Total</label>
-                <input type="text" class="form-control input-sm" id="total" name="total"
-                       value="{{ $pedido->total }}" step="any" 
-                       pattern="[0-9]+(\.[0-9]{1,2})?" 
-                       placeholder="0.00">
+                <input type="number" class="form-control input-sm" id="total" name="total" 
+                       value="{{ $pedido->total }}" step="0.01" readonly>
             </div>
             <div class="col-md-6">
                 <label for="saldo" class="form-label">Saldo Pendiente</label>
-                <input type="text" class="form-control input-sm" id="saldo" name="saldo"
-                       value="{{ $pedido->saldo }}" step="any" readonly
-                       placeholder="0.00">
+                <input type="number" class="form-control input-sm" id="saldo" name="saldo"
+                       value="{{ $pedido->saldo }}" step="0.01" readonly>
             </div>
         </div>
         
