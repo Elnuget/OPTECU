@@ -77,9 +77,9 @@
                         <option value="">SELECCIONAR EL PEDIDO</option>
                         @foreach($pedidos as $pedido)
                             <option value="{{ $pedido->id }}" 
-                                   data-saldo="{{ number_format($pedido->saldo + ($pedido->id == $pago->pedido_id ? $pago->pago : 0), 2, '.', '') }}" 
+                                   data-saldo="{{ $pedido->saldo + ($pedido->id == $pago->pedido_id ? $pago->pago : 0) }}" 
                                    {{ $pedido->id == $pago->pedido_id ? 'selected' : '' }}>
-                                ORDEN: {{ $pedido->numero_orden }} - CLIENTE: {{ $pedido->cliente }} - SALDO: ${{ number_format($pedido->saldo + ($pedido->id == $pago->pedido_id ? $pago->pago : 0), 2, ',', '.') }}
+                                ORDEN: {{ $pedido->numero_orden }} - CLIENTE: {{ $pedido->cliente }} - SALDO: ${{ $pedido->saldo + ($pedido->id == $pago->pedido_id ? $pago->pago : 0) }}
                             </option>
                         @endforeach
                     </select>
@@ -110,7 +110,7 @@
                 <div class="form-group">
                     <label>SALDO <span class="text-danger">*</span></label>
                     <input name="saldo" id="saldo" type="text" class="form-control" 
-                           value="{{ number_format($pago->pedido->saldo + $pago->pago, 2, '.', '') }}" readonly>
+                           value="{{ $pago->pedido->saldo + $pago->pago }}" readonly>
                     <small class="form-text text-muted">SALDO DISPONIBLE DEL PEDIDO SELECCIONADO</small>
                 </div>
                 
@@ -123,7 +123,7 @@
                            step="0.01"
                            min="0.01"
                            class="form-control {{ $errors->has('pago') ? 'is-invalid' : '' }}" 
-                           value="{{ number_format($pago->pago, 2, '.', '') }}"
+                           value="{{ $pago->pago }}"
                            placeholder="INGRESE EL MONTO DEL PAGO"
                            onblur="validarMonto(this)"
                            oninput="formatearDecimales(this)">
@@ -268,10 +268,7 @@
         const saldo = parseFloat(saldoTexto) || 0;
         const monto = parseFloat(montoInput.value) || 0;
         
-        // Formatear con 2 decimales si hay valor
-        if (montoInput.value && monto > 0) {
-            montoInput.value = monto.toFixed(2);
-        }
+        // No formatear el valor para evitar redondeo - mantener el valor original
         
         // Validar que el monto sea mayor a cero
         if (monto <= 0 && montoInput.value) {
@@ -283,8 +280,8 @@
         
         // Validar que el monto no sea mayor al saldo
         if (monto > saldo && saldo > 0) {
-            alert('ADVERTENCIA: EL MONTO DEL PAGO ($' + monto.toFixed(2) + ') NO PUEDE SER MAYOR AL SALDO DISPONIBLE ($' + saldo.toFixed(2) + ')');
-            montoInput.value = saldo.toFixed(2);
+            alert('ADVERTENCIA: EL MONTO DEL PAGO ($' + monto + ') NO PUEDE SER MAYOR AL SALDO DISPONIBLE ($' + saldo + ')');
+            montoInput.value = saldo;
             return false;
         }
         
