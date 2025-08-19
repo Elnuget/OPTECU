@@ -14,13 +14,15 @@
         <div class="row mb-3">
             <div class="col-md-6">
                 <label for="total" class="form-label" style="color: red;">Total</label>
-                <input type="number" class="form-control input-sm" id="total" name="total" 
-                       value="{{ $pedido->total }}" step="0.01" readonly>
+                <input type="text" class="form-control input-sm" id="total" name="total" 
+                       value="{{ $pedido->total }}" readonly
+                       style="background-color: #f8f9fa;">
             </div>
             <div class="col-md-6">
                 <label for="saldo" class="form-label">Saldo Pendiente</label>
-                <input type="number" class="form-control input-sm" id="saldo" name="saldo"
-                       value="{{ $pedido->saldo }}" step="0.01" readonly>
+                <input type="text" class="form-control input-sm" id="saldo" name="saldo"
+                       value="{{ $pedido->saldo }}" readonly
+                       style="background-color: #f8f9fa;">
             </div>
         </div>
         

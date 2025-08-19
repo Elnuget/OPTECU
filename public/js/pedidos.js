@@ -68,12 +68,35 @@ function calculateTotal() {
         const saldoElement = document.getElementById('saldo');
         
         if (totalElement) {
-            totalElement.value = total; // Sin formatear para mantener precisión
-            console.log('Total asignado:', total);
+            console.log('ANTES de asignar - total calculado:', total);
+            console.log('ANTES de asignar - valor actual del input:', totalElement.value);
+            
+            // Forzar el valor exacto de múltiples maneras
+            totalElement.value = total.toString();
+            totalElement.setAttribute('value', total.toString());
+            
+            // Verificar inmediatamente después
+            setTimeout(() => {
+                if (totalElement.value != total.toString()) {
+                    console.log('ADVERTENCIA: El valor cambió automáticamente!');
+                    console.log('Valor esperado:', total.toString());
+                    console.log('Valor actual:', totalElement.value);
+                    // Forzar de nuevo
+                    totalElement.value = total.toString();
+                }
+            }, 10);
+            
+            console.log('DESPUÉS de asignar - valor en el input:', totalElement.value);
+            console.log('DESPUÉS de asignar - tipo de valor:', typeof totalElement.value);
         }
         if (saldoElement) {
-            saldoElement.value = saldoPendiente; // Sin formatear para mantener precisión
-            console.log('Saldo asignado:', saldoPendiente);
+            console.log('ANTES de asignar - saldo calculado:', saldoPendiente);
+            console.log('ANTES de asignar - valor actual del saldo:', saldoElement.value);
+            
+            saldoElement.value = saldoPendiente.toString();
+            saldoElement.setAttribute('value', saldoPendiente.toString());
+            
+            console.log('DESPUÉS de asignar - valor del saldo:', saldoElement.value);
         }
         
         console.log('=== FIN CÁLCULO DE TOTAL ===');
@@ -402,7 +425,37 @@ document.addEventListener('DOMContentLoaded', function() {
     // Calcular total inicial
     setTimeout(() => {
         console.log('Calculando total inicial...');
+        
+        // Activar detección de redondeo
+        detectarRedondeoAutomatico();
+        
         calculateTotal();
+        
+        // Agregar listener para detectar cambios no deseados en el total
+        const totalElement = document.getElementById('total');
+        if (totalElement) {
+            totalElement.addEventListener('change', function() {
+                console.log('CAMBIO DETECTADO en total - Nuevo valor:', this.value);
+            });
+            
+            totalElement.addEventListener('input', function() {
+                console.log('INPUT DETECTADO en total - Nuevo valor:', this.value);
+            });
+            
+            // Usar MutationObserver para detectar cambios automáticos
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+                        console.log('MUTACIÓN DETECTADA en value del total:', totalElement.value);
+                    }
+                });
+            });
+            
+            observer.observe(totalElement, {
+                attributes: true,
+                attributeOldValue: true
+            });
+        }
     }, 100);
 
     // Hacer que todo el header sea clickeable
@@ -510,14 +563,53 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 }); 
 
+// Función para detectar redondeo automático
+function detectarRedondeoAutomatico() {
+    const totalElement = document.getElementById('total');
+    if (!totalElement) return;
+    
+    // Interceptar cualquier intento de cambiar el valor
+    let valorOriginal = totalElement.value;
+    
+    Object.defineProperty(totalElement, 'value', {
+        get: function() {
+            return this.getAttribute('value') || '';
+        },
+        set: function(newValue) {
+            console.log('INTENTO DE CAMBIAR VALOR DEL TOTAL:');
+            console.log('Valor anterior:', this.getAttribute('value'));
+            console.log('Valor nuevo:', newValue);
+            console.log('Stack trace:', new Error().stack);
+            
+            this.setAttribute('value', newValue.toString());
+            // Disparar evento personalizado
+            this.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    });
+}
+
 // Solo configurar event listeners básicos
 function configurarEventListenersCalculoTotal() {
     // Configurar event listeners para campos dinámicos nuevos
     document.querySelectorAll('[name*="precio"], [name*="descuento"]').forEach(field => {
         if (!field.hasAttribute('data-listener-added')) {
-            field.addEventListener('input', calculateTotal);
+            console.log('Agregando listener a campo:', field.name || field.id);
+            field.addEventListener('input', function(e) {
+                console.log('CAMBIO en campo:', e.target.name || e.target.id, 'Valor:', e.target.value);
+                calculateTotal();
+            });
             field.setAttribute('data-listener-added', 'true');
         }
+    });
+    
+    // Verificar si hay listeners no deseados en campos de precio
+    document.querySelectorAll('[name*="precio"]').forEach(field => {
+        // Clonar el elemento para eliminar todos los event listeners
+        if (field.hasAttribute('data-cleaned')) return;
+        
+        console.log('Verificando listeners en:', field.name || field.id);
+        // Marcar como verificado
+        field.setAttribute('data-cleaned', 'true');
     });
 }
 
