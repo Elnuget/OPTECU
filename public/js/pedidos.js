@@ -1,8 +1,11 @@
 function calculateTotal() {
     try {
+        console.log('=== INICIANDO CÁLCULO DE TOTAL ===');
+        
         // Obtener el total pagado
         const totalPagadoElement = document.getElementById('total_pagado');
         const totalPagado = totalPagadoElement ? parseFloat(totalPagadoElement.value) || 0 : 0;
+        console.log('Total pagado:', totalPagado);
 
         // Calcular nuevo total
         let newTotal = 0;
@@ -16,33 +19,46 @@ function calculateTotal() {
             const examenVisualDescuento = examenVisualDescuentoElement ? parseFloat(examenVisualDescuentoElement.value) || 0 : 0;
             const examenVisualTotal = examenVisual * (1 - (examenVisualDescuento / 100));
             newTotal += examenVisualTotal;
+            console.log('Examen visual:', examenVisual, 'descuento:', examenVisualDescuento, 'total:', examenVisualTotal);
         }
 
         // Sumar armazones - incluir tanto el original como los campos añadidos
         const armazonPrecios = document.querySelectorAll('[name="a_precio"], [name="a_precio[]"]');
         const armazonDescuentos = document.querySelectorAll('[name="a_precio_descuento"], [name="a_precio_descuento[]"]');
+        console.log('Armazones encontrados:', armazonPrecios.length);
+        
         armazonPrecios.forEach((precio, index) => {
             const precioValue = parseFloat(precio.value) || 0;
             const descuento = parseFloat(armazonDescuentos[index]?.value) || 0;
-            newTotal += precioValue * (1 - (descuento / 100));
+            const precioFinal = precioValue * (1 - (descuento / 100));
+            newTotal += precioFinal;
+            console.log(`Armazón ${index}: precio=${precioValue}, descuento=${descuento}%, final=${precioFinal}`);
         });
 
         // Sumar lunas - incluir tanto el original como los campos añadidos
         const lunasPrecios = document.querySelectorAll('[name="l_precio"], [name="l_precio[]"]');
         const lunasDescuentos = document.querySelectorAll('[name="l_precio_descuento"], [name="l_precio_descuento[]"]');
+        console.log('Lunas encontradas:', lunasPrecios.length);
+        
         lunasPrecios.forEach((precio, index) => {
             const precioValue = parseFloat(precio.value) || 0;
             const descuento = parseFloat(lunasDescuentos[index]?.value) || 0;
-            newTotal += precioValue * (1 - (descuento / 100));
+            const precioFinal = precioValue * (1 - (descuento / 100));
+            newTotal += precioFinal;
+            console.log(`Luna ${index}: precio=${precioValue}, descuento=${descuento}%, final=${precioFinal}`);
         });
 
         // Sumar accesorios - incluir tanto el original como los campos añadidos
         const accesoriosPrecios = document.querySelectorAll('[name="d_precio"], [name="d_precio[]"]');
         const accesoriosDescuentos = document.querySelectorAll('[name="d_precio_descuento"], [name="d_precio_descuento[]"]');
+        console.log('Accesorios encontrados:', accesoriosPrecios.length);
+        
         accesoriosPrecios.forEach((precio, index) => {
             const precioValue = parseFloat(precio.value) || 0;
             const descuento = parseFloat(accesoriosDescuentos[index]?.value) || 0;
-            newTotal += precioValue * (1 - (descuento / 100));
+            const precioFinal = precioValue * (1 - (descuento / 100));
+            newTotal += precioFinal;
+            console.log(`Accesorio ${index}: precio=${precioValue}, descuento=${descuento}%, final=${precioFinal}`);
         });
 
         // Sumar compra rápida
@@ -50,22 +66,35 @@ function calculateTotal() {
         if (valorCompraElement) {
             const valorCompra = parseFloat(valorCompraElement.value) || 0;
             newTotal += valorCompra;
+            console.log('Valor compra:', valorCompra);
         }
+
+        console.log('TOTAL CALCULADO SIN REDONDEO:', newTotal);
+        console.log('Tipo de newTotal:', typeof newTotal);
 
         // NO redondear para mantener precisión exacta
         // newTotal = Math.round(newTotal * 100) / 100;
 
         // Calcular saldo pendiente (nuevo total menos pagos realizados)
         const newSaldo = Math.max(0, newTotal - totalPagado);
+        console.log('SALDO CALCULADO:', newSaldo);
 
-        // Actualizar los campos SIN redondear
+        // Actualizar los campos SIN redondear, pero asegurar que se muestren como string para evitar redondeo del navegador
         const totalElement = document.getElementById('total');
         const saldoElement = document.getElementById('saldo');
         
-        if (totalElement) totalElement.value = newTotal;
-        if (saldoElement) saldoElement.value = newSaldo;
+        if (totalElement) {
+            // Convertir a string para evitar redondeo automático del input
+            totalElement.value = newTotal.toString();
+            console.log('Total asignado al input:', totalElement.value);
+        }
+        if (saldoElement) {
+            // Convertir a string para evitar redondeo automático del input
+            saldoElement.value = newSaldo.toString();
+            console.log('Saldo asignado al input:', saldoElement.value);
+        }
         
-        console.log('Total calculado:', newTotal, 'Total pagado:', totalPagado, 'Saldo:', newSaldo);
+        console.log('=== FIN CÁLCULO DE TOTAL ===');
     } catch (error) {
         console.error('Error al calcular el total:', error);
     }
@@ -406,6 +435,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Calcular total inicial
     setTimeout(() => {
         calculateTotal();
+        // Forzar que los campos mantengan su precisión
+        const totalElement = document.getElementById('total');
+        const saldoElement = document.getElementById('saldo');
+        if (totalElement && totalElement.value) {
+            const valor = parseFloat(totalElement.value);
+            if (!isNaN(valor)) {
+                totalElement.value = valor.toString();
+            }
+        }
+        if (saldoElement && saldoElement.value) {
+            const valor = parseFloat(saldoElement.value);
+            if (!isNaN(valor)) {
+                saldoElement.value = valor.toString();
+            }
+        }
     }, 100);
 
     // Hacer que todo el header sea clickeable
@@ -522,5 +566,38 @@ function configurarEventListenersCalculoTotal() {
     });
 }
 
+// Función para evitar redondeo automático en campos de total y saldo
+function evitarRedondeoAutomatico() {
+    const totalElement = document.getElementById('total');
+    const saldoElement = document.getElementById('saldo');
+    
+    if (totalElement) {
+        // Interceptar cambios manuales en el campo total
+        totalElement.addEventListener('blur', function() {
+            // Si el usuario cambió el total manualmente, mantener exactamente lo que escribió
+            if (this.value && !isNaN(parseFloat(this.value))) {
+                const valor = parseFloat(this.value);
+                this.value = valor.toString(); // Mantener como string sin redondeo
+                
+                // Recalcular saldo con el nuevo total
+                const totalPagadoElement = document.getElementById('total_pagado');
+                const totalPagado = totalPagadoElement ? parseFloat(totalPagadoElement.value) || 0 : 0;
+                const newSaldo = Math.max(0, valor - totalPagado);
+                if (saldoElement) saldoElement.value = newSaldo.toString();
+            }
+        });
+        
+        // Evitar redondeo en el evento input
+        totalElement.addEventListener('input', function() {
+            // No hacer nada aquí para evitar interferencia
+        });
+    }
+}
+
 // Ejecutar configuración de event listeners periódicamente para campos dinámicos
 setInterval(configurarEventListenersCalculoTotal, 1000);
+
+// Configurar función anti-redondeo
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(evitarRedondeoAutomatico, 200);
+});
