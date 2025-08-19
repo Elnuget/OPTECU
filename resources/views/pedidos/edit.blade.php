@@ -376,5 +376,69 @@
         
         console.log('=== Inicialización edit mode completada ===');
     });
+    
+    // Función para filtrar inventario por empresa en modo edición
+    function filtrarInventarioPorEmpresa(empresaId) {
+        console.log('Filtrando inventario por empresa (edit mode):', empresaId);
+        
+        if (!window.inventarioData || !window.inventarioData.items) {
+            console.warn('No hay datos de inventario disponibles');
+            return;
+        }
+        
+        // Filtrar items por empresa
+        const itemsFiltrados = window.inventarioData.items.filter(item => {
+            if (!empresaId) return true; // Si no hay empresa seleccionada, mostrar todos
+            return item.empresa_id == empresaId;
+        });
+        
+        console.log('Items filtrados:', itemsFiltrados.length, 'de', window.inventarioData.items.length);
+        
+        // Actualizar los dropdowns existentes de armazones
+        document.querySelectorAll('.armazon-dropdown').forEach(dropdown => {
+            actualizarDropdownConDatos(dropdown, itemsFiltrados);
+        });
+        
+        // Guardar datos filtrados para uso en addArmazon
+        window.inventarioData.itemsFiltrados = itemsFiltrados;
+    }
+    
+    // Función auxiliar para actualizar dropdown con datos filtrados
+    function actualizarDropdownConDatos(dropdown, datos) {
+        // Limpiar opciones actuales
+        dropdown.innerHTML = '';
+        
+        // Agregar opciones filtradas
+        datos.forEach(item => {
+            const option = document.createElement('a');
+            option.className = 'dropdown-item armazon-option';
+            option.href = '#';
+            option.setAttribute('data-id', item.id);
+            
+            // Extraer empresa del display para el atributo data-empresa
+            const partes = item.display.split(' - ');
+            const empresa = partes[partes.length - 1] || 'Sin empresa';
+            option.setAttribute('data-empresa', empresa);
+            
+            option.textContent = item.display;
+            dropdown.appendChild(option);
+        });
+        
+        // Si no hay opciones, mostrar mensaje
+        if (datos.length === 0) {
+            const noOption = document.createElement('a');
+            noOption.className = 'dropdown-item disabled';
+            noOption.href = '#';
+            noOption.textContent = 'No hay artículos disponibles para esta empresa';
+            dropdown.appendChild(noOption);
+        }
+        
+        // Actualizar búsqueda activa si existe
+        const searchInput = dropdown.closest('.input-group').querySelector('.armazon-search');
+        if (searchInput && searchInput.value.trim()) {
+            // Trigger búsqueda para aplicar filtros inmediatamente
+            $(searchInput).trigger('input');
+        }
+    }
 </script>
 @stop
