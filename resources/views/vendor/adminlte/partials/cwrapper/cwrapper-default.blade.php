@@ -91,8 +91,9 @@
             
             // Lógica para determinar qué mostrar:
             // 1. Si hay cajas pendientes de cierre del día anterior, mostrar cierre forzoso
-            // 2. Si hay cajas abiertas actualmente, no mostrar apertura
-            // 3. Si NO hay cajas abiertas, mostrar apertura (sin importar historial del día)
+            // 2. Si hay cajas abiertas actualmente pero no hay sucursal en cache, permitir selección
+            // 3. Si hay sucursal en cache y caja abierta, no mostrar apertura
+            // 4. Si NO hay cajas abiertas, mostrar apertura (sin importar historial del día)
             
             if ($hayCajasPendientesCierre) {
                 $isClosed = false; // No mostrar apertura, mostrar cierre pendiente
@@ -103,7 +104,8 @@
                 });
                 
                 if ($hayAperturasActivas) {
-                    $isClosed = false; // Hay cajas abiertas, no mostrar apertura
+                    // Hay cajas abiertas - la decisión final se hará en JavaScript verificando el cache
+                    $isClosed = 'check_cache'; // Valor especial para verificar en JS
                 } else {
                     $isClosed = true; // No hay cajas abiertas, mostrar apertura
                 }
@@ -122,7 +124,13 @@
                 } else {
                     // Verificar si la caja está actualmente abierta
                     $cajaActualmenteAbierta = $lastCashHistory && $lastCashHistory->estado === 'Apertura';
-                    $isClosed = !$cajaActualmenteAbierta; // Mostrar apertura solo si la caja NO está abierta
+                    
+                    if ($cajaActualmenteAbierta) {
+                        // Hay caja abierta - la decisión final se hará en JavaScript verificando el cache
+                        $isClosed = 'check_cache'; // Valor especial para verificar en JS
+                    } else {
+                        $isClosed = true; // No hay caja abierta, mostrar apertura
+                    }
                 }
             }
         }
@@ -294,15 +302,16 @@
 @endif
 
 {{-- Tarjeta de Apertura de Caja (para todos los usuarios con empresas asignadas) --}}
-@if($currentUser && $isClosed && $userEmpresas->count() > 0)
+@if($currentUser && $isClosed === true && $userEmpresas->count() > 0)
 <div class="position-fixed w-100 h-100 d-flex align-items-center justify-content-center p-3" 
-     style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;">
+     style="background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;" 
+     id="aperturaModal">
     <div class="w-100" style="max-width: 600px; max-height: 90vh;">
         <div class="card shadow" style="max-height: 90vh;">
             <div class="card-body bg-light" style="max-height: 90vh; overflow-y: auto;">
                 <div class="text-center mb-4">
                     <h6 class="text-info"><i class="fas fa-cash-register fa-lg mr-2"></i></h6>
-                    <h5 class="mb-2">Apertura de Caja</h5>
+                    <h5 class="mb-2" id="aperturaTitle">Apertura de Caja</h5>
                     @if($userEmpresas->count() == 1)
                         <h6 class="text-warning">{{ strtoupper($userEmpresa->nombre) }}</h6>
                     @else
@@ -311,36 +320,26 @@
                             <p class="text-muted mb-2"><small>Como administrador, puede abrir cualquier caja</small></p>
                         @endif
                     @endif
+                    <div id="seleccionSucursalInfo" class="alert alert-info" style="display: none;">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <small>Se detectaron cajas abiertas. Seleccione una sucursal para trabajar en ella o abra una nueva caja.</small>
+                    </div>
                 </div>
                 @if($userEmpresas->count() == 1)
-                    {{-- Una sola empresa - formulario directo --}}
-                    @if($previousCashHistory)
-                        <div class="alert alert-info mb-3">
-                            <p class="mb-1"><strong>Último Cierre:</strong></p>
-                            <p class="mb-1">Usuario: {{ $previousCashHistory->user->name }}</p>
-                            <p class="mb-1">Fecha: {{ $previousCashHistory->created_at->format('d/m/Y H:i') }}</p>
-                            <p class="mb-0">Monto: ${{ number_format($previousCashHistory->monto, 2) }}</p>
+                    {{-- Una sola empresa --}}
+                    @if($lastCashHistory && $lastCashHistory->estado === 'Apertura')
+                        {{-- Caja ya abierta - permitir selección --}}
+                        <div class="alert alert-success mb-3">
+                            <h5><i class="fas fa-cash-register mr-2"></i><strong>Caja Abierta Detectada</strong></h5>
+                            <p class="mb-1">La caja de <strong>{{ $userEmpresa->nombre }}</strong> ya está abierta.</p>
+                            <p class="mb-1">Abierta el: {{ $lastCashHistory->created_at->format('d/m/Y H:i') }}</p>
+                            <p class="mb-0">Usuario: {{ $lastCashHistory->user->name }}</p>
                         </div>
-                    @endif
-
-                    <form action="{{ route('cash-histories.store') }}" method="POST">
-                        @csrf
-                        <div class="form-group">
-                            <label for="monto">Monto Inicial ({{ $userEmpresa->nombre }})</label>
-                            <div class="input-group">
-                                <div class="input-group-prepend">
-                                    <span class="input-group-text">$</span>
-                                </div>
-                                <input type="number" step="0.01" min="0" class="form-control form-control-lg" 
-                                       name="monto" id="monto" value="{{ number_format($sumCaja, 2, '.', '') }}" readonly>
-                            </div>
-                        </div>
-                        <input type="hidden" name="estado" value="Apertura">
-                        <input type="hidden" name="empresa_id" value="{{ $userEmpresa->id }}">
                         
                         <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
-                            <button type="submit" class="btn btn-success btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1" onclick="SucursalCache.guardar('{{ $userEmpresa->id }}', '{{ $userEmpresa->nombre }}')">
-                                <i class="fas fa-door-open mr-2"></i>Abrir Caja
+                            <button type="button" class="btn btn-info btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1" 
+                                    onclick="trabajarEnSucursal('{{ $userEmpresa->id }}', '{{ $userEmpresa->nombre }}');">
+                                <i class="fas fa-building mr-2"></i>Trabajar en esta Sucursal
                             </button>
                             <a href="{{ route('logout') }}" class="btn btn-danger btn-lg" 
                                onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
@@ -348,7 +347,70 @@
                                 <span class="d-none d-md-inline">Salir</span>
                             </a>
                         </div>
-                    </form>
+                        
+                        <script>
+                            function trabajarEnSucursal(empresaId, empresaNombre) {
+                                console.log('CWrapper - Trabajando en sucursal:', empresaId, empresaNombre);
+                                
+                                // Guardar en cache
+                                SucursalCache.guardar(empresaId, empresaNombre);
+                                
+                                // Ocultar modal inmediatamente
+                                const aperturaModal = document.getElementById('aperturaModal');
+                                const contentWrapper = document.getElementById('contentWrapper');
+                                
+                                if (aperturaModal) {
+                                    aperturaModal.style.display = 'none';
+                                    aperturaModal.style.visibility = 'hidden';
+                                }
+                                if (contentWrapper) {
+                                    contentWrapper.style.filter = 'none';
+                                }
+                                
+                                // Recargar página después de un pequeño delay
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 200);
+                            }
+                        </script>
+                    @else
+                        {{-- Caja cerrada - permitir apertura --}}
+                        @if($previousCashHistory)
+                            <div class="alert alert-info mb-3">
+                                <p class="mb-1"><strong>Último Cierre:</strong></p>
+                                <p class="mb-1">Usuario: {{ $previousCashHistory->user->name }}</p>
+                                <p class="mb-1">Fecha: {{ $previousCashHistory->created_at->format('d/m/Y H:i') }}</p>
+                                <p class="mb-0">Monto: ${{ number_format($previousCashHistory->monto, 2) }}</p>
+                            </div>
+                        @endif
+
+                        <form action="{{ route('cash-histories.store') }}" method="POST">
+                            @csrf
+                            <div class="form-group">
+                                <label for="monto">Monto Inicial ({{ $userEmpresa->nombre }})</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text">$</span>
+                                    </div>
+                                    <input type="number" step="0.01" min="0" class="form-control form-control-lg" 
+                                           name="monto" id="monto" value="{{ number_format($sumCaja, 2, '.', '') }}" readonly>
+                                </div>
+                            </div>
+                            <input type="hidden" name="estado" value="Apertura">
+                            <input type="hidden" name="empresa_id" value="{{ $userEmpresa->id }}">
+                            
+                            <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
+                                <button type="submit" class="btn btn-success btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1" onclick="SucursalCache.guardar('{{ $userEmpresa->id }}', '{{ $userEmpresa->nombre }}')">
+                                    <i class="fas fa-door-open mr-2"></i>Abrir Caja
+                                </button>
+                                <a href="{{ route('logout') }}" class="btn btn-danger btn-lg" 
+                                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                    <i class="fas fa-sign-out-alt mr-2"></i>
+                                    <span class="d-none d-md-inline">Salir</span>
+                                </a>
+                            </div>
+                        </form>
+                    @endif
                 @else
                     {{-- Múltiples empresas - selector dinámico --}}
                     <form id="multiEmpresaForm" action="{{ route('cash-histories.store') }}" method="POST">
@@ -357,14 +419,16 @@
                             <label>Seleccionar Sucursal:</label>
                             <div class="row">
                                 @foreach($empresasCaja as $index => $empresaData)
-                                    @if($empresaData['isClosed'])
-                                        <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                                    <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                                        @if($empresaData['isClosed'])
+                                            {{-- Caja cerrada - permitir apertura --}}
                                             <button type="button" class="btn btn-outline-primary btn-block empresa-btn h-100 d-flex flex-column justify-content-center align-items-start p-3" 
                                                     data-empresa-id="{{ $empresaData['empresa']->id }}"
                                                     data-monto="{{ number_format($empresaData['sumCaja'], 2, '.', '') }}"
                                                     data-last-close="{{ $empresaData['previousHistory'] ? $empresaData['previousHistory']->created_at->format('d/m/Y H:i') : 'Sin cierres anteriores' }}"
                                                     data-last-user="{{ $empresaData['previousHistory'] ? $empresaData['previousHistory']->user->name : 'N/A' }}"
                                                     data-last-amount="{{ $empresaData['previousHistory'] ? number_format($empresaData['previousHistory']->monto, 2) : '0.00' }}"
+                                                    data-action="apertura"
                                                     style="min-height: 80px; border: 2px solid; cursor: pointer; transition: all 0.2s ease;">
                                                 <div class="d-flex align-items-center w-100">
                                                     <i class="fas fa-building mr-2 flex-shrink-0" style="font-size: 1.1em;"></i>
@@ -375,11 +439,30 @@
                                                     </div>
                                                 </div>
                                             </button>
-                                        </div>
-                                    @endif
+                                        @else
+                                            {{-- Caja abierta - permitir selección para trabajar --}}
+                                            <button type="button" class="btn btn-outline-success btn-block empresa-select-btn h-100 d-flex flex-column justify-content-center align-items-start p-3" 
+                                                    data-empresa-id="{{ $empresaData['empresa']->id }}"
+                                                    data-empresa-nombre="{{ $empresaData['empresa']->nombre }}"
+                                                    data-action="seleccionar"
+                                                    style="min-height: 80px; border: 2px solid #28a745; cursor: pointer; transition: all 0.2s ease;">
+                                                <div class="d-flex align-items-center w-100">
+                                                    <i class="fas fa-cash-register mr-2 flex-shrink-0 text-success" style="font-size: 1.1em;"></i>
+                                                    <div class="text-left flex-grow-1">
+                                                        <div class="font-weight-bold empresa-nombre" style="font-size: 0.95em; line-height: 1.2;">{{ strtoupper($empresaData['empresa']->nombre) }}</div>
+                                                        <small class="text-success d-block font-weight-bold" style="font-size: 0.8em;">Caja Abierta</small>
+                                                        <small class="text-muted" style="font-size: 0.75em;">
+                                                            Abierta: {{ $empresaData['lastHistory']->created_at->format('d/m H:i') }}
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        @endif
+                                    </div>
                                 @endforeach
                             </div>
-                            <input type="hidden" id="empresa_id_hidden" name="empresa_id" required>
+                            <input type="hidden" id="empresa_id_hidden" name="empresa_id">
+                            <input type="hidden" id="action_type" name="action_type" value="apertura">
                         </div>
 
                         <div id="empresa_info" class="alert alert-info" style="display: none;">
@@ -389,7 +472,7 @@
                             <p class="mb-0">Monto: $<span id="info_amount">0.00</span></p>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group" id="monto_group">
                             <label for="monto_multi">Monto Inicial:</label>
                             <div class="input-group">
                                 <div class="input-group-prepend">
@@ -403,7 +486,7 @@
                         
                         <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
                             <button type="submit" class="btn btn-success btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1" id="btn_abrir" disabled onclick="guardarSucursalCacheMulti()">
-                                <i class="fas fa-door-open mr-2"></i>Abrir Caja
+                                <i class="fas fa-door-open mr-2"></i><span id="btn_text">Abrir Caja</span>
                             </button>
                             <a href="{{ route('logout') }}" class="btn btn-danger btn-lg" 
                                onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
@@ -414,29 +497,36 @@
                     </form>
 
                     <script>
+                        // Manejar clics en botones de apertura de caja
                         document.querySelectorAll('.empresa-btn').forEach(button => {
-                            // Usar addEventListener con passive: false para asegurar compatibilidad
                             button.addEventListener('click', function(e) {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 
                                 // Remover selección anterior
-                                document.querySelectorAll('.empresa-btn').forEach(btn => {
-                                    btn.classList.remove('btn-primary');
-                                    btn.classList.add('btn-outline-primary');
-                                    btn.style.borderColor = '#007bff';
-                                    btn.style.backgroundColor = 'transparent';
-                                    btn.style.color = '#007bff';
+                                document.querySelectorAll('.empresa-btn, .empresa-select-btn').forEach(btn => {
+                                    btn.classList.remove('btn-primary', 'btn-success');
+                                    if (btn.classList.contains('empresa-btn')) {
+                                        btn.classList.add('btn-outline-primary');
+                                        btn.style.borderColor = '#007bff';
+                                        btn.style.backgroundColor = 'transparent';
+                                        btn.style.color = '#007bff';
+                                    } else {
+                                        btn.classList.add('btn-outline-success');
+                                        btn.style.borderColor = '#28a745';
+                                        btn.style.backgroundColor = 'transparent';
+                                        btn.style.color = '#28a745';
+                                    }
                                 });
                                 
-                                // Marcar como seleccionado con estilos más visibles
+                                // Marcar como seleccionado
                                 this.classList.remove('btn-outline-primary');
                                 this.classList.add('btn-primary');
                                 this.style.borderColor = '#0056b3';
                                 this.style.backgroundColor = '#007bff';
                                 this.style.color = 'white';
                                 
-                                // Actualizar campos
+                                // Actualizar campos para apertura
                                 const empresaId = this.getAttribute('data-empresa-id');
                                 const monto = this.getAttribute('data-monto');
                                 const lastUser = this.getAttribute('data-last-user');
@@ -445,18 +535,107 @@
                                 
                                 document.getElementById('empresa_id_hidden').value = empresaId;
                                 document.getElementById('monto_multi').value = monto;
+                                document.getElementById('action_type').value = 'apertura';
                                 
-                                // Mostrar información del último cierre
+                                // Mostrar información y campos de apertura
                                 document.getElementById('info_user').textContent = lastUser;
                                 document.getElementById('info_date').textContent = lastClose;
                                 document.getElementById('info_amount').textContent = lastAmount;
                                 document.getElementById('empresa_info').style.display = 'block';
+                                document.getElementById('monto_group').style.display = 'block';
                                 
-                                // Habilitar botón
+                                // Actualizar botón
                                 document.getElementById('btn_abrir').disabled = false;
+                                document.getElementById('btn_text').textContent = 'Abrir Caja';
+                                document.getElementById('btn_abrir').className = 'btn btn-success btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1';
                             }, { passive: false });
                             
-                            // Agregar eventos táctiles para dispositivos móviles
+                            // Eventos táctiles
+                            button.addEventListener('touchstart', function(e) {
+                                this.style.transform = 'scale(0.98)';
+                            }, { passive: true });
+                            
+                            button.addEventListener('touchend', function(e) {
+                                this.style.transform = 'scale(1)';
+                            }, { passive: true });
+                        });
+
+                        // Manejar clics en botones de selección de sucursal (caja ya abierta)
+                        document.querySelectorAll('.empresa-select-btn').forEach(button => {
+                            button.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                
+                                console.log('CWrapper - Clic en botón de selección de sucursal');
+                                
+                                // Remover selección anterior
+                                document.querySelectorAll('.empresa-btn, .empresa-select-btn').forEach(btn => {
+                                    btn.classList.remove('btn-primary', 'btn-success');
+                                    if (btn.classList.contains('empresa-btn')) {
+                                        btn.classList.add('btn-outline-primary');
+                                        btn.style.borderColor = '#007bff';
+                                        btn.style.backgroundColor = 'transparent';
+                                        btn.style.color = '#007bff';
+                                    } else {
+                                        btn.classList.add('btn-outline-success');
+                                        btn.style.borderColor = '#28a745';
+                                        btn.style.backgroundColor = 'transparent';
+                                        btn.style.color = '#28a745';
+                                    }
+                                });
+                                
+                                // Marcar como seleccionado
+                                this.classList.remove('btn-outline-success');
+                                this.classList.add('btn-success');
+                                this.style.borderColor = '#1e7e34';
+                                this.style.backgroundColor = '#28a745';
+                                this.style.color = 'white';
+                                
+                                // Configurar para selección de sucursal
+                                const empresaId = this.getAttribute('data-empresa-id');
+                                const empresaNombre = this.getAttribute('data-empresa-nombre');
+                                
+                                console.log('CWrapper - Seleccionando empresa:', empresaId, empresaNombre);
+                                
+                                document.getElementById('empresa_id_hidden').value = empresaId;
+                                document.getElementById('action_type').value = 'seleccionar';
+                                
+                                // Ocultar campos de apertura
+                                document.getElementById('empresa_info').style.display = 'none';
+                                document.getElementById('monto_group').style.display = 'none';
+                                
+                                // Actualizar botón para selección
+                                document.getElementById('btn_abrir').disabled = false;
+                                document.getElementById('btn_text').textContent = 'Seleccionar Sucursal';
+                                document.getElementById('btn_abrir').className = 'btn btn-info btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1';
+                                
+                                // Configurar evento para solo guardar en cache y ocultar modal inmediatamente
+                                document.getElementById('btn_abrir').onclick = function() {
+                                    console.log('CWrapper - Guardando sucursal en cache y ocultando modal');
+                                    SucursalCache.guardar(empresaId, empresaNombre);
+                                    
+                                    // Ocultar modal inmediatamente
+                                    const aperturaModal = document.getElementById('aperturaModal');
+                                    const contentWrapper = document.getElementById('contentWrapper');
+                                    
+                                    if (aperturaModal) {
+                                        aperturaModal.style.display = 'none';
+                                        aperturaModal.style.visibility = 'hidden';
+                                    }
+                                    if (contentWrapper) {
+                                        contentWrapper.style.filter = 'none';
+                                    }
+                                    
+                                    // Recargar página después de un pequeño delay
+                                    setTimeout(function() {
+                                        window.location.reload();
+                                    }, 200);
+                                    
+                                    return false;
+                                };
+                            }, { passive: false });
+                            
+                            // Eventos táctiles
                             button.addEventListener('touchstart', function(e) {
                                 this.style.transform = 'scale(0.98)';
                             }, { passive: true });
@@ -474,6 +653,192 @@
         </div>
     </div>
 </div>
+@endif
+
+{{-- Modal dinámico para check_cache - se crea solo si es necesario --}}
+@if($currentUser && $isClosed === 'check_cache' && $userEmpresass->count() > 0)
+<script>
+    console.log('CWrapper - Script de modal dinámico cargado');
+    console.log('CWrapper - isClosed:', '{{ $isClosed }}');
+    console.log('CWrapper - userEmpresas count:', {{ $userEmpresas->count() }});
+    
+    // Crear modal dinámicamente solo si no hay sucursal en cache
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('CWrapper - DOM cargado, verificando cache...');
+        verificarCacheYCrearModal();
+    });
+
+    function verificarCacheYCrearModal() {
+        console.log('CWrapper - Verificando cache...');
+        console.log('CWrapper - SucursalCache disponible:', !!window.SucursalCache);
+        
+        if (window.SucursalCache) {
+            const sucursalEnCache = SucursalCache.obtener();
+            console.log('CWrapper - Sucursal en cache:', sucursalEnCache);
+            
+            if (!sucursalEnCache || !sucursalEnCache.id) {
+                console.log('CWrapper - No hay sucursal en cache, creando modal...');
+                crearModalApertura();
+            } else {
+                console.log('CWrapper - Sucursal en cache encontrada, no crear modal');
+            }
+        } else {
+            console.log('CWrapper - SucursalCache no disponible, esperando...');
+            setTimeout(verificarCacheYCrearModal, 100);
+        }
+    }
+
+    function crearModalApertura() {
+        console.log('CWrapper - Creando modal dinámico...');
+        
+        // Crear elementos del modal paso a paso
+        const modal = document.createElement('div');
+        modal.className = 'position-fixed w-100 h-100 d-flex align-items-center justify-content-center p-3';
+        modal.style.cssText = 'background-color: rgba(0,0,0,0.9) !important; z-index: 9999; top: 0; left: 0;';
+        modal.id = 'aperturaModalDinamico';
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'w-100';
+        wrapper.style.cssText = 'max-width: 600px; max-height: 90vh;';
+        
+        const card = document.createElement('div');
+        card.className = 'card shadow';
+        card.style.cssText = 'max-height: 90vh;';
+        
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body bg-light';
+        cardBody.style.cssText = 'max-height: 90vh; overflow-y: auto;';
+        
+        // Crear header
+        const header = document.createElement('div');
+        header.className = 'text-center mb-4';
+        header.innerHTML = `
+            <h6 class="text-info"><i class="fas fa-cash-register fa-lg mr-2"></i></h6>
+            <h5 class="mb-2">Seleccionar Sucursal de Trabajo</h5>
+            <h6 class="text-info">SELECCIONE SUCURSAL</h6>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle mr-2"></i>
+                <small>Se detectaron cajas abiertas. Seleccione una sucursal para trabajar en ella.</small>
+            </div>
+        `;
+        
+        // Crear contenido según el tipo de usuario
+        const content = document.createElement('div');
+        @if($userEmpresas->count() == 1)
+            // Una sola empresa
+            @if($lastCashHistory && $lastCashHistory->estado === 'Apertura')
+                content.innerHTML = `
+                    <div class="alert alert-success mb-3">
+                        <h5><i class="fas fa-cash-register mr-2"></i><strong>Caja Abierta Detectada</strong></h5>
+                        <p class="mb-1">La caja de <strong>{{ $userEmpresa->nombre }}</strong> ya está abierta.</p>
+                        <p class="mb-1">Abierta el: {{ $lastCashHistory->created_at->format('d/m/Y H:i') }}</p>
+                        <p class="mb-0">Usuario: {{ $lastCashHistory->user->name }}</p>
+                    </div>
+                    <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
+                        <button type="button" class="btn btn-info btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1" 
+                                onclick="trabajarEnSucursalDinamico('{{ $userEmpresa->id }}', '{{ $userEmpresa->nombre }}');">
+                            <i class="fas fa-building mr-2"></i>Trabajar en esta Sucursal
+                        </button>
+                        <a href="{{ route('logout') }}" class="btn btn-danger btn-lg">
+                            <i class="fas fa-sign-out-alt mr-2"></i>
+                            <span class="d-none d-md-inline">Salir</span>
+                        </a>
+                    </div>
+                `;
+            @endif
+        @else
+            // Múltiples empresas
+            let empresasHTML = '';
+            @foreach($empresasCaja as $index => $empresaData)
+                @if(!$empresaData['isClosed'])
+                    empresasHTML += `
+                        <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                            <button type="button" class="btn btn-outline-success btn-block empresa-select-btn-dinamico h-100 d-flex flex-column justify-content-center align-items-start p-3" 
+                                    data-empresa-id="{{ $empresaData['empresa']->id }}"
+                                    data-empresa-nombre="{{ $empresaData['empresa']->nombre }}"
+                                    style="min-height: 80px; border: 2px solid #28a745; cursor: pointer;">
+                                <div class="d-flex align-items-center w-100">
+                                    <i class="fas fa-cash-register mr-2 flex-shrink-0 text-success"></i>
+                                    <div class="text-left flex-grow-1">
+                                        <div class="font-weight-bold">{{ strtoupper($empresaData['empresa']->nombre) }}</div>
+                                        <small class="text-success d-block font-weight-bold">Caja Abierta</small>
+                                        <small class="text-muted">Abierta: {{ $empresaData['lastHistory']->created_at->format('d/m H:i') }}</small>
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+                    `;
+                @endif
+            @endforeach
+            
+            content.innerHTML = `
+                <div class="form-group">
+                    <label>Seleccionar Sucursal:</label>
+                    <div class="row">
+                        ${empresasHTML}
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end mt-4">
+                    <a href="{{ route('logout') }}" class="btn btn-danger btn-lg">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Salir
+                    </a>
+                </div>
+            `;
+        @endif
+        
+        // Ensamblar modal
+        cardBody.appendChild(header);
+        cardBody.appendChild(content);
+        card.appendChild(cardBody);
+        wrapper.appendChild(card);
+        modal.appendChild(wrapper);
+        document.body.appendChild(modal);
+        
+        // Aplicar blur al content wrapper
+        const contentWrapper = document.getElementById('contentWrapper');
+        if (contentWrapper) {
+            contentWrapper.style.filter = 'blur(5px)';
+        }
+        
+        // Configurar eventos
+        configurarEventosBotonesDinamicos();
+        
+        console.log('CWrapper - Modal dinámico creado y mostrado');
+    }
+
+    function trabajarEnSucursalDinamico(empresaId, empresaNombre) {
+        console.log('CWrapper - Trabajando en sucursal dinámica:', empresaId, empresaNombre);
+        SucursalCache.guardar(empresaId, empresaNombre);
+        
+        // Remover modal inmediatamente
+        const modal = document.getElementById('aperturaModalDinamico');
+        if (modal) {
+            modal.remove();
+        }
+        
+        // Quitar blur
+        const contentWrapper = document.getElementById('contentWrapper');
+        if (contentWrapper) {
+            contentWrapper.style.filter = 'none';
+        }
+        
+        // Recargar página
+        setTimeout(() => window.location.reload(), 100);
+    }
+
+    function configurarEventosBotonesDinamicos() {
+        console.log('CWrapper - Configurando eventos de botones dinámicos');
+        // Eventos para botones de selección de sucursal
+        document.querySelectorAll('.empresa-select-btn-dinamico').forEach(button => {
+            button.addEventListener('click', function() {
+                const empresaId = this.getAttribute('data-empresa-id');
+                const empresaNombre = this.getAttribute('data-empresa-nombre');
+                console.log('CWrapper - Botón clickeado:', empresaId, empresaNombre);
+                trabajarEnSucursalDinamico(empresaId, empresaNombre);
+            });
+        });
+    }
+</script>
 @endif
 
 {{-- Tarjeta de Cierre de Caja (para todos los usuarios con empresas asignadas) --}}
@@ -769,9 +1134,10 @@
 
 {{-- Content Wrapper --}}
 <div class="content-wrapper {{ config('adminlte.classes_content_wrapper', '') }}" 
-     @if(($currentUser && $isClosed && $userEmpresas->count() > 0) || 
+     @if(($currentUser && $isClosed === true && $userEmpresas->count() > 0) || 
          ($showClosingCard && $currentUser && $userEmpresas->count() > 0) ||
-         ($hayCajasPendientesCierre && $currentUser && $userEmpresas->count() > 0)) style="filter: blur(5px);" @endif>
+         ($hayCajasPendientesCierre && $currentUser && $userEmpresas->count() > 0)) style="filter: blur(5px);" @endif
+     id="contentWrapper">
     {{-- Content Header --}}
     @hasSection('content_header')
         <div class="content-header">
@@ -985,12 +1351,37 @@
     // Función para guardar la sucursal en localStorage cuando se abre caja (múltiples empresas)
     function guardarSucursalCacheMulti() {
         const empresaSelect = document.getElementById('empresa_id_hidden');
+        const actionType = document.getElementById('action_type');
+        
         if (empresaSelect && empresaSelect.value) {
             const empresaId = empresaSelect.value;
-            const empresaBtn = document.querySelector(`.empresa-btn[data-empresa-id="${empresaId}"]`);
-            if (empresaBtn) {
-                const empresaNombre = empresaBtn.querySelector('.empresa-nombre').textContent.trim();
-                SucursalCache.guardar(empresaId, empresaNombre);
+            
+            if (actionType && actionType.value === 'apertura') {
+                // Para apertura, buscar en botones de apertura
+                const empresaBtn = document.querySelector(`.empresa-btn[data-empresa-id="${empresaId}"]`);
+                if (empresaBtn) {
+                    const empresaNombre = empresaBtn.querySelector('.empresa-nombre').textContent.trim();
+                    SucursalCache.guardar(empresaId, empresaNombre);
+                }
+            } else if (actionType && actionType.value === 'seleccionar') {
+                // Para selección, buscar en botones de selección
+                const empresaBtn = document.querySelector(`.empresa-select-btn[data-empresa-id="${empresaId}"]`);
+                if (empresaBtn) {
+                    const empresaNombre = empresaBtn.getAttribute('data-empresa-nombre');
+                    SucursalCache.guardar(empresaId, empresaNombre);
+                }
+            } else {
+                // Fallback: buscar cualquier botón con el ID
+                const empresaBtn = document.querySelector(`.empresa-btn[data-empresa-id="${empresaId}"], .empresa-select-btn[data-empresa-id="${empresaId}"]`);
+                if (empresaBtn) {
+                    let empresaNombre;
+                    if (empresaBtn.classList.contains('empresa-btn')) {
+                        empresaNombre = empresaBtn.querySelector('.empresa-nombre').textContent.trim();
+                    } else {
+                        empresaNombre = empresaBtn.getAttribute('data-empresa-nombre');
+                    }
+                    SucursalCache.guardar(empresaId, empresaNombre);
+                }
             }
         }
     }
