@@ -122,7 +122,11 @@
                                             <select name="empresa_id" id="empresa_id" class="form-control" {{ !auth()->user()->is_admin && isset($userEmpresaId) ? 'readonly disabled' : '' }}>
                                                 <option value="">Seleccione una Empresa</option>
                                                 @foreach ($empresas as $empresa)
-                                                    <option value="{{ $empresa->id }}" {{ isset($userEmpresaId) && $userEmpresaId == $empresa->id ? 'selected' : '' }}>
+                                                    <option value="{{ $empresa->id }}" 
+                                                        {{ 
+                                                            (isset($userEmpresaId) && $userEmpresaId == $empresa->id) || 
+                                                            (request('empresa_id') == $empresa->id) ? 'selected' : '' 
+                                                        }}>
                                                         {{ $empresa->nombre }}
                                                     </option>
                                                 @endforeach
@@ -226,12 +230,28 @@
 @stop
 
 @section('js')
+<script src="{{ asset('js/sucursal-cache.js') }}"></script>
 
 <script>
-// Preseleccionar la sucursal activa desde localStorage
+// Preseleccionar la sucursal activa desde localStorage o parámetros URL
 document.addEventListener('DOMContentLoaded', function() {
-    if (typeof SucursalCache !== 'undefined') {
+    const empresaSelect = document.getElementById('empresa_id');
+    
+    // Verificar si ya hay una empresa preseleccionada por el parámetro URL
+    const empresaPreseleccionada = empresaSelect && empresaSelect.value;
+    
+    // Solo usar el caché si no hay parámetro en la URL
+    if (!empresaPreseleccionada && typeof SucursalCache !== 'undefined') {
+        console.log('Intentando preseleccionar empresa desde caché de sucursales...');
         SucursalCache.preseleccionarEnSelect('empresa_id', false);
+    } else if (empresaPreseleccionada) {
+        console.log('Empresa ya preseleccionada desde URL:', empresaPreseleccionada);
+        // Aplicar estilos visuales para indicar empresa activa
+        empresaSelect.style.borderColor = '#28a745';
+        empresaSelect.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+        empresaSelect.classList.add('filtro-empresa-activo');
+    } else {
+        console.error('SucursalCache no está disponible en create.blade.php');
     }
 });
 

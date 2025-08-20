@@ -398,7 +398,34 @@
 
             // Funciones de navegación
             window.crearArticulo = function() {
-                window.location.href = "{{ route('inventario.create') }}";
+                // Intentar obtener la empresa seleccionada del caché de sucursales
+                let empresaId = null;
+                try {
+                    if (typeof SucursalCache !== 'undefined') {
+                        const sucursal = SucursalCache.obtener();
+                        if (sucursal && sucursal.id) {
+                            empresaId = sucursal.id;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error al obtener sucursal del caché:', e);
+                }
+
+                // Si no hay empresa en caché, intentar obtener del filtro actual
+                if (!empresaId) {
+                    const empresaSelect = document.getElementById('empresa_id');
+                    if (empresaSelect && empresaSelect.value) {
+                        empresaId = empresaSelect.value;
+                    }
+                }
+
+                // Construir la URL con el parámetro de empresa
+                let url = "{{ route('inventario.create') }}";
+                if (empresaId) {
+                    url += `?empresa_id=${empresaId}`;
+                }
+                
+                window.location.href = url;
             }
 
             window.actualizarArticulos = function() {
@@ -769,6 +796,24 @@
                 // Mostrar la nueva fila si está oculta
                 if (newRow.is(':hidden')) {
                     newRow.show();
+                    
+                    // Preseleccionar empresa desde caché de sucursales
+                    try {
+                        if (typeof SucursalCache !== 'undefined') {
+                            const sucursal = SucursalCache.obtener();
+                            if (sucursal && sucursal.id) {
+                                const empresaSelect = newRow.find('td[data-field="empresa_id"] .edit-input');
+                                if (empresaSelect.length) {
+                                    empresaSelect.val(sucursal.id);
+                                    newRow.find('td[data-field="empresa_id"] .display-value').text(sucursal.nombre);
+                                    console.log('Empresa preseleccionada en fila nueva:', sucursal.nombre);
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error al preseleccionar empresa en fila nueva:', e);
+                    }
+                    
                     // Activar la edición en la celda de código
                     setTimeout(() => {
                         newRow.find('td[data-field="codigo"]').trigger('click');

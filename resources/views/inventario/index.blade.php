@@ -70,6 +70,7 @@
 @stop
 
 @section('js')
+    <script src="{{ asset('js/sucursal-cache.js') }}"></script>
     @include('atajos')
     <x-inventario.scripts />
 @stop
