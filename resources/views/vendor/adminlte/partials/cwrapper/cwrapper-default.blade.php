@@ -656,7 +656,7 @@
 @endif
 
 {{-- Modal dinámico para check_cache - se crea solo si es necesario --}}
-@if($currentUser && $isClosed === 'check_cache' && $userEmpresass->count() > 0)
+@if($currentUser && $isClosed === 'check_cache' && $userEmpresas->count() > 0)
 <script>
     console.log('CWrapper - Script de modal dinámico cargado');
     console.log('CWrapper - isClosed:', '{{ $isClosed }}');
@@ -718,7 +718,7 @@
             <h6 class="text-info">SELECCIONE SUCURSAL</h6>
             <div class="alert alert-info">
                 <i class="fas fa-info-circle mr-2"></i>
-                <small>Se detectaron cajas abiertas. Seleccione una sucursal para trabajar en ella.</small>
+                <small>Seleccione una sucursal para trabajar. Si la caja está cerrada, podrá abrirla.</small>
             </div>
         `;
         
@@ -736,7 +736,7 @@
                     </div>
                     <div class="d-flex flex-column flex-md-row justify-content-between mt-4">
                         <button type="button" class="btn btn-info btn-lg mb-2 mb-md-0 mr-md-2 flex-grow-1" 
-                                onclick="trabajarEnSucursalDinamico('{{ $userEmpresa->id }}', '{{ $userEmpresa->nombre }}');">
+                                onclick="trabajarEnSucursalDinamico('{{ $userEmpresa->id }}', '{{ $userEmpresa->nombre }}', 'seleccionar', this);">
                             <i class="fas fa-building mr-2"></i>Trabajar en esta Sucursal
                         </button>
                         <a href="{{ route('logout') }}" class="btn btn-danger btn-lg">
@@ -747,22 +747,83 @@
                 `;
             @endif
         @else
-            // Múltiples empresas
+            // Múltiples empresas - mostrar TODAS las empresas disponibles
             let empresasHTML = '';
-            @foreach($empresasCaja as $index => $empresaData)
-                @if(!$empresaData['isClosed'])
+            @foreach($userEmpresas as $empresa)
+                @php
+                    $empresaData = null;
+                    $tieneHistorial = false;
+                    $cajaAbierta = false;
+                    $sumCaja = 0;
+                    $lastHistory = null;
+                    $previousHistory = null;
+                    
+                    foreach($empresasCaja as $empData) {
+                        if($empData['empresa']->id == $empresa->id) {
+                            $empresaData = $empData;
+                            $tieneHistorial = $empData['lastHistory'] !== null;
+                            $cajaAbierta = !$empData['isClosed'];
+                            $sumCaja = $empData['sumCaja'];
+                            $lastHistory = $empData['lastHistory'];
+                            $previousHistory = $empData['previousHistory'];
+                            break;
+                        }
+                    }
+                    
+                    // Si no está en empresasCaja, obtener datos básicos
+                    if (!$empresaData) {
+                        // Obtener suma de caja para empresas sin historial
+                        $sumCaja = \App\Models\CashHistory::where('empresa_id', $empresa->id)
+                                    ->where('estado', 'Cierre')
+                                    ->sum('monto');
+                        $previousHistory = \App\Models\CashHistory::where('empresa_id', $empresa->id)
+                                         ->where('estado', 'Cierre')
+                                         ->latest()
+                                         ->first();
+                    }
+                @endphp
+                
+                @if($cajaAbierta)
+                    // Caja abierta - botón verde
                     empresasHTML += `
                         <div class="col-12 col-sm-6 col-lg-4 mb-3">
                             <button type="button" class="btn btn-outline-success btn-block empresa-select-btn-dinamico h-100 d-flex flex-column justify-content-center align-items-start p-3" 
-                                    data-empresa-id="{{ $empresaData['empresa']->id }}"
-                                    data-empresa-nombre="{{ $empresaData['empresa']->nombre }}"
-                                    style="min-height: 80px; border: 2px solid #28a745; cursor: pointer;">
+                                    data-empresa-id="{{ $empresa->id }}"
+                                    data-empresa-nombre="{{ $empresa->nombre }}"
+                                    data-action="seleccionar"
+                                    style="min-height: 90px; border: 2px solid #28a745; cursor: pointer;">
                                 <div class="d-flex align-items-center w-100">
                                     <i class="fas fa-cash-register mr-2 flex-shrink-0 text-success"></i>
                                     <div class="text-left flex-grow-1">
-                                        <div class="font-weight-bold">{{ strtoupper($empresaData['empresa']->nombre) }}</div>
+                                        <div class="font-weight-bold">{{ strtoupper($empresa->nombre) }}</div>
                                         <small class="text-success d-block font-weight-bold">Caja Abierta</small>
-                                        <small class="text-muted">Abierta: {{ $empresaData['lastHistory']->created_at->format('d/m H:i') }}</small>
+                                        <small class="text-muted">Abierta: {{ $lastHistory ? $lastHistory->created_at->format('d/m H:i') : 'N/A' }}</small>
+                                        <small class="text-success font-weight-bold">\${{ number_format($sumCaja, 2, '.', ',') }}</small>
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+                    `;
+                @else
+                    // Caja cerrada - botón azul
+                    empresasHTML += `
+                        <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                            <button type="button" class="btn btn-outline-info btn-block empresa-select-btn-dinamico h-100 d-flex flex-column justify-content-center align-items-start p-3" 
+                                    data-empresa-id="{{ $empresa->id }}"
+                                    data-empresa-nombre="{{ $empresa->nombre }}"
+                                    data-action="apertura"
+                                    data-monto="{{ number_format($sumCaja, 2, '.', '') }}"
+                                    data-last-close="{{ $previousHistory ? $previousHistory->created_at->format('d/m/Y H:i') : 'Sin cierres anteriores' }}"
+                                    data-last-user="{{ $previousHistory ? $previousHistory->user->name : 'N/A' }}"
+                                    data-last-amount="{{ $previousHistory ? number_format($previousHistory->monto, 2) : '0.00' }}"
+                                    style="min-height: 90px; border: 2px solid #17a2b8; cursor: pointer;">
+                                <div class="d-flex align-items-center w-100">
+                                    <i class="fas fa-building mr-2 flex-shrink-0 text-info"></i>
+                                    <div class="text-left flex-grow-1">
+                                        <div class="font-weight-bold">{{ strtoupper($empresa->nombre) }}</div>
+                                        <small class="text-info d-block font-weight-bold">Caja Cerrada</small>
+                                        <small class="text-muted">Clic para abrir caja</small>
+                                        <small class="text-success font-weight-bold">\${{ number_format($sumCaja, 2, '.', ',') }}</small>
                                     </div>
                                 </div>
                             </button>
@@ -806,24 +867,81 @@
         console.log('CWrapper - Modal dinámico creado y mostrado');
     }
 
-    function trabajarEnSucursalDinamico(empresaId, empresaNombre) {
-        console.log('CWrapper - Trabajando en sucursal dinámica:', empresaId, empresaNombre);
-        SucursalCache.guardar(empresaId, empresaNombre);
+    function trabajarEnSucursalDinamico(empresaId, empresaNombre, action, button) {
+        console.log('CWrapper - Trabajando en sucursal dinámica:', empresaId, empresaNombre, 'Acción:', action);
         
-        // Remover modal inmediatamente
-        const modal = document.getElementById('aperturaModalDinamico');
-        if (modal) {
-            modal.remove();
+        if (action === 'seleccionar') {
+            // Caja ya abierta, solo seleccionar sucursal
+            SucursalCache.guardar(empresaId, empresaNombre);
+            
+            // Remover modal inmediatamente
+            const modal = document.getElementById('aperturaModalDinamico');
+            if (modal) {
+                modal.remove();
+            }
+            
+            // Quitar blur
+            const contentWrapper = document.getElementById('contentWrapper');
+            if (contentWrapper) {
+                contentWrapper.style.filter = 'none';
+            }
+            
+            // Recargar página
+            setTimeout(() => window.location.reload(), 100);
+            
+        } else if (action === 'apertura') {
+            // Caja cerrada, abrir caja
+            const monto = button.getAttribute('data-monto');
+            const lastUser = button.getAttribute('data-last-user');
+            const lastClose = button.getAttribute('data-last-close');
+            const lastAmount = button.getAttribute('data-last-amount');
+            
+            console.log('CWrapper - Abriendo caja con datos:', {
+                empresaId, empresaNombre, monto, lastUser, lastClose, lastAmount
+            });
+            
+            // Crear formulario de apertura dinámicamente
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{{ route("cash-histories.store") }}';
+            
+            // Token CSRF
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = '{{ csrf_token() }}';
+            form.appendChild(csrfInput);
+            
+            // Empresa ID
+            const empresaInput = document.createElement('input');
+            empresaInput.type = 'hidden';
+            empresaInput.name = 'empresa_id';
+            empresaInput.value = empresaId;
+            form.appendChild(empresaInput);
+            
+            // Monto
+            const montoInput = document.createElement('input');
+            montoInput.type = 'hidden';
+            montoInput.name = 'monto';
+            montoInput.value = monto;
+            form.appendChild(montoInput);
+            
+            // Estado
+            const estadoInput = document.createElement('input');
+            estadoInput.type = 'hidden';
+            estadoInput.name = 'estado';
+            estadoInput.value = 'Apertura';
+            form.appendChild(estadoInput);
+            
+            // Agregar formulario al DOM y enviarlo
+            document.body.appendChild(form);
+            
+            // Guardar en cache antes del envío
+            SucursalCache.guardar(empresaId, empresaNombre);
+            
+            console.log('CWrapper - Enviando formulario de apertura...');
+            form.submit();
         }
-        
-        // Quitar blur
-        const contentWrapper = document.getElementById('contentWrapper');
-        if (contentWrapper) {
-            contentWrapper.style.filter = 'none';
-        }
-        
-        // Recargar página
-        setTimeout(() => window.location.reload(), 100);
     }
 
     function configurarEventosBotonesDinamicos() {
@@ -833,8 +951,9 @@
             button.addEventListener('click', function() {
                 const empresaId = this.getAttribute('data-empresa-id');
                 const empresaNombre = this.getAttribute('data-empresa-nombre');
-                console.log('CWrapper - Botón clickeado:', empresaId, empresaNombre);
-                trabajarEnSucursalDinamico(empresaId, empresaNombre);
+                const action = this.getAttribute('data-action');
+                console.log('CWrapper - Botón clickeado:', empresaId, empresaNombre, 'Acción:', action);
+                trabajarEnSucursalDinamico(empresaId, empresaNombre, action, this);
             });
         });
     }
