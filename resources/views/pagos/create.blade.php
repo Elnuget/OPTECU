@@ -139,7 +139,7 @@
                            step="0.01"
                            min="0.01"
                            class="form-control {{ $errors->has('pago') ? 'is-invalid' : '' }}" 
-                           placeholder="0.00"
+                           placeholder="EJEMPLO: 100.50 O 100,50"
                            value="{{ old('pago') }}"
                            onblur="validarMonto(this)"
                            oninput="formatearDecimales(this)">
@@ -148,7 +148,7 @@
                             {{ $errors->first('pago') }}
                         </div>
                     @endif
-                    <small class="form-text text-muted">INGRESE EL MONTO DEL PAGO (ACEPTA DECIMALES HASTA 2 POSICIONES)</small>
+                    <small class="form-text text-muted">INGRESE EL MONTO DEL PAGO (ACEPTA DECIMALES HASTA 2 POSICIONES - USE . O , PARA DECIMALES)</small>
                 </div>
                 
                 <div class="form-group">
@@ -250,6 +250,9 @@
         
         // Si está vacío, no hacer nada
         if (!valor) return;
+        
+        // Convertir comas a puntos para estandarizar
+        valor = valor.replace(/,/g, '.');
         
         // Remover caracteres no numéricos excepto punto
         valor = valor.replace(/[^0-9.]/g, '');
