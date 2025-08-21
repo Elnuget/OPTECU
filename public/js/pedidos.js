@@ -1,110 +1,68 @@
 function calculateTotal() {
     try {
-        console.log('=== INICIANDO CÁLCULO DE TOTAL (MEJORADO) ===');
-        
-        let total = 0;
-
-        // Examen visual
-        const examenVisual = parseFloat(document.getElementById('examen_visual')?.value) || 0;
-        const examenVisualDescuento = parseFloat(document.getElementById('examen_visual_descuento')?.value) || 0;
-        const examenVisualTotal = examenVisual * (1 - (examenVisualDescuento / 100));
-        total += examenVisualTotal;
-        console.log('Examen visual:', examenVisual, 'descuento:', examenVisualDescuento, 'total:', examenVisualTotal);
-
-        // Armazones - buscar TODOS los campos de precio/descuento de armazones
-        const armazonPrecios = document.querySelectorAll('input[name="a_precio[]"], input[name="a_precio"]');
-        console.log('Campos de precio armazón encontrados:', armazonPrecios.length);
-        
-        armazonPrecios.forEach((precio, index) => {
-            const precioValue = parseFloat(precio.value) || 0;
-            
-            // Buscar el descuento correspondiente en el mismo contenedor
-            const section = precio.closest('.armazon-section, .row, .card-body');
-            let descuento = 0;
-            
-            if (section) {
-                const descuentoField = section.querySelector('input[name="a_precio_descuento[]"], input[name="a_precio_descuento"]');
-                descuento = parseFloat(descuentoField?.value) || 0;
-            }
-            
-            const subtotal = precioValue * (1 - (descuento / 100));
-            total += subtotal;
-            console.log(`Armazón ${index}: precio=${precioValue}, descuento=${descuento}%, aplicado=${subtotal}`);
-        });
-
-        // Lunas - buscar TODOS los campos de precio/descuento de lunas
-        const lunasPrecios = document.querySelectorAll('input[name="l_precio[]"], input[name="l_precio"]');
-        console.log('Campos de precio luna encontrados:', lunasPrecios.length);
-        
-        lunasPrecios.forEach((precio, index) => {
-            const precioValue = parseFloat(precio.value) || 0;
-            
-            // Buscar el descuento correspondiente en el mismo contenedor
-            const section = precio.closest('.luna-section, .row, .card-body');
-            let descuento = 0;
-            
-            if (section) {
-                const descuentoField = section.querySelector('input[name="l_precio_descuento[]"], input[name="l_precio_descuento"]');
-                descuento = parseFloat(descuentoField?.value) || 0;
-            }
-            
-            const subtotal = precioValue * (1 - (descuento / 100));
-            total += subtotal;
-            console.log(`Luna ${index}: precio=${precioValue}, descuento=${descuento}%, aplicado=${subtotal}`);
-        });
-
-        // Accesorios - buscar TODOS los campos de precio/descuento de accesorios
-        const accesoriosPrecios = document.querySelectorAll('input[name="d_precio[]"], input[name="d_precio"]');
-        console.log('Campos de precio accesorio encontrados:', accesoriosPrecios.length);
-        
-        accesoriosPrecios.forEach((precio, index) => {
-            const precioValue = parseFloat(precio.value) || 0;
-            
-            // Buscar el descuento correspondiente en el mismo contenedor
-            const section = precio.closest('.accesorio-section, .row, .card-body');
-            let descuento = 0;
-            
-            if (section) {
-                const descuentoField = section.querySelector('input[name="d_precio_descuento[]"], input[name="d_precio_descuento"]');
-                descuento = parseFloat(descuentoField?.value) || 0;
-            }
-            
-            const subtotal = precioValue * (1 - (descuento / 100));
-            total += subtotal;
-            console.log(`Accesorio ${index}: precio=${precioValue}, descuento=${descuento}%, aplicado=${subtotal}`);
-        });
-
-        // Valor compra
-        const valorCompra = parseFloat(document.getElementById('valor_compra')?.value) || 0;
-        total += valorCompra;
-        console.log('Valor compra:', valorCompra);
-
-        console.log('TOTAL CALCULADO FINAL:', total);
-
-        // Obtener el total pagado para calcular saldo
+        // Obtener el total pagado
         const totalPagadoElement = document.getElementById('total_pagado');
         const totalPagado = totalPagadoElement ? parseFloat(totalPagadoElement.value) || 0 : 0;
-        console.log('Total pagado:', totalPagado);
 
-        // Calcular saldo pendiente
-        const saldoPendiente = Math.max(0, total - totalPagado);
-        console.log('Saldo pendiente calculado:', saldoPendiente);
+        // Calcular nuevo total
+        let newTotal = 0;
 
-        // Actualizar campos
+        // Sumar examen visual
+        const examenVisualElement = document.getElementById('examen_visual');
+        const examenVisualDescuentoElement = document.getElementById('examen_visual_descuento');
+        
+        if (examenVisualElement && examenVisualDescuentoElement) {
+            const examenVisual = parseFloat(examenVisualElement.value) || 0;
+            const examenVisualDescuento = parseFloat(examenVisualDescuentoElement.value) || 0;
+            const examenVisualTotal = examenVisual * (1 - (examenVisualDescuento / 100));
+            newTotal += examenVisualTotal;
+        }
+
+        // Sumar armazones
+        document.querySelectorAll('.armazon-section').forEach(section => {
+            const precioElement = section.querySelector('[name="a_precio[]"]');
+            const descuentoElement = section.querySelector('[name="a_precio_descuento[]"]');
+            
+            if (precioElement && descuentoElement) {
+                const precio = parseFloat(precioElement.value) || 0;
+                const descuento = parseFloat(descuentoElement.value) || 0;
+                const precioFinal = precio * (1 - (descuento / 100));
+                newTotal += precioFinal;
+            }
+        });
+
+        // Sumar lunas
+        document.querySelectorAll('.luna-section').forEach(section => {
+            const precioElement = section.querySelector('[name="l_precio[]"]');
+            const descuentoElement = section.querySelector('[name="l_precio_descuento[]"]');
+            
+            if (precioElement && descuentoElement) {
+                const precio = parseFloat(precioElement.value) || 0;
+                const descuento = parseFloat(descuentoElement.value) || 0;
+                const precioFinal = precio * (1 - (descuento / 100));
+                newTotal += precioFinal;
+            }
+        });
+
+        // Sumar compra rápida
+        const valorCompraElement = document.getElementById('valor_compra');
+        if (valorCompraElement) {
+            const valorCompra = parseFloat(valorCompraElement.value) || 0;
+            newTotal += valorCompra;
+        }
+
+        // Redondear a 2 decimales
+        newTotal = Math.round(newTotal * 100) / 100;
+
+        // Calcular saldo pendiente (nuevo total menos pagos realizados)
+        const newSaldo = Math.max(0, newTotal - totalPagado);
+
+        // Actualizar los campos
         const totalElement = document.getElementById('total');
         const saldoElement = document.getElementById('saldo');
         
-        if (totalElement) {
-            totalElement.value = total.toFixed(2);
-            console.log('Total actualizado a:', totalElement.value);
-        }
-        
-        if (saldoElement) {
-            saldoElement.value = saldoPendiente.toFixed(2);
-            console.log('Saldo actualizado a:', saldoElement.value);
-        }
-        
-        console.log('=== FIN CÁLCULO DE TOTAL ===');
+        if (totalElement) totalElement.value = newTotal.toFixed(2);
+        if (saldoElement) saldoElement.value = newSaldo.toFixed(2);
     } catch (error) {
         console.error('Error al calcular el total:', error);
     }
@@ -122,79 +80,30 @@ function duplicateLunas() {
             </div>
             
             <div class="row mb-3">
-                <div class="col-md-12">
-                    <label class="form-label">Prescripción/Medidas de Lunas</label>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-sm">
-                            <thead class="thead-light">
-                                <tr>
-                                    <th width="10%">Ojo</th>
-                                    <th width="20%">Esfera</th>
-                                    <th width="20%">Cilindro</th>
-                                    <th width="15%">Eje</th>
-                                    <th width="15%">ADD</th>
-                                    <th width="20%">Observaciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="align-middle text-center"><strong>OD</strong></td>
-                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_esfera[]" placeholder="Ej: +2.00"></td>
-                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_cilindro[]" placeholder="Ej: -1.50"></td>
-                                    <td><input type="text" class="form-control form-control-sm medida-input" name="od_eje[]" placeholder="Ej: 90°"></td>
-                                    <td rowspan="2" class="align-middle">
-                                        <input type="text" class="form-control form-control-sm medida-input" name="add[]" placeholder="Ej: +2.00">
-                                    </td>
-                                    <td rowspan="2" class="align-middle">
-                                        <textarea class="form-control form-control-sm" name="l_detalle[]" rows="3" placeholder="Detalles adicionales"></textarea>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td class="align-middle text-center"><strong>OI</strong></td>
-                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_esfera[]" placeholder="Ej: +1.75"></td>
-                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_cilindro[]" placeholder="Ej: -1.25"></td>
-                                    <td><input type="text" class="form-control form-control-sm medida-input" name="oi_eje[]" placeholder="Ej: 85°"></td>
-                                </tr>
-                                <tr>
-                                    <td class="text-center"><strong>DP</strong></td>
-                                    <td><input type="text" class="form-control form-control-sm medida-input" name="dp[]" placeholder="Ej: 62"></td>
-                                    <td colspan="4">
-                                        <input type="hidden" name="l_medida[]" class="l-medida-hidden">
-                                        <small class="text-muted">Distancia Pupilar</small>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <small class="form-text text-muted">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        <strong>Formato de ejemplo:</strong> OD: +2.00 -1.50 X90° / OI: +1.75 -1.25 X85° ADD: +2.00 DP: 62
-                    </small>
+                <div class="col-md-6">
+                    <label class="form-label">Lunas Medidas</label>
+                    <input type="text" class="form-control" name="l_medida[]" value="">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Lunas Detalle</label>
+                    <input type="text" class="form-control" name="l_detalle[]" value="">
                 </div>
             </div>
 
             <div class="row mb-3">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label class="form-label">Tipo de Lente</label>
                     <input type="text" class="form-control" name="tipo_lente[]" 
                            list="tipo_lente_options" value=""
                            placeholder="Seleccione o escriba un tipo de lente">
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label">Material</label>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <label class="form-label text-sm">OD (Ojo Derecho)</label>
-                            <input type="text" class="form-control form-control-sm material-input" name="material_od[]" list="material_options" placeholder="Material OD">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label text-sm">OI (Ojo Izquierdo)</label>
-                            <input type="text" class="form-control form-control-sm material-input" name="material_oi[]" list="material_options" placeholder="Material OI">
-                        </div>
-                    </div>
-                    <input type="hidden" name="material[]" class="material-hidden">
+                    <input type="text" class="form-control" name="material[]" 
+                           list="material_options" value=""
+                           placeholder="Seleccione o escriba un material">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label class="form-label">Filtro</label>
                     <input type="text" class="form-control" name="filtro[]" 
                            list="filtro_options" value=""
@@ -206,32 +115,17 @@ function duplicateLunas() {
                 <div class="col-md-3">
                     <label class="form-label">Precio Lunas</label>
                     <input type="number" class="form-control input-sm" name="l_precio[]"
-                           value="0" step="0.01">
+                           value="0" step="0.01" oninput="calculateTotal()">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Desc. Lunas (%)</label>
                     <input type="number" class="form-control input-sm" name="l_precio_descuento[]"
-                           value="0" min="0" max="100">
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">Foto Lunas (Opcional)</label>
-                    <input type="file" class="form-control form-control-sm" name="l_foto[]" accept="image/*">
-                    <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF</small>
+                           value="0" min="0" max="100" oninput="calculateTotal()">
                 </div>
             </div>
         </div>
     `;
     container.insertAdjacentHTML('beforeend', template);
-    
-    // Agregar event listeners para los nuevos campos de medidas
-    setTimeout(() => {
-        if (typeof agregarEventListenersMedidas === 'function') {
-            agregarEventListenersMedidas();
-        }
-        if (typeof agregarEventListenersMaterial === 'function') {
-            agregarEventListenersMaterial();
-        }
-    }, 100);
 }
 
 function duplicateArmazon() {
@@ -249,10 +143,26 @@ function duplicateArmazon() {
         return;
     }
 
+    // Verificar que firstSelect.options existe y es iterable
+    if (!firstSelect.options) {
+        console.error('firstSelect.options es undefined');
+        return;
+    }
+
+    console.log('firstSelect encontrado:', firstSelect);
+    console.log('firstSelect.options:', firstSelect.options);
+    console.log('firstSelect.options.length:', firstSelect.options ? firstSelect.options.length : 'undefined');
+
     // Crear un nuevo elemento select y copiar las opciones del primero
-    const options = Array.from(firstSelect.options).map(opt => {
-        return `<option value="${opt.value}">${opt.text}</option>`;
-    }).join('');
+    let options = '';
+    try {
+        options = Array.from(firstSelect.options).map(opt => {
+            return `<option value="${opt.value}">${opt.text}</option>`;
+        }).join('');
+    } catch (error) {
+        console.error('Error al procesar las opciones del select:', error);
+        return;
+    }
 
     // Obtener el mes y año actual
     const currentDate = new Date();
@@ -287,12 +197,12 @@ function duplicateArmazon() {
                 <div class="col-md-6">
                     <label>Precio</label>
                     <input type="number" name="a_precio[]" class="form-control" 
-                        value="0" step="0.01">
+                        value="0" step="0.01" oninput="calculateTotal()">
                 </div>
                 <div class="col-md-6">
                     <label>Descuento (%)</label>
                     <input type="number" name="a_precio_descuento[]" class="form-control" 
-                        value="0" min="0" max="100">
+                        value="0" min="0" max="100" oninput="calculateTotal()">
                 </div>
             </div>
             <div class="row mt-2">
@@ -374,66 +284,52 @@ async function restaurarInventario(inventarioId) {
     }
 }
 
-// Event Listeners - Mejorados para campos dinámicos
+// Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM Content Loaded - Configurando event listeners mejorados');
+    console.log('DOM Content Loaded');
 
-    // Configurar event delegation para todos los contenedores de campos dinámicos
-    document.body.addEventListener('input', function(e) {
-        // Verificar si el campo que cambió es un campo de precio o descuento
-        const fieldName = e.target.name;
-        const fieldId = e.target.id;
-        
-        const isPriceOrDiscountField = 
-            fieldName && (
-                fieldName.includes('precio') || 
-                fieldName.includes('descuento') ||
-                fieldName === 'examen_visual' ||
-                fieldName === 'valor_compra'
-            ) ||
-            fieldId && (
-                fieldId.includes('precio') || 
-                fieldId.includes('descuento') ||
-                fieldId === 'examen_visual' ||
-                fieldId === 'valor_compra'
-            );
-            
-        if (isPriceOrDiscountField) {
-            console.log('Campo de precio/descuento cambiado:', fieldName || fieldId, '=', e.target.value);
+    // Campos que afectan al total
+    const fields = [
+        'examen_visual',
+        'examen_visual_descuento',
+        'valor_compra',
+        'total'
+    ];
+    
+    fields.forEach(field => {
+        const element = document.getElementById(field);
+        if (element) {
+            element.addEventListener('input', function() {
+                if (field === 'total') {
+                    // Si se modifica el total manualmente, recalcular solo el saldo
+                    const total = parseFloat(this.value) || 0;
+                    const totalPagado = parseFloat(document.getElementById('total_pagado').value) || 0;
+                    const newSaldo = Math.max(0, total - totalPagado);
+                    document.getElementById('saldo').value = newSaldo.toFixed(2);
+                } else {
+                    // Para otros campos, calcular todo
+                    calculateTotal();
+                }
+            });
+        }
+    });
+
+    // Event delegation para precios y descuentos de armazones
+    document.getElementById('armazones-container').addEventListener('input', function(e) {
+        if (e.target.matches('[name="a_precio[]"], [name="a_precio_descuento[]"]')) {
             calculateTotal();
         }
     });
 
-    // Event listeners específicos para campos principales (fallback)
-    ['examen_visual', 'examen_visual_descuento', 'valor_compra', 'total_pagado'].forEach(id => {
-        const element = document.getElementById(id);
-        if(element){
-            element.addEventListener('input', function() {
-                console.log(`Campo ${id} cambiado: ${this.value}`);
-                calculateTotal();
-            });
-            console.log(`Event listener agregado para: ${id}`);
-        }
-    });
-
-    // Event delegation para botones de eliminar lunas
-    document.body.addEventListener('click', function(e) {
-        if (e.target.closest('.remove-luna')) {
-            e.preventDefault();
-            const lunaSection = e.target.closest('.luna-section');
-            if (lunaSection) {
-                lunaSection.remove();
-                calculateTotal();
-                console.log('Luna eliminada, total recalculado');
-            }
+    // Event delegation para precios y descuentos de lunas
+    document.getElementById('lunas-container').addEventListener('input', function(e) {
+        if (e.target.matches('[name="l_precio[]"], [name="l_precio_descuento[]"]')) {
+            calculateTotal();
         }
     });
 
     // Calcular total inicial
-    setTimeout(() => {
-        console.log('Calculando total inicial...');
-        calculateTotal();
-    }, 100);
+    calculateTotal();
 
     // Hacer que todo el header sea clickeable
     document.querySelectorAll('.card-header').forEach(header => {
@@ -461,19 +357,21 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error al inicializar selectpicker en pedidos.js:', error);
     }
 
-    // Manejar el botón de agregar armazón (solo si no estamos en modo edición)
-    const addButton = document.getElementById('add-armazon');
-    if (addButton && !window.editMode) {
-        console.log('Botón de agregar encontrado - configurando event listener para crear');
-        addButton.addEventListener('click', function(e) {
-            console.log('Botón de agregar clickeado - modo crear');
-            e.preventDefault();
-            duplicateArmazon();
-        });
-    } else if (addButton && window.editMode) {
-        console.log('Botón de agregar encontrado pero estamos en modo edición - saltando configuración');
+    // Manejar el botón de agregar armazón - solo si NO estamos en modo edición
+    if (!window.editMode) {
+        const addButton = document.getElementById('add-armazon');
+        if (addButton) {
+            console.log('Botón de agregar encontrado');
+            addButton.addEventListener('click', function(e) {
+                console.log('Botón de agregar clickeado');
+                e.preventDefault();
+                duplicateArmazon();
+            });
+        } else {
+            console.error('No se encontró el botón de agregar armazón');
+        }
     } else {
-        console.error('No se encontró el botón de agregar armazón');
+        console.log('Modo edición detectado, event listener para #add-armazon no configurado en pedidos.js');
     }
 
     // Manejar eliminación de armazones/accesorios
@@ -539,4 +437,3 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('No se encontró el contenedor de armazones');
     }
 }); 
-
