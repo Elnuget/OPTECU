@@ -61,6 +61,7 @@
                     <td>Sucursales</td>
                     <td>Activo</td>
                     <td>Administrador</td>
+                    <td>Super Usuario</td>
                     <td>Acciones</td>
                 </tr>
             </thead>
@@ -140,6 +141,13 @@
                         <td>
                         @if ($u->is_admin)
                            <span class="badge badge-primary">Sí</span>
+                        @else
+                           <span class="badge badge-light">No</span>
+                        @endif       
+                        </td>
+                        <td>
+                        @if ($u->is_superadmin)
+                           <span class="badge badge-danger">Sí</span>
                         @else
                            <span class="badge badge-light">No</span>
                         @endif       

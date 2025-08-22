@@ -160,6 +160,21 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                         </div>
+                        <div class="form-group">
+                                <label>SUPER USUARIO</label>
+                                <select id="is_superadmin" name="is_superadmin" class="form-control @error('is_superadmin') is-invalid @enderror">
+                                @php
+                                    $isSuperadmin = old('is_superadmin', $usuario->is_superadmin);
+                                @endphp
+                                <option value="" {{$isSuperadmin === null ? 'selected' : ''}}>Sin definir</option>
+                                <option value="0" {{$isSuperadmin === 0 || $isSuperadmin === '0' ? 'selected' : ''}}>NO</option>
+                                <option value="1" {{$isSuperadmin == 1 ? 'selected' : ''}}>SÍ</option>
+                                </select>
+                                @error('is_superadmin')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="text-muted">Los super usuarios tienen acceso completo al sistema</small>
+                        </div>
                 <button type="button" class="btn btn-primary pull-left" data-toggle="modal" data-target="#modal">EDITAR USUARIO</button>
   <div class="modal fade" id="modal">
     <div class="modal-dialog">

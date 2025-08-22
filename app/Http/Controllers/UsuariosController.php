@@ -30,6 +30,7 @@ class UsuariosController extends Controller
                 'password_confirmation' => 'required|string|min:8',
                 'activo' => 'required|boolean',
                 'is_admin' => 'required|boolean',
+                'is_superadmin' => 'nullable|boolean',
                 'empresa_id' => 'nullable|exists:empresas,id',
                 'empresas_adicionales' => 'nullable|array',
                 'empresas_adicionales.*' => 'exists:empresas,id'
@@ -54,6 +55,7 @@ class UsuariosController extends Controller
                 'activo.boolean' => 'El campo activo debe ser verdadero o falso',
                 'is_admin.required' => 'Debe especificar si el usuario es administrador',
                 'is_admin.boolean' => 'El campo administrador debe ser verdadero o falso',
+                'is_superadmin.boolean' => 'El campo super usuario debe ser verdadero o falso',
                 'empresa_id.exists' => 'La sucursal seleccionada no existe',
                 'empresas_adicionales.array' => 'Las empresas adicionales deben ser un array',
                 'empresas_adicionales.*.exists' => 'Una o más empresas adicionales no existen'
@@ -65,6 +67,7 @@ class UsuariosController extends Controller
             $usuario->email = $request->email;
             $usuario->active = $request->activo;
             $usuario->is_admin = $request->is_admin;
+            $usuario->is_superadmin = $request->is_superadmin;
             $usuario->empresa_id = $request->empresa_id ?: null;
             $usuario->password = Hash::make($request->password);
             
@@ -143,6 +146,7 @@ class UsuariosController extends Controller
                 'password' => 'nullable|string|min:8|confirmed',
                 'activo' => 'required|boolean',
                 'is_admin' => 'required|boolean',
+                'is_superadmin' => 'nullable|boolean',
                 'empresa_id' => 'nullable|exists:empresas,id',
                 'empresas_adicionales' => 'nullable|array',
                 'empresas_adicionales.*' => 'exists:empresas,id'
@@ -165,6 +169,7 @@ class UsuariosController extends Controller
                 'activo.boolean' => 'El campo activo debe ser verdadero o falso',
                 'is_admin.required' => 'Debe especificar si el usuario es administrador',
                 'is_admin.boolean' => 'El campo administrador debe ser verdadero o falso',
+                'is_superadmin.boolean' => 'El campo super usuario debe ser verdadero o falso',
                 'empresa_id.exists' => 'La sucursal seleccionada no existe',
                 'empresas_adicionales.array' => 'Las empresas adicionales deben ser un array',
                 'empresas_adicionales.*.exists' => 'Una o más empresas adicionales no existen'
@@ -175,6 +180,7 @@ class UsuariosController extends Controller
             $usuario->email = $request->email;
             $usuario->active = $request->activo;
             $usuario->is_admin = $request->is_admin;
+            $usuario->is_superadmin = $request->is_superadmin;
             $usuario->empresa_id = $request->empresa_id ?: null;
             
             // Actualizar la contraseña solo si se proporciona una nueva
