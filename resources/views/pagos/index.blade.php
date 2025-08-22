@@ -312,7 +312,6 @@
                             <!-- Removed Paciente column -->
                             <td>MÉTODO DE PAGO</td>
                             <td>ESTADO TC</td>
-                            <td>SALDO</td>
                             <td>PAGO</td>
                             <td style="display: none;">TC</td>
                             <td>ACCIONES</td>
@@ -322,7 +321,7 @@
                         @foreach ($pagos as $index => $pago)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
-                                <td>{{ $pago->pedido->fecha }}</td> <!-- Fecha del Pedido -->
+                                <td>{{ \Carbon\Carbon::parse($pago->pedido->fecha)->format('Y-m-d') }}</td> <!-- Fecha del Pedido -->
                                 <td>{{ $pago->pedido->numero_orden }}</td> <!-- Orden Asociada -->
                                 <td>{{ $pago->pedido->cliente }}</td> <!-- Cliente Asociado -->
                                 <td>{{ $pago->pedido->empresa ? $pago->pedido->empresa->nombre : 'N/A' }}</td> <!-- Empresa Asociada -->
@@ -339,7 +338,6 @@
                                         <span class="badge badge-secondary">N/A</span>
                                     @endif
                                 </td>
-                                <td>${{ number_format($pago->pedido->saldo, 2, ',', '.') }}</td> <!-- Updated to access saldo from pedido -->
                                 <td>${{ number_format($pago->pago, 2, ',', '.') }}</td>
                                 <td style="display: none;">{{ $pago->TC ? 'SÍ' : 'NO' }}</td>
                                 <td>
@@ -591,7 +589,7 @@
                     "searchable": true,
                 },
                 {
-                    "targets": [8], // Índice de la columna TC (ahora es la 8va)
+                    "targets": [8], // Índice de la columna TC
                     "visible": false,
                     "searchable": false
                 }],
@@ -604,7 +602,7 @@
                         "text": 'IMPRIMIR',
                         "autoPrint": true,
                         "exportOptions": {
-                            "columns": [0, 1, 2, 3, 4, 5, 6, 7, 8]
+                            "columns": [0, 1, 2, 3, 4, 5, 6, 7]
                         },
                         "customize": function(win) {
                             $(win.document.body).css('font-size', '16pt');
@@ -619,7 +617,7 @@
                         "filename": 'Pagos.pdf',
                         "pageSize": 'LETTER',
                         "exportOptions": {
-                            "columns": [0, 1, 2, 3, 4, 5, 6, 7, 8]
+                            "columns": [0, 1, 2, 3, 4, 5, 6, 7]
                         }
                     }
                 ],
