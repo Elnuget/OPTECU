@@ -52,12 +52,11 @@ class SueldoController extends Controller
             // Obtener los pedidos filtrados
             $pedidos = $pedidosQuery->orderBy('fecha', 'desc')->get();
             
-            // Obtener la lista de usuarios únicos que han realizado pedidos
-            $usuariosConPedidos = \App\Models\Pedido::select('usuario')
-                ->whereNotNull('usuario')
-                ->distinct()
-                ->orderBy('usuario')
-                ->pluck('usuario')
+            // Obtener la lista de usuarios activos desde la tabla users
+            $usuariosConPedidos = \App\Models\User::whereNull('deleted_at')
+                ->where('name', '!=', '')
+                ->orderBy('name')
+                ->pluck('name')
                 ->toArray();
             
             // Obtener los retiros de caja para el mismo periodo
@@ -84,12 +83,16 @@ class SueldoController extends Controller
             // Obtener detalles de sueldo con filtros
             $detallesSueldoQuery = DetalleSueldo::with('user')
                 ->where('ano', $anio)
-                ->where('mes', $mes);
+                ->where(function($query) use ($mes) {
+                    $query->where('mes', $mes)
+                          ->orWhere('mes', str_pad($mes, 2, '0', STR_PAD_LEFT))
+                          ->orWhere('mes', (int)$mes);
+                });
                 
             // Si se seleccionó un usuario específico
             if ($usuario) {
                 $detallesSueldoQuery->whereHas('user', function($query) use ($usuario) {
-                    $query->where('name', 'LIKE', '%' . $usuario . '%');
+                    $query->where('name', $usuario);
                 });
             }
             
@@ -112,12 +115,11 @@ class SueldoController extends Controller
             // Procesar historial de caja para calcular horas trabajadas
             $historialCaja = $this->procesarHistorialCaja($cashHistoryRaw);
         } else {
-            // Si no hay búsqueda, obtener usuarios para el dropdown
-            $usuariosConPedidos = \App\Models\Pedido::select('usuario')
-                ->whereNotNull('usuario')
-                ->distinct()
-                ->orderBy('usuario')
-                ->pluck('usuario')
+            // Si no hay búsqueda, obtener usuarios activos para el dropdown
+            $usuariosConPedidos = \App\Models\User::whereNull('deleted_at')
+                ->where('name', '!=', '')
+                ->orderBy('name')
+                ->pluck('name')
                 ->toArray();
         }
         

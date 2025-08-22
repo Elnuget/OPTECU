@@ -37,7 +37,8 @@ class DetalleSueldo extends Model
      */
     protected $casts = [
         'valor' => 'decimal:2',
-        'ano' => 'integer'
+        'ano' => 'integer',
+        'mes' => 'integer'
     ];
 
     /**

@@ -361,9 +361,16 @@ return [
         ],
 
         [
+            'text' => 'Sueldos',
+            'icon' => 'fas fa-money-bill-wave',
+            'route' => 'sueldos.index',
+            'active' => ['sueldos', 'sueldos/*'],
+        ],
+
+        [
             'text' => 'Gestión',
             'icon' => 'fas fa-chart-line',
-            'active' => ['egresos', 'egresos/*', 'prestamos', 'prestamos/*', 'sueldos', 'sueldos/*'],
+            'active' => ['egresos', 'egresos/*', 'prestamos', 'prestamos/*'],
             'can' => 'admin',
             'submenu' => [
                 [
@@ -377,12 +384,6 @@ return [
                     'icon' => 'fas fa-coins',
                     'url' => '/egresos/finanzas',
                     'active' => ['egresos/finanzas'],
-                ],
-                [
-                    'text' => 'Sueldos',
-                    'icon' => 'fas fa-money-bill-wave',
-                    'route' => 'sueldos.index',
-                    'active' => ['sueldos', 'sueldos/*'],
                 ],
                 [
                     'text' => 'Préstamos',

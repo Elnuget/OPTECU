@@ -122,7 +122,7 @@
                                 <div class="input-group-prepend">
                                     <span class="input-group-text">$</span>
                                 </div>
-                                <input type="number" step="0.01" min="0" 
+                                <input type="number" step="0.01" 
                                        class="form-control @error('valor') is-invalid @enderror" 
                                        id="valor" name="valor" 
                                        placeholder="0.00" 

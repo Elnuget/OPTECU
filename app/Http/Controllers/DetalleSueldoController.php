@@ -22,7 +22,10 @@ class DetalleSueldoController extends Controller
      */
     public function create(Request $request)
     {
-        $usuarios = User::orderBy('name')->get();
+        $usuarios = User::whereNull('deleted_at')
+                        ->where('name', '!=', '')
+                        ->orderBy('name')
+                        ->get();
         
         // Obtener datos pre-seleccionados desde la URL
         $preselectedData = [
@@ -34,7 +37,9 @@ class DetalleSueldoController extends Controller
         // Si hay un usuario preseleccionado, encontrar su ID
         $usuarioPreseleccionado = null;
         if ($preselectedData['usuario']) {
-            $usuarioPreseleccionado = User::where('name', $preselectedData['usuario'])->first();
+            $usuarioPreseleccionado = User::whereNull('deleted_at')
+                                        ->where('name', $preselectedData['usuario'])
+                                        ->first();
         }
         
         return view('detalles-sueldo.create', compact('usuarios', 'preselectedData', 'usuarioPreseleccionado'));
@@ -50,7 +55,7 @@ class DetalleSueldoController extends Controller
             'mes' => 'required|integer|between:1,12',
             'ano' => 'required|integer|min:2020',
             'descripcion' => 'required|string|max:255',
-            'valor' => 'required|numeric|min:0',
+            'valor' => 'required|numeric',
         ]);
 
         $detalle = DetalleSueldo::create($validatedData);
@@ -78,7 +83,10 @@ class DetalleSueldoController extends Controller
      */
     public function edit(DetalleSueldo $detalleSueldo)
     {
-        $usuarios = User::orderBy('name')->get();
+        $usuarios = User::whereNull('deleted_at')
+                        ->where('name', '!=', '')
+                        ->orderBy('name')
+                        ->get();
         return view('detalles-sueldo.edit', compact('detalleSueldo', 'usuarios'));
     }
 
@@ -92,7 +100,7 @@ class DetalleSueldoController extends Controller
             'mes' => 'required|integer|between:1,12',
             'ano' => 'required|integer|min:2020',
             'descripcion' => 'required|string|max:255',
-            'valor' => 'required|numeric|min:0',
+            'valor' => 'required|numeric',
         ]);
 
         $detalleSueldo->update($validatedData);
