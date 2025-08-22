@@ -368,17 +368,18 @@ return [
         ],
 
         [
+            'text' => 'Egresos',
+            'icon' => 'fas fa-file-invoice-dollar',
+            'url' => '/egresos',
+            'active' => ['egresos', 'egresos/*'],
+        ],
+        
+        [
             'text' => 'Gestión',
             'icon' => 'fas fa-chart-line',
-            'active' => ['egresos', 'egresos/*', 'prestamos', 'prestamos/*'],
+            'active' => ['prestamos', 'prestamos/*'],
             'can' => 'admin',
             'submenu' => [
-                [
-                    'text' => 'Egresos',
-                    'icon' => 'fas fa-file-invoice-dollar',
-                    'url' => '/egresos',
-                    'active' => ['egresos', 'egresos/*'],
-                ],
                 [
                     'text' => 'Finanzas',
                     'icon' => 'fas fa-coins',
