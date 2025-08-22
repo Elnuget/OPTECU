@@ -94,12 +94,13 @@
                                 </datalist>
                             </div>
                             <div class="form-group col-md-4">
-                                <label for="edad">Edad <span class="text-danger">*</span></label>
-                                <input type="number" name="edad" id="edad" class="form-control" required>
-                            </div>
-                            <div class="form-group col-md-4">
                                 <label for="fecha_nacimiento">Fecha de Nacimiento</label>
                                 <input type="date" name="fecha_nacimiento" id="fecha_nacimiento" class="form-control">
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label for="edad">Edad <span class="text-danger">*</span></label>
+                                <input type="number" name="edad" id="edad" class="form-control" required readonly>
+                                <small class="form-text text-muted">Se calcula automáticamente según la fecha de nacimiento</small>
                             </div>                            <div class="form-group col-md-4">
                                 <label for="celular">Celular <span class="text-danger">*</span></label>
                                 <input type="text" name="celular" id="celular" class="form-control" required list="celulares_existentes" placeholder="Seleccione o escriba un número de celular" autocomplete="off">
@@ -456,6 +457,33 @@
         $('input[type="text"], textarea').on('input', function() {
             $(this).val($(this).val().toUpperCase());
         });
+        
+        // Función para calcular edad a partir de fecha de nacimiento
+        function calcularEdad(fechaNacimiento) {
+            if (!fechaNacimiento) return '';
+            
+            const hoy = new Date();
+            const fechaNac = new Date(fechaNacimiento);
+            
+            if (isNaN(fechaNac.getTime())) return '';
+            
+            let edad = hoy.getFullYear() - fechaNac.getFullYear();
+            const mes = hoy.getMonth() - fechaNac.getMonth();
+            
+            // Si no ha pasado el cumpleaños todavía este año, restar un año
+            if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNac.getDate())) {
+                edad--;
+            }
+            
+            return edad;
+        }
+        
+        // Calcular y actualizar la edad cuando cambia la fecha de nacimiento
+        $('#fecha_nacimiento').on('change', function() {
+            const fechaNacimiento = $(this).val();
+            const edad = calcularEdad(fechaNacimiento);
+            $('#edad').val(edad);
+        });
 
         // Manejar la selección de paciente existente
         $('#buscar_paciente').on('input', function() {
@@ -561,8 +589,6 @@
                         if (campo !== 'apellidos') document.getElementById('apellidos').value = (historial.apellidos || '').toUpperCase();
                         if (campo !== 'cedula') document.getElementById('cedula').value = historial.cedula || '';
                         if (campo !== 'celular') document.getElementById('celular').value = historial.celular || '';
-                        document.getElementById('edad').value = historial.edad || '';
-                        
                         // Formatear y establecer la fecha de nacimiento si existe
                         if (historial.fecha_nacimiento) {
                             // Asegurarse de que la fecha esté en formato YYYY-MM-DD
@@ -570,9 +596,13 @@
                             if (!isNaN(fechaNacimiento.getTime())) {
                                 const fechaFormateada = fechaNacimiento.toISOString().split('T')[0];
                                 document.getElementById('fecha_nacimiento').value = fechaFormateada;
+                                
+                                // Disparar el evento change para calcular la edad automáticamente
+                                $('#fecha_nacimiento').trigger('change');
                             }
                         } else {
                             document.getElementById('fecha_nacimiento').value = '';
+                            document.getElementById('edad').value = historial.edad || '';
                         }
                         
                         document.getElementById('ocupacion').value = (historial.ocupacion || '').toUpperCase();
@@ -698,16 +728,18 @@
                         // Autocompletar todos los campos excepto nombres, apellidos y fecha
                         document.getElementById('cedula').value = historial.cedula || '';
                         document.getElementById('celular').value = historial.celular || '';
-                        document.getElementById('edad').value = historial.edad || '';
-                        
                         // Formatear y establecer la fecha de nacimiento si existe
                         if (historial.fecha_nacimiento) {
                             const fechaNacimiento = new Date(historial.fecha_nacimiento);
                             if (!isNaN(fechaNacimiento.getTime())) {
                                 document.getElementById('fecha_nacimiento').value = fechaNacimiento.toISOString().split('T')[0];
+                                
+                                // Disparar el evento change para calcular la edad automáticamente
+                                $('#fecha_nacimiento').trigger('change');
                             }
                         } else {
                             document.getElementById('fecha_nacimiento').value = '';
+                            document.getElementById('edad').value = historial.edad || '';
                         }
                         
                         document.getElementById('ocupacion').value = (historial.ocupacion || '').toUpperCase();
