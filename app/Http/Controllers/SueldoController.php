@@ -37,6 +37,21 @@ class SueldoController extends Controller
         $mes = $request->get('mes', date('m')); // Por defecto el mes actual
         $usuario = $request->get('usuario');
         
+        // Inicializar la variable calificaciones con valores predeterminados
+        $calificaciones = [
+            'total' => 0,
+            'calificados' => 0,
+            'promedio' => 0,
+            'distribucion' => [
+                5 => 0,
+                4 => 0,
+                3 => 0,
+                2 => 0,
+                1 => 0,
+            ],
+            'porcentaje_calificados' => 0,
+        ];
+        
         // Solo ejecutar consultas si se ha realizado una búsqueda
         if ($request->hasAny(['anio', 'mes', 'usuario']) && $request->isMethod('get')) {
             
@@ -51,6 +66,22 @@ class SueldoController extends Controller
             
             // Obtener los pedidos filtrados
             $pedidos = $pedidosQuery->orderBy('fecha', 'desc')->get();
+            
+            // Procesar calificaciones de pedidos
+            $calificaciones = [
+                'total' => $pedidos->count(),
+                'calificados' => $pedidos->whereNotNull('calificacion')->count(),
+                'promedio' => $pedidos->whereNotNull('calificacion')->avg('calificacion'),
+                'distribucion' => [
+                    5 => $pedidos->where('calificacion', 5)->count(),
+                    4 => $pedidos->where('calificacion', 4)->count(),
+                    3 => $pedidos->where('calificacion', 3)->count(),
+                    2 => $pedidos->where('calificacion', 2)->count(),
+                    1 => $pedidos->where('calificacion', 1)->count(),
+                ],
+                'porcentaje_calificados' => $pedidos->count() > 0 ? 
+                    ($pedidos->whereNotNull('calificacion')->count() / $pedidos->count()) * 100 : 0,
+            ];
             
             // Obtener la lista de usuarios activos desde la tabla users
             $usuariosConPedidos = \App\Models\User::whereNull('deleted_at')
@@ -123,7 +154,7 @@ class SueldoController extends Controller
                 ->toArray();
         }
         
-        return view('sueldos.index', compact('sueldos', 'usuariosConPedidos', 'pedidos', 'anio', 'mes', 'usuario', 'retirosCaja', 'detallesSueldo', 'historialCaja'));
+        return view('sueldos.index', compact('sueldos', 'usuariosConPedidos', 'pedidos', 'calificaciones', 'anio', 'mes', 'usuario', 'retirosCaja', 'detallesSueldo', 'historialCaja'));
     }
 
     /**
@@ -392,6 +423,21 @@ class SueldoController extends Controller
         // Si no se especifica mes, usar el actual
         if (!$mes) $mes = date('m');
         
+        // Inicializar la variable calificaciones con valores predeterminados
+        $calificaciones = [
+            'total' => 0,
+            'calificados' => 0,
+            'promedio' => 0,
+            'distribucion' => [
+                5 => 0,
+                4 => 0,
+                3 => 0,
+                2 => 0,
+                1 => 0,
+            ],
+            'porcentaje_calificados' => 0,
+        ];
+        
         // Obtener pedidos para estadísticas
         $pedidosQuery = \App\Models\Pedido::with('empresa')
             ->whereYear('fecha', $anio)
@@ -403,6 +449,22 @@ class SueldoController extends Controller
         }
         
         $pedidos = $pedidosQuery->orderBy('fecha', 'desc')->get();
+        
+        // Procesar calificaciones de pedidos
+        $calificaciones = [
+            'total' => $pedidos->count(),
+            'calificados' => $pedidos->whereNotNull('calificacion')->count(),
+            'promedio' => $pedidos->whereNotNull('calificacion')->avg('calificacion'),
+            'distribucion' => [
+                5 => $pedidos->where('calificacion', 5)->count(),
+                4 => $pedidos->where('calificacion', 4)->count(),
+                3 => $pedidos->where('calificacion', 3)->count(),
+                2 => $pedidos->where('calificacion', 2)->count(),
+                1 => $pedidos->where('calificacion', 1)->count(),
+            ],
+            'porcentaje_calificados' => $pedidos->count() > 0 ? 
+                ($pedidos->whereNotNull('calificacion')->count() / $pedidos->count()) * 100 : 0,
+        ];
         
         // Obtener detalles de sueldo con filtros
         $detallesSueldoQuery = DetalleSueldo::with('user')
@@ -460,6 +522,7 @@ class SueldoController extends Controller
         
         return view('sueldos.imprimir-rol-pago', compact(
             'pedidos',
+            'calificaciones',
             'detallesSueldo', 
             'retirosCaja', 
             'historialCaja', 
