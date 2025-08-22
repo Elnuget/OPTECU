@@ -53,17 +53,26 @@
         }
     </style>
 
-    {{-- Tarjetas de Resumen de Pagos --}}
+    {{-- Tarjetas de Resumen de Cuotas Individuales de Préstamos --}}
     <div class="row mb-4">
         <div class="col-md-12">
-            <div class="info-box bg-success">
-                <span class="info-box-icon"><i class="fas fa-dollar-sign"></i></span>
+            <div class="info-box bg-primary">
+                <span class="info-box-icon"><i class="fas fa-calculator"></i></span>
                 <div class="info-box-content">
-                    <span class="info-box-text">TOTAL PAGOS DE PRÉSTAMOS</span>
-                    <span class="info-box-number" id="summary-pagos-total">CARGANDO...</span>
+                    <span class="info-box-text">TOTAL SUMA DE CUOTAS INDIVIDUALES DE PRÉSTAMOS ACTIVOS</span>
+                    <span class="info-box-number" id="summary-cuotas-total">CARGANDO...</span>
+                    <div class="progress">
+                        <div class="progress-bar bg-primary" style="width: 100%"></div>
+                    </div>
+                    <span class="progress-description" id="summary-cuotas-detalle">CALCULANDO SUMA DE CUOTAS INDIVIDUALES POR SUCURSAL...</span>
                 </div>
             </div>
         </div>
+    </div>
+
+    {{-- Tarjetas de Resumen por Sucursal --}}
+    <div class="row mb-4" id="cuotas-por-sucursal">
+        {{-- Las tarjetas de sucursales se generarán dinámicamente --}}
     </div>
     {{-- Fin Tarjetas de Resumen --}}
 
@@ -125,7 +134,7 @@
 
     <div class="card">
         <div class="card-header bg-primary">
-            <h3 class="card-title">LISTA DE PRÉSTAMOS (VALORES NETOS CALCULADOS)</h3>
+            <h3 class="card-title">LISTA DE PRÉSTAMOS ACTIVOS (VALORES NETOS CALCULADOS)</h3>
         </div>
         <div class="card-body">
             {{-- Botón Añadir Préstamo --}}
@@ -203,6 +212,35 @@
             </div>
         </div>
     </div>
+
+    {{-- Tabla de Préstamos Pagados --}}
+    <div class="card mt-4">
+        <div class="card-header bg-success">
+            <h3 class="card-title">LISTA DE PRÉSTAMOS PAGADOS (COMPLETAMENTE LIQUIDADOS)</h3>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="prestamosPagadosTable" class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>FECHA</th>
+                            <th>USUARIO</th>
+                            <th>MOTIVO</th>
+                            <th>VALORES</th>
+                            <th>CUOTAS</th>
+                            <th>EMPRESA</th>
+                            <th>FECHA LIQUIDACIÓN</th>
+                            <th>ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{-- Los préstamos pagados se moverán aquí dinámicamente --}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {{-- Fin Tabla de Préstamos Pagados --}}
 
     <!-- Modal Crear Préstamo -->
     <div class="modal fade" id="crearPrestamoModal" tabindex="-1" role="dialog">
@@ -347,15 +385,140 @@
 
 @section('js')
 @include('atajos')
+    {{-- Cargar Select2 CSS --}}
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@x.x.x/dist/select2-bootstrap4.min.css" rel="stylesheet" />
+    
+    {{-- Cargar Select2 JS --}}
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    
     <script>
         let detallesPagosGlobal = [];
         let pagosCargados = false;
         let empresaSeleccionada = 'TODAS';
         let empresaIdSeleccionada = 'todas';
+        let prestamosTableRef = null;
+        let prestamosPagadosTableRef = null;
+        let empresasData = @json($empresas);
 
         // Función para formatear números como moneda
         function formatCurrency(number) {
             return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'USD' }).format(number);
+        }
+
+        // Función para calcular cuotas individuales de préstamos activos
+        function calcularCuotasIndividuales() {
+            const cuotasPorEmpresa = {};
+            let totalGeneralCuotasIndividuales = 0;
+
+            // Inicializar contadores por empresa
+            empresasData.forEach(empresa => {
+                cuotasPorEmpresa[empresa.id] = {
+                    nombre: empresa.nombre,
+                    valorCuotasIndividuales: 0,
+                    prestamosActivos: 0
+                };
+            });
+
+            // Recorrer TODAS las filas de préstamos ACTIVOS (sin filtro)
+            if (prestamosTableRef) {
+                prestamosTableRef.rows().every(function() {
+                    const rowNode = this.node();
+                    const $rowNode = $(rowNode);
+
+                    const originalValor = parseFloat($rowNode.data('original-valor')) || 0;
+                    const totalCuotas = parseInt($rowNode.data('cuotas')) || 1;
+                    const empresaId = $rowNode.data('empresa-id');
+
+                    if (empresaId && cuotasPorEmpresa[empresaId]) {
+                        // Valor de cada cuota individual = valor del préstamo ÷ número de cuotas
+                        const valorCuotaIndividual = originalValor / totalCuotas;
+
+                        cuotasPorEmpresa[empresaId].valorCuotasIndividuales += valorCuotaIndividual;
+                        cuotasPorEmpresa[empresaId].prestamosActivos += 1;
+                        
+                        totalGeneralCuotasIndividuales += valorCuotaIndividual;
+                    }
+                });
+            }
+
+            return {
+                porEmpresa: cuotasPorEmpresa,
+                totalGeneral: totalGeneralCuotasIndividuales
+            };
+        }
+
+        // Función para actualizar la visualización de cuotas individuales
+        function actualizarVisualizacionCuotas() {
+            const datosCuotas = calcularCuotasIndividuales();
+            
+            // Actualizar total general
+            const summarySpan = document.getElementById('summary-cuotas-total');
+            const summaryDetalle = document.getElementById('summary-cuotas-detalle');
+            
+            if (summarySpan) {
+                summarySpan.textContent = formatCurrency(datosCuotas.totalGeneral);
+            }
+            
+            // Generar detalle por sucursal
+            const sucursalesContainer = document.getElementById('cuotas-por-sucursal');
+            if (sucursalesContainer) {
+                let htmlSucursales = '';
+                let detalleTexto = '';
+                
+                Object.entries(datosCuotas.porEmpresa).forEach(([empresaId, datos]) => {
+                    if (datos.prestamosActivos > 0) {
+                        const porcentaje = datosCuotas.totalGeneral > 0 ? 
+                            (datos.valorCuotasIndividuales / datosCuotas.totalGeneral * 100).toFixed(1) : 0;
+                        
+                        htmlSucursales += `
+                            <div class="col-md-4 mb-3">
+                                <div class="info-box bg-info">
+                                    <span class="info-box-icon"><i class="fas fa-calculator"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">${datos.nombre}</span>
+                                        <span class="info-box-number">${formatCurrency(datos.valorCuotasIndividuales)}</span>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-info" style="width: ${porcentaje}%"></div>
+                                        </div>
+                                        <span class="progress-description">
+                                            SUMA DE CUOTAS INDIVIDUALES EN ${datos.prestamosActivos} PRÉSTAMOS
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        detalleTexto += `${datos.nombre}: ${formatCurrency(datos.valorCuotasIndividuales)} (${datos.prestamosActivos} préstamos) | `;
+                    }
+                });
+                
+                // Si no hay préstamos activos
+                if (Object.values(datosCuotas.porEmpresa).every(datos => datos.prestamosActivos === 0)) {
+                    htmlSucursales = `
+                        <div class="col-md-12 mb-3">
+                            <div class="info-box bg-success">
+                                <span class="info-box-icon"><i class="fas fa-check-circle"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">SIN PRÉSTAMOS ACTIVOS</span>
+                                    <span class="info-box-number">$0.00</span>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" style="width: 100%"></div>
+                                    </div>
+                                    <span class="progress-description">NO HAY PRÉSTAMOS ACTIVOS EN NINGUNA SUCURSAL</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    detalleTexto = 'NO HAY PRÉSTAMOS ACTIVOS';
+                }
+                
+                sucursalesContainer.innerHTML = htmlSucursales;
+                
+                if (summaryDetalle) {
+                    summaryDetalle.textContent = detalleTexto.slice(0, -3) || 'NO HAY DATOS DISPONIBLES';
+                }
+            }
         }
 
         // Función para filtrar pagos por empresa
@@ -417,13 +580,20 @@
 
         // Función combinada para cargar todos los datos de pagos
         async function cargarDatosPagos() {
-            const summarySpan = document.getElementById('summary-pagos-total');
+            const summarySpan = document.getElementById('summary-pagos-total-badge');
             const desgloseBody = document.getElementById('desglose-pagos-prestamos');
             const loadingOverlay = document.getElementById('loading-overlay-pagos');
+            const summaryCuotas = document.getElementById('summary-cuotas-total');
+            const summaryCuotasDetalle = document.getElementById('summary-cuotas-detalle');
 
             if (summarySpan) summarySpan.textContent = 'CARGANDO...';
-            if (desgloseBody) desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center">CARGANDO DATOS...</td></tr>';
+            if (summaryCuotas) summaryCuotas.textContent = 'CARGANDO...';
+            if (summaryCuotasDetalle) summaryCuotasDetalle.textContent = 'CALCULANDO CUOTAS...';
+            if (desgloseBody) desgloseBody.innerHTML = '<tr><td colspan="6" class="text-center">CARGANDO DATOS...</td></tr>';
             if (loadingOverlay) loadingOverlay.style.display = 'flex';
+
+            // Mostrar estado de carga en las deducciones
+            $('.prestamo-deducciones').text('CARGANDO...');
 
             try {
                 const response = await fetch('/api/prestamos/pagos-locales', {
@@ -436,7 +606,7 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Error en la respuesta del servidor');
+                    throw new Error(`Error HTTP: ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -453,15 +623,32 @@
                 detallesPagosGlobal = todosLosPagos;
                 pagosCargados = true;
 
+                console.log('Datos de pagos cargados:', detallesPagosGlobal.length, 'registros');
+
                 const totalPagos = data.total_pagos || 0;
                 if (summarySpan) summarySpan.textContent = formatCurrency(totalPagos);
 
+                // Actualizar visualización después de cargar los datos
                 actualizarVisualizacionPagos();
+                
+                // Esperar un momento antes de actualizar los valores netos para asegurar que el DOM esté listo
+                setTimeout(() => {
+                    actualizarValoresNetosPrestamos();
+                    // Actualizar también las cuotas después de procesar los préstamos
+                    setTimeout(() => {
+                        actualizarVisualizacionCuotas();
+                    }, 100);
+                }, 200);
 
             } catch (error) {
                 console.error('Error al obtener pagos de préstamos:', error);
-                if (summarySpan) summarySpan.textContent = 'ERROR AL CARGAR';
-                if (desgloseBody) desgloseBody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">ERROR AL CARGAR LOS DATOS DE PAGOS.</td></tr>';
+                if (summarySpan) summarySpan.textContent = 'ERROR';
+                if (summaryCuotas) summaryCuotas.textContent = 'ERROR AL CARGAR';
+                if (summaryCuotasDetalle) summaryCuotasDetalle.textContent = 'ERROR AL CALCULAR CUOTAS';
+                if (desgloseBody) desgloseBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">ERROR AL CARGAR LOS DATOS DE PAGOS.</td></tr>';
+                
+                // Mostrar error en las deducciones
+                $('.prestamo-deducciones').text('ERROR AL CARGAR');
             } finally {
                 if (loadingOverlay) loadingOverlay.style.display = 'none';
             }
@@ -489,101 +676,226 @@
 
         // Función para calcular y actualizar los valores netos en la tabla de préstamos
         function actualizarValoresNetosPrestamos() {
-            const prestamosTable = $('#prestamosTable').DataTable();
+            if (!prestamosTableRef || !prestamosPagadosTableRef) {
+                console.warn('Las tablas aún no están inicializadas');
+                return;
+            }
 
-            prestamosTable.rows().every(function() {
-                const rowNode = this.node();
-                const $rowNode = $(rowNode);
+            if (!detallesPagosGlobal || detallesPagosGlobal.length === 0) {
+                console.warn('Los datos de pagos aún no están cargados');
+                // Mostrar "CARGANDO..." en las celdas de deducciones
+                $('.prestamo-deducciones').text('CARGANDO...');
+                return;
+            }
 
-                const originalValor = parseFloat($rowNode.data('original-valor'));
-                const cuotasBD = parseInt($rowNode.data('cuotas')) || 0;
-                
-                const usuarioNombre = $rowNode.find('td.prestamo-usuario').text().trim();
-                const usuarioNombreNormalizado = normalizarTexto(usuarioNombre);
-                const motivoPrestamoOriginalText = $rowNode.find('td.prestamo-motivo').text().trim();
-                const palabrasClavePrestamo = obtenerPalabrasClave(motivoPrestamoOriginalText);
+            try {
+                prestamosTableRef.rows().every(function() {
+                    const rowNode = this.node();
+                    const $rowNode = $(rowNode);
 
-                const $valoresCell = $rowNode.find('td.prestamo-valores');
-                const $cuotasCell = $rowNode.find('td.prestamo-cuotas');
+                    const originalValor = parseFloat($rowNode.data('original-valor')) || 0;
+                    const cuotasBD = parseInt($rowNode.data('cuotas')) || 0;
+                    
+                    const usuarioNombre = $rowNode.find('td.prestamo-usuario').text().trim();
+                    const usuarioNombreNormalizado = normalizarTexto(usuarioNombre);
+                    const motivoPrestamoOriginalText = $rowNode.find('td.prestamo-motivo').text().trim();
+                    const palabrasClavePrestamo = obtenerPalabrasClave(motivoPrestamoOriginalText);
 
-                const pagosFiltrados = empresaIdSeleccionada === 'todas' 
-                    ? detallesPagosGlobal 
-                    : detallesPagosGlobal.filter(pago => pago.empresa_id == empresaIdSeleccionada);
+                    const $valoresCell = $rowNode.find('td.prestamo-valores');
+                    const $cuotasCell = $rowNode.find('td.prestamo-cuotas');
 
-                let pagosDetallados = [];
+                    const pagosFiltrados = empresaIdSeleccionada === 'todas' 
+                        ? detallesPagosGlobal 
+                        : detallesPagosGlobal.filter(pago => pago.empresa_id == empresaIdSeleccionada);
 
-                const prestamoId = $rowNode.data('prestamo-id');
-                const pagosRelacionados = pagosFiltrados.filter(pago => {
-                    if (pago.prestamo_id) {
-                        return pago.prestamo_id == prestamoId;
-                    }
-                    const motivoPagoNormalizado = normalizarTexto(pago.motivo);
-                    if (usuarioNombreNormalizado.length > 0 && motivoPagoNormalizado.includes(usuarioNombreNormalizado)) {
-                        return true;
-                    }
-                    if (palabrasClavePrestamo.length > 0) {
-                        return palabrasClavePrestamo.some(clave => motivoPagoNormalizado.includes(clave));
-                    }
-                    return false;
-                });
+                    let pagosDetallados = [];
 
-                pagosRelacionados.forEach(pago => {
-                    pagosDetallados.push({
-                        fecha: pago.fecha,
-                        motivo: pago.motivo,
-                        valor: parseFloat(pago.valor),
-                        usuario: pago.usuario
+                    const prestamoId = $rowNode.data('prestamo-id');
+                    const pagosRelacionados = pagosFiltrados.filter(pago => {
+                        if (pago.prestamo_id) {
+                            return pago.prestamo_id == prestamoId;
+                        }
+                        const motivoPagoNormalizado = normalizarTexto(pago.motivo);
+                        if (usuarioNombreNormalizado.length > 0 && motivoPagoNormalizado.includes(usuarioNombreNormalizado)) {
+                            return true;
+                        }
+                        if (palabrasClavePrestamo.length > 0) {
+                            return palabrasClavePrestamo.some(clave => motivoPagoNormalizado.includes(clave));
+                        }
+                        return false;
                     });
-                });
 
-                const totalPagosAplicados = pagosDetallados.reduce((sum, d) => sum + d.valor, 0);
-                
-                const valorNetoActualizado = originalValor - totalPagosAplicados;
-                
-                let valoresHtml = `
-                    <div class="d-flex flex-column">
-                        <small class="text-muted" title="Valor original del préstamo">ORIGINAL: ${formatCurrency(originalValor)}</small>
-                        <strong class="text-success" title="Valor neto actual">NETO: ${formatCurrency(valorNetoActualizado)}</strong>
-                        <small class="text-danger prestamo-deducciones" title="Total de pagos/deducciones aplicados">DEDUCCIONES: ${formatCurrency(totalPagosAplicados)}</small>
-                    </div>
-                `;
-                
-                $valoresCell.html(valoresHtml);
-                
-                const cuotasTotal = cuotasBD;
-                const cuotasPagadas = pagosDetallados.length;
-                const cuotasPendientes = Math.max(0, cuotasTotal - cuotasPagadas);
+                    pagosRelacionados.forEach(pago => {
+                        pagosDetallados.push({
+                            fecha: pago.fecha,
+                            motivo: pago.motivo,
+                            valor: parseFloat(pago.valor) || 0,
+                            usuario: pago.usuario
+                        });
+                    });
 
-                let cuotasHtml = '';
-                if (cuotasTotal > 0) {
-                    cuotasHtml = `
-                        <div class="d-flex flex-column align-items-start">
-                            <span class="badge badge-primary">TOTAL: ${cuotasTotal}</span>
-                            <span class="badge badge-success mt-1">PAGADAS: ${cuotasPagadas}</span>
-                            <span class="badge badge-warning mt-1">PENDIENTES: ${cuotasPendientes}</span>
+                    const totalPagosAplicados = pagosDetallados.reduce((sum, d) => sum + d.valor, 0);
+                    
+                    const valorNetoActualizado = originalValor - totalPagosAplicados;
+                    
+                    // Si el préstamo está completamente pagado (valor neto <= 0), moverlo a la tabla de pagados
+                    if (valorNetoActualizado <= 0 && pagosDetallados.length > 0) {
+                        moverPrestamoAPagados($rowNode, pagosDetallados);
+                        this.remove();
+                        return;
+                    }
+                    
+                    let valoresHtml = `
+                        <div class="d-flex flex-column">
+                            <small class="text-muted" title="Valor original del préstamo">ORIGINAL: ${formatCurrency(originalValor)}</small>
+                            <strong class="text-success" title="Valor neto actual">NETO: ${formatCurrency(valorNetoActualizado)}</strong>
+                            <small class="text-danger prestamo-deducciones" title="Total de pagos/deducciones aplicados">DEDUCCIONES: ${formatCurrency(totalPagosAplicados)}</small>
                         </div>
                     `;
-                } else {
-                    cuotasHtml = '<span class="text-muted">SIN CUOTAS DEFINIDAS</span>';
-                }
-                $cuotasCell.html(cuotasHtml);
+                    
+                    $valoresCell.html(valoresHtml);
+                    
+                    const cuotasTotal = cuotasBD;
+                    const cuotasPagadas = pagosDetallados.length;
+                    const cuotasPendientes = Math.max(0, cuotasTotal - cuotasPagadas);
 
-                let pagosTooltipHtml = 'Ningún pago registrado.';
-                if (pagosDetallados.length > 0) {
-                    pagosDetallados.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-                    pagosTooltipHtml = '<ul class="list-unstyled mb-0" style="font-size: 0.8em; text-align: left;">';
-                    pagosDetallados.forEach(d => {
-                        pagosTooltipHtml += `<li><strong>${d.fecha}:</strong> ${formatCurrency(d.valor)} - ${d.motivo.substring(0, 20)}...</li>`;
-                    });
-                    pagosTooltipHtml += '</ul>';
-                }
+                    let cuotasHtml = '';
+                    if (cuotasTotal > 0) {
+                        cuotasHtml = `
+                            <div class="d-flex flex-column align-items-start">
+                                <span class="badge badge-primary">TOTAL: ${cuotasTotal}</span>
+                                <span class="badge badge-success mt-1">PAGADAS: ${cuotasPagadas}</span>
+                                <span class="badge badge-warning mt-1">PENDIENTES: ${cuotasPendientes}</span>
+                            </div>
+                        `;
+                    } else {
+                        cuotasHtml = '<span class="text-muted">SIN CUOTAS DEFINIDAS</span>';
+                    }
+                    $cuotasCell.html(cuotasHtml);
 
-                $valoresCell.find('.prestamo-deducciones').attr('data-toggle', 'tooltip').attr('data-html', 'true').attr('title', pagosTooltipHtml).tooltip();
-            });
+                    let pagosTooltipHtml = 'Ningún pago registrado.';
+                    if (pagosDetallados.length > 0) {
+                        pagosDetallados.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+                        pagosTooltipHtml = '<ul class="list-unstyled mb-0" style="font-size: 0.8em; text-align: left;">';
+                        pagosDetallados.forEach(d => {
+                            pagosTooltipHtml += `<li><strong>${d.fecha}:</strong> ${formatCurrency(d.valor)} - ${d.motivo.substring(0, 20)}...</li>`;
+                        });
+                        pagosTooltipHtml += '</ul>';
+                    }
+
+                    // Usar setTimeout para asegurar que el DOM esté actualizado antes de agregar tooltips
+                    setTimeout(() => {
+                        const $deduccionesElement = $valoresCell.find('.prestamo-deducciones');
+                        if ($deduccionesElement.length > 0) {
+                            $deduccionesElement.attr('data-toggle', 'tooltip')
+                                             .attr('data-html', 'true')
+                                             .attr('title', pagosTooltipHtml);
+                            
+                            // Inicializar tooltip si está disponible
+                            if (typeof $deduccionesElement.tooltip === 'function') {
+                                $deduccionesElement.tooltip();
+                            }
+                        }
+                    }, 50);
+                });
+                
+                // Redibujar las tablas para reflejar los cambios
+                prestamosTableRef.draw();
+                prestamosPagadosTableRef.draw();
+                
+            } catch (error) {
+                console.error('Error al actualizar valores netos de préstamos:', error);
+                $('.prestamo-deducciones').text('ERROR AL CALCULAR');
+            }
+        }
+
+        // Función para mover un préstamo a la tabla de pagados
+        function moverPrestamoAPagados($rowNode, pagosDetallados) {
+            const prestamoId = $rowNode.data('prestamo-id');
+            const originalValor = parseFloat($rowNode.data('original-valor'));
+            const cuotasBD = parseInt($rowNode.data('cuotas')) || 0;
+            
+            const fechaCreacion = $rowNode.find('td').eq(0).text();
+            const usuario = $rowNode.find('td.prestamo-usuario').text();
+            const motivo = $rowNode.find('td.prestamo-motivo').text();
+            const empresa = $rowNode.find('td.prestamo-empresa').text();
+            
+            const totalPagosAplicados = pagosDetallados.reduce((sum, d) => sum + d.valor, 0);
+            const valorNetoFinal = originalValor - totalPagosAplicados;
+            
+            // Encontrar la fecha del último pago como fecha de liquidación
+            const fechasPagos = pagosDetallados.map(p => new Date(p.fecha)).sort((a, b) => b - a);
+            const fechaLiquidacion = fechasPagos.length > 0 ? fechasPagos[0].toISOString().split('T')[0] : fechaCreacion;
+            
+            const cuotasPagadas = pagosDetallados.length;
+            
+            let valoresHtml = `
+                <div class="d-flex flex-column">
+                    <small class="text-muted">ORIGINAL: ${formatCurrency(originalValor)}</small>
+                    <strong class="text-success">NETO: ${formatCurrency(valorNetoFinal)}</strong>
+                    <small class="text-success">PAGADO: ${formatCurrency(totalPagosAplicados)}</small>
+                    <span class="badge badge-success mt-1">LIQUIDADO</span>
+                </div>
+            `;
+            
+            let cuotasHtml = '';
+            if (cuotasBD > 0) {
+                cuotasHtml = `
+                    <div class="d-flex flex-column align-items-start">
+                        <span class="badge badge-primary">TOTAL: ${cuotasBD}</span>
+                        <span class="badge badge-success mt-1">PAGADAS: ${cuotasPagadas}</span>
+                        <span class="badge badge-success mt-1">COMPLETADO</span>
+                    </div>
+                `;
+            } else {
+                cuotasHtml = '<span class="badge badge-success">COMPLETADO</span>';
+            }
+            
+            let accionesHtml = `
+                <div class="btn-group">
+                    <button type="button" 
+                        class="btn btn-xs btn-default text-info mx-1 shadow" 
+                        title="Ver"
+                        onclick="window.location.href='/prestamos/${prestamoId}'">
+                        <i class="fa fa-lg fa-fw fa-eye"></i>
+                    </button>
+                    <span class="btn btn-xs btn-default text-muted mx-1" title="Préstamo Liquidado">
+                        <i class="fa fa-lg fa-fw fa-check-circle"></i>
+                    </span>
+                </div>
+            `;
+            
+            // Agregar la fila a la tabla de préstamos pagados
+            prestamosPagadosTableRef.row.add([
+                fechaCreacion,
+                usuario,
+                motivo,
+                valoresHtml,
+                cuotasHtml,
+                empresa,
+                fechaLiquidacion,
+                accionesHtml
+            ]);
+            
+            // Actualizar las cuotas después de mover el préstamo
+            setTimeout(() => {
+                actualizarVisualizacionCuotas();
+            }, 50);
         }
 
         $(document).ready(function() {
-            var prestamosTable = $('#prestamosTable').DataTable({
+            prestamosTableRef = $('#prestamosTable').DataTable({
+                "order": [[0, "desc"]],
+                "paging": false,
+                "language": {
+                    "url": "{{ asset('js/datatables/Spanish.json') }}"
+                },
+                "columnDefs": [
+                    { "targets": [5], "searchable": true, "visible": true } 
+                ]
+            });
+
+            prestamosPagadosTableRef = $('#prestamosPagadosTable').DataTable({
                 "order": [[0, "desc"]],
                 "paging": false,
                 "language": {
@@ -610,26 +922,44 @@
                 empresaSeleccionada = $(this).find('option:selected').text();
                 
                 if (empresaIdSeleccionada === 'todas') {
-                    prestamosTable.columns(5).search('').draw();
+                    prestamosTableRef.columns(5).search('').draw();
+                    prestamosPagadosTableRef.columns(5).search('').draw();
                 } else {
-                    prestamosTable.columns(5).search('^' + empresaSeleccionada + '$', true, false).draw();
+                    prestamosTableRef.columns(5).search('^' + empresaSeleccionada + '$', true, false).draw();
+                    prestamosPagadosTableRef.columns(5).search('^' + empresaSeleccionada + '$', true, false).draw();
                 }
 
                 actualizarVisualizacionPagos();
             });
 
-            cargarDatosPagos();
+            // Cargar datos después de un pequeño retraso para asegurar que las tablas estén listas
+            setTimeout(function() {
+                cargarDatosPagos();
+            }, 100);
 
-            $('#user_id, #empresa_id').select2({
-                theme: 'bootstrap4',
-                placeholder: 'SELECCIONE UNA OPCIÓN',
-                allowClear: true,
-                width: '100%'
-            });
+            // Inicializar Select2 solo si está disponible
+            if (typeof $.fn.select2 !== 'undefined') {
+                $('#user_id, #empresa_id').select2({
+                    theme: 'bootstrap4',
+                    placeholder: 'SELECCIONE UNA OPCIÓN',
+                    allowClear: true,
+                    width: '100%'
+                });
+            } else {
+                console.warn('Select2 no está disponible. Los selectores funcionarán como elementos HTML normales.');
+            }
 
             $('.modal').on('hidden.bs.modal', function () {
                 $(this).find('form').trigger('reset');
-                $(this).find('select').val('').trigger('change');
+                
+                // Limpiar selects con Select2 si está disponible
+                if (typeof $.fn.select2 !== 'undefined') {
+                    $(this).find('select').val('').trigger('change');
+                } else {
+                    // Fallback para selects normales
+                    $(this).find('select').val('');
+                }
+                
                 $(this).find('input[name="_method"]').remove();
                 
                 // Restaurar action por defecto para el modal de pago
@@ -644,6 +974,11 @@
                 SucursalCache.preseleccionarEnSelect('filtro-empresa');
                 $('#filtro-empresa').trigger('change');
             }
+
+            // Actualizar cuotas inicialmente (para mostrar datos básicos antes de cargar pagos)
+            setTimeout(() => {
+                actualizarVisualizacionCuotas();
+            }, 300);
         });
 
         function eliminarPrestamo(id) {
