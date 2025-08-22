@@ -64,7 +64,7 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
     Route::post('asistencias/marcar-salida', [AsistenciaController::class, 'marcarSalida'])->name('asistencias.marcar-salida');
     Route::resource('asistencias', AsistenciaController::class);
 
-    // Egresos - Solo para administradores
+    // Rutas financieras - Solo para administradores
     Route::get('/egresos/finanzas', [EgresoController::class, 'finanzas'])
         ->name('egresos.finanzas');
     Route::get('/egresos/datos-financieros', [EgresoController::class, 'getDatosFinancieros'])
@@ -77,7 +77,6 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
         ->name('egresos.pedidos-usuario');
     Route::get('/egresos/ultimo-sueldo-usuario', [EgresoController::class, 'getUltimoSueldoUsuario'])
         ->name('egresos.ultimo-sueldo-usuario');
-    Route::resource('egresos', EgresoController::class);
 
     // Horarios - Solo para administradores
     Route::get('horarios/activos', [HorarioController::class, 'activos'])->name('horarios.activos');
@@ -336,6 +335,9 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         ->name('sueldos.imprimir-rol-pago');
     
     Route::resource('sueldos', SueldoController::class);
+    
+    // Ruta de Egresos accesible para todos los usuarios autenticados
+    Route::resource('egresos', EgresoController::class);
     
     // Rutas para Detalles de Sueldo
     Route::resource('detalles-sueldo', DetalleSueldoController::class)->names([

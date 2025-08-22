@@ -12,7 +12,19 @@ class EgresoController extends Controller
 {
     public function __construct()
     {
+        // Solo restringir edición, actualización y eliminación a administradores
+        // Permitir ver, crear y almacenar egresos a todos los usuarios autenticados
         $this->middleware('can:admin')->only(['edit', 'update', 'destroy']);
+        
+        // También restringir acceso a las vistas de finanzas
+        $this->middleware('can:admin')->only([
+            'finanzas', 
+            'getDatosFinancieros', 
+            'getGraficosFinancieros',
+            'getMovimientosRecientes',
+            'getPedidosPorUsuario',
+            'getUltimoSueldoUsuario'
+        ]);
     }
 
     public function index(Request $request)
