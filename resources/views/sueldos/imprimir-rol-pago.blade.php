@@ -257,12 +257,9 @@
             <div class="count">{{ $retirosCaja->count() }} retiros</div>
         </div>
         <div class="resumen-box">
-            <h3>Calificación Promedio</h3>
-            <div class="amount">{{ number_format($calificaciones['promedio'], 1) }}/5</div>
-            <div class="count">
-                {{ $calificaciones['calificados'] }} calificaciones 
-                ({{ $calificaciones['porcentaje_calificados'] > 0 ? number_format($calificaciones['porcentaje_calificados'], 1) : 0 }}%)
-            </div>
+            <h3>Detalles de Sueldo</h3>
+            <div class="amount">${{ number_format($detallesSueldo->sum('valor'), 2, ',', '.') }}</div>
+            <div class="count">{{ $detallesSueldo->count() }} detalles</div>
         </div>
         <div class="resumen-box">
             <h3>Pedidos Realizados</h3>
@@ -271,8 +268,8 @@
         </div>
         <div class="resumen-box">
             <h3>Balance Neto</h3>
-            <div class="amount">${{ number_format($pedidos->sum('total') + $retirosCaja->sum('valor'), 2, ',', '.') }}</div>
-            <div class="count">Ventas - Retiros</div>
+            <div class="amount">${{ number_format($pedidos->sum('total') + $retirosCaja->sum('valor') - $detallesSueldo->sum('valor'), 2, ',', '.') }}</div>
+            <div class="count">Ventas - Retiros - Detalles</div>
         </div>
     </div>
 
@@ -319,9 +316,6 @@
             </div>
         @endif
     </div>
-
-    <!-- Sección de Calificaciones -->
-    @include('sueldos.imprimir-rol-pago-calificaciones')
 
     @if($detallesSueldo->count() > 0)
     <!-- Sección: Detalles de Sueldo -->
@@ -386,8 +380,7 @@
                     <th style="width: 12%;">Horas Trabajadas</th>
                     <th style="width: 8%;">Monto Inicial</th>
                     <th style="width: 8%;">Monto Final</th>
-                    <th style="width: 8%;">Estado</th>
-                    <th style="width: 5%;">Cobro</th>
+                    <th style="width: 10%;">Estado</th>
                 </tr>
             </thead>
             <tbody>
@@ -426,21 +419,17 @@
                         @endif
                     </td>
                     <td class="text-center">{{ $historial->estado ?? '' }}</td>
-                    <td class="text-center"><!-- Columna vacía para Corbor --></td>
                 </tr>
                 @endforeach
                 <tr class="total-general">
                     <td colspan="6" class="text-center">TOTAL HORAS TRABAJADAS</td>
                     <td class="text-center">{{ $totalHorasCalculadas }}h {{ $totalMinutosRestantes }}m</td>
-                    <td colspan="4"></td>
+                    <td colspan="3"></td>
                 </tr>
             </tbody>
         </table>
     </div>
     @endif
-
-    <!-- Sección de Calificaciones -->
-    @include('sueldos.imprimir-rol-pago-calificaciones')
 
     <!-- Firmas -->
     <div class="signatures">
