@@ -249,7 +249,7 @@ return [
             'icon' => 'fas fa-user-cog',
             'route' => 'admin.index',
             'active' => ['admin', 'admin/*'],
-            'can' => 'admin'
+            'can' => 'superadmin'
         ],        [
             'text' => 'Pedidos',
             'icon' => 'fas fa-shopping-cart',
@@ -309,44 +309,67 @@ return [
         ],
 
         [
-            'text' => 'ASISTENCIAS',
-            'icon' => 'fas fa-user-clock',
-            'active' => ['asistencias', 'asistencias/*'],
-            'can' => 'admin',
+            'text' => 'Configuracion',
+            'icon' => 'fas fa-cog',
+            'active' => ['Configuracion/*'],
+            'can' => 'superadmin',
             'submenu' => [
                 [
-                    'text' => 'VER ASISTENCIAS',
-                    'route' => 'asistencias.index',
-                    'icon' => 'fas fa-list'
+                    'text' => 'Usuarios',
+                    'icon' => 'fas fa-users',
+                    'route' => 'configuracion.usuarios.index',
+                    'active' => ['Configuracion/Usuarios/*'],
                 ],
                 [
-                    'text' => 'ESCANEAR QR',
-                    'route' => 'asistencias.scan',
-                    'icon' => 'fas fa-camera'
+                    'text' => 'Sucursales',
+                    'icon' => 'fas fa-building',
+                    'route' => 'empresas.index',
+                    'active' => ['empresas/*', 'empresas'],
                 ],
                 [
-                    'text' => 'REPORTES',
-                    'route' => 'asistencias.reporte',
-                    'icon' => 'fas fa-chart-bar'
+                    'text' => 'Asistencias',
+                    'icon' => 'fas fa-user-clock',
+                    'active' => ['asistencias', 'asistencias/*'],
+                    'submenu' => [
+                        [
+                            'text' => 'Ver Asistencias',
+                            'route' => 'asistencias.index',
+                            'icon' => 'fas fa-list'
+                        ],
+                        [
+                            'text' => 'Escanear QR',
+                            'route' => 'asistencias.scan',
+                            'icon' => 'fas fa-camera'
+                        ],
+                        [
+                            'text' => 'Reportes',
+                            'route' => 'asistencias.reporte',
+                            'icon' => 'fas fa-chart-bar'
+                        ],
+                    ],
                 ],
-            ],
-        ],
-
-        [
-            'text' => 'HORARIOS',
-            'icon' => 'fas fa-clock',
-            'active' => ['horarios', 'horarios/*'],
-            'can' => 'admin',
-            'submenu' => [
                 [
-                    'text' => 'VER HORARIOS',
-                    'route' => 'horarios.index',
-                    'icon' => 'fas fa-list'
+                    'text' => 'Horarios',
+                    'icon' => 'fas fa-clock',
+                    'active' => ['horarios', 'horarios/*'],
+                    'submenu' => [
+                        [
+                            'text' => 'Ver Horarios',
+                            'route' => 'horarios.index',
+                            'icon' => 'fas fa-list'
+                        ],
+                        [
+                            'text' => 'Crear Horario',
+                            'route' => 'horarios.create',
+                            'icon' => 'fas fa-plus'
+                        ],
+                    ],
                 ],
                 [
-                    'text' => 'CREAR HORARIO',
-                    'route' => 'horarios.create',
-                    'icon' => 'fas fa-plus'
+                    'text' => 'Medios de pago',
+                    'icon' => 'fas fa-credit-card',
+                    'route' => 'configuracion.mediosdepago.index',
+                    'active' => ['Configuración/MediosDePago/*']
                 ],
             ],
         ],
@@ -378,7 +401,7 @@ return [
             'text' => 'Gestión',
             'icon' => 'fas fa-chart-line',
             'active' => ['prestamos', 'prestamos/*'],
-            'can' => 'admin',
+            'can' => 'superadmin',
             'submenu' => [
                 [
                     'text' => 'Finanzas',
@@ -391,34 +414,6 @@ return [
                     'icon' => 'fas fa-hand-holding-usd',
                     'route' => 'prestamos.index',
                     'active' => ['prestamos', 'prestamos/*'],
-                ],
-            ],
-        ],
-
-        [
-            'text' => 'Configuracion',
-            'icon' => 'fas fa-cog',
-            'active' => ['Configuracion/*'],
-            'submenu' => [
-                [
-                    'text' => 'Usuarios',
-                    'icon' => 'fas fa-cog',
-                    'route' => 'configuracion.usuarios.index',
-                    'active' => ['Configuracion/Usuarios/*'],
-                    'can' => 'admin'  // Add this line to check admin permission
-                ],
-                [
-                    'text' => 'Medios de pago',
-                    'icon' => 'fas fa-cog',
-                    'route' => 'configuracion.mediosdepago.index',
-                    'active' => ['Configuración/MediosDePago/*']
-                ],
-                [
-                    'text' => 'Sucursales',
-                    'icon' => 'fas fa-building',
-                    'route' => 'empresas.index',
-                    'active' => ['empresas/*', 'empresas'],
-                    'can' => 'admin'
                 ],
             ],
         ],

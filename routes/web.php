@@ -36,9 +36,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Wrap admin-only routes in admin middleware group
-Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
-    // Configuracion
+// Rutas específicas para SUPER ADMINISTRADORES
+Route::middleware(['auth:sanctum', 'verified', 'superadmin'])->group(function () {
+    // Gestión de usuarios - Solo super admin
     Route::get('Configuracion/Usuarios', [UsuariosController::class, 'index'])->name('configuracion.usuarios.index');
     Route::get('Configuracion/Usuarios/Crear', [UsuariosController::class, 'create'])->name('configuracion.usuarios.create');
     Route::post('Configuracion/Usuarios', [UsuariosController::class, 'store'])->name('configuracion.usuarios.store');
@@ -47,16 +47,15 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
     Route::delete('Configuracion/Usuarios/{id}', [UsuariosController::class, 'destroy'])->name('configuracion.usuarios.destroy');
     Route::patch('Configuracion/Usuarios/{id}/toggle-admin', [UsuariosController::class, 'toggleAdmin'])->name('configuracion.usuarios.toggleAdmin');
 
-    // Admin dashboard
+    // Panel de administración - Solo super admin
     Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
-    
-    // Only keep admin-specific inventory routes here
-    Route::delete('Inventario/eliminar/{id}', [InventarioController::class, 'destroy'])->name('inventario.destroy');
-
     Route::get('/admin/puntuaciones', [AdminController::class, 'puntuacionesUsuarios'])
         ->name('admin.puntuaciones');
 
-    // Asistencias - Solo para administradores
+    // Gestión de empresas/sucursales - Solo super admin
+    Route::resource('empresas', EmpresaController::class);
+
+    // Asistencias - Solo super admin (movido desde admin regular)
     Route::get('asistencias/reporte', [AsistenciaController::class, 'reporte'])->name('asistencias.reporte');
     Route::get('asistencias/scan', [AsistenciaController::class, 'scan'])->name('asistencias.scan');
     Route::post('asistencias/procesar-qr', [AsistenciaController::class, 'procesarQr'])->name('asistencias.procesar-qr');
@@ -64,7 +63,12 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
     Route::post('asistencias/marcar-salida', [AsistenciaController::class, 'marcarSalida'])->name('asistencias.marcar-salida');
     Route::resource('asistencias', AsistenciaController::class);
 
-    // Rutas financieras - Solo para administradores
+    // Horarios - Solo super admin (movido desde admin regular)
+    Route::get('horarios/activos', [HorarioController::class, 'activos'])->name('horarios.activos');
+    Route::get('horarios/empresa/{empresaId}', [HorarioController::class, 'getByEmpresa'])->name('horarios.por-empresa');
+    Route::resource('horarios', HorarioController::class);
+
+    // Rutas financieras - Solo super admin
     Route::get('/egresos/finanzas', [EgresoController::class, 'finanzas'])
         ->name('egresos.finanzas');
     Route::get('/egresos/datos-financieros', [EgresoController::class, 'getDatosFinancieros'])
@@ -78,10 +82,14 @@ Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
     Route::get('/egresos/ultimo-sueldo-usuario', [EgresoController::class, 'getUltimoSueldoUsuario'])
         ->name('egresos.ultimo-sueldo-usuario');
 
-    // Horarios - Solo para administradores
-    Route::get('horarios/activos', [HorarioController::class, 'activos'])->name('horarios.activos');
-    Route::get('horarios/empresa/{empresaId}', [HorarioController::class, 'getByEmpresa'])->name('horarios.por-empresa');
-    Route::resource('horarios', HorarioController::class);
+    // Préstamos - Solo super admin
+    Route::resource('prestamos', PrestamoController::class);
+});
+
+// Rutas para ADMINISTRADORES REGULARES
+Route::middleware(['auth:sanctum', 'verified', 'admin'])->group(function () {
+    // Inventario específico para administradores
+    Route::delete('Inventario/eliminar/{id}', [InventarioController::class, 'destroy'])->name('inventario.destroy');
 });
 
 // Keep these routes accessible to all authenticated users
