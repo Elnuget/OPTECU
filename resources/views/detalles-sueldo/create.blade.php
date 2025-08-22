@@ -103,6 +103,22 @@
                 </div>
 
                 <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label for="created_at">FECHA DE CREACIÓN</label>
+                            <input type="datetime-local" 
+                                   class="form-control @error('created_at') is-invalid @enderror"
+                                   id="created_at" name="created_at"
+                                   value="{{ old('created_at') ?? now()->format('Y-m-d\TH:i') }}">
+                            <small class="text-muted">SI NO SELECCIONA FECHA, SE USARÁ LA ACTUAL</small>
+                            @error('created_at')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
                     <div class="col-md-8">
                         <div class="form-group">
                             <label for="descripcion">DESCRIPCIÓN <span class="text-danger">*</span></label>

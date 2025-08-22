@@ -27,7 +27,8 @@ class DetalleSueldo extends Model
         'mes',
         'ano',
         'descripcion',
-        'valor'
+        'valor',
+        'created_at'
     ];
 
     /**

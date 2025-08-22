@@ -56,8 +56,14 @@ class DetalleSueldoController extends Controller
             'ano' => 'required|integer|min:2020',
             'descripcion' => 'required|string|max:255',
             'valor' => 'required|numeric',
+            'created_at' => 'nullable|date',
         ]);
 
+        // Si no se proporciona una fecha de creación, usamos la fecha actual
+        if (!isset($validatedData['created_at']) || empty($validatedData['created_at'])) {
+            $validatedData['created_at'] = now();
+        }
+        
         $detalle = DetalleSueldo::create($validatedData);
         
         // Obtener datos del usuario para redireccionar con filtros
@@ -101,7 +107,13 @@ class DetalleSueldoController extends Controller
             'ano' => 'required|integer|min:2020',
             'descripcion' => 'required|string|max:255',
             'valor' => 'required|numeric',
+            'created_at' => 'nullable|date',
         ]);
+        
+        // Si no se proporciona una fecha de creación, mantenemos la existente
+        if (!isset($validatedData['created_at']) || empty($validatedData['created_at'])) {
+            $validatedData['created_at'] = $detalleSueldo->created_at;
+        }
 
         $detalleSueldo->update($validatedData);
         
