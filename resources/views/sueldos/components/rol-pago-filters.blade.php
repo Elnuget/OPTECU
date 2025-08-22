@@ -89,36 +89,6 @@
                 </div>
                 <div class="card-body">
                     @if(isset($detallesSueldo) && count($detallesSueldo) > 0)
-                        <!-- Resumen de Detalles -->
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="info-box bg-success">
-                                    <span class="info-box-icon"><i class="fas fa-calculator"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">TOTAL DETALLES</span>
-                                        <span class="info-box-number">${{ number_format($detallesSueldo->sum('valor'), 2, ',', '.') }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="info-box bg-info">
-                                    <span class="info-box-icon"><i class="fas fa-list"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">CANTIDAD</span>
-                                        <span class="info-box-number">{{ $detallesSueldo->count() }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="info-box bg-warning">
-                                    <span class="info-box-icon"><i class="fas fa-chart-line"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">PROMEDIO</span>
-                                        <span class="info-box-number">${{ number_format($detallesSueldo->count() > 0 ? $detallesSueldo->sum('valor') / $detallesSueldo->count() : 0, 2, ',', '.') }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
 
                         <!-- Tabla de Detalles -->
                         <div class="table-responsive">
@@ -202,11 +172,83 @@
                 </div>
             </div>
 
+            <!-- Resumen de Estadísticas -->
+            @if(isset($pedidos) && count($pedidos) > 0)
+                <div class="row mt-3">
+                    <!-- Total de Ventas -->
+                    <div class="col-lg-3 col-6">
+                        <div class="small-box bg-info">
+                            <div class="inner">
+                                <h3>${{ number_format($pedidos->sum('total'), 2, ',', '.') }}</h3>
+                                <p>TOTAL DE VENTAS</p>
+                            </div>
+                            <div class="icon">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Total de Saldo -->
+                    <div class="col-lg-2 col-6">
+                        <div class="small-box bg-warning">
+                            <div class="inner">
+                                <h3>${{ number_format($pedidos->sum('saldo'), 2, ',', '.') }}</h3>
+                                <p>SALDO PENDIENTE</p>
+                            </div>
+                            <div class="icon">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Total Retiros de Caja -->
+                    <div class="col-lg-2 col-6">
+                        <div class="small-box bg-danger">
+                            <div class="inner">
+                                <h3>$-{{ number_format(isset($retirosCaja) ? abs($retirosCaja->sum('valor')) : 0, 2, ',', '.') }}</h3>
+                                <p>RETIROS DE CAJA</p>
+                            </div>
+                            <div class="icon">
+                                <i class="fas fa-cash-register"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Cantidad de Pedidos -->
+                    <div class="col-lg-2 col-6">
+                        <div class="small-box bg-success">
+                            <div class="inner">
+                                <h3>{{ $pedidos->count() }}</h3>
+                                <p>PEDIDOS REALIZADOS</p>
+                            </div>
+                            <div class="icon">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Balance Neto (Ventas - Retiros + Total Detalles) -->
+                    <div class="col-lg-3 col-6">
+                        <div class="small-box" style="background-color: #6f42c1; color: white;">
+                            <div class="inner">
+                                <h3>${{ number_format($pedidos->sum('total') + (isset($retirosCaja) ? $retirosCaja->sum('valor') : 0) + (isset($detallesSueldo) ? $detallesSueldo->sum('valor') : 0), 2, ',', '.') }}</h3>
+                                <p>BALANCE NETO (CON DETALLES)</p>
+                            </div>
+                            <div class="icon">
+                                <i class="fas fa-balance-scale"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            <!-- Calificaciones de Pedidos -->
+            @include('sueldos.components.calificaciones-pedidos')
+
             <!-- Historial de Caja (Aperturas y Cierres) -->
             @include('sueldos.components.historial-caja', ['historialCaja' => $historialCaja ?? null])
 
             @if(isset($pedidos) && count($pedidos) > 0)
-                @include('sueldos.components.estadisticas-resumen', ['pedidos' => $pedidos, 'retirosCaja' => $retirosCaja ?? null])
                 @include('sueldos.components.pedidos-por-sucursal', ['pedidos' => $pedidos])
                 @include('sueldos.components.retiros-caja', ['retirosCaja' => $retirosCaja ?? null])
                 @include('sueldos.components.tabla-pedidos', ['pedidos' => $pedidos])

@@ -30,10 +30,6 @@
     @include('sueldos.components.styles')
 
     @include('sueldos.components.tabla-sueldos')
-    
-    @include('sueldos.components.calificaciones-pedidos')
-
-    @include('sueldos.components.tabla-detalles-sueldo')
 
     @include('sueldos.components.modal-confirmar-eliminar')
     @include('sueldos.components.modal-confirmar-eliminar-detalle')

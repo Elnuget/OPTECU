@@ -52,12 +52,12 @@
         </div>
     </div>
     
-    <!-- Balance Neto (Ventas - Retiros) -->
+    <!-- Balance Neto (Ventas - Retiros + Total Detalles) -->
     <div class="col-lg-3 col-6">
         <div class="small-box" style="background-color: #6f42c1; color: white;">
             <div class="inner">
-                <h3>${{ number_format($pedidos->sum('total') + (isset($retirosCaja) ? $retirosCaja->sum('valor') : 0), 2, ',', '.') }}</h3>
-                <p>BALANCE NETO</p>
+                <h3>${{ number_format($pedidos->sum('total') + (isset($retirosCaja) ? $retirosCaja->sum('valor') : 0) + (isset($detallesSueldo) ? $detallesSueldo->sum('valor') : 0), 2, ',', '.') }}</h3>
+                <p>BALANCE NETO (CON DETALLES)</p>
             </div>
             <div class="icon">
                 <i class="fas fa-balance-scale"></i>
