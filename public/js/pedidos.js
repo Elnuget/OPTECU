@@ -9,13 +9,10 @@ function calculateTotal() {
 
         // Sumar examen visual
         const examenVisualElement = document.getElementById('examen_visual');
-        const examenVisualDescuentoElement = document.getElementById('examen_visual_descuento');
         
-        if (examenVisualElement && examenVisualDescuentoElement) {
+        if (examenVisualElement) {
             const examenVisual = parseFloat(examenVisualElement.value) || 0;
-            const examenVisualDescuento = parseFloat(examenVisualDescuentoElement.value) || 0;
-            const examenVisualTotal = examenVisual * (1 - (examenVisualDescuento / 100));
-            newTotal += examenVisualTotal;
+            newTotal += examenVisual;
         }
 
         // Sumar armazones
@@ -291,7 +288,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Campos que afectan al total
     const fields = [
         'examen_visual',
-        'examen_visual_descuento',
         'valor_compra',
         'total'
     ];
