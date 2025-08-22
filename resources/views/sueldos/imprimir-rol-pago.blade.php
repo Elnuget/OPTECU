@@ -431,6 +431,9 @@
     </div>
     @endif
 
+    <!-- Tabla simplificada de calificaciones -->
+    @include('sueldos.imprimir-rol-pago-tabla-calificaciones')
+
     <!-- Firmas -->
     <div class="signatures">
         <div class="signature-box">
