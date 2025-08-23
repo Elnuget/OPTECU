@@ -386,16 +386,10 @@ class FacturaController extends Controller
             $infoFactura->appendChild($dom->createElement('dirEstablecimiento', htmlspecialchars($declarante->direccion_matriz ?? 'DIRECCION NO ESPECIFICADA')));
             $infoFactura->appendChild($dom->createElement('obligadoContabilidad', ($declarante->obligado_contabilidad ?? false) ? 'SI' : 'NO'));
             
-            // Cliente (usar datos del pedido o consumidor final)
-            if (is_object($pedido) && property_exists($pedido, 'cedula') && $pedido->cedula) {
-                $infoFactura->appendChild($dom->createElement('tipoIdentificacionComprador', '05')); // Cédula
-                $infoFactura->appendChild($dom->createElement('razonSocialComprador', htmlspecialchars($pedido->cliente)));
-                $infoFactura->appendChild($dom->createElement('identificacionComprador', $pedido->cedula));
-            } else {
-                $infoFactura->appendChild($dom->createElement('tipoIdentificacionComprador', '07')); // Consumidor final
-                $infoFactura->appendChild($dom->createElement('razonSocialComprador', 'CONSUMIDOR FINAL'));
-                $infoFactura->appendChild($dom->createElement('identificacionComprador', '9999999999'));
-            }
+            // Siempre usar datos del pedido para el comprador
+            $infoFactura->appendChild($dom->createElement('tipoIdentificacionComprador', '05'));
+            $infoFactura->appendChild($dom->createElement('razonSocialComprador', htmlspecialchars($pedido->cliente ?? 'CLIENTE NO ESPECIFICADO')));
+            $infoFactura->appendChild($dom->createElement('identificacionComprador', $pedido->cedula ?? '9999999999'));
             
             $infoFactura->appendChild($dom->createElement('totalSinImpuestos', number_format($subtotal, 2, '.', '')));
             $infoFactura->appendChild($dom->createElement('totalDescuento', '0.00'));
