@@ -91,18 +91,21 @@ class FacturaController extends Controller
     public function store(Request $request)
     {
         try {
+            // Log para depuración
+            \Log::info('Datos recibidos en FacturaController::store', $request->all());
+            
             $validator = Validator::make($request->all(), [
-                'declarante_id' => 'required|exists:declarantes,id',
-                'pedido_id' => 'required|exists:pedidos,id',
+                'declarante_id' => 'required|exists:declarante,id',
+                'pedido_id' => 'nullable|exists:pedidos,id',
                 // Campos de elementos a facturar
-                'incluir_examen' => 'nullable|boolean',
-                'incluir_armazon' => 'nullable|boolean',
-                'incluir_luna' => 'nullable|boolean',
-                'incluir_accesorio' => 'nullable|boolean',
+                'incluir_examen' => 'nullable',
+                'incluir_armazon' => 'nullable',
+                'incluir_luna' => 'nullable',
+                'incluir_compra_rapida' => 'nullable',
                 'precio_examen' => 'nullable|numeric|min:0',
                 'precio_armazon' => 'nullable|numeric|min:0',
                 'precio_luna' => 'nullable|numeric|min:0',
-                'precio_accesorio' => 'nullable|numeric|min:0',
+                'precio_compra_rapida' => 'nullable|numeric|min:0',
             ]);
             
             if ($validator->fails()) {
@@ -113,17 +116,35 @@ class FacturaController extends Controller
             }
             
             // Validar que al menos un elemento esté seleccionado
-            if (!$request->incluir_examen && !$request->incluir_armazon && 
-                !$request->incluir_luna && !$request->incluir_accesorio) {
+            if (!$request->has('incluir_examen') && !$request->has('incluir_armazon') && 
+                !$request->has('incluir_luna') && !$request->has('incluir_compra_rapida')) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Debe seleccionar al menos un elemento para facturar.'
                 ], 422);
             }
             
-            // Obtener datos del pedido y declarante
-            $pedido = \App\Models\Pedido::findOrFail($request->pedido_id);
+            // Obtener datos del declarante
             $declarante = Declarante::findOrFail($request->declarante_id);
+            
+            // Obtener datos del pedido (puede ser null)
+            $pedido = null;
+            if ($request->pedido_id) {
+                $pedido = Pedido::find($request->pedido_id);
+            }
+            
+            // Si no hay pedido, crear datos por defecto
+            if (!$pedido) {
+                $pedido = (object) [
+                    'id' => 0,
+                    'cliente' => 'CLIENTE GENERICO',
+                    'cedula' => null,
+                    'celular' => null,
+                    'correo_electronico' => null,
+                    'examen_visual' => null,
+                    'motivo_compra' => null
+                ];
+            }
             
             // Calcular totales según los elementos seleccionados
             $subtotal = 0;
@@ -131,27 +152,27 @@ class FacturaController extends Controller
             $elementos = [];
             
             // Examen Visual - 0% IVA (exento)
-            if ($request->incluir_examen && $request->precio_examen > 0) {
+            if ($request->has('incluir_examen') && $request->precio_examen > 0) {
                 $precioExamen = floatval($request->precio_examen);
                 $subtotal += $precioExamen;
                 $elementos[] = [
                     'tipo' => 'Examen Visual',
-                    'descripcion' => $pedido->examen_visual ?: 'Examen Visual',
+                    'descripcion' => (is_object($pedido) && property_exists($pedido, 'examen_visual') && $pedido->examen_visual) ? $pedido->examen_visual : 'Examen Visual',
                     'precio' => $precioExamen,
                     'iva_porcentaje' => 0,
                     'iva_valor' => 0
                 ];
             }
             
-            // Armazón - 15% IVA
-            if ($request->incluir_armazon && $request->precio_armazon > 0) {
+            // Armazón/Accesorios - 15% IVA
+            if ($request->has('incluir_armazon') && $request->precio_armazon > 0) {
                 $precioArmazon = floatval($request->precio_armazon);
                 $ivaArmazon = $precioArmazon * 0.15;
                 $subtotal += $precioArmazon;
                 $iva += $ivaArmazon;
                 $elementos[] = [
-                    'tipo' => 'Armazón',
-                    'descripcion' => 'Armazón',
+                    'tipo' => 'Armazón/Accesorios',
+                    'descripcion' => 'Armazón/Accesorios',
                     'precio' => $precioArmazon,
                     'iva_porcentaje' => 15,
                     'iva_valor' => $ivaArmazon
@@ -159,7 +180,7 @@ class FacturaController extends Controller
             }
             
             // Luna - 15% IVA
-            if ($request->incluir_luna && $request->precio_luna > 0) {
+            if ($request->has('incluir_luna') && $request->precio_luna > 0) {
                 $precioLuna = floatval($request->precio_luna);
                 $ivaLuna = $precioLuna * 0.15;
                 $subtotal += $precioLuna;
@@ -173,22 +194,28 @@ class FacturaController extends Controller
                 ];
             }
             
-            // Accesorio - 15% IVA
-            if ($request->incluir_accesorio && $request->precio_accesorio > 0) {
-                $precioAccesorio = floatval($request->precio_accesorio);
-                $ivaAccesorio = $precioAccesorio * 0.15;
-                $subtotal += $precioAccesorio;
-                $iva += $ivaAccesorio;
+            // Compra Rápida - 0% IVA (exento)
+            if ($request->has('incluir_compra_rapida') && $request->precio_compra_rapida >= 0) {
+                $precioCompraRapida = floatval($request->precio_compra_rapida);
+                $subtotal += $precioCompraRapida;
                 $elementos[] = [
-                    'tipo' => 'Accesorio',
-                    'descripcion' => 'Accesorio',
-                    'precio' => $precioAccesorio,
-                    'iva_porcentaje' => 15,
-                    'iva_valor' => $ivaAccesorio
+                    'tipo' => 'Compra Rápida',
+                    'descripcion' => (is_object($pedido) && property_exists($pedido, 'motivo_compra') && $pedido->motivo_compra) ? $pedido->motivo_compra : 'Servicio de compra rápida',
+                    'precio' => $precioCompraRapida,
+                    'iva_porcentaje' => 0,
+                    'iva_valor' => 0
                 ];
             }
             
             $total = $subtotal + $iva;
+            
+            // Validar que se calcularon elementos
+            if (empty($elementos)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo calcular ningún elemento para la factura. Verifique los precios ingresados.'
+                ], 422);
+            }
             
             // Generar XML
             $xmlPath = $this->generarXMLFactura($pedido, $declarante, $elementos, $subtotal, $iva, $total);
@@ -196,13 +223,15 @@ class FacturaController extends Controller
             // Crear la factura
             $factura = new Factura();
             $factura->declarante_id = $request->declarante_id;
-            $factura->pedido_id = $request->pedido_id;
+            $factura->pedido_id = $request->pedido_id ?: null;
             $factura->xml = $xmlPath;
             $factura->monto = round($subtotal, 2);
             $factura->iva = round($iva, 2);
             $factura->tipo = 'comprobante';
             
-            $factura->save();
+            if (!$factura->save()) {
+                throw new \Exception('No se pudo guardar la factura en la base de datos');
+            }
             
             return response()->json([
                 'success' => true,
@@ -216,6 +245,9 @@ class FacturaController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error en FacturaController::store: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error al crear factura: ' . $e->getMessage()
@@ -224,81 +256,191 @@ class FacturaController extends Controller
     }
     
     /**
-     * Generar XML de la factura
+     * Generar XML de la factura según formato Ecuador
      */
     private function generarXMLFactura($pedido, $declarante, $elementos, $subtotal, $iva, $total)
     {
         try {
-            // Crear estructura XML
-            $xml = new \SimpleXMLElement('<?xml version="1.0" encoding="UTF-8"?><factura></factura>');
-            
-            // Información general
-            $info = $xml->addChild('informacion');
-            $info->addChild('numero', 'COMP-' . time());
-            $info->addChild('fecha', date('Y-m-d'));
-            $info->addChild('hora', date('H:i:s'));
-            
-            // Información del declarante (emisor)
-            $emisor = $xml->addChild('emisor');
-            $emisor->addChild('nombre', htmlspecialchars($declarante->nombre));
-            $emisor->addChild('ruc', $declarante->ruc);
-            if ($declarante->direccion_matriz) {
-                $emisor->addChild('direccion', htmlspecialchars($declarante->direccion_matriz));
+            // Verificar que hay elementos para facturar
+            if (empty($elementos)) {
+                throw new \Exception('No hay elementos para incluir en la factura');
             }
             
-            // Información del cliente
-            $cliente = $xml->addChild('cliente');
-            $cliente->addChild('nombre', htmlspecialchars($pedido->cliente));
-            if ($pedido->cedula) {
-                $cliente->addChild('cedula', $pedido->cedula);
-            }
-            if ($pedido->direccion) {
-                $cliente->addChild('direccion', htmlspecialchars($pedido->direccion));
+            // Obtener secuencial
+            $secuencial = str_pad(rand(1, 999999), 9, '0', STR_PAD_LEFT);
+            
+            // Generar clave de acceso (simplificada para ejemplo)
+            $fecha = date('dmY');
+            $ruc = $declarante->ruc ?? '9999999999999';
+            $establecimiento = $declarante->establecimiento ?? '001';
+            $puntoEmision = $declarante->punto_emision ?? '001';
+            $claveAcceso = $fecha . '01' . $ruc . '1' . $establecimiento . $puntoEmision . $secuencial . '123456781';
+            
+            // Crear DOM document para mejor control del XML
+            $dom = new \DOMDocument('1.0', 'UTF-8');
+            $dom->formatOutput = true;
+            
+            // Elemento raíz
+            $factura = $dom->createElement('factura');
+            $factura->setAttribute('id', 'comprobante');
+            $factura->setAttribute('version', '2.1.0');
+            $dom->appendChild($factura);
+            
+            // Información tributaria
+            $infoTributaria = $dom->createElement('infoTributaria');
+            $infoTributaria->appendChild($dom->createElement('ambiente', '1'));
+            $infoTributaria->appendChild($dom->createElement('tipoEmision', '1'));
+            $infoTributaria->appendChild($dom->createElement('razonSocial', htmlspecialchars($declarante->nombre ?? 'RAZON SOCIAL')));
+            $infoTributaria->appendChild($dom->createElement('ruc', $ruc));
+            $infoTributaria->appendChild($dom->createElement('claveAcceso', $claveAcceso));
+            $infoTributaria->appendChild($dom->createElement('codDoc', '01'));
+            $infoTributaria->appendChild($dom->createElement('estab', $establecimiento));
+            $infoTributaria->appendChild($dom->createElement('ptoEmi', $puntoEmision));
+            $infoTributaria->appendChild($dom->createElement('secuencial', $secuencial));
+            $infoTributaria->appendChild($dom->createElement('dirMatriz', htmlspecialchars($declarante->direccion_matriz ?? 'DIRECCION NO ESPECIFICADA')));
+            $factura->appendChild($infoTributaria);
+            
+            // Información de la factura
+            $infoFactura = $dom->createElement('infoFactura');
+            $infoFactura->appendChild($dom->createElement('fechaEmision', date('d/m/Y')));
+            $infoFactura->appendChild($dom->createElement('dirEstablecimiento', htmlspecialchars($declarante->direccion_matriz ?? 'DIRECCION NO ESPECIFICADA')));
+            $infoFactura->appendChild($dom->createElement('obligadoContabilidad', ($declarante->obligado_contabilidad ?? false) ? 'SI' : 'NO'));
+            
+            // Cliente (usar datos del pedido o consumidor final)
+            if (is_object($pedido) && property_exists($pedido, 'cedula') && $pedido->cedula) {
+                $infoFactura->appendChild($dom->createElement('tipoIdentificacionComprador', '05')); // Cédula
+                $infoFactura->appendChild($dom->createElement('razonSocialComprador', htmlspecialchars($pedido->cliente)));
+                $infoFactura->appendChild($dom->createElement('identificacionComprador', $pedido->cedula));
+            } else {
+                $infoFactura->appendChild($dom->createElement('tipoIdentificacionComprador', '07')); // Consumidor final
+                $infoFactura->appendChild($dom->createElement('razonSocialComprador', 'CONSUMIDOR FINAL'));
+                $infoFactura->appendChild($dom->createElement('identificacionComprador', '9999999999'));
             }
             
-            // Información del pedido
-            $pedidoXml = $xml->addChild('pedido');
-            $pedidoXml->addChild('id', $pedido->id);
-            $pedidoXml->addChild('numero_orden', $pedido->numero_orden);
-            $pedidoXml->addChild('fecha_pedido', $pedido->fecha ? $pedido->fecha->format('Y-m-d') : date('Y-m-d'));
+            $infoFactura->appendChild($dom->createElement('totalSinImpuestos', number_format($subtotal, 2, '.', '')));
+            $infoFactura->appendChild($dom->createElement('totalDescuento', '0.00'));
             
-            // Detalles de elementos facturados
-            $detalles = $xml->addChild('detalles');
+            // Total con impuestos
+            $totalConImpuestos = $dom->createElement('totalConImpuestos');
+            if ($iva > 0) {
+                $totalImpuesto = $dom->createElement('totalImpuesto');
+                $totalImpuesto->appendChild($dom->createElement('codigo', '2')); // IVA
+                $totalImpuesto->appendChild($dom->createElement('codigoPorcentaje', '4')); // 15%
+                $totalImpuesto->appendChild($dom->createElement('baseImponible', number_format($subtotal - $this->calcularSubtotalExento($elementos), 2, '.', '')));
+                $totalImpuesto->appendChild($dom->createElement('valor', number_format($iva, 2, '.', '')));
+                $totalConImpuestos->appendChild($totalImpuesto);
+            }
+            
+            // Si hay elementos exentos, agregar impuesto 0%
+            $subtotalExento = $this->calcularSubtotalExento($elementos);
+            if ($subtotalExento > 0) {
+                $totalImpuestoExento = $dom->createElement('totalImpuesto');
+                $totalImpuestoExento->appendChild($dom->createElement('codigo', '2')); // IVA
+                $totalImpuestoExento->appendChild($dom->createElement('codigoPorcentaje', '0')); // 0%
+                $totalImpuestoExento->appendChild($dom->createElement('baseImponible', number_format($subtotalExento, 2, '.', '')));
+                $totalImpuestoExento->appendChild($dom->createElement('valor', '0.00'));
+                $totalConImpuestos->appendChild($totalImpuestoExento);
+            }
+            
+            $infoFactura->appendChild($totalConImpuestos);
+            $infoFactura->appendChild($dom->createElement('propina', '0.00'));
+            $infoFactura->appendChild($dom->createElement('importeTotal', number_format($total, 2, '.', '')));
+            $infoFactura->appendChild($dom->createElement('moneda', 'DOLAR'));
+            
+            // Pagos
+            $pagos = $dom->createElement('pagos');
+            $pago = $dom->createElement('pago');
+            $pago->appendChild($dom->createElement('formaPago', '01')); // Sin sistema financiero
+            $pago->appendChild($dom->createElement('total', number_format($total, 2, '.', '')));
+            $pagos->appendChild($pago);
+            $infoFactura->appendChild($pagos);
+            
+            $factura->appendChild($infoFactura);
+            
+            // Detalles
+            $detalles = $dom->createElement('detalles');
             foreach ($elementos as $elemento) {
-                $detalle = $detalles->addChild('detalle');
-                $detalle->addChild('tipo', $elemento['tipo']);
-                $detalle->addChild('descripcion', htmlspecialchars($elemento['descripcion']));
-                $detalle->addChild('precio', number_format($elemento['precio'], 2));
-                $detalle->addChild('iva_porcentaje', $elemento['iva_porcentaje']);
-                $detalle->addChild('iva_valor', number_format($elemento['iva_valor'], 2));
-                $detalle->addChild('total_item', number_format($elemento['precio'] + $elemento['iva_valor'], 2));
+                $detalle = $dom->createElement('detalle');
+                $detalle->appendChild($dom->createElement('codigoPrincipal', strtoupper(str_replace([' ', '/'], '', $elemento['tipo']))));
+                $detalle->appendChild($dom->createElement('descripcion', htmlspecialchars($elemento['descripcion'])));
+                $detalle->appendChild($dom->createElement('cantidad', '1.00'));
+                $detalle->appendChild($dom->createElement('precioUnitario', number_format($elemento['precio'], 2, '.', '')));
+                $detalle->appendChild($dom->createElement('descuento', '0.00'));
+                $detalle->appendChild($dom->createElement('precioTotalSinImpuesto', number_format($elemento['precio'], 2, '.', '')));
+                
+                // Impuestos del detalle
+                $impuestos = $dom->createElement('impuestos');
+                $impuesto = $dom->createElement('impuesto');
+                $impuesto->appendChild($dom->createElement('codigo', '2')); // IVA
+                
+                if ($elemento['iva_porcentaje'] > 0) {
+                    $impuesto->appendChild($dom->createElement('codigoPorcentaje', '4')); // 15%
+                    $impuesto->appendChild($dom->createElement('tarifa', '15.00'));
+                } else {
+                    $impuesto->appendChild($dom->createElement('codigoPorcentaje', '0')); // 0%
+                    $impuesto->appendChild($dom->createElement('tarifa', '0.00'));
+                }
+                
+                $impuesto->appendChild($dom->createElement('baseImponible', number_format($elemento['precio'], 2, '.', '')));
+                $impuesto->appendChild($dom->createElement('valor', number_format($elemento['iva_valor'], 2, '.', '')));
+                $impuestos->appendChild($impuesto);
+                $detalle->appendChild($impuestos);
+                
+                $detalles->appendChild($detalle);
             }
+            $factura->appendChild($detalles);
             
-            // Totales
-            $totales = $xml->addChild('totales');
-            $totales->addChild('subtotal', number_format($subtotal, 2));
-            $totales->addChild('iva_total', number_format($iva, 2));
-            $totales->addChild('total', number_format($total, 2));
+            // Información adicional
+            $infoAdicional = $dom->createElement('infoAdicional');
+            if (is_object($pedido) && property_exists($pedido, 'celular') && $pedido->celular) {
+                $campoTelefono = $dom->createElement('campoAdicional', $pedido->celular);
+                $campoTelefono->setAttribute('nombre', 'Telefono');
+                $infoAdicional->appendChild($campoTelefono);
+            }
+            if (is_object($pedido) && property_exists($pedido, 'correo_electronico') && $pedido->correo_electronico) {
+                $campoEmail = $dom->createElement('campoAdicional', htmlspecialchars($pedido->correo_electronico));
+                $campoEmail->setAttribute('nombre', 'Email');
+                $infoAdicional->appendChild($campoEmail);
+            }
+            $factura->appendChild($infoAdicional);
             
-            // Generar nombre del archivo y ruta
-            $filename = 'factura_' . $pedido->id . '_' . time() . '.xml';
-            $xmlPath = 'facturas/' . $filename;
-            $fullPath = storage_path('app/public/' . $xmlPath);
+            // Guardar archivo XML
+            $xmlPath = 'facturas/' . date('Y/m');
+            $xmlFullPath = storage_path('app/public/' . $xmlPath);
             
             // Crear directorio si no existe
-            $directory = dirname($fullPath);
-            if (!file_exists($directory)) {
-                mkdir($directory, 0755, true);
+            if (!is_dir($xmlFullPath)) {
+                if (!mkdir($xmlFullPath, 0755, true)) {
+                    throw new \Exception('No se pudo crear el directorio para guardar el XML');
+                }
             }
             
-            // Guardar el archivo XML
-            $xml->asXML($fullPath);
+            $xmlFileName = 'factura_' . $secuencial . '_' . time() . '.xml';
+            $xmlFilePath = $xmlFullPath . DIRECTORY_SEPARATOR . $xmlFileName;
             
-            return $xmlPath;
+            if (!$dom->save($xmlFilePath)) {
+                throw new \Exception('No se pudo guardar el archivo XML');
+            }
+            
+            return $xmlPath . '/' . $xmlFileName;
             
         } catch (\Exception $e) {
             throw new \Exception('Error al generar XML: ' . $e->getMessage());
         }
+    }
+    
+    /**
+     * Calcular subtotal de elementos exentos de IVA
+     */
+    private function calcularSubtotalExento($elementos)
+    {
+        $subtotalExento = 0;
+        foreach ($elementos as $elemento) {
+            if ($elemento['iva_porcentaje'] == 0) {
+                $subtotalExento += $elemento['precio'];
+            }
+        }
+        return $subtotalExento;
     }
 
     /**

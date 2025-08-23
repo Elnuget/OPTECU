@@ -59,13 +59,13 @@
                                 <!-- Examen Visual -->
                                 <div class="col-md-3">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="incluir_examen" name="incluir_examen" onchange="calcularTotales()" checked>
+                                        <input class="form-check-input" type="checkbox" id="incluir_examen" name="incluir_examen" checked>
                                         <label class="form-check-label" for="incluir_examen">
                                             Examen Visual
                                         </label>
                                         <div class="mt-2" id="precio_examen_container">
                                             <input type="number" class="form-control form-control-sm" id="precio_examen" name="precio_examen" 
-                                                   placeholder="Precio examen" step="0.01" min="0" onchange="calcularTotales()"
+                                                   placeholder="Precio examen" step="0.01" min="0"
                                                    value="{{ isset($pedido) && $pedido->examen_visual ? $pedido->examen_visual : '' }}">
                                             <small class="form-text text-muted">IVA: 0% (Exento)</small>
                                             <small class="form-text text-info">Examen visual</small>
@@ -76,13 +76,13 @@
                                 <!-- Armazón/Accesorios -->
                                 <div class="col-md-3">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="incluir_armazon" name="incluir_armazon" onchange="calcularTotales()" checked>
+                                        <input class="form-check-input" type="checkbox" id="incluir_armazon" name="incluir_armazon" checked>
                                         <label class="form-check-label" for="incluir_armazon">
                                             Armazón/Accesorios
                                         </label>
                                         <div class="mt-2" id="precio_armazon_container">
                                             <input type="number" class="form-control form-control-sm" id="precio_armazon" name="precio_armazon" 
-                                                   placeholder="Precio armazón" step="0.01" min="0" onchange="calcularTotales()"
+                                                   placeholder="Precio armazón" step="0.01" min="0"
                                                    value="{{ isset($pedido) && $pedido->inventarios ? $pedido->inventarios->sum(function($inv) { return $inv->pivot->precio * (1 - ($inv->pivot->descuento / 100)); }) : '' }}">
                                             <small class="form-text text-muted">IVA: 15%</small>
                                             <small class="form-text text-info">{{ isset($pedido) && $pedido->inventarios ? $pedido->inventarios->count() . ' artículo(s)' : 'Sin artículos' }}</small>
@@ -93,13 +93,13 @@
                                 <!-- Lunas -->
                                 <div class="col-md-3">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="incluir_luna" name="incluir_luna" onchange="calcularTotales()" checked>
+                                        <input class="form-check-input" type="checkbox" id="incluir_luna" name="incluir_luna" checked>
                                         <label class="form-check-label" for="incluir_luna">
                                             Lunas
                                         </label>
                                         <div class="mt-2" id="precio_luna_container">
                                             <input type="number" class="form-control form-control-sm" id="precio_luna" name="precio_luna" 
-                                                   placeholder="Precio luna" step="0.01" min="0" onchange="calcularTotales()"
+                                                   placeholder="Precio luna" step="0.01" min="0"
                                                    value="{{ isset($pedido) && $pedido->lunas ? $pedido->lunas->sum(function($luna) { return $luna->l_precio * (1 - ($luna->l_precio_descuento / 100)); }) : '' }}">
                                             <small class="form-text text-muted">IVA: 15%</small>
                                             <small class="form-text text-info">{{ isset($pedido) && $pedido->lunas ? $pedido->lunas->count() . ' luna(s)' : 'Sin lunas' }}</small>
@@ -110,13 +110,13 @@
                                 <!-- Compra Rápida -->
                                 <div class="col-md-3">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="incluir_compra_rapida" name="incluir_compra_rapida" onchange="calcularTotales()" checked>
+                                        <input class="form-check-input" type="checkbox" id="incluir_compra_rapida" name="incluir_compra_rapida" checked>
                                         <label class="form-check-label" for="incluir_compra_rapida">
                                             Compra Rápida
                                         </label>
                                         <div class="mt-2" id="precio_compra_rapida_container">
                                             <input type="number" class="form-control form-control-sm" id="precio_compra_rapida" name="precio_compra_rapida" 
-                                                   placeholder="Precio compra rápida" step="0.01" min="0" onchange="calcularTotales()"
+                                                   placeholder="Precio compra rápida" step="0.01" min="0"
                                                    value="{{ isset($pedido) && $pedido->valor_compra ? $pedido->valor_compra : '' }}">
                                             <small class="form-text text-muted">IVA: 0% (Exento)</small>
                                             <small class="form-text text-info">{{ isset($pedido) && $pedido->motivo_compra ? $pedido->motivo_compra : 'Servicio de compra rápida' }}</small>
@@ -179,6 +179,8 @@
 @section('js')
 @include('atajos')
 @parent
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function () {
         // Mostrar/ocultar campos de precio según los checkboxes
@@ -211,6 +213,11 @@
             if (!this.checked) {
                 $('#precio_compra_rapida').val('{{ isset($pedido) && $pedido->valor_compra ? $pedido->valor_compra : "0" }}');
             }
+            calcularTotales();
+        });
+        
+        // Agregar event listeners para los inputs de precio
+        $('#precio_examen, #precio_armazon, #precio_luna, #precio_compra_rapida').on('input change', function() {
             calcularTotales();
         });
         
