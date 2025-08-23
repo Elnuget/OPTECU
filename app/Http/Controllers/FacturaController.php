@@ -447,31 +447,60 @@ class FacturaController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
      */
     public function show($id)
     {
         try {
-            $factura = Factura::with(['declarante', 'pedido.cliente'])->findOrFail($id);
+            $factura = Factura::with(['declarante', 'pedido'])->findOrFail($id);
             
-            // Cargar pedidos relacionados si existe un pedido asociado
-            $pedidos = [];
-            if ($factura->pedido) {
-                $pedidos[] = $factura->pedido;
+            // Leer el contenido del XML si existe
+            $xmlContent = null;
+            $xmlFormatted = null;
+            if ($factura->xml) {
+                $xmlPath = storage_path('app/public/' . $factura->xml);
+                if (file_exists($xmlPath)) {
+                    $xmlContent = file_get_contents($xmlPath);
+                    
+                    // Formatear el XML para mejor visualización
+                    $dom = new \DOMDocument();
+                    $dom->preserveWhiteSpace = false;
+                    $dom->formatOutput = true;
+                    if ($dom->loadXML($xmlContent)) {
+                        $xmlFormatted = $dom->saveXML();
+                    }
+                }
             }
             
-            $data = $factura->toArray();
-            $data['pedidos'] = $pedidos;
+            // Si es una petición AJAX, devolver JSON
+            if (request()->wantsJson()) {
+                $pedidos = [];
+                if ($factura->pedido) {
+                    $pedidos[] = $factura->pedido;
+                }
+                
+                $data = $factura->toArray();
+                $data['pedidos'] = $pedidos;
+                $data['xml_content'] = $xmlContent;
+                
+                return response()->json([
+                    'success' => true,
+                    'data' => $data
+                ]);
+            }
             
-            return response()->json([
-                'success' => true,
-                'data' => $data
-            ]);
+            // Si no es AJAX, devolver vista HTML
+            return view('facturas.show', compact('factura', 'xmlContent', 'xmlFormatted'));
+            
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al cargar factura: ' . $e->getMessage()
-            ], 500);
+            if (request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al cargar factura: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return back()->with('error', 'Error al cargar factura: ' . $e->getMessage());
         }
     }
 
