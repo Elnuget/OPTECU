@@ -34,12 +34,22 @@
                 <div class="col-md-4">
                     <div class="form-group">
                         <label for="usuario">USUARIO</label>
-                        <select class="form-control select2" id="usuario" name="usuario">
-                            <option value="">TODOS LOS USUARIOS</option>
-                            @foreach($usuariosConPedidos ?? [] as $nombreUsuario)
-                                <option value="{{ $nombreUsuario }}" {{ request('usuario') == $nombreUsuario ? 'selected' : '' }}>{{ $nombreUsuario }}</option>
-                            @endforeach
-                        </select>
+                        @if(Auth::user() && !Auth::user()->is_admin)
+                            {{-- Usuario no administrador: solo puede ver su propio rol de pago --}}
+                            <input type="hidden" name="usuario" value="{{ Auth::user()->name }}">
+                            <select class="form-control select2" id="usuario" disabled>
+                                <option value="{{ Auth::user()->name }}" selected>{{ Auth::user()->name }}</option>
+                            </select>
+                            <small class="text-muted">Solo puedes consultar tu propio rol de pago</small>
+                        @else
+                            {{-- Usuario administrador: puede ver todos los usuarios --}}
+                            <select class="form-control select2" id="usuario" name="usuario">
+                                <option value="">TODOS LOS USUARIOS</option>
+                                @foreach($usuariosConPedidos ?? [] as $nombreUsuario)
+                                    <option value="{{ $nombreUsuario }}" {{ request('usuario') == $nombreUsuario ? 'selected' : '' }}>{{ $nombreUsuario }}</option>
+                                @endforeach
+                            </select>
+                        @endif
                     </div>
                 </div>
                 <div class="col-md-2">

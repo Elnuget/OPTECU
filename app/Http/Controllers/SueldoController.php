@@ -37,6 +37,11 @@ class SueldoController extends Controller
         $mes = $request->get('mes', date('m')); // Por defecto el mes actual
         $usuario = $request->get('usuario');
         
+        // Si el usuario no es administrador, forzar que solo vea su propia información
+        if (Auth::user() && !Auth::user()->is_admin) {
+            $usuario = Auth::user()->name;
+        }
+        
         // Inicializar la variable calificaciones con valores predeterminados
         $calificaciones = [
             'total' => 0,
@@ -52,8 +57,13 @@ class SueldoController extends Controller
             'porcentaje_calificados' => 0,
         ];
         
-        // Solo ejecutar consultas si se ha realizado una búsqueda
-        if ($request->hasAny(['anio', 'mes', 'usuario']) && $request->isMethod('get')) {
+        // Ejecutar consultas si:
+        // 1. Se ha realizado una búsqueda (para administradores)
+        // 2. El usuario no es administrador (para cargar automáticamente sus datos)
+        $debeEjecutarConsultas = ($request->hasAny(['anio', 'mes', 'usuario']) && $request->isMethod('get')) 
+                                || (Auth::user() && !Auth::user()->is_admin);
+        
+        if ($debeEjecutarConsultas) {
             
             // Consultar los pedidos según los filtros
             $pedidosQuery = \App\Models\Pedido::whereYear('fecha', $anio)
@@ -145,13 +155,19 @@ class SueldoController extends Controller
             
             // Procesar historial de caja para calcular horas trabajadas
             $historialCaja = $this->procesarHistorialCaja($cashHistoryRaw);
-        } else {
-            // Si no hay búsqueda, obtener usuarios activos para el dropdown
+        }
+        
+        // Siempre obtener usuarios activos para el dropdown (para administradores)
+        // Para no administradores, esto no se usará pero no afecta el rendimiento
+        if (Auth::user() && Auth::user()->is_admin) {
             $usuariosConPedidos = \App\Models\User::whereNull('deleted_at')
                 ->where('name', '!=', '')
                 ->orderBy('name')
                 ->pluck('name')
                 ->toArray();
+        } else {
+            // Para usuarios no administradores, solo incluir su propio nombre
+            $usuariosConPedidos = [Auth::user()->name];
         }
         
         return view('sueldos.index', compact('sueldos', 'usuariosConPedidos', 'pedidos', 'calificaciones', 'anio', 'mes', 'usuario', 'retirosCaja', 'detallesSueldo', 'historialCaja'));

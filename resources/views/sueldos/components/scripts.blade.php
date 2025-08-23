@@ -110,5 +110,14 @@
         });
 
         // Ninguna funcionalidad de filtro es necesaria ya que hemos eliminado los filtros
+        
+        // Auto-enviar formulario para usuarios no administradores
+        @if(Auth::user() && !Auth::user()->is_admin)
+            // Si es un usuario no administrador y no hay resultados cargados, enviar automáticamente el formulario
+            if (!$('#detallesSueldoTable tbody tr').length && window.location.search.indexOf('usuario=') === -1) {
+                console.log('Auto-enviando formulario para usuario no administrador');
+                $('#rolDePagoForm').submit();
+            }
+        @endif
     });
 </script>
