@@ -50,7 +50,7 @@
                     </div>
                     <div class="row mt-3">
                         <div class="col-md-6">
-                            <strong>Medio de Pago:</strong><br>
+                            <strong>Medio de Pago Original:</strong><br>
                             @if($pedido->pagos && $pedido->pagos->count() > 0)
                                 @php
                                     $primerPago = $pedido->pagos->first();
@@ -73,6 +73,29 @@
                             {{ $pedido->fecha ? $pedido->fecha->format('d/m/Y') : 'No especificada' }}
                         </div>
                     </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="medio_pago_xml">Medio de Pago para XML <span class="text-danger">*</span></label>
+                                <select id="medio_pago_xml" name="medio_pago_xml" class="form-control" required>
+                                    <option value="">Seleccione un medio de pago</option>
+                                    @foreach ($mediosPago as $medio)
+                                        <option value="{{ $medio->id }}" 
+                                            @if($pedido->pagos && $pedido->pagos->count() > 0 && $pedido->pagos->first()->mediodepago_id == $medio->id) 
+                                                selected 
+                                            @endif>
+                                            {{ $medio->medio_de_pago }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle"></i> 
+                                    Este medio de pago se incluirá en el XML de la factura
+                                </small>
+                                <div class="invalid-feedback" id="medio_pago_xml-error"></div>
+                            </div>
+                        </div>
+                    </div>
                     <small class="text-muted">
                         <i class="fas fa-info-circle"></i> 
                         Este número de orden se usará como secuencial en la clave de acceso del SRI
@@ -83,6 +106,24 @@
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle"></i> No se ha especificado un pedido para facturar.
                 <br><small>Se generará un secuencial automático para la clave de acceso del SRI.</small>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="medio_pago_xml">Medio de Pago para XML <span class="text-danger">*</span></label>
+                        <select id="medio_pago_xml" name="medio_pago_xml" class="form-control" required>
+                            <option value="">Seleccione un medio de pago</option>
+                            @foreach ($mediosPago as $medio)
+                                <option value="{{ $medio->id }}">{{ $medio->medio_de_pago }}</option>
+                            @endforeach
+                        </select>
+                        <small class="form-text text-muted">
+                            <i class="fas fa-info-circle"></i> 
+                            Este medio de pago se incluirá en el XML de la factura
+                        </small>
+                        <div class="invalid-feedback" id="medio_pago_xml-error"></div>
+                    </div>
+                </div>
             </div>
             @endif
             
@@ -342,6 +383,17 @@
                 Swal.fire({
                     title: 'Error',
                     text: 'Debe seleccionar un declarante.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
+            // Validar que hay un medio de pago seleccionado
+            if (!$('#medio_pago_xml').val()) {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Debe seleccionar un medio de pago para el XML.',
                     icon: 'error',
                     confirmButtonText: 'OK'
                 });

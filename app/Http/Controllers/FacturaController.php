@@ -72,6 +72,7 @@ class FacturaController extends Controller
     public function create(Request $request)
     {
         $declarantes = Declarante::all();
+        $mediosPago = \App\Models\mediosdepago::all();
         
         // Verificar si viene un pedido_id en la solicitud
         $pedido = null;
@@ -79,7 +80,7 @@ class FacturaController extends Controller
             $pedido = \App\Models\Pedido::with(['pagos.mediodepago'])->find($request->pedido_id);
         }
         
-        return view('facturas.create', compact('declarantes', 'pedido'));
+        return view('facturas.create', compact('declarantes', 'pedido', 'mediosPago'));
     }
 
     /**
@@ -95,7 +96,8 @@ class FacturaController extends Controller
             \Log::info('Datos recibidos en FacturaController::store', $request->all());
             
             $validator = Validator::make($request->all(), [
-                'declarante_id' => 'required|exists:declarante,id',
+                'declarante_id' => 'required|exists:declarantes,id',
+                'medio_pago_xml' => 'required|exists:mediosdepago,id',
                 'pedido_id' => 'nullable|exists:pedidos,id',
                 // Campos de elementos a facturar
                 'incluir_examen' => 'nullable',
@@ -126,6 +128,9 @@ class FacturaController extends Controller
             
             // Obtener datos del declarante
             $declarante = Declarante::findOrFail($request->declarante_id);
+            
+            // Obtener el medio de pago seleccionado
+            $medioPago = \App\Models\mediosdepago::findOrFail($request->medio_pago_xml);
             
             // Obtener datos del pedido (puede ser null)
             $pedido = null;
@@ -225,7 +230,7 @@ class FacturaController extends Controller
             }
             
             // Generar XML
-            $xmlPath = $this->generarXMLFactura($pedido, $declarante, $elementos, $subtotal, $iva, $total);
+            $xmlPath = $this->generarXMLFactura($pedido, $declarante, $elementos, $subtotal, $iva, $total, $medioPago);
             
             // Crear la factura
             $factura = new Factura();
@@ -265,7 +270,7 @@ class FacturaController extends Controller
     /**
      * Generar XML de la factura según formato Ecuador
      */
-    private function generarXMLFactura($pedido, $declarante, $elementos, $subtotal, $iva, $total)
+    private function generarXMLFactura($pedido, $declarante, $elementos, $subtotal, $iva, $total, $medioPago)
     {
         try {
             // Verificar que hay elementos para facturar
@@ -424,8 +429,31 @@ class FacturaController extends Controller
             // Pagos
             $pagos = $dom->createElement('pagos');
             $pago = $dom->createElement('pago');
-            $pago->appendChild($dom->createElement('formaPago', '01')); // Sin sistema financiero
+            
+            // Mapear el medio de pago a códigos del SRI
+            $formaPago = '01'; // Valor por defecto: Sin sistema financiero
+            $medioPagoNombre = strtolower(trim($medioPago->medio_de_pago ?? ''));
+            
+            if (strpos($medioPagoNombre, 'efectivo') !== false) {
+                $formaPago = '01'; // Sin sistema financiero (efectivo)
+            } elseif (strpos($medioPagoNombre, 'tarjeta') !== false || strpos($medioPagoNombre, 'debito') !== false || strpos($medioPagoNombre, 'credito') !== false) {
+                $formaPago = '19'; // Tarjeta de débito
+            } elseif (strpos($medioPagoNombre, 'transferencia') !== false || strpos($medioPagoNombre, 'banco') !== false) {
+                $formaPago = '17'; // Transferencia bancaria
+            } elseif (strpos($medioPagoNombre, 'cheque') !== false) {
+                $formaPago = '02'; // Cheque
+            }
+            
+            // Log para depuración
+            \Log::info('Medio de pago mapeado', [
+                'medio_pago_original' => $medioPago->medio_de_pago,
+                'forma_pago_sri' => $formaPago
+            ]);
+            
+            $pago->appendChild($dom->createElement('formaPago', $formaPago));
             $pago->appendChild($dom->createElement('total', number_format($total, 2, '.', '')));
+            $pago->appendChild($dom->createElement('plazo', '1'));
+            $pago->appendChild($dom->createElement('unidadTiempo', 'dias'));
             $pagos->appendChild($pago);
             $infoFactura->appendChild($pagos);
             
