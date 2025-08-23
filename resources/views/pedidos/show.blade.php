@@ -211,6 +211,51 @@
                 </ul>
             </div>
         </div>
+
+            {{-- Pagos Asociados --}}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h3 class="card-title">Pagos Asociados</h3>
+                </div>
+                <div class="card-body">
+                    @if ($pedido->pagos->count() > 0)
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Método de Pago</th>
+                                        <th>Monto</th>
+                                        <th>TC</th>
+                                        <th>Fecha</th>
+                                        <th>Foto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($pedido->pagos as $pago)
+                                        <tr>
+                                            <td>{{ $pago->id }}</td>
+                                            <td>{{ $pago->mediodepago ? $pago->mediodepago->medio_de_pago : 'N/A' }}</td>
+                                            <td>${{ number_format($pago->pago, 2, ',', '.') }}</td>
+                                            <td>{{ $pago->TC ? 'Sí' : 'No' }}</td>
+                                            <td>{{ $pago->created_at ? $pago->created_at->format('d-m-Y H:i') : '' }}</td>
+                                            <td>
+                                                @if ($pago->foto)
+                                                    <a href="{{ asset('uploads/' . $pago->foto) }}" target="_blank">Ver</a>
+                                                @else
+                                                    -
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="text-muted">No hay pagos registrados para este pedido.</p>
+                    @endif
+                </div>
+            </div>
     </div>
 </div>
 @stop
