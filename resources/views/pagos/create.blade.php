@@ -139,16 +139,16 @@
                            step="0.01"
                            min="0.01"
                            class="form-control {{ $errors->has('pago') ? 'is-invalid' : '' }}" 
-                           placeholder="EJEMPLO: 100.50 O 100,50"
+                           placeholder="EJEMPLO: 100.50"
                            value="{{ old('pago') }}"
-                           onblur="validarMonto(this)"
-                           oninput="formatearDecimales(this)">
+                           onblur="validarYFormatearMonto(this)"
+                           onkeypress="permitirDecimales(event)">
                     @if($errors->has('pago'))
                         <div class="invalid-feedback">
                             {{ $errors->first('pago') }}
                         </div>
                     @endif
-                    <small class="form-text text-muted">INGRESE EL MONTO DEL PAGO (ACEPTA DECIMALES HASTA 2 POSICIONES - USE . O , PARA DECIMALES)</small>
+                    <small class="form-text text-muted">INGRESE EL MONTO DEL PAGO (ACEPTA DECIMALES HASTA 2 POSICIONES)</small>
                 </div>
                 
                 <div class="form-group">
@@ -244,8 +244,45 @@
         updateSaldo();
     });
 
-    // Formatear decimales mientras se escribe
-    function formatearDecimales(element) {
+    // Permitir entrada de decimales sin interferir con la posición del cursor
+    function permitirDecimales(event) {
+        const charCode = event.which ? event.which : event.keyCode;
+        const char = String.fromCharCode(charCode);
+        const value = event.target.value;
+        
+        // Permitir números, punto, coma, backspace, delete, tab, escape, enter
+        if ([8, 9, 27, 13, 46].indexOf(charCode) !== -1 ||
+            // Permitir Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+            (charCode === 65 && event.ctrlKey === true) ||
+            (charCode === 67 && event.ctrlKey === true) ||
+            (charCode === 86 && event.ctrlKey === true) ||
+            (charCode === 88 && event.ctrlKey === true)) {
+            return true;
+        }
+        
+        // Permitir números
+        if (charCode >= 48 && charCode <= 57) {
+            return true;
+        }
+        
+        // Permitir punto decimal (.) si no hay uno ya
+        if (char === '.' && value.indexOf('.') === -1) {
+            return true;
+        }
+        
+        // Permitir coma decimal (,) si no hay punto ni coma ya
+        if (char === ',' && value.indexOf('.') === -1 && value.indexOf(',') === -1) {
+            return true;
+        }
+        
+        // Prevenir el carácter por defecto
+        event.preventDefault();
+        return false;
+    }
+
+    // Validar y formatear el monto del pago
+    function validarYFormatearMonto(element) {
+        const saldoInput = document.getElementById('saldo');
         let valor = element.value;
         
         // Si está vacío, no hacer nada
@@ -268,36 +305,33 @@
             valor = partes[0] + '.' + partes[1].substring(0, 2);
         }
         
+        // Actualizar el valor del input
         element.value = valor;
-    }
-
-    // Validar el monto del pago contra el saldo
-    function validarMonto(element) {
-        const saldoInput = document.getElementById('saldo');
-        const montoInput = element;
         
-        // Limpiar y convertir a números
-        const saldoTexto = saldoInput.value.replace(/[^0-9.]/g, '');
-        const saldo = parseFloat(saldoTexto) || 0;
-        const monto = parseFloat(montoInput.value) || 0;
+        // Convertir a número para validaciones
+        const monto = parseFloat(valor) || 0;
         
         // Formatear con 2 decimales si hay valor
-        if (montoInput.value && monto > 0) {
-            montoInput.value = monto.toFixed(2);
+        if (monto > 0) {
+            element.value = monto.toFixed(2);
         }
         
         // Validar que el monto sea mayor a cero
-        if (monto <= 0 && montoInput.value) {
+        if (monto <= 0 && element.value) {
             alert('ADVERTENCIA: EL MONTO DEL PAGO DEBE SER MAYOR A CERO');
-            montoInput.value = '';
-            montoInput.focus();
+            element.value = '';
+            element.focus();
             return false;
         }
+        
+        // Validar contra el saldo
+        const saldoTexto = saldoInput.value.replace(/[^0-9.]/g, '');
+        const saldo = parseFloat(saldoTexto) || 0;
         
         // Validar que el monto no sea mayor al saldo
         if (monto > saldo && saldo > 0) {
             alert('ADVERTENCIA: EL MONTO DEL PAGO ($' + monto.toFixed(2) + ') NO PUEDE SER MAYOR AL SALDO PENDIENTE ($' + saldo.toFixed(2) + ')');
-            montoInput.value = saldo.toFixed(2);
+            element.value = saldo.toFixed(2);
             return false;
         }
         
