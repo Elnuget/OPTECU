@@ -131,6 +131,13 @@ class FacturaController extends Controller
             $pedido = null;
             if ($request->pedido_id) {
                 $pedido = Pedido::find($request->pedido_id);
+                \Log::info('Pedido encontrado', [
+                    'pedido_id' => $request->pedido_id,
+                    'numero_orden' => $pedido ? $pedido->numero_orden : 'PEDIDO NO ENCONTRADO',
+                    'cliente' => $pedido ? $pedido->cliente : 'N/A'
+                ]);
+            } else {
+                \Log::info('No se recibió pedido_id en la solicitud');
             }
             
             // Si no hay pedido, crear datos por defecto
@@ -266,15 +273,88 @@ class FacturaController extends Controller
                 throw new \Exception('No hay elementos para incluir en la factura');
             }
             
-            // Obtener secuencial
-            $secuencial = str_pad(rand(1, 999999), 9, '0', STR_PAD_LEFT);
+            // Obtener secuencial del número de orden del pedido
+            $secuencial = '000000001'; // Valor por defecto si no hay pedido
             
-            // Generar clave de acceso (simplificada para ejemplo)
-            $fecha = date('dmY');
-            $ruc = $declarante->ruc ?? '9999999999999';
-            $establecimiento = $declarante->establecimiento ?? '001';
-            $puntoEmision = $declarante->punto_emision ?? '001';
-            $claveAcceso = $fecha . '01' . $ruc . '1' . $establecimiento . $puntoEmision . $secuencial . '123456781';
+            \Log::info('Iniciando generación de secuencial', [
+                'pedido_es_objeto' => is_object($pedido),
+                'pedido_tipo' => gettype($pedido),
+                'pedido_data' => is_object($pedido) ? get_object_vars($pedido) : $pedido
+            ]);
+            
+            if (is_object($pedido) && isset($pedido->numero_orden) && !empty($pedido->numero_orden)) {
+                \Log::info('Procesando número de orden', [
+                    'numero_orden_original' => $pedido->numero_orden,
+                    'tipo_numero_orden' => gettype($pedido->numero_orden)
+                ]);
+                
+                // Extraer solo los números del número de orden
+                $numeroOrden = preg_replace('/[^0-9]/', '', (string)$pedido->numero_orden);
+                
+                \Log::info('Número de orden procesado', [
+                    'numero_orden_limpio' => $numeroOrden,
+                    'longitud' => strlen($numeroOrden)
+                ]);
+                
+                if (!empty($numeroOrden)) {
+                    // Asegurar que tenga máximo 9 dígitos
+                    if (strlen($numeroOrden) > 9) {
+                        $numeroOrden = substr($numeroOrden, -9); // Tomar los últimos 9 dígitos
+                        \Log::info('Número truncado a 9 dígitos', ['numero_truncado' => $numeroOrden]);
+                    }
+                    $secuencial = str_pad($numeroOrden, 9, '0', STR_PAD_LEFT);
+                    \Log::info('Secuencial generado desde número de orden', ['secuencial' => $secuencial]);
+                } else {
+                    // Si no hay números en el numero_orden, usar timestamp
+                    $secuencial = str_pad(substr(time(), -9), 9, '0', STR_PAD_LEFT);
+                    \Log::warning('No se encontraron números en numero_orden, usando timestamp', ['secuencial' => $secuencial]);
+                }
+            } else {
+                // Si no hay pedido válido, usar un número secuencial basado en timestamp
+                $secuencial = str_pad(substr(time(), -9), 9, '0', STR_PAD_LEFT);
+                \Log::warning('No hay pedido válido o numero_orden vacío, usando timestamp', [
+                    'secuencial' => $secuencial,
+                    'razon' => !is_object($pedido) ? 'No es objeto' : (!isset($pedido->numero_orden) ? 'No tiene numero_orden' : 'numero_orden vacío')
+                ]);
+            }
+            
+            // Generar clave de acceso según especificaciones del SRI (49 dígitos)
+            $fechaEmision = date('dmY'); // 8 dígitos: ddmmaaaa
+            $tipoComprobante = '01'; // 2 dígitos: 01 = Factura
+            $ruc = str_pad($declarante->ruc ?? '9999999999999', 13, '0', STR_PAD_LEFT); // 13 dígitos exactos
+            $tipoAmbiente = '1'; // 1 dígito: 1 = Pruebas, 2 = Producción
+            $establecimiento = str_pad($declarante->establecimiento ?? '001', 3, '0', STR_PAD_LEFT); // 3 dígitos exactos
+            $puntoEmision = str_pad($declarante->punto_emision ?? '001', 3, '0', STR_PAD_LEFT); // 3 dígitos exactos
+            $serie = $establecimiento . $puntoEmision; // 6 dígitos: estab (3) + punto (3)
+            $numeroComprobante = $secuencial; // 9 dígitos
+            $codigoNumerico = str_pad(rand(10000000, 99999999), 8, '0', STR_PAD_LEFT); // 8 dígitos aleatorios
+            $tipoEmision = '1'; // 1 dígito: 1 = Emisión normal
+            
+            // Construir los primeros 48 dígitos
+            $claveAcceso48 = $fechaEmision . $tipoComprobante . $ruc . $tipoAmbiente . $serie . $numeroComprobante . $codigoNumerico . $tipoEmision;
+            
+            // Verificar que los primeros 48 dígitos tengan la longitud correcta
+            if (strlen($claveAcceso48) !== 48) {
+                throw new \Exception('Error en la generación de clave de acceso: longitud incorrecta (' . strlen($claveAcceso48) . ' dígitos)');
+            }
+            
+            // Calcular dígito verificador (módulo 11)
+            $digitoVerificador = $this->calcularDigitoVerificador($claveAcceso48);
+            
+            // Clave de acceso completa (49 dígitos)
+            $claveAcceso = $claveAcceso48 . $digitoVerificador;
+            
+            // Log para depuración final
+            \Log::info('Secuencial final y clave de acceso', [
+                'pedido_id' => is_object($pedido) ? ($pedido->id ?? 'N/A') : 'Sin pedido',
+                'pedido_numero_orden' => is_object($pedido) ? ($pedido->numero_orden ?? 'N/A') : 'Sin pedido',
+                'secuencial_final' => $secuencial,
+                'numero_comprobante_usado' => $numeroComprobante,
+                'clave_acceso_48_digitos' => $claveAcceso48,
+                'digito_verificador' => $digitoVerificador,
+                'clave_acceso_completa' => $claveAcceso,
+                'longitud_clave_acceso' => strlen($claveAcceso)
+            ]);
             
             // Crear DOM document para mejor control del XML
             $dom = new \DOMDocument('1.0', 'UTF-8');
@@ -442,12 +522,41 @@ class FacturaController extends Controller
         }
         return $subtotalExento;
     }
+    
+    /**
+     * Calcular dígito verificador usando módulo 11
+     */
+    private function calcularDigitoVerificador($claveAcceso48)
+    {
+        $factor = 7;
+        $suma = 0;
+        
+        // Recorrer los 48 dígitos de derecha a izquierda
+        for ($i = 47; $i >= 0; $i--) {
+            $suma += intval($claveAcceso48[$i]) * $factor;
+            $factor--;
+            if ($factor == 1) {
+                $factor = 7;
+            }
+        }
+        
+        $residuo = $suma % 11;
+        $digitoVerificador = 11 - $residuo;
+        
+        if ($digitoVerificador == 11) {
+            $digitoVerificador = 0;
+        } elseif ($digitoVerificador == 10) {
+            $digitoVerificador = 1;
+        }
+        
+        return $digitoVerificador;
+    }
 
     /**
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\JsonResponse|\Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory
+     * @return \Illuminate\Http\JsonResponse|\Illuminate\Contracts\View\View|\Illuminate\Contracts\View\Factory|\Illuminate\Http\RedirectResponse
      */
     public function show($id)
     {
@@ -500,7 +609,8 @@ class FacturaController extends Controller
                 ], 500);
             }
             
-            return back()->with('error', 'Error al cargar factura: ' . $e->getMessage());
+            // Para vistas HTML, redirigir con error
+            return redirect()->route('facturas.index')->with('error', 'Error al cargar factura: ' . $e->getMessage());
         }
     }
 

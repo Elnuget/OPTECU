@@ -25,9 +25,39 @@
                 <i class="fas fa-info-circle"></i> Creando factura para el pedido <strong>#{{ $pedido->numero_orden }}</strong> - Cliente: <strong>{{ $pedido->cliente }}</strong>
                 <input type="hidden" name="pedido_id" value="{{ $pedido->id }}">
             </div>
+            <div class="card bg-light mb-3">
+                <div class="card-header">
+                    <h5><i class="fas fa-receipt"></i> Información del Pedido</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Número de Orden:</strong><br>
+                            <span class="h4 text-primary">{{ $pedido->numero_orden }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Cliente:</strong><br>
+                            {{ $pedido->cliente }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Cédula:</strong><br>
+                            {{ $pedido->cedula ?? 'No especificado' }}
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Total del Pedido:</strong><br>
+                            ${{ number_format($pedido->total, 2) }}
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        Este número de orden se usará como secuencial en la clave de acceso del SRI
+                    </small>
+                </div>
+            </div>
             @else
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle"></i> No se ha especificado un pedido para facturar.
+                <br><small>Se generará un secuencial automático para la clave de acceso del SRI.</small>
             </div>
             @endif
             

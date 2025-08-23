@@ -83,7 +83,7 @@
                 <table id="facturasTable" class="table table-striped table-hover">
                     <thead>
                         <tr>
-                            <th>#</th>
+                            <th>ID</th>
                             <th>Fecha</th>
                             <th>Declarante</th>
                             <th>Número</th>
@@ -144,6 +144,9 @@
 
 @section('js')
 <script>
+// Variables globales
+const FACTURA_SHOW_URL = "{{ url('facturas') }}";
+
 document.addEventListener('DOMContentLoaded', function() {
     // Cargar facturas al cargar la página
     cargarFacturas();
@@ -248,19 +251,20 @@ function renderizarFacturas(facturas) {
             : `<span class="badge badge-info">Compra</span>`;
         
         // Acciones
+        const showUrl = `${FACTURA_SHOW_URL}/${factura.id}`;
         const acciones = `
             <div class="btn-group btn-group-sm" role="group">
-                <a href="{{ url('facturas') }}/${factura.id}" class="btn btn-info" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
+                <a href="${showUrl}" class="btn btn-info" title="Ver XML de la factura #${factura.id}">
+                    <i class="fas fa-eye"></i> Ver XML
                 </a>
-                <button type="button" class="btn btn-danger btn-eliminar" data-id="${factura.id}" title="Eliminar">
+                <button type="button" class="btn btn-danger btn-eliminar" data-id="${factura.id}" title="Eliminar factura #${factura.id}">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
         `;
         
         row.innerHTML = `
-            <td>${index + 1}</td>
+            <td><strong>${factura.id}</strong></td>
             <td>${formatearFecha(factura.created_at)}</td>
             <td>${factura.declarante ? factura.declarante.nombre : 'N/A'}</td>
             <td>${factura.numero || 'Sin número'}</td>
