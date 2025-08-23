@@ -96,8 +96,8 @@ class FacturaController extends Controller
             \Log::info('Datos recibidos en FacturaController::store', $request->all());
             
             $validator = Validator::make($request->all(), [
-                'declarante_id' => 'required|exists:declarantes,id',
-                'medio_pago_xml' => 'required|exists:mediosdepago,id',
+                'declarante_id' => 'required|exists:declarante,id',
+                'medio_pago_xml' => 'required|numeric',
                 'pedido_id' => 'nullable|exists:pedidos,id',
                 // Campos de elementos a facturar
                 'incluir_examen' => 'nullable',
@@ -130,7 +130,20 @@ class FacturaController extends Controller
             $declarante = Declarante::findOrFail($request->declarante_id);
             
             // Obtener el medio de pago seleccionado
-            $medioPago = \App\Models\mediosdepago::findOrFail($request->medio_pago_xml);
+            $medioPago = \App\Models\mediosdepago::find($request->medio_pago_xml);
+            if (!$medioPago) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El medio de pago seleccionado no existe.'
+                ], 422);
+            }
+            
+            // Log para verificar el medio de pago obtenido
+            \Log::info('Medio de pago obtenido en store', [
+                'medio_pago_id' => $request->medio_pago_xml,
+                'medio_pago_encontrado' => $medioPago ? get_object_vars($medioPago) : 'NULL',
+                'nombre_medio_pago' => $medioPago->medio_de_pago ?? 'NO DISPONIBLE'
+            ]);
             
             // Obtener datos del pedido (puede ser null)
             $pedido = null;
@@ -432,22 +445,73 @@ class FacturaController extends Controller
             
             // Mapear el medio de pago a códigos del SRI
             $formaPago = '01'; // Valor por defecto: Sin sistema financiero
+            
+            // Log para verificar que el medio de pago llega correctamente
+            \Log::info('Medio de pago recibido en generarXMLFactura', [
+                'medio_pago_objeto' => $medioPago ? get_object_vars($medioPago) : 'NULL',
+                'tipo_objeto' => gettype($medioPago),
+                'existe_propiedad_medio_de_pago' => isset($medioPago->medio_de_pago),
+                'valor_medio_de_pago' => $medioPago->medio_de_pago ?? 'NO EXISTE'
+            ]);
+            
             $medioPagoNombre = strtolower(trim($medioPago->medio_de_pago ?? ''));
             
-            if (strpos($medioPagoNombre, 'efectivo') !== false) {
-                $formaPago = '01'; // Sin sistema financiero (efectivo)
-            } elseif (strpos($medioPagoNombre, 'tarjeta') !== false || strpos($medioPagoNombre, 'debito') !== false || strpos($medioPagoNombre, 'credito') !== false) {
-                $formaPago = '19'; // Tarjeta de débito
-            } elseif (strpos($medioPagoNombre, 'transferencia') !== false || strpos($medioPagoNombre, 'banco') !== false) {
-                $formaPago = '17'; // Transferencia bancaria
-            } elseif (strpos($medioPagoNombre, 'cheque') !== false) {
-                $formaPago = '02'; // Cheque
+            // Mapeo específico según los medios de pago de la empresa
+            // Nombres exactos de la BD: Efectivo, Transferencia, Tarjeta Débito, Tarjeta Crédito, 
+            // Tarjeta Banco, Transferencia Pichincha, Transferencia Guayaquil, Transferencia De Una
+            switch ($medioPagoNombre) {
+                case 'efectivo':
+                    $formaPago = '01'; // Sin sistema financiero
+                    break;
+                case 'transferencia':
+                case 'transferencia pichincha':
+                case 'transferencia guayaquil':
+                case 'transferencia de una':
+                    $formaPago = '20'; // Transferencia de fondos
+                    break;
+                case 'tarjeta débito':
+                case 'tarjeta banco':
+                    $formaPago = '16'; // Tarjeta de débito
+                    break;
+                case 'tarjeta crédito':
+                    $formaPago = '19'; // Tarjeta de crédito
+                    break;
+                default:
+                    // Si no coincide exactamente, usar lógica de detección por palabras clave
+                    if (strpos($medioPagoNombre, 'efectivo') !== false) {
+                        $formaPago = '01';
+                    } elseif (strpos($medioPagoNombre, 'transferencia') !== false) {
+                        $formaPago = '20';
+                    } elseif (strpos($medioPagoNombre, 'débito') !== false || strpos($medioPagoNombre, 'debito') !== false || strpos($medioPagoNombre, 'banco') !== false) {
+                        $formaPago = '16';
+                    } elseif (strpos($medioPagoNombre, 'crédito') !== false || strpos($medioPagoNombre, 'credito') !== false) {
+                        $formaPago = '19';
+                    }
+                    break;
             }
             
             // Log para depuración
-            \Log::info('Medio de pago mapeado', [
-                'medio_pago_original' => $medioPago->medio_de_pago,
-                'forma_pago_sri' => $formaPago
+            \Log::info('Medio de pago mapeado para XML', [
+                'medio_pago_original' => $medioPago->medio_de_pago ?? 'NO DISPONIBLE',
+                'medio_pago_lower' => $medioPagoNombre,
+                'forma_pago_sri' => $formaPago,
+                'coincidencia_exacta' => in_array($medioPagoNombre, [
+                    'efectivo', 'transferencia', 'transferencia pichincha', 
+                    'transferencia guayaquil', 'transferencia de una',
+                    'tarjeta débito', 'tarjeta banco', 'tarjeta crédito'
+                ]),
+                'entro_en_switch' => !empty($medioPagoNombre),
+                'mapeo_resultado' => [
+                    '01' => 'EFECTIVO',
+                    '16' => 'TARJETA DÉBITO/BANCO', 
+                    '19' => 'TARJETA CRÉDITO',
+                    '20' => 'TRANSFERENCIAS'
+                ][$formaPago] ?? 'DESCONOCIDO'
+            ]);
+            
+            \Log::info('Forma de pago que se incluirá en XML', [
+                'formaPago' => $formaPago,
+                'elemento_xml' => '<formaPago>' . $formaPago . '</formaPago>'
             ]);
             
             $pago->appendChild($dom->createElement('formaPago', $formaPago));
