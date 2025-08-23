@@ -76,7 +76,7 @@ class FacturaController extends Controller
         // Verificar si viene un pedido_id en la solicitud
         $pedido = null;
         if ($request->has('pedido_id')) {
-            $pedido = \App\Models\Pedido::find($request->pedido_id);
+            $pedido = \App\Models\Pedido::with(['pagos.mediodepago'])->find($request->pedido_id);
         }
         
         return view('facturas.create', compact('declarantes', 'pedido'));

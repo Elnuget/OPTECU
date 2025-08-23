@@ -48,6 +48,31 @@
                             ${{ number_format($pedido->total, 2) }}
                         </div>
                     </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <strong>Medio de Pago:</strong><br>
+                            @if($pedido->pagos && $pedido->pagos->count() > 0)
+                                @php
+                                    $primerPago = $pedido->pagos->first();
+                                @endphp
+                                <span class="badge badge-info">
+                                    {{ $primerPago->mediodepago->medio_de_pago ?? 'No especificado' }}
+                                </span>
+                                <small class="text-muted d-block">
+                                    Monto: ${{ number_format($primerPago->pago, 2) }}
+                                    @if($pedido->pagos->count() > 1)
+                                        <br><em>(+ {{ $pedido->pagos->count() - 1 }} pago(s) adicional(es))</em>
+                                    @endif
+                                </small>
+                            @else
+                                <span class="text-muted">Sin pagos registrados</span>
+                            @endif
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Fecha del Pedido:</strong><br>
+                            {{ $pedido->fecha ? $pedido->fecha->format('d/m/Y') : 'No especificada' }}
+                        </div>
+                    </div>
                     <small class="text-muted">
                         <i class="fas fa-info-circle"></i> 
                         Este número de orden se usará como secuencial en la clave de acceso del SRI
