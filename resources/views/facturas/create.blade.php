@@ -56,75 +56,73 @@
                         </div>
                         <div class="card-body">
                             <div class="row">
-                                @if(!empty($pedido->examen_visual))
+                                <!-- Examen Visual -->
                                 <div class="col-md-3">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="incluir_examen" name="incluir_examen" onchange="calcularTotales()">
+                                        <input class="form-check-input" type="checkbox" id="incluir_examen" name="incluir_examen" onchange="calcularTotales()" checked>
                                         <label class="form-check-label" for="incluir_examen">
                                             Examen Visual
                                         </label>
-                                        <div class="mt-2" id="precio_examen_container" style="display: none;">
+                                        <div class="mt-2" id="precio_examen_container">
                                             <input type="number" class="form-control form-control-sm" id="precio_examen" name="precio_examen" 
-                                                   placeholder="Precio examen" step="0.01" min="0" onchange="calcularTotales()">
+                                                   placeholder="Precio examen" step="0.01" min="0" onchange="calcularTotales()"
+                                                   value="{{ isset($pedido) && $pedido->examen_visual ? $pedido->examen_visual : '' }}">
                                             <small class="form-text text-muted">IVA: 0% (Exento)</small>
-                                            <small class="form-text text-info">{{ $pedido->examen_visual }}</small>
+                                            <small class="form-text text-info">Examen visual</small>
                                         </div>
                                     </div>
                                 </div>
-                                @endif
                                 
-                                @if($pedido->inventarios && $pedido->inventarios->count() > 0)
+                                <!-- Armazón/Accesorios -->
                                 <div class="col-md-3">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="incluir_armazon" name="incluir_armazon" onchange="calcularTotales()">
+                                        <input class="form-check-input" type="checkbox" id="incluir_armazon" name="incluir_armazon" onchange="calcularTotales()" checked>
                                         <label class="form-check-label" for="incluir_armazon">
                                             Armazón/Accesorios
                                         </label>
-                                        <div class="mt-2" id="precio_armazon_container" style="display: none;">
+                                        <div class="mt-2" id="precio_armazon_container">
                                             <input type="number" class="form-control form-control-sm" id="precio_armazon" name="precio_armazon" 
                                                    placeholder="Precio armazón" step="0.01" min="0" onchange="calcularTotales()"
-                                                   value="{{ $pedido->inventarios->sum(function($inv) { return $inv->pivot->precio * (1 - ($inv->pivot->descuento / 100)); }) }}">
+                                                   value="{{ isset($pedido) && $pedido->inventarios ? $pedido->inventarios->sum(function($inv) { return $inv->pivot->precio * (1 - ($inv->pivot->descuento / 100)); }) : '' }}">
                                             <small class="form-text text-muted">IVA: 15%</small>
-                                            <small class="form-text text-info">{{ $pedido->inventarios->count() }} artículo(s)</small>
+                                            <small class="form-text text-info">{{ isset($pedido) && $pedido->inventarios ? $pedido->inventarios->count() . ' artículo(s)' : 'Sin artículos' }}</small>
                                         </div>
                                     </div>
                                 </div>
-                                @endif
                                 
-                                @if($pedido->lunas && $pedido->lunas->count() > 0)
+                                <!-- Lunas -->
                                 <div class="col-md-3">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="incluir_luna" name="incluir_luna" onchange="calcularTotales()">
+                                        <input class="form-check-input" type="checkbox" id="incluir_luna" name="incluir_luna" onchange="calcularTotales()" checked>
                                         <label class="form-check-label" for="incluir_luna">
                                             Lunas
                                         </label>
-                                        <div class="mt-2" id="precio_luna_container" style="display: none;">
+                                        <div class="mt-2" id="precio_luna_container">
                                             <input type="number" class="form-control form-control-sm" id="precio_luna" name="precio_luna" 
                                                    placeholder="Precio luna" step="0.01" min="0" onchange="calcularTotales()"
-                                                   value="{{ $pedido->lunas->sum(function($luna) { return $luna->l_precio * (1 - ($luna->l_precio_descuento / 100)); }) }}">
+                                                   value="{{ isset($pedido) && $pedido->lunas ? $pedido->lunas->sum(function($luna) { return $luna->l_precio * (1 - ($luna->l_precio_descuento / 100)); }) : '' }}">
                                             <small class="form-text text-muted">IVA: 15%</small>
-                                            <small class="form-text text-info">{{ $pedido->lunas->count() }} luna(s)</small>
+                                            <small class="form-text text-info">{{ isset($pedido) && $pedido->lunas ? $pedido->lunas->count() . ' luna(s)' : 'Sin lunas' }}</small>
                                         </div>
                                     </div>
                                 </div>
-                                @endif
                                 
-                                @if($pedido->d_precio && $pedido->d_precio > 0)
+                                <!-- Compra Rápida -->
                                 <div class="col-md-3">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="incluir_accesorio" name="incluir_accesorio" onchange="calcularTotales()">
-                                        <label class="form-check-label" for="incluir_accesorio">
-                                            Accesorio Adicional
+                                        <input class="form-check-input" type="checkbox" id="incluir_compra_rapida" name="incluir_compra_rapida" onchange="calcularTotales()" checked>
+                                        <label class="form-check-label" for="incluir_compra_rapida">
+                                            Compra Rápida
                                         </label>
-                                        <div class="mt-2" id="precio_accesorio_container" style="display: none;">
-                                            <input type="number" class="form-control form-control-sm" id="precio_accesorio" name="precio_accesorio" 
-                                                   placeholder="Precio accesorio" step="0.01" min="0" onchange="calcularTotales()"
-                                                   value="{{ $pedido->d_precio }}">
-                                            <small class="form-text text-muted">IVA: 15%</small>
+                                        <div class="mt-2" id="precio_compra_rapida_container">
+                                            <input type="number" class="form-control form-control-sm" id="precio_compra_rapida" name="precio_compra_rapida" 
+                                                   placeholder="Precio compra rápida" step="0.01" min="0" onchange="calcularTotales()"
+                                                   value="{{ isset($pedido) && $pedido->valor_compra ? $pedido->valor_compra : '' }}">
+                                            <small class="form-text text-muted">IVA: 0% (Exento)</small>
+                                            <small class="form-text text-info">{{ isset($pedido) && $pedido->motivo_compra ? $pedido->motivo_compra : 'Servicio de compra rápida' }}</small>
                                         </div>
                                     </div>
                                 </div>
-                                @endif
                             </div>
                         </div>
                     </div>
@@ -187,7 +185,7 @@
         $('#incluir_examen').on('change', function() {
             $('#precio_examen_container').toggle(this.checked);
             if (!this.checked) {
-                $('#precio_examen').val('');
+                $('#precio_examen').val('{{ isset($pedido) && $pedido->examen_visual ? $pedido->examen_visual : "" }}');
             }
             calcularTotales();
         });
@@ -208,10 +206,10 @@
             calcularTotales();
         });
         
-        $('#incluir_accesorio').on('change', function() {
-            $('#precio_accesorio_container').toggle(this.checked);
+        $('#incluir_compra_rapida').on('change', function() {
+            $('#precio_compra_rapida_container').toggle(this.checked);
             if (!this.checked) {
-                $('#precio_accesorio').val('');
+                $('#precio_compra_rapida').val('{{ isset($pedido) && $pedido->valor_compra ? $pedido->valor_compra : "0" }}');
             }
             calcularTotales();
         });
@@ -243,11 +241,11 @@
                 iva += precioLuna * 0.15;
             }
             
-            // Accesorio - 15% IVA
-            const precioAccesorio = parseFloat($('#precio_accesorio').val()) || 0;
-            if ($('#incluir_accesorio').is(':checked') && precioAccesorio > 0) {
-                subtotal += precioAccesorio;
-                iva += precioAccesorio * 0.15;
+            // Compra Rápida - 0% IVA (exento)
+            const precioCompraRapida = parseFloat($('#precio_compra_rapida').val()) || 0;
+            if ($('#incluir_compra_rapida').is(':checked') && precioCompraRapida >= 0) {
+                subtotal += precioCompraRapida;
+                // No se suma IVA para compra rápida (0%)
             }
             
             total = subtotal + iva;
@@ -266,7 +264,7 @@
             if (!$('#incluir_examen').is(':checked') && 
                 !$('#incluir_armazon').is(':checked') && 
                 !$('#incluir_luna').is(':checked') && 
-                !$('#incluir_accesorio').is(':checked')) {
+                !$('#incluir_compra_rapida').is(':checked')) {
                 
                 Swal.fire({
                     title: 'Error',
@@ -364,27 +362,8 @@
         // Inicializar cálculos
         calcularTotales();
         
-        @if(isset($pedido) && $pedido)
-        // Auto-seleccionar elementos si ya tienen precios predefinidos
-        @if(!empty($pedido->examen_visual))
-        $('#incluir_examen').prop('checked', false); // Dejar sin seleccionar por defecto
-        @endif
-        
-        @if($pedido->inventarios && $pedido->inventarios->count() > 0)
-        $('#incluir_armazon').prop('checked', true).trigger('change');
-        @endif
-        
-        @if($pedido->lunas && $pedido->lunas->count() > 0)
-        $('#incluir_luna').prop('checked', true).trigger('change');
-        @endif
-        
-        @if($pedido->d_precio && $pedido->d_precio > 0)
-        $('#incluir_accesorio').prop('checked', true).trigger('change');
-        @endif
-        
         // Recalcular después de cargar los datos
         setTimeout(calcularTotales, 100);
-        @endif
     });
 </script>
 @stop
