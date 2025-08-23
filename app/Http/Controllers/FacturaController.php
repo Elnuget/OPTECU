@@ -516,7 +516,7 @@ class FacturaController extends Controller
             
             $pago->appendChild($dom->createElement('formaPago', $formaPago));
             $pago->appendChild($dom->createElement('total', number_format($total, 2, '.', '')));
-            $pago->appendChild($dom->createElement('plazo', '1'));
+            $pago->appendChild($dom->createElement('plazo', '0'));
             $pago->appendChild($dom->createElement('unidadTiempo', 'dias'));
             $pagos->appendChild($pago);
             $infoFactura->appendChild($pagos);
