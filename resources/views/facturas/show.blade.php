@@ -74,13 +74,42 @@
                 <div class="row">
                     <div class="col-md-12">
                         <strong>Mensajes del SRI:</strong>
-                        <div class="alert alert-info mt-2">
+                        <div class="alert alert-dark mt-2" style="color: white; background-color: #343a40; border-color: #495057;">
                             @php
-                                $mensajes = is_string($factura->mensajes_sri) ? json_decode($factura->mensajes_sri, true) : $factura->mensajes_sri;
+                                $mensajes = $factura->mensajes_sri_procesados ?? (
+                                    is_string($factura->mensajes_sri) ? json_decode($factura->mensajes_sri, true) : $factura->mensajes_sri
+                                );
                                 if (!is_array($mensajes)) $mensajes = [$factura->mensajes_sri];
                             @endphp
                             @foreach($mensajes as $mensaje)
-                                <div>• {{ $mensaje }}</div>
+                                <div class="mb-3 p-2" style="border-left: 3px solid #ffffff; background-color: rgba(255,255,255,0.1);">
+                                    @if(is_array($mensaje))
+                                        <div style="color: white; font-weight: bold; font-size: 14px;">
+                                            • {{ $mensaje['mensaje'] ?? 'Mensaje sin descripción' }}
+                                        </div>
+                                        @if(isset($mensaje['identificador']))
+                                            <div style="color: #f8f9fa; font-size: 12px; margin-top: 5px;">
+                                                <strong>Código:</strong> {{ $mensaje['identificador'] }}
+                                            </div>
+                                        @endif
+                                        @if(isset($mensaje['informacionAdicional']))
+                                            <div style="color: #f8f9fa; font-size: 12px; margin-top: 5px; word-break: break-word;">
+                                                <strong>Detalle:</strong> {{ $mensaje['informacionAdicional'] }}
+                                            </div>
+                                        @endif
+                                        @if(isset($mensaje['tipo']))
+                                            <div style="margin-top: 8px;">
+                                                <span class="badge badge-{{ $mensaje['tipo'] === 'ERROR' ? 'danger' : 'warning' }}" style="font-size: 11px;">
+                                                    {{ $mensaje['tipo'] }}
+                                                </span>
+                                            </div>
+                                        @endif
+                                    @else
+                                        <div style="color: white; font-weight: bold; font-size: 14px;">
+                                            • {{ is_string($mensaje) ? $mensaje : 'Mensaje no válido' }}
+                                        </div>
+                                    @endif
+                                </div>
                             @endforeach
                         </div>
                     </div>

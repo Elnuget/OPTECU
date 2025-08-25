@@ -559,16 +559,28 @@ class FacturaController extends Controller
             
             // Información adicional
             $infoAdicional = $dom->createElement('infoAdicional');
+            
+            // Agregar teléfono si existe
             if (is_object($pedido) && property_exists($pedido, 'celular') && $pedido->celular) {
-                $campoTelefono = $dom->createElement('campoAdicional', $pedido->celular);
+                $campoTelefono = $dom->createElement('campoAdicional', htmlspecialchars($pedido->celular));
                 $campoTelefono->setAttribute('nombre', 'Telefono');
                 $infoAdicional->appendChild($campoTelefono);
             }
+            
+            // Agregar email si existe
             if (is_object($pedido) && property_exists($pedido, 'correo_electronico') && $pedido->correo_electronico) {
                 $campoEmail = $dom->createElement('campoAdicional', htmlspecialchars($pedido->correo_electronico));
                 $campoEmail->setAttribute('nombre', 'Email');
                 $infoAdicional->appendChild($campoEmail);
             }
+            
+            // Si no hay campos adicionales, agregar uno por defecto (requerido por el SRI)
+            if (!$infoAdicional->hasChildNodes()) {
+                $campoDefault = $dom->createElement('campoAdicional', 'SISTEMA DE FACTURACION ELECTRONICA');
+                $campoDefault->setAttribute('nombre', 'Observaciones');
+                $infoAdicional->appendChild($campoDefault);
+            }
+            
             $factura->appendChild($infoAdicional);
             
             // Guardar archivo XML
@@ -650,6 +662,53 @@ class FacturaController extends Controller
         try {
             $factura = Factura::with(['declarante', 'pedido'])->findOrFail($id);
             
+            // Procesar mensajes del SRI para la vista
+            $mensajesSriProcesados = null;
+            if ($factura->mensajes_sri) {
+                try {
+                    \Log::info('Procesando mensajes SRI para vista', [
+                        'factura_id' => $id,
+                        'mensajes_sri_raw' => $factura->mensajes_sri,
+                        'tipo_mensajes_sri' => gettype($factura->mensajes_sri)
+                    ]);
+                    
+                    $mensajesSriProcesados = is_string($factura->mensajes_sri) 
+                        ? json_decode($factura->mensajes_sri, true) 
+                        : $factura->mensajes_sri;
+                        
+                    // Asegurarse de que sea un array
+                    if (!is_array($mensajesSriProcesados)) {
+                        $mensajesSriProcesados = [$factura->mensajes_sri];
+                    }
+                    
+                    \Log::info('Mensajes SRI procesados para vista', [
+                        'factura_id' => $id,
+                        'mensajes_procesados' => $mensajesSriProcesados,
+                        'total_mensajes' => count($mensajesSriProcesados)
+                    ]);
+                    
+                } catch (\Exception $e) {
+                    \Log::error('Error procesando mensajes SRI para vista', [
+                        'factura_id' => $id,
+                        'error' => $e->getMessage(),
+                        'mensajes_sri_original' => $factura->mensajes_sri
+                    ]);
+                    
+                    // Si hay error al decodificar, usar el valor original como string
+                    $mensajesSriProcesados = [
+                        [
+                            'mensaje' => is_string($factura->mensajes_sri) ? $factura->mensajes_sri : 'Error procesando mensajes del SRI',
+                            'tipo' => 'ERROR',
+                            'identificador' => 'PROCESAMIENTO',
+                            'informacionAdicional' => 'No se pudieron procesar los mensajes del SRI correctamente'
+                        ]
+                    ];
+                }
+            }
+            
+            // Agregar los mensajes procesados a la factura
+            $factura->mensajes_sri_procesados = $mensajesSriProcesados;
+            
             // Leer el contenido del XML si existe
             $xmlContent = null;
             $xmlFormatted = null;
@@ -678,6 +737,13 @@ class FacturaController extends Controller
                 $data = $factura->toArray();
                 $data['pedidos'] = $pedidos;
                 $data['xml_content'] = $xmlContent;
+                $data['mensajes_sri_procesados'] = $mensajesSriProcesados;
+                
+                \Log::info('Devolviendo factura via JSON', [
+                    'factura_id' => $id,
+                    'tiene_mensajes_sri' => !empty($mensajesSriProcesados),
+                    'total_mensajes' => $mensajesSriProcesados ? count($mensajesSriProcesados) : 0
+                ]);
                 
                 return response()->json([
                     'success' => true,
@@ -958,6 +1024,14 @@ class FacturaController extends Controller
             $factura->estado = 'ENVIADA';
             $factura->save();
 
+            // Log para verificar contenido del XML antes de enviar
+            \Log::info('XML que se enviará al SRI', [
+                'factura_id' => $id,
+                'xml_tiene_infoAdicional' => strpos($xmlFirmado, '<infoAdicional>') !== false,
+                'xml_tiene_campoAdicional' => strpos($xmlFirmado, '<campoAdicional') !== false,
+                'xml_preview_infoAdicional' => $this->extraerSeccionXML($xmlFirmado, 'infoAdicional')
+            ]);
+
             $resultadoSRI = $this->enviarAlSRI($xmlFirmado);
             
             \Log::info('Resultado del SRI', [
@@ -969,48 +1043,104 @@ class FacturaController extends Controller
                 // Error al enviar al SRI
                 $factura->estado = 'DEVUELTA';
                 $factura->estado_sri = 'DEVUELTA';
-                $factura->mensajes_sri = json_encode($resultadoSRI['errors'] ?? [$resultadoSRI['message']]);
+                
+                // Recopilar todos los detalles de error del SRI
+                $erroresDetallados = [];
+                if (isset($resultadoSRI['errores_detallados'])) {
+                    $erroresDetallados = $resultadoSRI['errores_detallados'];
+                } else {
+                    $erroresDetallados = $resultadoSRI['errors'] ?? [$resultadoSRI['message']];
+                }
+                
+                $factura->mensajes_sri = json_encode($erroresDetallados);
                 $factura->save();
 
                 \Log::error('Error al enviar al SRI', [
                     'factura_id' => $id,
                     'error_message' => $resultadoSRI['message'],
-                    'errors' => $resultadoSRI['errors'] ?? []
+                    'errors' => $resultadoSRI['errors'] ?? [],
+                    'errores_detallados' => $erroresDetallados
                 ]);
+
+                // Preparar mensaje de error más detallado para el usuario
+                $mensajeError = 'Error del SRI: ' . $resultadoSRI['message'];
+                if (!empty($erroresDetallados)) {
+                    $mensajeError .= "\n\nDetalles de los errores:";
+                    foreach ($erroresDetallados as $index => $error) {
+                        if (is_array($error)) {
+                            $mensajeError .= "\n" . ($index + 1) . ". " . ($error['mensaje'] ?? 'Error sin descripción');
+                            if (isset($error['informacionAdicional'])) {
+                                $mensajeError .= "\n   Información adicional: " . $error['informacionAdicional'];
+                            }
+                            if (isset($error['identificador'])) {
+                                $mensajeError .= "\n   Código: " . $error['identificador'];
+                            }
+                        } else {
+                            $mensajeError .= "\n" . ($index + 1) . ". " . $error;
+                        }
+                    }
+                }
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error al enviar al SRI: ' . $resultadoSRI['message'],
-                    'errors' => $resultadoSRI['errors'] ?? []
+                    'message' => $mensajeError,
+                    'errors' => $resultadoSRI['errors'] ?? [],
+                    'errores_detallados' => $erroresDetallados
                 ], 422);
             }
 
             // Actualizar estado según respuesta del SRI
-            $estadoSRI = $resultadoSRI['estado'];
-            
-            if ($estadoSRI === 'RECIBIDA') {
-                $factura->estado = 'RECIBIDA';
-                $factura->estado_sri = 'RECIBIDA';
-            } elseif ($estadoSRI === 'AUTORIZADA') {
-                $factura->estado = 'AUTORIZADA';
-                $factura->estado_sri = 'AUTORIZADA';
-            } else {
-                $factura->estado = 'DEVUELTA';
-                $factura->estado_sri = $estadoSRI;
-                $factura->mensajes_sri = json_encode($resultadoSRI['errors'] ?? ['Estado desconocido: ' . $estadoSRI]);
-            }
-            
-            $factura->numero_autorizacion = $resultadoSRI['numero_autorizacion'] ?? null;
-            $factura->fecha_autorizacion = $resultadoSRI['fecha_autorizacion'] ? 
-                \Carbon\Carbon::parse($resultadoSRI['fecha_autorizacion']) : now();
-            $factura->save();
+            try {
+                $estadoSRI = $resultadoSRI['estado'] ?? 'DESCONOCIDO';
+                
+                \Log::info('Procesando estado del SRI', [
+                    'factura_id' => $id,
+                    'estado_sri' => $estadoSRI,
+                    'resultado_completo' => $resultadoSRI
+                ]);
+                
+                if ($estadoSRI === 'RECIBIDA') {
+                    $factura->estado = 'RECIBIDA';
+                    $factura->estado_sri = 'RECIBIDA';
+                } elseif ($estadoSRI === 'AUTORIZADA') {
+                    $factura->estado = 'AUTORIZADA';
+                    $factura->estado_sri = 'AUTORIZADA';
+                } else {
+                    $factura->estado = 'DEVUELTA';
+                    $factura->estado_sri = $estadoSRI;
+                    $factura->mensajes_sri = json_encode($resultadoSRI['errors'] ?? ['Estado desconocido: ' . $estadoSRI]);
+                }
+                
+                $factura->numero_autorizacion = $resultadoSRI['numero_autorizacion'] ?? null;
+                $factura->fecha_autorizacion = isset($resultadoSRI['fecha_autorizacion']) && $resultadoSRI['fecha_autorizacion'] ? 
+                    \Carbon\Carbon::parse($resultadoSRI['fecha_autorizacion']) : now();
+                $factura->save();
 
-            \Log::info('Factura actualizada exitosamente', [
-                'factura_id' => $id,
-                'estado' => $factura->estado,
-                'estado_sri' => $factura->estado_sri,
-                'numero_autorizacion' => $factura->numero_autorizacion
-            ]);
+                \Log::info('Factura actualizada exitosamente', [
+                    'factura_id' => $id,
+                    'estado' => $factura->estado,
+                    'estado_sri' => $factura->estado_sri,
+                    'numero_autorizacion' => $factura->numero_autorizacion
+                ]);
+
+            } catch (\Exception $e) {
+                \Log::error('Error al procesar respuesta del SRI', [
+                    'factura_id' => $id,
+                    'error' => $e->getMessage(),
+                    'resultado_sri' => $resultadoSRI
+                ]);
+                
+                // Marcar como error de procesamiento
+                $factura->estado = 'ERROR_PROCESAMIENTO';
+                $factura->estado_sri = 'ERROR_PROCESAMIENTO';
+                $factura->mensajes_sri = json_encode(['Error al procesar respuesta: ' . $e->getMessage()]);
+                $factura->save();
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al procesar respuesta del SRI: ' . $e->getMessage()
+                ], 500);
+            }
 
             \Log::info('=== FIN PROCESO FIRMA Y ENVÍO EXITOSO ===', ['factura_id' => $id]);
 
@@ -1317,13 +1447,6 @@ class FacturaController extends Controller
                 'xml_length' => strlen($xmlFirmado)
             ]);
 
-            // URL del servicio web del SRI (pruebas)
-            $urlSRI = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl';
-            
-            \Log::info('Configurando cliente SOAP', [
-                'url_sri' => $urlSRI
-            ]);
-
             // Convertir XML a Base64
             $xmlBase64 = base64_encode($xmlFirmado);
             
@@ -1332,88 +1455,89 @@ class FacturaController extends Controller
                 'xml_base64_preview' => substr($xmlBase64, 0, 100) . '...'
             ]);
 
-            // Preparar solicitud SOAP
-            $soapClient = new \SoapClient($urlSRI, [
-                'trace' => true,
-                'exceptions' => true,
-                'connection_timeout' => 30,
-                'cache_wsdl' => WSDL_CACHE_NONE
+            // Crear SOAP envelope manualmente (como en el código funcional)
+            $soapEnvelope = $this->crearSoapEnvelope($xmlBase64);
+            
+            \Log::info('SOAP envelope creado', [
+                'soap_length' => strlen($soapEnvelope),
+                'soap_preview' => substr($soapEnvelope, 0, 500) . '...'
             ]);
 
-            \Log::info('Cliente SOAP creado, enviando validarComprobante...');
-
-            // Llamar al método validarComprobante
-            $response = $soapClient->validarComprobante([
-                'xml' => $xmlBase64
-            ]);
-
-            \Log::info('Respuesta del SRI recibida', [
-                'response_type' => gettype($response),
-                'response_data' => is_object($response) ? get_object_vars($response) : $response
-            ]);
-
-            // Procesar respuesta
-            if (isset($response->RespuestaRecepcionComprobante)) {
-                $respuesta = $response->RespuestaRecepcionComprobante;
-                
-                \Log::info('Procesando RespuestaRecepcionComprobante', [
-                    'estado' => $respuesta->estado ?? 'NO_DEFINIDO',
-                    'numero_autorizacion' => $respuesta->numeroAutorizacion ?? 'N/A',
-                    'fecha_autorizacion' => $respuesta->fechaAutorizacion ?? 'N/A'
-                ]);
-                
-                if ($respuesta->estado === 'RECIBIDA') {
-                    \Log::info('=== COMPROBANTE RECIBIDO EXITOSAMENTE ===');
-                    return [
-                        'success' => true,
-                        'estado' => 'RECIBIDA',
-                        'numero_autorizacion' => $respuesta->numeroAutorizacion ?? null,
-                        'fecha_autorizacion' => $respuesta->fechaAutorizacion ?? null
-                    ];
-                } else {
-                    // Estado DEVUELTA u otro
-                    $errores = [];
-                    if (isset($respuesta->comprobantes->comprobante->mensajes)) {
-                        foreach ($respuesta->comprobantes->comprobante->mensajes as $mensaje) {
-                            $errores[] = $mensaje->mensaje;
-                        }
-                    }
-                    
-                    \Log::warning('Comprobante devuelto por el SRI', [
-                        'estado' => $respuesta->estado,
-                        'errores' => $errores
-                    ]);
-                    
-                    return [
-                        'success' => false,
-                        'message' => 'Comprobante devuelto por el SRI',
-                        'estado' => $respuesta->estado,
-                        'errors' => $errores
-                    ];
-                }
+            // Enviar con cURL (como en el código funcional)
+            $respuesta = $this->enviarSoapRequestCurl($soapEnvelope);
+            
+            if ($respuesta === false) {
+                \Log::error('Error al conectar con el servicio del SRI');
+                return [
+                    'success' => false,
+                    'message' => 'Error al conectar con el servicio del SRI',
+                    'estado' => 'ERROR_CONEXION'
+                ];
             }
 
-            \Log::error('Respuesta inesperada del SRI', [
-                'response' => $response
+            \Log::info('Respuesta del SRI recibida', [
+                'response_length' => strlen($respuesta),
+                'response_preview' => substr($respuesta, 0, 1000) . '...'
             ]);
 
-            return [
-                'success' => false,
-                'message' => 'Respuesta inesperada del SRI'
-            ];
-
-        } catch (\SoapFault $e) {
-            \Log::error('=== ERROR SOAP AL CONECTAR CON SRI ===', [
-                'error_message' => $e->getMessage(),
-                'error_code' => $e->getCode(),
-                'error_file' => $e->getFile(),
-                'error_line' => $e->getLine()
+            // Procesar la respuesta XML manualmente (como en el código funcional)
+            $respuestaProcesada = $this->procesarRespuestaSRI($respuesta);
+            
+            \Log::info('Respuesta procesada del SRI', [
+                'estado' => $respuestaProcesada['estado'] ?? 'NO_DEFINIDO',
+                'respuesta_completa' => $respuestaProcesada
             ]);
 
-            return [
-                'success' => false,
-                'message' => 'Error de conexión con el SRI: ' . $e->getMessage()
-            ];
+            if ($respuestaProcesada['estado'] === 'RECIBIDA') {
+                \Log::info('=== COMPROBANTE RECIBIDO EXITOSAMENTE ===');
+                return [
+                    'success' => true,
+                    'estado' => 'RECIBIDA',
+                    'numero_autorizacion' => null,
+                    'fecha_autorizacion' => null
+                ];
+            } elseif ($respuestaProcesada['estado'] === 'DEVUELTA') {
+                // Extraer errores de los comprobantes
+                $errores = [];
+                $erroresDetallados = [];
+                
+                if (!empty($respuestaProcesada['comprobantes'])) {
+                    foreach ($respuestaProcesada['comprobantes'] as $comprobante) {
+                        if (!empty($comprobante['mensajes'])) {
+                            foreach ($comprobante['mensajes'] as $mensaje) {
+                                $errores[] = $mensaje['mensaje'] ?? 'Error sin descripción';
+                                $erroresDetallados[] = $mensaje; // Incluir toda la información del mensaje
+                            }
+                        }
+                    }
+                }
+                
+                \Log::warning('Comprobante devuelto por el SRI', [
+                    'estado' => $respuestaProcesada['estado'],
+                    'errores' => $errores,
+                    'errores_detallados' => $erroresDetallados
+                ]);
+                
+                return [
+                    'success' => false,
+                    'message' => 'Comprobante devuelto por el SRI',
+                    'estado' => 'DEVUELTA',
+                    'errors' => $errores,
+                    'errores_detallados' => $erroresDetallados
+                ];
+            } else {
+                \Log::error('Estado desconocido del SRI', [
+                    'estado' => $respuestaProcesada['estado'],
+                    'respuesta' => $respuestaProcesada
+                ]);
+                
+                return [
+                    'success' => false,
+                    'message' => 'Estado desconocido del SRI: ' . ($respuestaProcesada['estado'] ?? 'INDEFINIDO'),
+                    'estado' => $respuestaProcesada['estado'] ?? 'DESCONOCIDO'
+                ];
+            }
+
         } catch (\Exception $e) {
             \Log::error('=== ERROR GENERAL AL ENVIAR AL SRI ===', [
                 'error_message' => $e->getMessage(),
@@ -1424,8 +1548,216 @@ class FacturaController extends Controller
 
             return [
                 'success' => false,
-                'message' => 'Error al procesar respuesta del SRI: ' . $e->getMessage()
+                'message' => 'Error al procesar respuesta del SRI: ' . $e->getMessage(),
+                'estado' => 'ERROR_PROCESAMIENTO'
             ];
+        }
+    }
+
+    /**
+     * Crear SOAP envelope para enviar al SRI
+     *
+     * @param  string  $xmlBase64
+     * @return string
+     */
+    private function crearSoapEnvelope($xmlBase64)
+    {
+        return '<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+               xmlns:rec="http://ec.gob.sri.ws.recepcion">
+    <soap:Header />
+    <soap:Body>
+        <rec:validarComprobante>
+            <xml>' . $xmlBase64 . '</xml>
+        </rec:validarComprobante>
+    </soap:Body>
+</soap:Envelope>';
+    }
+
+    /**
+     * Enviar petición SOAP con cURL
+     *
+     * @param  string  $soapEnvelope
+     * @return string|false
+     */
+    private function enviarSoapRequestCurl($soapEnvelope)
+    {
+        $url = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline';
+        
+        $headers = [
+            'Content-Type: text/xml; charset=utf-8',
+            'SOAPAction: ""',
+            'Content-Length: ' . strlen($soapEnvelope)
+        ];
+        
+        \Log::info('Enviando petición cURL al SRI', [
+            'url' => $url,
+            'headers' => $headers
+        ]);
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $soapEnvelope);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Sistema Facturacion Electronica OPTECU');
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        
+        curl_close($ch);
+        
+        \Log::info('Respuesta cURL del SRI', [
+            'http_code' => $httpCode,
+            'curl_error' => $error,
+            'response_length' => $response ? strlen($response) : 0
+        ]);
+        
+        if ($error) {
+            \Log::error('Error CURL: ' . $error);
+            return false;
+        }
+        
+        if ($httpCode !== 200) {
+            \Log::error('HTTP Error: ' . $httpCode);
+            return false;
+        }
+        
+        return $response;
+    }
+
+    /**
+     * Procesar respuesta XML del SRI
+     *
+     * @param  string  $xmlResponse
+     * @return array
+     */
+    private function procesarRespuestaSRI($xmlResponse)
+    {
+        try {
+            \Log::info('Procesando respuesta XML del SRI');
+            
+            // Limpiar posibles BOM y espacios
+            $xmlResponse = trim($xmlResponse);
+            if (substr($xmlResponse, 0, 3) === "\xEF\xBB\xBF") {
+                $xmlResponse = substr($xmlResponse, 3);
+            }
+            
+            // Cargar el XML
+            $dom = new \DOMDocument();
+            $loadResult = $dom->loadXML($xmlResponse);
+            
+            if (!$loadResult) {
+                \Log::error('Error al cargar XML de respuesta del SRI');
+                return [
+                    'estado' => 'ERROR',
+                    'comprobantes' => [],
+                    'error' => 'Error al cargar XML de respuesta'
+                ];
+            }
+            
+            $xpath = new \DOMXPath($dom);
+            $xpath->registerNamespace('soap', 'http://schemas.xmlsoap.org/soap/envelope/');
+            $xpath->registerNamespace('ns2', 'http://ec.gob.sri.ws.recepcion');
+            
+            // Extraer el estado
+            $estadoNode = $xpath->query('//ns2:validarComprobanteResponse/RespuestaRecepcionComprobante/estado');
+            $estado = $estadoNode->length > 0 ? $estadoNode->item(0)->textContent : '';
+            
+            \Log::info('Estado extraído del XML', ['estado' => $estado]);
+            
+            $respuesta = [
+                'estado' => $estado,
+                'comprobantes' => []
+            ];
+            
+            // Si hay errores, extraer los mensajes
+            $comprobantesNodes = $xpath->query('//ns2:validarComprobanteResponse/RespuestaRecepcionComprobante/comprobantes/comprobante');
+            
+            foreach ($comprobantesNodes as $comprobanteNode) {
+                $comprobante = [];
+                
+                $claveAccesoNode = $xpath->query('.//claveAcceso', $comprobanteNode);
+                if ($claveAccesoNode->length > 0) {
+                    $comprobante['claveAcceso'] = $claveAccesoNode->item(0)->textContent;
+                }
+                
+                $mensajesNodes = $xpath->query('.//mensajes/mensaje', $comprobanteNode);
+                $comprobante['mensajes'] = [];
+                
+                foreach ($mensajesNodes as $mensajeNode) {
+                    $mensaje = [];
+                    
+                    $identificadorNode = $xpath->query('.//identificador', $mensajeNode);
+                    if ($identificadorNode->length > 0) {
+                        $mensaje['identificador'] = $identificadorNode->item(0)->textContent;
+                    }
+                    
+                    $mensajeTextNode = $xpath->query('.//mensaje', $mensajeNode);
+                    if ($mensajeTextNode->length > 0) {
+                        $mensaje['mensaje'] = $mensajeTextNode->item(0)->textContent;
+                    }
+                    
+                    $infoAdicionalNode = $xpath->query('.//informacionAdicional', $mensajeNode);
+                    if ($infoAdicionalNode->length > 0) {
+                        $mensaje['informacionAdicional'] = $infoAdicionalNode->item(0)->textContent;
+                    }
+                    
+                    $tipoNode = $xpath->query('.//tipo', $mensajeNode);
+                    if ($tipoNode->length > 0) {
+                        $mensaje['tipo'] = $tipoNode->item(0)->textContent;
+                    }
+                    
+                    $comprobante['mensajes'][] = $mensaje;
+                }
+                
+                $respuesta['comprobantes'][] = $comprobante;
+            }
+            
+            \Log::info('Respuesta XML procesada exitosamente', [
+                'estado' => $respuesta['estado'],
+                'num_comprobantes' => count($respuesta['comprobantes'])
+            ]);
+            
+            return $respuesta;
+            
+        } catch (\Exception $e) {
+            \Log::error('Error procesando respuesta SRI: ' . $e->getMessage());
+            return [
+                'estado' => 'ERROR',
+                'comprobantes' => [],
+                'error' => 'Error procesando respuesta: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Extraer una sección específica del XML para logging
+     *
+     * @param  string  $xml
+     * @param  string  $elemento
+     * @return string
+     */
+    private function extraerSeccionXML($xml, $elemento)
+    {
+        try {
+            $inicio = strpos($xml, '<' . $elemento . '>');
+            $fin = strpos($xml, '</' . $elemento . '>');
+            
+            if ($inicio !== false && $fin !== false) {
+                $longitud = $fin - $inicio + strlen('</' . $elemento . '>');
+                return substr($xml, $inicio, $longitud);
+            }
+            
+            return 'Elemento <' . $elemento . '> no encontrado';
+        } catch (\Exception $e) {
+            return 'Error extrayendo elemento: ' . $e->getMessage();
         }
     }
 }
