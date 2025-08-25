@@ -211,8 +211,8 @@ class FacturaController extends Controller
                 $subtotal += $precioLuna;
                 $iva += $ivaLuna;
                 $elementos[] = [
-                    'tipo' => 'Luna',
-                    'descripcion' => 'Luna',
+                    'tipo' => 'Cristalería',
+                    'descripcion' => 'Cristalería',
                     'precio' => $precioLuna,
                     'iva_porcentaje' => 15,
                     'iva_valor' => $ivaLuna
