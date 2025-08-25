@@ -1792,4 +1792,508 @@ class FacturaController extends Controller
             return 'Error extrayendo elemento: ' . $e->getMessage();
         }
     }
+    
+    /**
+     * Autorizar comprobante en el SRI
+     *
+     * @param  int  $id
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function autorizarComprobante($id, Request $request)
+    {
+        try {
+            // Log inicial
+            \Log::info('=== INICIO PROCESO AUTORIZACIÓN ===', [
+                'factura_id' => $id,
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+
+            // Obtener la factura
+            \Log::info('Buscando factura para autorización', ['factura_id' => $id]);
+            $factura = Factura::with('declarante')->findOrFail($id);
+            
+            \Log::info('Factura encontrada para autorización', [
+                'factura_id' => $factura->id,
+                'estado_actual' => $factura->estado ?? 'SIN_ESTADO',
+                'estado_sri' => $factura->estado_sri ?? 'SIN_ESTADO_SRI'
+            ]);
+
+            // Verificar que la factura esté en estado RECIBIDA
+            if ($factura->estado !== 'RECIBIDA') {
+                \Log::error('Factura no está en estado RECIBIDA', [
+                    'factura_id' => $id,
+                    'estado_actual' => $factura->estado
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La factura debe estar en estado RECIBIDA para poder autorizarla. Estado actual: ' . ($factura->estado ?? 'DESCONOCIDO')
+                ], 422);
+            }
+
+            // Verificar que no haya sido autorizada ya
+            if (!empty($factura->fecha_autorizacion) || $factura->estado === 'AUTORIZADA') {
+                \Log::warning('Factura ya autorizada', [
+                    'factura_id' => $id,
+                    'fecha_autorizacion' => $factura->fecha_autorizacion
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Esta factura ya fue autorizada'
+                ], 422);
+            }
+
+            // Verificar que tenga clave de acceso
+            $claveAcceso = $this->extraerClaveAccesoDeXML($factura);
+            if (empty($claveAcceso)) {
+                \Log::error('Factura sin clave de acceso', ['factura_id' => $id]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La factura no tiene clave de acceso válida'
+                ], 422);
+            }
+
+            \Log::info('Iniciando solicitud de autorización al SRI', [
+                'factura_id' => $id,
+                'clave_acceso' => $claveAcceso
+            ]);
+
+            // Enviar solicitud de autorización al SRI
+            $resultadoSRI = $this->solicitarAutorizacionSRI($claveAcceso);
+            
+            \Log::info('Resultado de autorización del SRI', [
+                'factura_id' => $id,
+                'resultado' => $resultadoSRI
+            ]);
+
+            if (!$resultadoSRI['success']) {
+                // Error al autorizar en SRI
+                $factura->mensajes_sri = json_encode($resultadoSRI['errores_detallados'] ?? [$resultadoSRI['message']]);
+                $factura->save();
+
+                \Log::error('Error al autorizar en SRI', [
+                    'factura_id' => $id,
+                    'error_message' => $resultadoSRI['message'],
+                    'errors' => $resultadoSRI['errors'] ?? []
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error del SRI: ' . $resultadoSRI['message'],
+                    'errors' => $resultadoSRI['errors'] ?? []
+                ], 422);
+            }
+
+            // Actualizar estado según respuesta del SRI
+            $estadoSRI = $resultadoSRI['estado'] ?? 'DESCONOCIDO';
+            
+            if ($estadoSRI === 'AUTORIZADO') {
+                $factura->estado = 'AUTORIZADA';
+                $factura->estado_sri = 'AUTORIZADA';
+                $factura->numero_autorizacion = $resultadoSRI['numero_autorizacion'] ?? null;
+                $factura->fecha_autorizacion = isset($resultadoSRI['fecha_autorizacion']) && $resultadoSRI['fecha_autorizacion'] ? 
+                    \Carbon\Carbon::parse($resultadoSRI['fecha_autorizacion']) : now();
+                    
+            } elseif (in_array($estadoSRI, ['RECHAZADO', 'NO_AUTORIZADO'])) {
+                $factura->estado = 'NO_AUTORIZADA';
+                $factura->estado_sri = 'NO_AUTORIZADA';
+                $factura->mensajes_sri = json_encode($resultadoSRI['errores_detallados'] ?? ['No autorizada por el SRI']);
+                
+            } else {
+                $factura->estado = 'ERROR_AUTORIZACION';
+                $factura->estado_sri = $estadoSRI;
+                $factura->mensajes_sri = json_encode($resultadoSRI['errores_detallados'] ?? ['Estado desconocido: ' . $estadoSRI]);
+            }
+            
+            $factura->save();
+
+            \Log::info('Factura actualizada después de autorización', [
+                'factura_id' => $id,
+                'estado' => $factura->estado,
+                'estado_sri' => $factura->estado_sri,
+                'numero_autorizacion' => $factura->numero_autorizacion
+            ]);
+
+            \Log::info('=== FIN PROCESO AUTORIZACIÓN EXITOSO ===', ['factura_id' => $id]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $estadoSRI === 'AUTORIZADO' ? 'Factura autorizada exitosamente' : 'Proceso de autorización completado',
+                'data' => [
+                    'estado' => $factura->estado,
+                    'estado_sri' => $factura->estado_sri,
+                    'numero_autorizacion' => $factura->numero_autorizacion,
+                    'fecha_autorizacion' => $factura->fecha_autorizacion
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('=== ERROR CRÍTICO EN AUTORIZACIÓN ===', [
+                'factura_id' => $id,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Extraer clave de acceso del XML de la factura
+     *
+     * @param  \App\Models\Factura  $factura
+     * @return string|null
+     */
+    private function extraerClaveAccesoDeXML($factura)
+    {
+        try {
+            if (!$factura->xml) {
+                return null;
+            }
+            
+            $xmlPath = storage_path('app/public/' . $factura->xml);
+            if (!file_exists($xmlPath)) {
+                return null;
+            }
+            
+            $xmlContent = file_get_contents($xmlPath);
+            if (!$xmlContent) {
+                return null;
+            }
+            
+            // Buscar clave de acceso en el XML
+            $dom = new \DOMDocument();
+            if (!$dom->loadXML($xmlContent)) {
+                return null;
+            }
+            
+            $xpath = new \DOMXPath($dom);
+            $claveAccesoNode = $xpath->query('//claveAcceso');
+            
+            if ($claveAccesoNode->length > 0) {
+                return $claveAccesoNode->item(0)->textContent;
+            }
+            
+            return null;
+            
+        } catch (\Exception $e) {
+            \Log::error('Error extrayendo clave de acceso del XML', [
+                'factura_id' => $factura->id,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+    
+    /**
+     * Solicitar autorización al SRI
+     *
+     * @param  string  $claveAcceso
+     * @return array
+     */
+    private function solicitarAutorizacionSRI($claveAcceso)
+    {
+        try {
+            \Log::info('=== INICIO SOLICITUD AUTORIZACIÓN SRI ===', [
+                'clave_acceso' => $claveAcceso
+            ]);
+
+            // Crear SOAP envelope para autorización
+            $soapEnvelope = $this->crearSoapEnvelopeAutorizacion($claveAcceso);
+            
+            \Log::info('SOAP envelope de autorización creado', [
+                'soap_length' => strlen($soapEnvelope)
+            ]);
+
+            // Enviar con cURL
+            $respuesta = $this->enviarSoapRequestAutorizacion($soapEnvelope);
+            
+            if ($respuesta === false) {
+                \Log::error('Error al conectar con el servicio de autorización del SRI');
+                return [
+                    'success' => false,
+                    'message' => 'Error al conectar con el servicio de autorización del SRI',
+                    'estado' => 'ERROR_CONEXION'
+                ];
+            }
+
+            \Log::info('Respuesta de autorización del SRI recibida', [
+                'response_length' => strlen($respuesta)
+            ]);
+
+            // Procesar la respuesta XML
+            $respuestaProcesada = $this->procesarRespuestaAutorizacionSRI($respuesta);
+            
+            \Log::info('Respuesta de autorización procesada', [
+                'estado' => $respuestaProcesada['estado'] ?? 'NO_DEFINIDO',
+                'respuesta_completa' => $respuestaProcesada
+            ]);
+
+            if ($respuestaProcesada['estado'] === 'AUTORIZADO') {
+                \Log::info('=== COMPROBANTE AUTORIZADO EXITOSAMENTE ===');
+                return [
+                    'success' => true,
+                    'estado' => 'AUTORIZADO',
+                    'numero_autorizacion' => $respuestaProcesada['numeroAutorizacion'] ?? null,
+                    'fecha_autorizacion' => $respuestaProcesada['fechaAutorizacion'] ?? null
+                ];
+            } else {
+                // Estado RECHAZADO, NO_AUTORIZADO u otro
+                $errores = [];
+                $erroresDetallados = [];
+                
+                if (!empty($respuestaProcesada['mensajes'])) {
+                    foreach ($respuestaProcesada['mensajes'] as $mensaje) {
+                        $errores[] = $mensaje['mensaje'] ?? 'Error sin descripción';
+                        $erroresDetallados[] = $mensaje;
+                    }
+                }
+                
+                \Log::warning('Comprobante no autorizado por el SRI', [
+                    'estado' => $respuestaProcesada['estado'],
+                    'errores' => $errores
+                ]);
+                
+                return [
+                    'success' => false,
+                    'message' => 'Comprobante no autorizado por el SRI',
+                    'estado' => $respuestaProcesada['estado'],
+                    'errors' => $errores,
+                    'errores_detallados' => $erroresDetallados
+                ];
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('=== ERROR GENERAL EN AUTORIZACIÓN SRI ===', [
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Error al procesar autorización del SRI: ' . $e->getMessage(),
+                'estado' => 'ERROR_PROCESAMIENTO'
+            ];
+        }
+    }
+    
+    /**
+     * Crear SOAP envelope para autorización al SRI
+     *
+     * @param  string  $claveAcceso
+     * @return string
+     */
+    private function crearSoapEnvelopeAutorizacion($claveAcceso)
+    {
+        return '<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+               xmlns:aut="http://ec.gob.sri.ws.autorizacion">
+    <soap:Header />
+    <soap:Body>
+        <aut:autorizacionComprobante>
+            <claveAccesoComprobante>' . $claveAcceso . '</claveAccesoComprobante>
+        </aut:autorizacionComprobante>
+    </soap:Body>
+</soap:Envelope>';
+    }
+    
+    /**
+     * Enviar petición SOAP de autorización con cURL
+     *
+     * @param  string  $soapEnvelope
+     * @return string|false
+     */
+    private function enviarSoapRequestAutorizacion($soapEnvelope)
+    {
+        $url = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline';
+        
+        $headers = [
+            'Content-Type: text/xml; charset=utf-8',
+            'SOAPAction: ""',
+            'Content-Length: ' . strlen($soapEnvelope)
+        ];
+        
+        \Log::info('Enviando petición cURL de autorización al SRI', [
+            'url' => $url,
+            'headers' => $headers
+        ]);
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $soapEnvelope);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'Sistema Facturacion Electronica OPTECU');
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        
+        curl_close($ch);
+        
+        \Log::info('Respuesta cURL de autorización del SRI', [
+            'http_code' => $httpCode,
+            'curl_error' => $error,
+            'response_length' => $response ? strlen($response) : 0
+        ]);
+        
+        if ($error) {
+            \Log::error('Error CURL Autorización: ' . $error);
+            return false;
+        }
+        
+        if ($httpCode !== 200) {
+            \Log::error('HTTP Error Autorización: ' . $httpCode);
+            return false;
+        }
+        
+        return $response;
+    }
+    
+    /**
+     * Procesar respuesta XML de autorización del SRI
+     *
+     * @param  string  $xmlResponse
+     * @return array
+     */
+    private function procesarRespuestaAutorizacionSRI($xmlResponse)
+    {
+        try {
+            \Log::info('Procesando respuesta XML de autorización del SRI');
+            
+            // Limpiar posibles BOM y espacios
+            $xmlResponse = trim($xmlResponse);
+            if (substr($xmlResponse, 0, 3) === "\xEF\xBB\xBF") {
+                $xmlResponse = substr($xmlResponse, 3);
+            }
+            
+            // Cargar el XML
+            $dom = new \DOMDocument();
+            if (!$dom->loadXML($xmlResponse)) {
+                \Log::error('Error al cargar XML de respuesta de autorización del SRI');
+                return [
+                    'estado' => 'ERROR',
+                    'claveAcceso' => '',
+                    'numeroAutorizacion' => '',
+                    'fechaAutorizacion' => '',
+                    'ambiente' => '',
+                    'mensajes' => [],
+                    'error' => 'Error al cargar XML de respuesta'
+                ];
+            }
+            
+            $xpath = new \DOMXPath($dom);
+            $xpath->registerNamespace('soap', 'http://schemas.xmlsoap.org/soap/envelope/');
+            $xpath->registerNamespace('ns2', 'http://ec.gob.sri.ws.autorizacion');
+            
+            // Extraer la clave de acceso consultada
+            $claveAccesoNode = $xpath->query('//ns2:autorizacionComprobanteResponse/RespuestaAutorizacionComprobante/claveAccesoConsultada');
+            $claveAcceso = $claveAccesoNode->length > 0 ? $claveAccesoNode->item(0)->textContent : '';
+            
+            $respuesta = [
+                'claveAcceso' => $claveAcceso,
+                'numeroComprobantes' => '',
+                'estado' => '',
+                'numeroAutorizacion' => '',
+                'fechaAutorizacion' => '',
+                'ambiente' => '',
+                'mensajes' => []
+            ];
+            
+            // Extraer número de comprobantes
+            $numeroComprobantesNode = $xpath->query('//ns2:autorizacionComprobanteResponse/RespuestaAutorizacionComprobante/numeroComprobantes');
+            if ($numeroComprobantesNode->length > 0) {
+                $respuesta['numeroComprobantes'] = $numeroComprobantesNode->item(0)->textContent;
+            }
+            
+            // Extraer información de la autorización
+            $autorizacionNodes = $xpath->query('//ns2:autorizacionComprobanteResponse/RespuestaAutorizacionComprobante/autorizaciones/autorizacion');
+            
+            if ($autorizacionNodes->length > 0) {
+                $autorizacionNode = $autorizacionNodes->item(0);
+                
+                // Estado
+                $estadoNode = $xpath->query('.//estado', $autorizacionNode);
+                if ($estadoNode->length > 0) {
+                    $respuesta['estado'] = $estadoNode->item(0)->textContent;
+                }
+                
+                // Número de autorización
+                $numeroAutorizacionNode = $xpath->query('.//numeroAutorizacion', $autorizacionNode);
+                if ($numeroAutorizacionNode->length > 0) {
+                    $respuesta['numeroAutorizacion'] = $numeroAutorizacionNode->item(0)->textContent;
+                }
+                
+                // Fecha de autorización
+                $fechaAutorizacionNode = $xpath->query('.//fechaAutorizacion', $autorizacionNode);
+                if ($fechaAutorizacionNode->length > 0) {
+                    $respuesta['fechaAutorizacion'] = $fechaAutorizacionNode->item(0)->textContent;
+                }
+                
+                // Ambiente
+                $ambienteNode = $xpath->query('.//ambiente', $autorizacionNode);
+                if ($ambienteNode->length > 0) {
+                    $respuesta['ambiente'] = $ambienteNode->item(0)->textContent;
+                }
+                
+                // Mensajes
+                $mensajesNodes = $xpath->query('.//mensajes/mensaje', $autorizacionNode);
+                foreach ($mensajesNodes as $mensajeNode) {
+                    $mensaje = [];
+                    
+                    $identificadorNode = $xpath->query('.//identificador', $mensajeNode);
+                    if ($identificadorNode->length > 0) {
+                        $mensaje['identificador'] = $identificadorNode->item(0)->textContent;
+                    }
+                    
+                    $mensajeTextNode = $xpath->query('.//mensaje', $mensajeNode);
+                    if ($mensajeTextNode->length > 0) {
+                        $mensaje['mensaje'] = $mensajeTextNode->item(0)->textContent;
+                    }
+                    
+                    $tipoNode = $xpath->query('.//tipo', $mensajeNode);
+                    if ($tipoNode->length > 0) {
+                        $mensaje['tipo'] = $tipoNode->item(0)->textContent;
+                    }
+                    
+                    $respuesta['mensajes'][] = $mensaje;
+                }
+            }
+            
+            \Log::info('Respuesta XML de autorización procesada exitosamente', [
+                'estado' => $respuesta['estado'],
+                'numero_autorizacion' => $respuesta['numeroAutorizacion'],
+                'num_mensajes' => count($respuesta['mensajes'])
+            ]);
+            
+            return $respuesta;
+            
+        } catch (\Exception $e) {
+            \Log::error('Error procesando respuesta autorización SRI: ' . $e->getMessage());
+            return [
+                'estado' => 'ERROR',
+                'claveAcceso' => '',
+                'numeroAutorizacion' => '',
+                'fechaAutorizacion' => '',
+                'ambiente' => '',
+                'mensajes' => [],
+                'error' => 'Error procesando respuesta: ' . $e->getMessage()
+            ];
+        }
+    }
 }

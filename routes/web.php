@@ -336,6 +336,7 @@ Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guard
     Route::put('facturas/{id}', [App\Http\Controllers\FacturaController::class, 'update'])->name('facturas.update');
     Route::delete('facturas/{id}', [App\Http\Controllers\FacturaController::class, 'destroy'])->name('facturas.destroy');
     Route::post('facturas/{id}/firmar-y-enviar', [App\Http\Controllers\FacturaController::class, 'firmarYEnviar'])->name('facturas.firmar-y-enviar');
+    Route::post('facturas/{id}/autorizar', [App\Http\Controllers\FacturaController::class, 'autorizarComprobante'])->name('facturas.autorizar');
     
     // Rutas para el controlador de Sueldos
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
