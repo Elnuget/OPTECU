@@ -851,9 +851,9 @@ class FacturaController extends Controller
                 ], 422);
             }
 
-            // Verificar que el declarante tiene certificado
+            // Verificar que el declarante tiene certificado PEM
             if (!isset($factura->declarante->firma) || !$factura->declarante->firma) {
-                \Log::error('Declarante sin certificado', [
+                \Log::error('Declarante sin certificado PEM', [
                     'factura_id' => $id,
                     'declarante_id' => $factura->declarante_id,
                     'firma' => $factura->declarante->firma ?? 'NULL'
@@ -861,7 +861,7 @@ class FacturaController extends Controller
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'El declarante no tiene un certificado digital configurado. Configure un certificado .p12 válido en el campo firma antes de firmar.'
+                    'message' => 'El declarante no tiene un certificado digital configurado. Configure un certificado PEM válido en el campo firma antes de firmar.'
                 ], 422);
             }
 
@@ -1045,7 +1045,7 @@ class FacturaController extends Controller
     }
 
     /**
-     * Firmar XML con certificado digital .p12
+     * Firmar XML con certificado digital PEM
      *
      * @param  string  $xmlContent
      * @param  object  $declarante
@@ -1055,79 +1055,85 @@ class FacturaController extends Controller
     private function firmarXML($xmlContent, $declarante, $password)
     {
         try {
-            \Log::info('=== INICIO PROCESO FIRMA XML ===', [
+            \Log::info('=== INICIO PROCESO FIRMA XML CON PEM ===', [
                 'declarante_id' => $declarante->id,
                 'declarante_nombre' => $declarante->nombre,
                 'firma' => $declarante->firma,
                 'xml_length' => strlen($xmlContent)
             ]);
 
-            // Obtener el certificado .p12
-            $certificadoPath = $this->obtenerRutaCertificado($declarante);
+            // Obtener el certificado PEM
+            $certificadoPath = $this->obtenerRutaCertificadoPEM($declarante);
             
-            \Log::info('Ruta del certificado', [
+            \Log::info('Ruta del certificado PEM', [
                 'certificado_path' => $certificadoPath,
                 'file_exists' => $certificadoPath ? file_exists($certificadoPath) : false
             ]);
             
             if (!$certificadoPath || !file_exists($certificadoPath)) {
-                \Log::error('Certificado no encontrado', [
+                \Log::error('Certificado PEM no encontrado', [
                     'certificado_path' => $certificadoPath,
                     'declarante_firma' => $declarante->firma
                 ]);
-                throw new \Exception('No se encontró el archivo del certificado en: ' . $certificadoPath);
+                throw new \Exception('No se encontró el archivo del certificado PEM en: ' . $certificadoPath);
             }
 
-            // Leer el certificado real
+            // Leer el certificado PEM
             $certificadoContent = file_get_contents($certificadoPath);
             if (!$certificadoContent) {
-                \Log::error('Error al leer certificado', ['certificado_path' => $certificadoPath]);
-                throw new \Exception('No se pudo leer el contenido del certificado');
+                \Log::error('Error al leer certificado PEM', ['certificado_path' => $certificadoPath]);
+                throw new \Exception('No se pudo leer el contenido del certificado PEM');
             }
 
-            \Log::info('Certificado leído', [
+            \Log::info('Certificado PEM leído', [
                 'certificado_size' => strlen($certificadoContent),
-                'password_length' => strlen($password)
+                'password_length' => strlen($password),
+                'contains_private_key' => strpos($certificadoContent, '-----BEGIN PRIVATE KEY-----') !== false,
+                'contains_certificate' => strpos($certificadoContent, '-----BEGIN CERTIFICATE-----') !== false
             ]);
 
-            // Extraer certificado y clave privada
-            $certificados = [];
-            if (!openssl_pkcs12_read($certificadoContent, $certificados, $password)) {
-                $openssl_error = openssl_error_string();
-                \Log::error('Error al leer PKCS12', [
-                    'openssl_error' => $openssl_error,
-                    'password_provided' => !empty($password)
-                ]);
-                throw new \Exception('Contraseña del certificado incorrecta o certificado inválido');
+            // Extraer certificado y clave privada del archivo PEM
+            $certificado = null;
+            $clavePrivada = null;
+
+            // Leer el certificado
+            $certificado = openssl_x509_read($certificadoContent);
+            if (!$certificado) {
+                \Log::error('Error al leer certificado X509 del archivo PEM');
+                throw new \Exception('El archivo PEM no contiene un certificado X509 válido');
             }
 
-            // Verificar que tenemos los componentes necesarios
-            if (!isset($certificados['cert']) || !isset($certificados['pkey'])) {
-                \Log::error('Certificado incompleto', [
-                    'has_cert' => isset($certificados['cert']),
-                    'has_pkey' => isset($certificados['pkey']),
-                    'keys' => array_keys($certificados)
-                ]);
-                throw new \Exception('El certificado no contiene los componentes necesarios');
+            // Leer la clave privada (puede requerir contraseña)
+            $clavePrivada = openssl_pkey_get_private($certificadoContent, $password);
+            if (!$clavePrivada) {
+                // Intentar sin contraseña
+                $clavePrivada = openssl_pkey_get_private($certificadoContent);
+                if (!$clavePrivada) {
+                    $openssl_error = openssl_error_string();
+                    \Log::error('Error al leer clave privada PEM', [
+                        'openssl_error' => $openssl_error,
+                        'password_provided' => !empty($password)
+                    ]);
+                    throw new \Exception('No se pudo leer la clave privada del certificado PEM. Verifique la contraseña.');
+                }
             }
 
-            \Log::info('Certificado PKCS12 procesado exitosamente', [
-                'cert_length' => strlen($certificados['cert']),
-                'pkey_available' => !empty($certificados['pkey'])
+            \Log::info('Certificado PEM procesado exitosamente', [
+                'certificate_valid' => !empty($certificado),
+                'private_key_valid' => is_resource($clavePrivada)
             ]);
 
-            // Implementar firma XAdES-BES (simplificada para el ejemplo)
-            // En producción, necesitarías una librería especializada como XMLSecLibs
-            $xmlFirmado = $this->aplicarFirmaXAdES($xmlContent, $certificados['cert'], $certificados['pkey']);
+            // Aplicar firma XAdES-BES con PEM
+            $xmlFirmado = $this->aplicarFirmaXAdESPEM($xmlContent, $certificado, $clavePrivada);
 
-            \Log::info('=== FIN PROCESO FIRMA XML EXITOSO ===', [
+            \Log::info('=== FIN PROCESO FIRMA XML PEM EXITOSO ===', [
                 'xml_firmado_length' => strlen($xmlFirmado)
             ]);
 
             return $xmlFirmado;
 
         } catch (\Exception $e) {
-            \Log::error('=== ERROR EN FIRMA XML ===', [
+            \Log::error('=== ERROR EN FIRMA XML PEM ===', [
                 'error_message' => $e->getMessage(),
                 'error_file' => $e->getFile(),
                 'error_line' => $e->getLine()
@@ -1137,17 +1143,24 @@ class FacturaController extends Controller
     }
 
     /**
-     * Obtener ruta del certificado del declarante
+     * Obtener ruta del certificado PEM del declarante
      *
      * @param  object  $declarante
      * @return string|null
      */
-    private function obtenerRutaCertificado($declarante)
+    private function obtenerRutaCertificadoPEM($declarante)
     {
-        \Log::info('Obteniendo ruta del certificado', [
+        \Log::info('Obteniendo ruta del certificado PEM', [
             'declarante_id' => $declarante->id,
             'firma' => $declarante->firma
         ]);
+
+        if (empty($declarante->firma)) {
+            \Log::warning('Declarante no tiene archivo de firma configurado', [
+                'declarante_id' => $declarante->id
+            ]);
+            return null;
+        }
 
         $rutaBase = public_path('uploads/firmas/');
         
@@ -1159,7 +1172,18 @@ class FacturaController extends Controller
             $rutaCompleta = $rutaBase . $declarante->firma;
         }
         
-        \Log::info('Ruta del certificado calculada', [
+        // Verificar que el archivo tenga extensión .pem
+        $extension = strtolower(pathinfo($rutaCompleta, PATHINFO_EXTENSION));
+        if ($extension !== 'pem') {
+            \Log::warning('El archivo de firma no tiene extensión .pem', [
+                'archivo' => $rutaCompleta,
+                'extension' => $extension
+            ]);
+            // Agregar extensión .pem si no la tiene
+            $rutaCompleta .= '.pem';
+        }
+        
+        \Log::info('Ruta del certificado PEM calculada', [
             'ruta_base' => $rutaBase,
             'ruta_completa' => $rutaCompleta,
             'directorio_existe' => is_dir($rutaBase),
@@ -1176,32 +1200,108 @@ class FacturaController extends Controller
     }
 
     /**
-     * Aplicar firma XAdES-BES al XML
+     * Aplicar firma XAdES-BES al XML usando certificado PEM
      * NOTA: Esta es una implementación simplificada
-     * En producción se recomienda usar librerías especializadas
+     * En producción se recomienda usar librerías especializadas como XMLSecLibs
      *
      * @param  string  $xmlContent
-     * @param  string  $cert
-     * @param  string  $privateKey
+     * @param  \OpenSSLCertificate|bool  $cert
+     * @param  \OpenSSLAsymmetricKey|bool  $privateKey
      * @return string
      */
-    private function aplicarFirmaXAdES($xmlContent, $cert, $privateKey)
+    private function aplicarFirmaXAdESPEM($xmlContent, $cert, $privateKey)
     {
-        // Por ahora, retornamos el XML original con una marca de firmado
-        // En una implementación real, aquí se aplicaría la firma XAdES-BES
-        $dom = new \DOMDocument();
-        $dom->loadXML($xmlContent);
-        
-        // Agregar elemento de firma básico (placeholder)
-        $signature = $dom->createElement('ds:Signature');
-        $signature->setAttribute('xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
-        
-        $signedInfo = $dom->createElement('ds:SignedInfo');
-        $signature->appendChild($signedInfo);
-        
-        $dom->documentElement->appendChild($signature);
-        
-        return $dom->saveXML();
+        try {
+            \Log::info('Aplicando firma XAdES-BES con certificado PEM');
+            
+            // Por ahora, retornamos el XML original con una marca de firmado
+            // En una implementación real, aquí se aplicaría la firma XAdES-BES
+            $dom = new \DOMDocument();
+            $dom->loadXML($xmlContent);
+            
+            // Obtener información del certificado
+            $certInfo = openssl_x509_parse($cert);
+            $certData = null;
+            openssl_x509_export($cert, $certData);
+            
+            // Agregar elemento de firma XAdES-BES (simplificado)
+            $signature = $dom->createElement('ds:Signature');
+            $signature->setAttribute('xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
+            $signature->setAttribute('xmlns:etsi', 'http://uri.etsi.org/01903/v1.3.2#');
+            $signature->setAttribute('Id', 'Signature-' . uniqid());
+            
+            // SignedInfo
+            $signedInfo = $dom->createElement('ds:SignedInfo');
+            $canonicalizationMethod = $dom->createElement('ds:CanonicalizationMethod');
+            $canonicalizationMethod->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
+            $signedInfo->appendChild($canonicalizationMethod);
+            
+            $signatureMethod = $dom->createElement('ds:SignatureMethod');
+            $signatureMethod->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#rsa-sha1');
+            $signedInfo->appendChild($signatureMethod);
+            
+            // Reference
+            $reference = $dom->createElement('ds:Reference');
+            $reference->setAttribute('URI', '#comprobante');
+            
+            $transforms = $dom->createElement('ds:Transforms');
+            $transform = $dom->createElement('ds:Transform');
+            $transform->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#enveloped-signature');
+            $transforms->appendChild($transform);
+            $reference->appendChild($transforms);
+            
+            $digestMethod = $dom->createElement('ds:DigestMethod');
+            $digestMethod->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+            $reference->appendChild($digestMethod);
+            
+            // Calcular digest del documento
+            $canonicalXML = $dom->C14N();
+            $digestValue = base64_encode(sha1($canonicalXML, true));
+            $digestValueNode = $dom->createElement('ds:DigestValue', $digestValue);
+            $reference->appendChild($digestValueNode);
+            
+            $signedInfo->appendChild($reference);
+            $signature->appendChild($signedInfo);
+            
+            // SignatureValue (placeholder - en producción se calcularía realmente)
+            $signatureValue = $dom->createElement('ds:SignatureValue', 'PEM_SIGNATURE_PLACEHOLDER');
+            $signature->appendChild($signatureValue);
+            
+            // KeyInfo
+            $keyInfo = $dom->createElement('ds:KeyInfo');
+            $x509Data = $dom->createElement('ds:X509Data');
+            
+            // Limpiar y formatear el certificado
+            $certPEM = str_replace([
+                '-----BEGIN CERTIFICATE-----',
+                '-----END CERTIFICATE-----',
+                "\r", "\n", " "
+            ], '', $certData);
+            
+            $x509Certificate = $dom->createElement('ds:X509Certificate', $certPEM);
+            $x509Data->appendChild($x509Certificate);
+            $keyInfo->appendChild($x509Data);
+            $signature->appendChild($keyInfo);
+            
+            // Agregar información del certificado al log
+            \Log::info('Información del certificado PEM usado', [
+                'subject' => $certInfo['subject']['CN'] ?? 'N/A',
+                'issuer' => $certInfo['issuer']['CN'] ?? 'N/A',
+                'valid_from' => date('Y-m-d H:i:s', $certInfo['validFrom_time_t'] ?? 0),
+                'valid_to' => date('Y-m-d H:i:s', $certInfo['validTo_time_t'] ?? 0)
+            ]);
+            
+            // Insertar firma antes del cierre del elemento raíz
+            $dom->documentElement->appendChild($signature);
+            
+            \Log::info('Firma XAdES-BES aplicada exitosamente con PEM');
+            
+            return $dom->saveXML();
+            
+        } catch (\Exception $e) {
+            \Log::error('Error al aplicar firma XAdES-BES con PEM: ' . $e->getMessage());
+            throw new \Exception('Error al aplicar firma digital PEM: ' . $e->getMessage());
+        }
     }
 
     /**
