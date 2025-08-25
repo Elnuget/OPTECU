@@ -99,6 +99,7 @@ class FacturaController extends Controller
                 'declarante_id' => 'required|exists:declarante,id',
                 'medio_pago_xml' => 'required|numeric',
                 'pedido_id' => 'nullable|exists:pedidos,id',
+                'correo_cliente' => 'nullable|email|max:255',
                 // Campos de elementos a facturar
                 'incluir_examen' => 'nullable',
                 'incluir_armazon' => 'nullable',
@@ -154,6 +155,16 @@ class FacturaController extends Controller
                     'numero_orden' => $pedido ? $pedido->numero_orden : 'PEDIDO NO ENCONTRADO',
                     'cliente' => $pedido ? $pedido->cliente : 'N/A'
                 ]);
+                
+                // Actualizar correo del pedido si se proporcionó uno nuevo
+                if ($pedido && $request->filled('correo_cliente')) {
+                    $pedido->correo_electronico = $request->correo_cliente;
+                    $pedido->save();
+                    \Log::info('Correo del pedido actualizado', [
+                        'pedido_id' => $pedido->id,
+                        'nuevo_correo' => $request->correo_cliente
+                    ]);
+                }
             } else {
                 \Log::info('No se recibió pedido_id en la solicitud');
             }
@@ -1106,6 +1117,40 @@ class FacturaController extends Controller
                 if ($estadoSRI === 'RECIBIDA') {
                     $factura->estado = 'RECIBIDA';
                     $factura->estado_sri = 'RECIBIDA';
+                    $factura->save();
+                    
+                    \Log::info('Factura RECIBIDA por SRI, iniciando autorización automática', [
+                        'factura_id' => $id
+                    ]);
+                    
+                    // Autorización automática
+                    $claveAcceso = $this->extraerClaveAccesoDeXML($factura);
+                    if ($claveAcceso) {
+                        $resultadoAutorizacion = $this->solicitarAutorizacionSRI($claveAcceso);
+                        
+                        if ($resultadoAutorizacion['success'] && $resultadoAutorizacion['estado'] === 'AUTORIZADO') {
+                            $factura->estado = 'AUTORIZADA';
+                            $factura->estado_sri = 'AUTORIZADA';
+                            $factura->numero_autorizacion = $resultadoAutorizacion['numero_autorizacion'] ?? null;
+                            $factura->fecha_autorizacion = isset($resultadoAutorizacion['fecha_autorizacion']) && $resultadoAutorizacion['fecha_autorizacion'] ? 
+                                \Carbon\Carbon::parse($resultadoAutorizacion['fecha_autorizacion']) : now();
+                            
+                            \Log::info('Factura AUTORIZADA automáticamente', [
+                                'factura_id' => $id,
+                                'numero_autorizacion' => $factura->numero_autorizacion
+                            ]);
+                            
+                            // Enviar email al cliente con el XML autorizado
+                            $this->enviarEmailFacturaAutorizada($factura);
+                            
+                        } else {
+                            \Log::warning('Autorización automática falló', [
+                                'factura_id' => $id,
+                                'resultado' => $resultadoAutorizacion
+                            ]);
+                        }
+                    }
+                    
                 } elseif ($estadoSRI === 'AUTORIZADA') {
                     $factura->estado = 'AUTORIZADA';
                     $factura->estado_sri = 'AUTORIZADA';
@@ -2294,6 +2339,77 @@ class FacturaController extends Controller
                 'mensajes' => [],
                 'error' => 'Error procesando respuesta: ' . $e->getMessage()
             ];
+        }
+    }
+    
+    /**
+     * Enviar email al cliente con la factura autorizada
+     *
+     * @param  \App\Models\Factura  $factura
+     * @return void
+     */
+    private function enviarEmailFacturaAutorizada($factura)
+    {
+        try {
+            \Log::info('=== INICIO ENVÍO EMAIL FACTURA AUTORIZADA ===', [
+                'factura_id' => $factura->id
+            ]);
+
+            // Obtener email del cliente desde el pedido relacionado
+            $emailCliente = null;
+            if ($factura->pedido_id) {
+                $pedido = \App\Models\Pedido::find($factura->pedido_id);
+                if ($pedido && $pedido->correo_electronico) {
+                    $emailCliente = $pedido->correo_electronico;
+                }
+            }
+            
+            if (!$emailCliente) {
+                \Log::warning('No se encontró email del cliente para enviar factura', [
+                    'factura_id' => $factura->id,
+                    'pedido_id' => $factura->pedido_id
+                ]);
+                return;
+            }
+
+            // Obtener la ruta del XML firmado
+            $xmlPath = null;
+            if ($factura->xml_firmado) {
+                $xmlPath = storage_path('app/public/' . $factura->xml_firmado);
+            } elseif ($factura->xml) {
+                $xmlPath = storage_path('app/public/' . $factura->xml);
+            }
+            
+            if (!$xmlPath || !file_exists($xmlPath)) {
+                \Log::error('No se encontró archivo XML para enviar', [
+                    'factura_id' => $factura->id,
+                    'xml_firmado' => $factura->xml_firmado,
+                    'xml' => $factura->xml,
+                    'xml_path' => $xmlPath
+                ]);
+                return;
+            }
+
+            \Log::info('Enviando email de factura autorizada', [
+                'factura_id' => $factura->id,
+                'email_cliente' => $emailCliente,
+                'xml_path' => $xmlPath
+            ]);
+
+            // Enviar el email
+            \Mail::to($emailCliente)->send(new \App\Mail\FacturaAutorizada($factura, $xmlPath));
+            
+            \Log::info('Email de factura autorizada enviado exitosamente', [
+                'factura_id' => $factura->id,
+                'email_cliente' => $emailCliente
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error al enviar email de factura autorizada', [
+                'factura_id' => $factura->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
         }
     }
 }

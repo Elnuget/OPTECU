@@ -49,7 +49,7 @@
                         </div>
                     </div>
                     <div class="row mt-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <strong>Medio de Pago Original:</strong><br>
                             @if($pedido->pagos && $pedido->pagos->count() > 0)
                                 @php
@@ -68,9 +68,19 @@
                                 <span class="text-muted">Sin pagos registrados</span>
                             @endif
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <strong>Fecha del Pedido:</strong><br>
                             {{ $pedido->fecha ? $pedido->fecha->format('d/m/Y') : 'No especificada' }}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Correo Electrónico:</strong><br>
+                            {{ $pedido->correo_electronico ?? 'No especificado' }}
+                            @if(!$pedido->correo_electronico)
+                                <br><small class="text-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> 
+                                    Sin correo registrado - No se enviará XML por email
+                                </small>
+                            @endif
                         </div>
                     </div>
                     <div class="row mt-3">
@@ -93,6 +103,22 @@
                                     Este medio de pago se incluirá en el XML de la factura
                                 </small>
                                 <div class="invalid-feedback" id="medio_pago_xml-error"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="correo_cliente">Correo Electrónico del Cliente</label>
+                                <input type="email" 
+                                       id="correo_cliente" 
+                                       name="correo_cliente" 
+                                       class="form-control" 
+                                       value="{{ $pedido->correo_electronico ?? '' }}"
+                                       placeholder="cliente@ejemplo.com">
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-envelope"></i> 
+                                    Se enviará el XML autorizado a este correo
+                                </small>
+                                <div class="invalid-feedback" id="correo_cliente-error"></div>
                             </div>
                         </div>
                     </div>

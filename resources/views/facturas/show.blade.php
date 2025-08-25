@@ -148,9 +148,9 @@
                     <i class="fas fa-certificate"></i> Firmar y Enviar al SRI
                 </button>
             @elseif($factura->estado === 'RECIBIDA')
-                <button type="button" class="btn btn-sm btn-info" onclick="autorizarComprobante({{ $factura->id }})">
-                    <i class="fas fa-check-circle"></i> Autorizar en SRI
-                </button>
+                <span class="badge badge-primary">
+                    <i class="fas fa-clock"></i> Procesando Autorización...
+                </span>
             @elseif($factura->estado === 'AUTORIZADA')
                 <span class="badge badge-success">
                     <i class="fas fa-check-circle"></i> Autorizada
@@ -250,68 +250,6 @@
     </div>
 </div>
 
-<!-- Modal para autorización en SRI -->
-<div class="modal fade" id="modalAutorizacion" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-md" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-check-circle"></i> Autorizar en SRI
-                </h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    <strong>Información:</strong> Este proceso solicitará la autorización del comprobante al SRI.
-                    La factura debe estar en estado "RECIBIDA" para poder ser autorizada.
-                </div>
-                
-                <div class="form-group">
-                    <div class="custom-control custom-checkbox">
-                        <input type="checkbox" class="custom-control-input" id="confirmar_autorizacion" required>
-                        <label class="custom-control-label" for="confirmar_autorizacion">
-                            Confirmo que deseo solicitar la autorización de este comprobante al SRI
-                        </label>
-                    </div>
-                </div>
-                
-                <!-- Área de progreso autorización -->
-                <div id="progreso_autorizacion" style="display: none;">
-                    <div class="progress mb-3">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
-                             role="progressbar" style="width: 0%">
-                            <span class="progress-text">Iniciando...</span>
-                        </div>
-                    </div>
-                    <div class="text-center">
-                        <small class="text-muted" id="estado_autorizacion">Solicitando autorización...</small>
-                    </div>
-                </div>
-                
-                <!-- Área de resultados autorización -->
-                <div id="resultado_autorizacion" style="display: none;">
-                    <div class="alert" id="alert_resultado_autorizacion">
-                        <div id="mensaje_resultado_autorizacion"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-                <button type="button" class="btn btn-info" id="btn_autorizar" onclick="procesarAutorizacion()">
-                    <i class="fas fa-check-circle"></i> Autorizar
-                </button>
-                <button type="button" class="btn btn-success" id="btn_cerrar_autorizacion_exitoso" style="display: none;" data-dismiss="modal">
-                    <i class="fas fa-check"></i> Cerrar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 @stop
 
 @section('css')
@@ -617,9 +555,8 @@
             procesarFirmaYEnvio();
         }
     });
-    
-    // Variables para autorización
-    let facturaIdAutorizacion = null;
+</script>
+@stop
     
     // Función para mostrar modal de autorización
     function autorizarComprobante(facturaId) {
@@ -779,10 +716,6 @@
     
     // Manejar eventos del modal de autorización
     $('#modalAutorizacion').on('hidden.bs.modal', function () {
-        facturaIdAutorizacion = null;
-        document.getElementById('confirmar_autorizacion').checked = false;
-        document.getElementById('progreso_autorizacion').style.display = 'none';
-        document.getElementById('resultado_autorizacion').style.display = 'none';
     });
 </script>
 @stop
