@@ -89,6 +89,7 @@
                             <th>Número</th>
                             <th>Cliente</th>
                             <th>Tipo</th>
+                            <th>Estado</th>
                             <th class="text-right">Subtotal</th>
                             <th class="text-right">IVA</th>
                             <th class="text-right">Total</th>
@@ -164,6 +165,25 @@ document.addEventListener('DOMContentLoaded', function() {
         cargarFacturas();
     });
 });
+
+// Función para formatear el estado de la factura
+function formatearEstadoFactura(estado) {
+    const estados = {
+        'CREADA': { class: 'badge-secondary', icon: 'fas fa-file', text: 'Creada' },
+        'FIRMADA': { class: 'badge-info', icon: 'fas fa-certificate', text: 'Firmada' },
+        'ENVIADA': { class: 'badge-warning', icon: 'fas fa-paper-plane', text: 'Enviada' },
+        'RECIBIDA': { class: 'badge-primary', icon: 'fas fa-inbox', text: 'Recibida' },
+        'AUTORIZADA': { class: 'badge-success', icon: 'fas fa-check-circle', text: 'Autorizada' },
+        'DEVUELTA': { class: 'badge-danger', icon: 'fas fa-times-circle', text: 'Devuelta' },
+        'NO_AUTORIZADA': { class: 'badge-dark', icon: 'fas fa-ban', text: 'No Autorizada' }
+    };
+    
+    const estadoInfo = estados[estado] || estados['CREADA'];
+    
+    return `<span class="badge ${estadoInfo.class}" title="Estado: ${estadoInfo.text}">
+                <i class="${estadoInfo.icon}"></i> ${estadoInfo.text}
+            </span>`;
+}
 
 // Función para cargar facturas
 function cargarFacturas() {
@@ -250,6 +270,9 @@ function renderizarFacturas(facturas) {
             ? `<span class="badge badge-primary">Venta</span>`
             : `<span class="badge badge-info">Compra</span>`;
         
+        // Estado de la factura
+        const estadoBadge = formatearEstadoFactura(factura.estado || 'CREADA');
+        
         // Acciones
         const showUrl = `${FACTURA_SHOW_URL}/${factura.id}`;
         const acciones = `
@@ -270,6 +293,7 @@ function renderizarFacturas(facturas) {
             <td>${factura.numero || 'Sin número'}</td>
             <td>${factura.pedido ? factura.pedido.cliente : 'N/A'}</td>
             <td>${tipoBadge}</td>
+            <td>${estadoBadge}</td>
             <td class="text-right">$${numberFormat(monto)}</td>
             <td class="text-right">$${numberFormat(iva)}</td>
             <td class="text-right">$${numberFormat(total)}</td>

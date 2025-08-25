@@ -7,6 +7,90 @@
 @stop
 
 @section('content')
+<!-- Información de la factura -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="card card-outline card-info">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-info-circle"></i> Información de la Factura
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>ID:</strong> {{ $factura->id }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Fecha:</strong> {{ $factura->created_at->format('d/m/Y H:i') }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Declarante:</strong> {{ $factura->declarante->nombre ?? 'N/A' }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Estado:</strong> 
+                        @php
+                            $estados = [
+                                'CREADA' => ['class' => 'secondary', 'icon' => 'file', 'text' => 'Creada'],
+                                'FIRMADA' => ['class' => 'info', 'icon' => 'certificate', 'text' => 'Firmada'],
+                                'ENVIADA' => ['class' => 'warning', 'icon' => 'paper-plane', 'text' => 'Enviada'],
+                                'RECIBIDA' => ['class' => 'primary', 'icon' => 'inbox', 'text' => 'Recibida'],
+                                'AUTORIZADA' => ['class' => 'success', 'icon' => 'check-circle', 'text' => 'Autorizada'],
+                                'DEVUELTA' => ['class' => 'danger', 'icon' => 'times-circle', 'text' => 'Devuelta'],
+                                'NO_AUTORIZADA' => ['class' => 'dark', 'icon' => 'ban', 'text' => 'No Autorizada']
+                            ];
+                            $estadoInfo = $estados[$factura->estado ?? 'CREADA'] ?? $estados['CREADA'];
+                        @endphp
+                        <span class="badge badge-{{ $estadoInfo['class'] }}">
+                            <i class="fas fa-{{ $estadoInfo['icon'] }}"></i> {{ $estadoInfo['text'] }}
+                        </span>
+                    </div>
+                </div>
+                @if($factura->estado_sri || $factura->numero_autorizacion)
+                <hr>
+                <div class="row">
+                    @if($factura->estado_sri)
+                    <div class="col-md-3">
+                        <strong>Estado SRI:</strong> 
+                        <span class="badge badge-{{ $factura->estado_sri === 'AUTORIZADA' ? 'success' : ($factura->estado_sri === 'RECIBIDA' ? 'primary' : 'danger') }}">
+                            {{ $factura->estado_sri }}
+                        </span>
+                    </div>
+                    @endif
+                    @if($factura->numero_autorizacion)
+                    <div class="col-md-6">
+                        <strong>Autorización SRI:</strong> {{ $factura->numero_autorizacion }}
+                    </div>
+                    @endif
+                    @if($factura->fecha_autorizacion)
+                    <div class="col-md-3">
+                        <strong>Fecha Autorización:</strong> {{ $factura->fecha_autorizacion->format('d/m/Y H:i') }}
+                    </div>
+                    @endif
+                </div>
+                @endif
+                @if($factura->mensajes_sri)
+                <hr>
+                <div class="row">
+                    <div class="col-md-12">
+                        <strong>Mensajes del SRI:</strong>
+                        <div class="alert alert-info mt-2">
+                            @php
+                                $mensajes = is_string($factura->mensajes_sri) ? json_decode($factura->mensajes_sri, true) : $factura->mensajes_sri;
+                                if (!is_array($mensajes)) $mensajes = [$factura->mensajes_sri];
+                            @endphp
+                            @foreach($mensajes as $mensaje)
+                                <div>• {{ $mensaje }}</div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-header">
         <h3 class="card-title">
