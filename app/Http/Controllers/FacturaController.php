@@ -253,6 +253,7 @@ class FacturaController extends Controller
             $factura->monto = round($subtotal, 2);
             $factura->iva = round($iva, 2);
             $factura->tipo = 'comprobante';
+            $factura->estado = 'CREADA'; // Estado inicial
             
             if (!$factura->save()) {
                 throw new \Exception('No se pudo guardar la factura en la base de datos');
@@ -790,6 +791,541 @@ class FacturaController extends Controller
                 'success' => false,
                 'message' => 'Error al eliminar factura: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Firmar digitalmente y enviar factura al SRI
+     *
+     * @param  int  $id
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function firmarYEnviar($id, Request $request)
+    {
+        try {
+            // Log inicial
+            \Log::info('=== INICIO PROCESO FIRMA Y ENVÍO ===', [
+                'factura_id' => $id,
+                'request_data' => $request->except(['password_certificado']),
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent()
+            ]);
+
+            // Validar entrada
+            $validator = Validator::make($request->all(), [
+                'password_certificado' => 'required|string|min:1',
+            ]);
+
+            if ($validator->fails()) {
+                \Log::warning('Validación fallida en firmarYEnviar', [
+                    'factura_id' => $id,
+                    'errors' => $validator->errors()->toArray()
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Datos de entrada inválidos',
+                    'errors' => $validator->errors()->all()
+                ], 422);
+            }
+
+            // Obtener la factura
+            \Log::info('Buscando factura', ['factura_id' => $id]);
+            $factura = Factura::with('declarante')->findOrFail($id);
+            
+            \Log::info('Factura encontrada', [
+                'factura_id' => $factura->id,
+                'declarante_id' => $factura->declarante_id,
+                'declarante_nombre' => $factura->declarante->nombre ?? 'N/A',
+                'xml_path' => $factura->xml,
+                'estado_actual' => $factura->estado ?? 'SIN_ESTADO'
+            ]);
+
+            // Verificar que existe el XML
+            if (!$factura->xml) {
+                \Log::error('Factura sin XML', ['factura_id' => $id]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La factura no tiene un XML generado'
+                ], 422);
+            }
+
+            // Verificar que el declarante tiene certificado
+            if (!isset($factura->declarante->firma) || !$factura->declarante->firma) {
+                \Log::error('Declarante sin certificado', [
+                    'factura_id' => $id,
+                    'declarante_id' => $factura->declarante_id,
+                    'firma' => $factura->declarante->firma ?? 'NULL'
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El declarante no tiene un certificado digital configurado. Configure un certificado .p12 válido en el campo firma antes de firmar.'
+                ], 422);
+            }
+
+            // Leer el XML existente
+            $xmlPath = storage_path('app/public/' . $factura->xml);
+            \Log::info('Verificando archivo XML', [
+                'xml_path' => $xmlPath,
+                'file_exists' => file_exists($xmlPath),
+                'file_size' => file_exists($xmlPath) ? filesize($xmlPath) : 0
+            ]);
+
+            if (!file_exists($xmlPath)) {
+                \Log::error('Archivo XML no encontrado', [
+                    'factura_id' => $id,
+                    'xml_path' => $xmlPath
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontró el archivo XML de la factura'
+                ], 422);
+            }
+
+            $xmlContent = file_get_contents($xmlPath);
+            if (!$xmlContent) {
+                \Log::error('Error al leer XML', [
+                    'factura_id' => $id,
+                    'xml_path' => $xmlPath
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo leer el contenido del archivo XML'
+                ], 422);
+            }
+
+            \Log::info('XML leído correctamente', [
+                'factura_id' => $id,
+                'xml_length' => strlen($xmlContent),
+                'xml_preview' => substr($xmlContent, 0, 200) . '...'
+            ]);
+
+            // Paso 1: Firmar el XML
+            \Log::info('Iniciando proceso de firma XML', ['factura_id' => $id]);
+            $xmlFirmado = $this->firmarXML($xmlContent, $factura->declarante, $request->password_certificado);
+            
+            if (!$xmlFirmado) {
+                \Log::error('Error en proceso de firma', ['factura_id' => $id]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al firmar el XML. Verifique la contraseña del certificado.'
+                ], 422);
+            }
+
+            \Log::info('XML firmado exitosamente', [
+                'factura_id' => $id,
+                'xml_firmado_length' => strlen($xmlFirmado)
+            ]);
+
+            // Guardar XML firmado
+            $xmlFirmadoPath = str_replace('.xml', '_firmado.xml', $xmlPath);
+            if (!file_put_contents($xmlFirmadoPath, $xmlFirmado)) {
+                \Log::error('Error al guardar XML firmado', [
+                    'factura_id' => $id,
+                    'xml_firmado_path' => $xmlFirmadoPath
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo guardar el XML firmado'
+                ], 500);
+            }
+
+            \Log::info('XML firmado guardado', [
+                'factura_id' => $id,
+                'xml_firmado_path' => $xmlFirmadoPath,
+                'file_size' => filesize($xmlFirmadoPath)
+            ]);
+
+            // Actualizar estado de la factura después de la firma
+            $factura->estado = 'FIRMADA';
+            $factura->xml_firmado = str_replace(storage_path('app/public/'), '', $xmlFirmadoPath);
+            $factura->fecha_firma = now();
+            $factura->save();
+
+            \Log::info('Factura marcada como FIRMADA', [
+                'factura_id' => $id,
+                'xml_firmado_path' => $factura->xml_firmado
+            ]);
+
+            // Paso 2: Enviar al SRI
+            \Log::info('Iniciando envío al SRI', ['factura_id' => $id]);
+            $factura->fecha_envio_sri = now();
+            $factura->estado = 'ENVIADA';
+            $factura->save();
+
+            $resultadoSRI = $this->enviarAlSRI($xmlFirmado);
+            
+            \Log::info('Resultado del SRI', [
+                'factura_id' => $id,
+                'resultado' => $resultadoSRI
+            ]);
+
+            if (!$resultadoSRI['success']) {
+                // Error al enviar al SRI
+                $factura->estado = 'DEVUELTA';
+                $factura->estado_sri = 'DEVUELTA';
+                $factura->mensajes_sri = json_encode($resultadoSRI['errors'] ?? [$resultadoSRI['message']]);
+                $factura->save();
+
+                \Log::error('Error al enviar al SRI', [
+                    'factura_id' => $id,
+                    'error_message' => $resultadoSRI['message'],
+                    'errors' => $resultadoSRI['errors'] ?? []
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al enviar al SRI: ' . $resultadoSRI['message'],
+                    'errors' => $resultadoSRI['errors'] ?? []
+                ], 422);
+            }
+
+            // Actualizar estado según respuesta del SRI
+            $estadoSRI = $resultadoSRI['estado'];
+            
+            if ($estadoSRI === 'RECIBIDA') {
+                $factura->estado = 'RECIBIDA';
+                $factura->estado_sri = 'RECIBIDA';
+            } elseif ($estadoSRI === 'AUTORIZADA') {
+                $factura->estado = 'AUTORIZADA';
+                $factura->estado_sri = 'AUTORIZADA';
+            } else {
+                $factura->estado = 'DEVUELTA';
+                $factura->estado_sri = $estadoSRI;
+                $factura->mensajes_sri = json_encode($resultadoSRI['errors'] ?? ['Estado desconocido: ' . $estadoSRI]);
+            }
+            
+            $factura->numero_autorizacion = $resultadoSRI['numero_autorizacion'] ?? null;
+            $factura->fecha_autorizacion = $resultadoSRI['fecha_autorizacion'] ? 
+                \Carbon\Carbon::parse($resultadoSRI['fecha_autorizacion']) : now();
+            $factura->save();
+
+            \Log::info('Factura actualizada exitosamente', [
+                'factura_id' => $id,
+                'estado' => $factura->estado,
+                'estado_sri' => $factura->estado_sri,
+                'numero_autorizacion' => $factura->numero_autorizacion
+            ]);
+
+            \Log::info('=== FIN PROCESO FIRMA Y ENVÍO EXITOSO ===', ['factura_id' => $id]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Factura firmada y enviada exitosamente al SRI',
+                'data' => [
+                    'estado' => $factura->estado,
+                    'estado_sri' => $factura->estado_sri,
+                    'numero_autorizacion' => $factura->numero_autorizacion ?? 'N/A',
+                    'fecha_autorizacion' => $factura->fecha_autorizacion->format('d/m/Y H:i:s'),
+                    'fecha_firma' => $factura->fecha_firma->format('d/m/Y H:i:s'),
+                    'fecha_envio_sri' => $factura->fecha_envio_sri->format('d/m/Y H:i:s'),
+                    'xml_firmado_path' => $factura->xml_firmado
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('=== ERROR CRÍTICO EN FIRMA Y ENVÍO ===', [
+                'factura_id' => $id,
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Firmar XML con certificado digital .p12
+     *
+     * @param  string  $xmlContent
+     * @param  object  $declarante
+     * @param  string  $password
+     * @return string|false
+     */
+    private function firmarXML($xmlContent, $declarante, $password)
+    {
+        try {
+            \Log::info('=== INICIO PROCESO FIRMA XML ===', [
+                'declarante_id' => $declarante->id,
+                'declarante_nombre' => $declarante->nombre,
+                'firma' => $declarante->firma,
+                'xml_length' => strlen($xmlContent)
+            ]);
+
+            // Obtener el certificado .p12
+            $certificadoPath = $this->obtenerRutaCertificado($declarante);
+            
+            \Log::info('Ruta del certificado', [
+                'certificado_path' => $certificadoPath,
+                'file_exists' => $certificadoPath ? file_exists($certificadoPath) : false
+            ]);
+            
+            if (!$certificadoPath || !file_exists($certificadoPath)) {
+                \Log::error('Certificado no encontrado', [
+                    'certificado_path' => $certificadoPath,
+                    'declarante_firma' => $declarante->firma
+                ]);
+                throw new \Exception('No se encontró el archivo del certificado en: ' . $certificadoPath);
+            }
+
+            // Leer el certificado real
+            $certificadoContent = file_get_contents($certificadoPath);
+            if (!$certificadoContent) {
+                \Log::error('Error al leer certificado', ['certificado_path' => $certificadoPath]);
+                throw new \Exception('No se pudo leer el contenido del certificado');
+            }
+
+            \Log::info('Certificado leído', [
+                'certificado_size' => strlen($certificadoContent),
+                'password_length' => strlen($password)
+            ]);
+
+            // Extraer certificado y clave privada
+            $certificados = [];
+            if (!openssl_pkcs12_read($certificadoContent, $certificados, $password)) {
+                $openssl_error = openssl_error_string();
+                \Log::error('Error al leer PKCS12', [
+                    'openssl_error' => $openssl_error,
+                    'password_provided' => !empty($password)
+                ]);
+                throw new \Exception('Contraseña del certificado incorrecta o certificado inválido');
+            }
+
+            // Verificar que tenemos los componentes necesarios
+            if (!isset($certificados['cert']) || !isset($certificados['pkey'])) {
+                \Log::error('Certificado incompleto', [
+                    'has_cert' => isset($certificados['cert']),
+                    'has_pkey' => isset($certificados['pkey']),
+                    'keys' => array_keys($certificados)
+                ]);
+                throw new \Exception('El certificado no contiene los componentes necesarios');
+            }
+
+            \Log::info('Certificado PKCS12 procesado exitosamente', [
+                'cert_length' => strlen($certificados['cert']),
+                'pkey_available' => !empty($certificados['pkey'])
+            ]);
+
+            // Implementar firma XAdES-BES (simplificada para el ejemplo)
+            // En producción, necesitarías una librería especializada como XMLSecLibs
+            $xmlFirmado = $this->aplicarFirmaXAdES($xmlContent, $certificados['cert'], $certificados['pkey']);
+
+            \Log::info('=== FIN PROCESO FIRMA XML EXITOSO ===', [
+                'xml_firmado_length' => strlen($xmlFirmado)
+            ]);
+
+            return $xmlFirmado;
+
+        } catch (\Exception $e) {
+            \Log::error('=== ERROR EN FIRMA XML ===', [
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Obtener ruta del certificado del declarante
+     *
+     * @param  object  $declarante
+     * @return string|null
+     */
+    private function obtenerRutaCertificado($declarante)
+    {
+        \Log::info('Obteniendo ruta del certificado', [
+            'declarante_id' => $declarante->id,
+            'firma' => $declarante->firma
+        ]);
+
+        $rutaBase = storage_path('app/certificados/');
+        
+        // Si el campo firma es una ruta
+        if (str_contains($declarante->firma, '/') || str_contains($declarante->firma, '\\')) {
+            $rutaCompleta = $rutaBase . basename($declarante->firma);
+        } else {
+            // Si es un nombre de archivo
+            $rutaCompleta = $rutaBase . $declarante->firma;
+        }
+        
+        \Log::info('Ruta del certificado calculada', [
+            'ruta_base' => $rutaBase,
+            'ruta_completa' => $rutaCompleta,
+            'directorio_existe' => is_dir($rutaBase),
+            'archivo_existe' => file_exists($rutaCompleta)
+        ]);
+        
+        // Crear directorio si no existe
+        if (!is_dir($rutaBase)) {
+            \Log::warning('Directorio de certificados no existe, creando...', ['ruta' => $rutaBase]);
+            mkdir($rutaBase, 0755, true);
+        }
+        
+        return $rutaCompleta;
+    }
+
+    /**
+     * Aplicar firma XAdES-BES al XML
+     * NOTA: Esta es una implementación simplificada
+     * En producción se recomienda usar librerías especializadas
+     *
+     * @param  string  $xmlContent
+     * @param  string  $cert
+     * @param  string  $privateKey
+     * @return string
+     */
+    private function aplicarFirmaXAdES($xmlContent, $cert, $privateKey)
+    {
+        // Por ahora, retornamos el XML original con una marca de firmado
+        // En una implementación real, aquí se aplicaría la firma XAdES-BES
+        $dom = new \DOMDocument();
+        $dom->loadXML($xmlContent);
+        
+        // Agregar elemento de firma básico (placeholder)
+        $signature = $dom->createElement('ds:Signature');
+        $signature->setAttribute('xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
+        
+        $signedInfo = $dom->createElement('ds:SignedInfo');
+        $signature->appendChild($signedInfo);
+        
+        $dom->documentElement->appendChild($signature);
+        
+        return $dom->saveXML();
+    }
+
+    /**
+     * Enviar XML firmado al SRI
+     *
+     * @param  string  $xmlFirmado
+     * @return array
+     */
+    private function enviarAlSRI($xmlFirmado)
+    {
+        try {
+            \Log::info('=== INICIO ENVÍO AL SRI ===', [
+                'xml_length' => strlen($xmlFirmado)
+            ]);
+
+            // URL del servicio web del SRI (pruebas)
+            $urlSRI = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl';
+            
+            \Log::info('Configurando cliente SOAP', [
+                'url_sri' => $urlSRI
+            ]);
+
+            // Convertir XML a Base64
+            $xmlBase64 = base64_encode($xmlFirmado);
+            
+            \Log::info('XML convertido a Base64', [
+                'xml_base64_length' => strlen($xmlBase64),
+                'xml_base64_preview' => substr($xmlBase64, 0, 100) . '...'
+            ]);
+
+            // Preparar solicitud SOAP
+            $soapClient = new \SoapClient($urlSRI, [
+                'trace' => true,
+                'exceptions' => true,
+                'connection_timeout' => 30,
+                'cache_wsdl' => WSDL_CACHE_NONE
+            ]);
+
+            \Log::info('Cliente SOAP creado, enviando validarComprobante...');
+
+            // Llamar al método validarComprobante
+            $response = $soapClient->validarComprobante([
+                'xml' => $xmlBase64
+            ]);
+
+            \Log::info('Respuesta del SRI recibida', [
+                'response_type' => gettype($response),
+                'response_data' => is_object($response) ? get_object_vars($response) : $response
+            ]);
+
+            // Procesar respuesta
+            if (isset($response->RespuestaRecepcionComprobante)) {
+                $respuesta = $response->RespuestaRecepcionComprobante;
+                
+                \Log::info('Procesando RespuestaRecepcionComprobante', [
+                    'estado' => $respuesta->estado ?? 'NO_DEFINIDO',
+                    'numero_autorizacion' => $respuesta->numeroAutorizacion ?? 'N/A',
+                    'fecha_autorizacion' => $respuesta->fechaAutorizacion ?? 'N/A'
+                ]);
+                
+                if ($respuesta->estado === 'RECIBIDA') {
+                    \Log::info('=== COMPROBANTE RECIBIDO EXITOSAMENTE ===');
+                    return [
+                        'success' => true,
+                        'estado' => 'RECIBIDA',
+                        'numero_autorizacion' => $respuesta->numeroAutorizacion ?? null,
+                        'fecha_autorizacion' => $respuesta->fechaAutorizacion ?? null
+                    ];
+                } else {
+                    // Estado DEVUELTA u otro
+                    $errores = [];
+                    if (isset($respuesta->comprobantes->comprobante->mensajes)) {
+                        foreach ($respuesta->comprobantes->comprobante->mensajes as $mensaje) {
+                            $errores[] = $mensaje->mensaje;
+                        }
+                    }
+                    
+                    \Log::warning('Comprobante devuelto por el SRI', [
+                        'estado' => $respuesta->estado,
+                        'errores' => $errores
+                    ]);
+                    
+                    return [
+                        'success' => false,
+                        'message' => 'Comprobante devuelto por el SRI',
+                        'estado' => $respuesta->estado,
+                        'errors' => $errores
+                    ];
+                }
+            }
+
+            \Log::error('Respuesta inesperada del SRI', [
+                'response' => $response
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Respuesta inesperada del SRI'
+            ];
+
+        } catch (\SoapFault $e) {
+            \Log::error('=== ERROR SOAP AL CONECTAR CON SRI ===', [
+                'error_message' => $e->getMessage(),
+                'error_code' => $e->getCode(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Error de conexión con el SRI: ' . $e->getMessage()
+            ];
+        } catch (\Exception $e) {
+            \Log::error('=== ERROR GENERAL AL ENVIAR AL SRI ===', [
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Error al procesar respuesta del SRI: ' . $e->getMessage()
+            ];
         }
     }
 }

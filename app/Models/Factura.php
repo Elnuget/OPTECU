@@ -26,9 +26,19 @@ class Factura extends Model
         'pedido_id',
         'declarante_id',
         'xml',
+        'xml_firmado',
         'monto',
         'iva',
         'tipo',
+        'estado',
+        'estado_sri',
+        'numero_autorizacion',
+        'fecha_autorizacion',
+        'mensajes_sri',
+        'fecha_firma',
+        'fecha_envio_sri',
+        'clave_acceso',
+        'observaciones'
     ];
 
     /**
@@ -39,6 +49,9 @@ class Factura extends Model
     protected $casts = [
         'monto' => 'float',
         'iva' => 'float',
+        'fecha_autorizacion' => 'datetime',
+        'fecha_firma' => 'datetime',
+        'fecha_envio_sri' => 'datetime',
     ];
 
     /**
