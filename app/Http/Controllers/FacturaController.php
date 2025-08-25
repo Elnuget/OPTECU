@@ -1149,7 +1149,7 @@ class FacturaController extends Controller
             'firma' => $declarante->firma
         ]);
 
-        $rutaBase = storage_path('app/certificados/');
+        $rutaBase = public_path('uploads/firmas/');
         
         // Si el campo firma es una ruta
         if (str_contains($declarante->firma, '/') || str_contains($declarante->firma, '\\')) {
@@ -1168,7 +1168,7 @@ class FacturaController extends Controller
         
         // Crear directorio si no existe
         if (!is_dir($rutaBase)) {
-            \Log::warning('Directorio de certificados no existe, creando...', ['ruta' => $rutaBase]);
+            \Log::warning('Directorio de firmas no existe, creando...', ['ruta' => $rutaBase]);
             mkdir($rutaBase, 0755, true);
         }
         
