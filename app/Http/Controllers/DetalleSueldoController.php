@@ -10,7 +10,8 @@ class DetalleSueldoController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('can:admin')->only(['create', 'store', 'edit', 'update', 'destroy']);
+        // Solo los administradores pueden eliminar detalles de sueldo
+        $this->middleware('can:admin')->only(['destroy']);
     }
 
     /**
@@ -84,16 +85,30 @@ class DetalleSueldoController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(DetalleSueldo $detalleSueldo)
+    public function show($id)
     {
+        $detalleSueldo = DetalleSueldo::find($id);
+        
+        if (!$detalleSueldo) {
+            return redirect()->route('sueldos.index')
+                            ->with('error', 'El detalle de sueldo no fue encontrado.');
+        }
+        
         return view('detalles-sueldo.show', compact('detalleSueldo'));
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(DetalleSueldo $detalleSueldo)
+    public function edit($id)
     {
+        $detalleSueldo = DetalleSueldo::find($id);
+        
+        if (!$detalleSueldo) {
+            return redirect()->route('sueldos.index')
+                            ->with('error', 'El detalle de sueldo no fue encontrado.');
+        }
+        
         $usuarios = User::whereNull('deleted_at')
                         ->where('name', '!=', '')
                         ->orderBy('name')
@@ -104,8 +119,15 @@ class DetalleSueldoController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, DetalleSueldo $detalleSueldo)
+    public function update(Request $request, $id)
     {
+        $detalleSueldo = DetalleSueldo::find($id);
+        
+        if (!$detalleSueldo) {
+            return redirect()->route('sueldos.index')
+                            ->with('error', 'El detalle de sueldo no fue encontrado.');
+        }
+        
         $validatedData = $request->validate([
             'user_id' => 'required|exists:users,id',
             'mes' => 'required|integer|between:1,12',
@@ -138,62 +160,45 @@ class DetalleSueldoController extends Controller
     public function destroy($id)
     {
         try {
-            \Log::info('DetalleSueldo destroy - ID recibido:', ['id' => $id]);
-            
             // Buscar el detalle de sueldo por ID
             $detalleSueldo = DetalleSueldo::find($id);
             
             if (!$detalleSueldo) {
-                \Log::error('DetalleSueldo no encontrado:', ['id' => $id]);
+                \Log::warning('DetalleSueldo no encontrado para eliminación', ['id' => $id]);
                 return redirect()->back()
                                 ->with('error', 'El detalle de sueldo no fue encontrado.');
             }
             
-            // Guardar datos antes de eliminar
+            // Guardar datos antes de eliminar para la redirección
             $usuario = $detalleSueldo->user;
             $mes = $detalleSueldo->mes;
             $ano = $detalleSueldo->ano;
             
-            \Log::info('DetalleSueldo ANTES de eliminar:', [
-                'id' => $detalleSueldo->id,
-                'user_id' => $detalleSueldo->user_id,
-                'mes' => $mes,
-                'ano' => $ano,
-                'usuario_name' => $usuario ? $usuario->name : 'null'
-            ]);
-            
             // Eliminar el registro (soft delete)
-            $deleted = $detalleSueldo->delete();
+            $detalleSueldo->delete();
             
-            \Log::info('DetalleSueldo DESPUÉS de eliminar:', [
-                'deleted_result' => $deleted,
-                'exists_normal' => DetalleSueldo::find($detalleSueldo->id) ? 'yes' : 'no',
-                'exists_with_trashed' => DetalleSueldo::withTrashed()->find($detalleSueldo->id) ? 'yes' : 'no'
+            \Log::info('DetalleSueldo eliminado exitosamente', [
+                'id' => $id,
+                'usuario' => $usuario ? $usuario->name : null,
+                'periodo' => "$mes/$ano"
             ]);
             
             $redirectParams = [
                 'anio' => $ano,
-                'mes' => str_pad($mes, 2, '0', STR_PAD_LEFT), // Asegurar formato MM
+                'mes' => str_pad($mes, 2, '0', STR_PAD_LEFT),
             ];
             
             if ($usuario) {
                 $redirectParams['usuario'] = $usuario->name;
             }
             
-            $redirectUrl = route('sueldos.index', $redirectParams);
-            
-            \Log::info('Redirect info:', [
-                'params' => $redirectParams,
-                'url' => $redirectUrl
-            ]);
-            
-            return redirect($redirectUrl)
+            return redirect()->route('sueldos.index', $redirectParams)
                             ->with('success', 'DETALLE DE SUELDO ELIMINADO EXITOSAMENTE');
                             
         } catch (\Exception $e) {
-            \Log::error('Error eliminando DetalleSueldo:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+            \Log::error('Error eliminando DetalleSueldo', [
+                'id' => $id,
+                'error' => $e->getMessage()
             ]);
             
             return redirect()->back()

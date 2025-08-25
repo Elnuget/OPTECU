@@ -126,13 +126,13 @@
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                             @endif
-                                            @can('admin')
                                             @if(Route::has('detalles-sueldo.edit'))
                                             <a href="{{ route('detalles-sueldo.edit', $detalle->id) }}" 
                                                class="btn btn-xs btn-outline-primary" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             @endif
+                                            @can('admin')
                                             @if(Route::has('detalles-sueldo.destroy'))
                                             <a href="#" class="btn btn-xs btn-outline-danger" 
                                                data-toggle="modal" data-target="#confirmarEliminarDetalleModal"

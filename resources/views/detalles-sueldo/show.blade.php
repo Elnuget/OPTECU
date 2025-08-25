@@ -40,12 +40,10 @@
         <div class="card-header">
             <h3 class="card-title">INFORMACIÓN DEL DETALLE</h3>
             <div class="card-tools">
-                @can('admin')
                 <a href="{{ route('detalles-sueldo.edit', $detalleSueldo->id) }}" 
                    class="btn btn-primary btn-sm">
                     <i class="fas fa-edit"></i> EDITAR
                 </a>
-                @endcan
             </div>
         </div>
         <div class="card-body">
@@ -96,11 +94,11 @@
                         ])) }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> VOLVER AL ROL DE PAGO
                         </a>
-                        @can('admin')
                         <a href="{{ route('detalles-sueldo.edit', $detalleSueldo->id) }}" 
                            class="btn btn-primary">
                             <i class="fas fa-edit"></i> EDITAR DETALLE
                         </a>
+                        @can('admin')
                         <button type="button" class="btn btn-danger" 
                                 data-toggle="modal" data-target="#confirmarEliminarModal">
                             <i class="fas fa-trash"></i> ELIMINAR DETALLE
