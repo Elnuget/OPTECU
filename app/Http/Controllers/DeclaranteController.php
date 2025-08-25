@@ -99,9 +99,9 @@ class DeclaranteController extends Controller
                 'obligado_contabilidad' => 'nullable'
             ];
             
-            // Solo validar firma si hay un archivo
+            // Solo validar firma si hay un archivo - Ahora solo aceptamos formato PEM
             if ($request->hasFile('firma')) {
-                $reglas['firma'] = 'nullable|file|max:2048'; // Permitimos cualquier tipo de archivo para evitar problemas de mimes
+                $reglas['firma'] = 'nullable|file|mimes:pem,txt|max:2048'; // Solo archivos PEM (formato texto)
             }
             
             $request->validate($reglas);
@@ -201,9 +201,9 @@ class DeclaranteController extends Controller
                 'obligado_contabilidad' => 'nullable'
             ];
             
-            // Solo validar firma si hay un archivo
+            // Solo validar firma si hay un archivo - Ahora solo aceptamos formato PEM
             if ($request->hasFile('firma')) {
-                $reglas['firma'] = 'nullable|file|max:2048'; // Permitimos cualquier tipo de archivo para evitar problemas de mimes
+                $reglas['firma'] = 'nullable|file|mimes:pem,txt|max:2048'; // Solo archivos PEM (formato texto)
             }
             
             $request->validate($reglas);

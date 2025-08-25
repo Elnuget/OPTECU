@@ -29,6 +29,25 @@
     }
 </style>
 
+<!-- Alerta informativa sobre el cambio a PEM -->
+<div class="alert alert-info alert-dismissible fade show" role="alert">
+    <h5><i class="fas fa-info-circle"></i> Importante: Cambio a Formato PEM</h5>
+    <p class="mb-2">
+        <strong>Ahora trabajamos únicamente con certificados en formato PEM.</strong> 
+        Este formato es más moderno, seguro y compatible que el antiguo P12.
+    </p>
+    <p class="mb-0">
+        <i class="fas fa-link text-primary"></i> 
+        <strong>¿Tienes un certificado en otro formato?</strong> 
+        <a href="https://www.leaderssl.es/tools/ssl_converter" target="_blank" class="alert-link">
+            <strong>Conviértelo aquí a PEM <i class="fas fa-external-link-alt"></i></strong>
+        </a>
+    </p>
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+
 <div class="card">
     <div class="card-body">
         <!-- Formulario para crear/editar declarante -->
@@ -60,12 +79,20 @@
                         </div>
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="firma">Certificado Digital de Firma</label>
+                                <label for="firma">Certificado Digital PEM <span class="text-info">(Formato Requerido)</span></label>
                                 <div class="custom-file">
-                                    <input type="file" class="custom-file-input" id="firma" name="firma" accept=".p12,.pem">
-                                    <label class="custom-file-label" for="firma">Seleccionar certificado...</label>
+                                    <input type="file" class="custom-file-input" id="firma" name="firma" accept=".pem,.txt">
+                                    <label class="custom-file-label" for="firma">Seleccionar certificado PEM...</label>
                                 </div>
-                                <small class="form-text text-muted">Formatos permitidos: P12, PEM (certificados digitales)</small>
+                                <small class="form-text text-muted">
+                                    <strong>Solo formato PEM:</strong> Archivos .pem o .txt con certificados en formato PEM.
+                                    <br>
+                                    <i class="fas fa-info-circle text-info"></i> 
+                                    <strong>¿Tienes certificado en otro formato?</strong> 
+                                    <a href="https://www.leaderssl.es/tools/ssl_converter" target="_blank" class="text-primary">
+                                        <i class="fas fa-external-link-alt"></i> Convierte aquí a PEM
+                                    </a>
+                                </small>
                                 <div class="invalid-feedback"></div>
                                 <!-- Vista previa del archivo -->
                                 <div id="firmaPreview" class="mt-2" style="display: none;">
@@ -73,7 +100,7 @@
                                         <div class="text-center">
                                             <i class="fas fa-certificate fa-3x text-primary mb-2"></i>
                                             <div id="firmaFileName" class="text-center small text-muted"></div>
-                                            <div class="text-center small text-info">Certificado Digital</div>
+                                            <div class="text-center small text-info">Certificado PEM</div>
                                         </div>
                                         <button type="button" class="btn btn-sm btn-danger mt-1 btn-block" id="removeFirma">
                                             <i class="fas fa-times"></i> Eliminar
@@ -82,12 +109,12 @@
                                 </div>
                                 <!-- Mostrar firma actual al editar -->
                                 <div id="firmaActual" class="mt-2" style="display: none;">
-                                    <label class="small text-muted">Certificado actual:</label>
+                                    <label class="small text-muted">Certificado PEM actual:</label>
                                     <div class="border rounded p-2" style="max-width: 200px;">
                                         <div class="text-center">
                                             <i class="fas fa-certificate fa-3x text-success mb-2"></i>
                                             <div id="firmaActualName" class="text-center small text-muted"></div>
-                                            <div class="text-center small text-success">Certificado Digital</div>
+                                            <div class="text-center small text-success">Certificado PEM</div>
                                         </div>
                                     </div>
                                 </div>
@@ -478,10 +505,10 @@ function renderizarDeclarantes(declarantes) {
     }
     
     declarantes.forEach((declarante, index) => {
-        // Crear badge para certificado
+        // Crear badge para certificado PEM
         const certificadoBadge = declarante.firma 
-            ? `<span class="badge badge-has-cert"><i class="fas fa-check"></i> Certificado: Sí</span>`
-            : `<span class="badge badge-no-cert"><i class="fas fa-times"></i> Certificado: No</span>`;
+            ? `<span class="badge badge-has-cert"><i class="fas fa-check"></i> Certificado PEM: Sí</span>`
+            : `<span class="badge badge-no-cert"><i class="fas fa-times"></i> Certificado PEM: No</span>`;
         
         // Crear badge para obligado contabilidad
         const obligadoContabilidadBadge = declarante.obligado_contabilidad 
@@ -942,7 +969,7 @@ function resetearFormulario() {
         // Resetear también la etiqueta del archivo seleccionado
         const fileLabel = firmaInput.nextElementSibling;
         if (fileLabel) {
-            fileLabel.textContent = 'Seleccionar certificado...';
+            fileLabel.textContent = 'Seleccionar certificado PEM...';
         }
     }
     
