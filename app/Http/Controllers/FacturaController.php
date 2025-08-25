@@ -1029,7 +1029,11 @@ class FacturaController extends Controller
                 'factura_id' => $id,
                 'xml_tiene_infoAdicional' => strpos($xmlFirmado, '<infoAdicional>') !== false,
                 'xml_tiene_campoAdicional' => strpos($xmlFirmado, '<campoAdicional') !== false,
-                'xml_preview_infoAdicional' => $this->extraerSeccionXML($xmlFirmado, 'infoAdicional')
+                'xml_tiene_signature' => strpos($xmlFirmado, '<ds:Signature') !== false,
+                'xml_tiene_signature_value' => strpos($xmlFirmado, '<ds:SignatureValue>') !== false,
+                'xml_tiene_placeholder' => strpos($xmlFirmado, 'PEM_SIGNATURE_PLACEHOLDER') !== false,
+                'xml_preview_infoAdicional' => $this->extraerSeccionXML($xmlFirmado, 'infoAdicional'),
+                'xml_preview_signature' => substr($this->extraerSeccionXML($xmlFirmado, 'ds:SignatureValue'), 0, 200) . '...'
             ]);
 
             $resultadoSRI = $this->enviarAlSRI($xmlFirmado);
@@ -1250,7 +1254,8 @@ class FacturaController extends Controller
 
             \Log::info('Certificado PEM procesado exitosamente', [
                 'certificate_valid' => !empty($certificado),
-                'private_key_valid' => is_resource($clavePrivada)
+                'private_key_valid' => $clavePrivada !== false,
+                'private_key_type' => gettype($clavePrivada)
             ]);
 
             // Aplicar firma XAdES-BES con PEM
@@ -1344,10 +1349,21 @@ class FacturaController extends Controller
         try {
             \Log::info('Aplicando firma XAdES-BES con certificado PEM');
             
+            // Validar parámetros de entrada
+            if (!$cert) {
+                throw new \Exception('Certificado no válido');
+            }
+            
+            if (!$privateKey) {
+                throw new \Exception('Clave privada no válida');
+            }
+            
             // Por ahora, retornamos el XML original con una marca de firmado
             // En una implementación real, aquí se aplicaría la firma XAdES-BES
             $dom = new \DOMDocument();
-            $dom->loadXML($xmlContent);
+            if (!$dom->loadXML($xmlContent)) {
+                throw new \Exception('Error al cargar XML para firmar');
+            }
             
             // Obtener información del certificado
             $certInfo = openssl_x509_parse($cert);
@@ -1393,8 +1409,24 @@ class FacturaController extends Controller
             $signedInfo->appendChild($reference);
             $signature->appendChild($signedInfo);
             
-            // SignatureValue (placeholder - en producción se calcularía realmente)
-            $signatureValue = $dom->createElement('ds:SignatureValue', 'PEM_SIGNATURE_PLACEHOLDER');
+            // Calcular SignatureValue real usando la clave privada
+            $signedInfoCanonical = $signedInfo->C14N();
+            $signatureBinary = '';
+            
+            // Firmar el SignedInfo con la clave privada
+            if (openssl_sign($signedInfoCanonical, $signatureBinary, $privateKey, OPENSSL_ALGO_SHA1)) {
+                $signatureValueBase64 = base64_encode($signatureBinary);
+                \Log::info('Firma digital generada exitosamente', [
+                    'signedInfo_length' => strlen($signedInfoCanonical),
+                    'signature_binary_length' => strlen($signatureBinary),
+                    'signature_base64_length' => strlen($signatureValueBase64)
+                ]);
+            } else {
+                \Log::error('Error al generar firma digital');
+                throw new \Exception('No se pudo generar la firma digital con la clave privada');
+            }
+            
+            $signatureValue = $dom->createElement('ds:SignatureValue', $signatureValueBase64);
             $signature->appendChild($signatureValue);
             
             // KeyInfo

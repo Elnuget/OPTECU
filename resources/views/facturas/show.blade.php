@@ -74,7 +74,7 @@
                 <div class="row">
                     <div class="col-md-12">
                         <strong>Mensajes del SRI:</strong>
-                        <div class="alert alert-dark mt-2" style="color: white; background-color: #343a40; border-color: #495057;">
+                        <div class="alert alert-dark mt-2" style="color: white; background-color: #343a40; border-color: #495057; max-height: none;">
                             @php
                                 $mensajes = $factura->mensajes_sri_procesados ?? (
                                     is_string($factura->mensajes_sri) ? json_decode($factura->mensajes_sri, true) : $factura->mensajes_sri
@@ -82,30 +82,38 @@
                                 if (!is_array($mensajes)) $mensajes = [$factura->mensajes_sri];
                             @endphp
                             @foreach($mensajes as $mensaje)
-                                <div class="mb-3 p-2" style="border-left: 3px solid #ffffff; background-color: rgba(255,255,255,0.1);">
+                                <div class="mb-3 p-3" style="border-left: 4px solid #ffffff; background-color: rgba(255,255,255,0.1); border-radius: 4px;">
                                     @if(is_array($mensaje))
-                                        <div style="color: white; font-weight: bold; font-size: 14px;">
+                                        <div style="color: white; font-weight: bold; font-size: 16px; margin-bottom: 8px;">
                                             • {{ $mensaje['mensaje'] ?? 'Mensaje sin descripción' }}
                                         </div>
                                         @if(isset($mensaje['identificador']))
-                                            <div style="color: #f8f9fa; font-size: 12px; margin-top: 5px;">
+                                            <div style="color: #f8f9fa; font-size: 13px; margin-bottom: 6px;">
                                                 <strong>Código:</strong> {{ $mensaje['identificador'] }}
                                             </div>
                                         @endif
                                         @if(isset($mensaje['informacionAdicional']))
-                                            <div style="color: #f8f9fa; font-size: 12px; margin-top: 5px; word-break: break-word;">
+                                            <div style="color: #f8f9fa; font-size: 13px; margin-bottom: 8px; 
+                                                       word-wrap: break-word; 
+                                                       white-space: pre-wrap; 
+                                                       overflow-wrap: break-word; 
+                                                       max-width: 100%; 
+                                                       line-height: 1.4;">
                                                 <strong>Detalle:</strong> {{ $mensaje['informacionAdicional'] }}
                                             </div>
                                         @endif
                                         @if(isset($mensaje['tipo']))
-                                            <div style="margin-top: 8px;">
-                                                <span class="badge badge-{{ $mensaje['tipo'] === 'ERROR' ? 'danger' : 'warning' }}" style="font-size: 11px;">
+                                            <div style="margin-top: 10px;">
+                                                <span class="badge badge-{{ $mensaje['tipo'] === 'ERROR' ? 'danger' : 'warning' }}" style="font-size: 12px; padding: 4px 8px;">
                                                     {{ $mensaje['tipo'] }}
                                                 </span>
                                             </div>
                                         @endif
                                     @else
-                                        <div style="color: white; font-weight: bold; font-size: 14px;">
+                                        <div style="color: white; font-weight: bold; font-size: 16px; 
+                                                   word-wrap: break-word; 
+                                                   white-space: pre-wrap; 
+                                                   overflow-wrap: break-word;">
                                             • {{ is_string($mensaje) ? $mensaje : 'Mensaje no válido' }}
                                         </div>
                                     @endif
