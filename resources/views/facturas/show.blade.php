@@ -623,10 +623,19 @@
 
     // Manejar eventos del modal
     $('#modalCertificado').on('hidden.bs.modal', function () {
+        // Verificar si el proceso fue exitoso
+        const btnCerrarExitoso = document.getElementById('btn_cerrar_exitoso');
+        const procesoExitoso = btnCerrarExitoso && btnCerrarExitoso.style.display !== 'none';
+        
         facturaIdActual = null;
         document.getElementById('formCertificado').reset();
         document.getElementById('progreso_firma').style.display = 'none';
         document.getElementById('resultado_firma').style.display = 'none';
+        
+        // Si el proceso fue exitoso, recargar la página
+        if (procesoExitoso) {
+            window.location.reload();
+        }
     });
 
     // Permitir envío con Enter en el campo de contraseña
