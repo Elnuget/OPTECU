@@ -81,6 +81,18 @@ class Factura extends Model
     }
 
     /**
+     * Accessor para la fecha de autorización - solo devolver si está realmente autorizada
+     */
+    public function getFechaAutorizacionAttribute($value)
+    {
+        // Solo devolver la fecha si la factura está realmente autorizada
+        if ($this->estado === 'AUTORIZADA' && $value) {
+            return $this->asDateTime($value);
+        }
+        return null;
+    }
+
+    /**
      * Scope para buscar facturas por pedido.
      */
     public function scopeByPedido($query, $pedidoId)

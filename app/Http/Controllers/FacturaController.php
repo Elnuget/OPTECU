@@ -1155,15 +1155,18 @@ class FacturaController extends Controller
                 } elseif ($estadoSRI === 'AUTORIZADA') {
                     $factura->estado = 'AUTORIZADA';
                     $factura->estado_sri = 'AUTORIZADA';
+                    $factura->numero_autorizacion = $resultadoSRI['numero_autorizacion'] ?? null;
+                    $factura->fecha_autorizacion = isset($resultadoSRI['fecha_autorizacion']) && $resultadoSRI['fecha_autorizacion'] ? 
+                        \Carbon\Carbon::parse($resultadoSRI['fecha_autorizacion']) : now();
                 } else {
                     $factura->estado = 'DEVUELTA';
                     $factura->estado_sri = $estadoSRI;
                     $factura->mensajes_sri = json_encode($resultadoSRI['errors'] ?? ['Estado desconocido: ' . $estadoSRI]);
                 }
                 
-                $factura->numero_autorizacion = $resultadoSRI['numero_autorizacion'] ?? null;
-                $factura->fecha_autorizacion = isset($resultadoSRI['fecha_autorizacion']) && $resultadoSRI['fecha_autorizacion'] ? 
-                    \Carbon\Carbon::parse($resultadoSRI['fecha_autorizacion']) : now();
+                // Solo guardar numero_autorizacion y fecha_autorizacion si está AUTORIZADA
+                // NO guardar estos campos para estados RECIBIDA o DEVUELTA
+                
                 $factura->save();
 
                 \Log::info('Factura actualizada exitosamente', [
@@ -1201,9 +1204,9 @@ class FacturaController extends Controller
                     'estado' => $factura->estado,
                     'estado_sri' => $factura->estado_sri,
                     'numero_autorizacion' => $factura->numero_autorizacion ?? 'N/A',
-                    'fecha_autorizacion' => $factura->fecha_autorizacion->format('d/m/Y H:i:s'),
-                    'fecha_firma' => $factura->fecha_firma->format('d/m/Y H:i:s'),
-                    'fecha_envio_sri' => $factura->fecha_envio_sri->format('d/m/Y H:i:s'),
+                    'fecha_autorizacion' => $factura->fecha_autorizacion ? $factura->fecha_autorizacion->format('d/m/Y H:i:s') : 'N/A',
+                    'fecha_firma' => $factura->fecha_firma ? $factura->fecha_firma->format('d/m/Y H:i:s') : 'N/A',
+                    'fecha_envio_sri' => $factura->fecha_envio_sri ? $factura->fecha_envio_sri->format('d/m/Y H:i:s') : 'N/A',
                     'xml_firmado_path' => $factura->xml_firmado
                 ]
             ]);
@@ -1879,11 +1882,12 @@ class FacturaController extends Controller
                 ], 422);
             }
 
-            // Verificar que no haya sido autorizada ya
-            if (!empty($factura->fecha_autorizacion) || $factura->estado === 'AUTORIZADA') {
+            // Verificar que no haya sido autorizada ya (solo verificar por estado)
+            if ($factura->estado === 'AUTORIZADA') {
                 \Log::warning('Factura ya autorizada', [
                     'factura_id' => $id,
-                    'fecha_autorizacion' => $factura->fecha_autorizacion
+                    'estado' => $factura->estado,
+                    'numero_autorizacion' => $factura->numero_autorizacion
                 ]);
                 
                 return response()->json([
@@ -1966,16 +1970,38 @@ class FacturaController extends Controller
 
             \Log::info('=== FIN PROCESO AUTORIZACIÓN EXITOSO ===', ['factura_id' => $id]);
 
-            return response()->json([
-                'success' => true,
-                'message' => $estadoSRI === 'AUTORIZADO' ? 'Factura autorizada exitosamente' : 'Proceso de autorización completado',
-                'data' => [
+            // Determinar si es realmente exitoso o no
+            if ($estadoSRI === 'AUTORIZADO') {
+                $responseData = [
                     'estado' => $factura->estado,
                     'estado_sri' => $factura->estado_sri,
                     'numero_autorizacion' => $factura->numero_autorizacion,
-                    'fecha_autorizacion' => $factura->fecha_autorizacion
-                ]
-            ]);
+                ];
+                
+                // Solo incluir fecha_autorizacion si existe y es válida
+                if ($factura->fecha_autorizacion) {
+                    $responseData['fecha_autorizacion'] = $factura->fecha_autorizacion->format('Y-m-d H:i:s');
+                }
+                
+                return response()->json([
+                    'success' => true,
+                    'authorized' => true,
+                    'message' => 'Factura autorizada exitosamente por el SRI',
+                    'data' => $responseData
+                ]);
+            } else {
+                // No autorizada - proceso completado pero factura rechazada
+                return response()->json([
+                    'success' => true,
+                    'authorized' => false,
+                    'message' => 'La factura NO fue autorizada por el SRI',
+                    'data' => [
+                        'estado' => $factura->estado,
+                        'estado_sri' => $factura->estado_sri,
+                        'motivo_rechazo' => $resultadoSRI['errores_detallados'] ?? 'Rechazada por el SRI'
+                    ]
+                ]);
+            }
 
         } catch (\Exception $e) {
             \Log::error('=== ERROR CRÍTICO EN AUTORIZACIÓN ===', [

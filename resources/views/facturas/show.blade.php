@@ -22,7 +22,12 @@
                         <strong>ID:</strong> {{ $factura->id }}
                     </div>
                     <div class="col-md-3">
-                        <strong>Fecha:</strong> {{ $factura->created_at->format('d/m/Y H:i') }}
+                        <strong>Fecha:</strong> 
+                        @if($factura->created_at)
+                            {{ $factura->created_at->format('d/m/Y H:i') }}
+                        @else
+                            N/A
+                        @endif
                     </div>
                     <div class="col-md-3">
                         <strong>Declarante:</strong> {{ $factura->declarante->nombre ?? 'N/A' }}
@@ -64,7 +69,12 @@
                     @endif
                     @if($factura->fecha_autorizacion)
                     <div class="col-md-3">
-                        <strong>Fecha Autorización:</strong> {{ $factura->fecha_autorizacion->format('d/m/Y H:i') }}
+                        <strong>Fecha Autorización:</strong> 
+                        @if(is_object($factura->fecha_autorizacion) && method_exists($factura->fecha_autorizacion, 'format'))
+                            {{ $factura->fecha_autorizacion->format('d/m/Y H:i') }}
+                        @else
+                            {{ $factura->fecha_autorizacion }}
+                        @endif
                     </div>
                     @endif
                 </div>
@@ -148,12 +158,21 @@
                     <i class="fas fa-certificate"></i> Firmar y Enviar al SRI
                 </button>
             @elseif($factura->estado === 'RECIBIDA')
-                <span class="badge badge-primary">
-                    <i class="fas fa-clock"></i> Procesando Autorización...
-                </span>
+                <button type="button" class="btn btn-sm btn-info" onclick="procesarAutorizacionDirecta({{ $factura->id }})">
+                    <i class="fas fa-check"></i> Solicitar Autorización
+                </button>
+                <div id="estado_autorizacion_proceso" style="display: none;" class="mt-2">
+                    <div class="alert alert-info">
+                        <i class="fas fa-spinner fa-spin"></i> Solicitando autorización al SRI...
+                    </div>
+                </div>
             @elseif($factura->estado === 'AUTORIZADA')
                 <span class="badge badge-success">
                     <i class="fas fa-check-circle"></i> Autorizada
+                </span>
+            @elseif($factura->estado === 'NO_AUTORIZADA')
+                <span class="badge badge-dark">
+                    <i class="fas fa-ban"></i> No Autorizada por el SRI
                 </span>
             @elseif($factura->estado === 'DEVUELTA')
                 <button type="button" class="btn btn-sm btn-warning" onclick="firmarYEnviar({{ $factura->id }})">
@@ -186,7 +205,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-certificate"></i> Firmar y Enviar al SRI
+                    <i class="fas fa-certificate"></i> Firmar y Enviar al SRI (Certificado PEM)
                 </h5>
                 <button type="button" class="close" data-dismiss="modal">
                     <span>&times;</span>
@@ -196,13 +215,13 @@
                 <form id="formCertificado">
                     <div class="form-group">
                         <label for="password_certificado">
-                            <i class="fas fa-key"></i> Contraseña del Certificado Digital
+                            <i class="fas fa-key"></i> Contraseña del Certificado Digital PEM
                         </label>
                         <input type="password" class="form-control" id="password_certificado" 
                                name="password_certificado" required 
-                               placeholder="Ingrese la contraseña del certificado .p12">
+                               placeholder="Ingrese la contraseña del certificado PEM">
                         <small class="form-text text-muted">
-                            Se requiere la contraseña del certificado digital (.p12) para firmar el documento.
+                            Se requiere la contraseña del certificado digital (.pem) para firmar el documento.
                         </small>
                     </div>
                     <div class="form-group">
@@ -243,6 +262,67 @@
                     <i class="fas fa-certificate"></i> Firmar y Enviar
                 </button>
                 <button type="button" class="btn btn-success" id="btn_cerrar_exitoso" style="display: none;" data-dismiss="modal">
+                    <i class="fas fa-check"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Autorización -->
+<div class="modal fade" id="modalAutorizacion" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle"></i> Solicitar Autorización al SRI
+                </h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="confirmar_autorizacion" required>
+                        <label class="custom-control-label" for="confirmar_autorizacion">
+                            Confirmo que deseo solicitar la autorización de este comprobante al SRI
+                        </label>
+                    </div>
+                    <small class="form-text text-muted">
+                        Se enviará una solicitud de autorización al SRI para este comprobante.
+                    </small>
+                </div>
+
+                <!-- Área de progreso -->
+                <div id="progreso_autorizacion" style="display: none;">
+                    <div class="text-center mb-3">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <div class="progress-text mt-2"><strong>Iniciando proceso...</strong></div>
+                    </div>
+                    <div class="text-muted text-center">
+                        <small id="estado_autorizacion">Preparando solicitud de autorización</small>
+                    </div>
+                </div>
+
+                <!-- Área de resultado -->
+                <div id="resultado_autorizacion" style="display: none;">
+                    <div id="alert_resultado_autorizacion" class="alert">
+                        <!-- El contenido se llenará dinámicamente -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-info" id="btn_autorizar" onclick="procesarAutorizacion()">
+                    <i class="fas fa-check"></i> Solicitar Autorización
+                </button>
+                <button type="button" class="btn btn-success" id="btn_cerrar_autorizacion_exitoso" style="display: none;" data-dismiss="modal">
                     <i class="fas fa-check"></i> Cerrar
                 </button>
             </div>
@@ -346,6 +426,7 @@
 @section('js')
 <script>
     let facturaIdActual = null;
+    let facturaIdAutorizacion = null;
 
     function copyXmlToClipboard() {
         const xmlContent = document.getElementById('xmlContent');
@@ -556,6 +637,83 @@
         }
     });
     
+    // Función para procesar autorización directamente sin modal
+    function procesarAutorizacionDirecta(facturaId) {
+        console.log('Iniciando autorización directa para factura:', facturaId);
+        
+        // Mostrar indicador de proceso
+        const estadoProceso = document.getElementById('estado_autorizacion_proceso');
+        if (estadoProceso) {
+            estadoProceso.style.display = 'block';
+        }
+        
+        // Deshabilitar el botón
+        const btnAutorizar = event.target;
+        btnAutorizar.disabled = true;
+        btnAutorizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Solicitando...';
+        
+        // Enviar solicitud directa
+        fetch(`{{ url('/facturas') }}/${facturaId}/autorizar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                _token: document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Respuesta de autorización directa:', data);
+            
+            // Ocultar indicador de proceso
+            if (estadoProceso) {
+                estadoProceso.style.display = 'none';
+            }
+            
+            if (data.success) {
+                if (data.authorized) {
+                    // Autorizada exitosamente
+                    alert('¡Factura autorizada exitosamente!\n\n' + data.message);
+                    window.location.reload(); // Recargar para mostrar nuevo estado
+                } else {
+                    // No autorizada pero proceso exitoso
+                    let mensaje = 'La factura NO fue autorizada por el SRI:\n\n' + data.message;
+                    if (data.data && data.data.motivo_rechazo) {
+                        if (Array.isArray(data.data.motivo_rechazo)) {
+                            mensaje += '\n\nMotivos:\n• ' + data.data.motivo_rechazo.join('\n• ');
+                        } else {
+                            mensaje += '\n\nMotivo: ' + data.data.motivo_rechazo;
+                        }
+                    }
+                    alert(mensaje);
+                    window.location.reload(); // Recargar para mostrar nuevo estado
+                }
+            } else {
+                // Error en el proceso
+                alert('Error al procesar autorización:\n\n' + data.message);
+                // Rehabilitar botón para reintentar
+                btnAutorizar.disabled = false;
+                btnAutorizar.innerHTML = '<i class="fas fa-check"></i> Solicitar Autorización';
+            }
+        })
+        .catch(error => {
+            console.error('Error en autorización directa:', error);
+            
+            // Ocultar indicador de proceso
+            if (estadoProceso) {
+                estadoProceso.style.display = 'none';
+            }
+            
+            alert('Error de conexión al solicitar autorización:\n\n' + error.message);
+            
+            // Rehabilitar botón para reintentar
+            btnAutorizar.disabled = false;
+            btnAutorizar.innerHTML = '<i class="fas fa-check"></i> Solicitar Autorización';
+        });
+    }
+    
     // Función para mostrar modal de autorización
     function autorizarComprobante(facturaId) {
         facturaIdAutorizacion = facturaId;
@@ -639,8 +797,15 @@
             console.log('Respuesta de autorización:', data);
             
             if (data.success) {
-                mostrarResultadoAutorizacion(true, data.message, data.data);
+                if (data.authorized) {
+                    // Autorizada exitosamente
+                    mostrarResultadoAutorizacion(true, data.message, data.data);
+                } else {
+                    // No autorizada (proceso exitoso pero rechazada)
+                    mostrarResultadoAutorizacion(false, data.message, data.data, true);
+                }
             } else {
+                // Error en el proceso
                 mostrarResultadoAutorizacion(false, data.message, data.errors);
             }
         })
@@ -651,8 +816,8 @@
     }
     
     // Función para mostrar resultado de autorización
-    function mostrarResultadoAutorizacion(exito, mensaje, datos) {
-        console.log('Mostrando resultado de autorización:', { exito, mensaje, datos });
+    function mostrarResultadoAutorizacion(exito, mensaje, datos, noAutorizada = false) {
+        console.log('Mostrando resultado de autorización:', { exito, mensaje, datos, noAutorizada });
         
         document.getElementById('progreso_autorizacion').style.display = 'none';
         document.getElementById('resultado_autorizacion').style.display = 'block';
@@ -690,25 +855,62 @@
             }, 3000);
             
         } else {
-            alertElement.className = 'alert alert-danger';
-            alertElement.innerHTML = `
-                <h6><i class="fas fa-times-circle"></i> Error en Autorización</h6>
-                <p>${mensaje}</p>
-            `;
-            
-            if (datos && Array.isArray(datos)) {
-                let errores = '<hr><small><strong>Detalles:</strong><ul>';
-                datos.forEach(error => {
-                    errores += `<li>${error}</li>`;
-                });
-                errores += '</ul></small>';
-                alertElement.innerHTML += errores;
+            // Determinar si es un rechazo (no autorizada) o un error de proceso
+            if (noAutorizada) {
+                alertElement.className = 'alert alert-warning';
+                alertElement.innerHTML = `
+                    <h6><i class="fas fa-exclamation-triangle"></i> Factura NO Autorizada</h6>
+                    <p>${mensaje}</p>
+                    <small class="text-muted">El proceso se completó correctamente, pero el SRI no autorizó la factura.</small>
+                `;
+                
+                if (datos && datos.motivo_rechazo) {
+                    let motivos = '<hr><small><strong>Motivos del rechazo:</strong><ul>';
+                    if (Array.isArray(datos.motivo_rechazo)) {
+                        datos.motivo_rechazo.forEach(motivo => {
+                            motivos += `<li>${motivo}</li>`;
+                        });
+                    } else {
+                        motivos += `<li>${datos.motivo_rechazo}</li>`;
+                    }
+                    motivos += '</ul></small>';
+                    alertElement.innerHTML += motivos;
+                }
+                
+                if (datos && datos.estado_sri) {
+                    alertElement.innerHTML += `<hr><small><strong>Estado SRI:</strong> ${datos.estado_sri}</small>`;
+                }
+                
+                // Mostrar botón de cerrar (no de reintentar)
+                document.getElementById('btn_cerrar_autorizacion_exitoso').style.display = 'inline-block';
+                
+                // Recargar página después de 5 segundos para mostrar el nuevo estado
+                setTimeout(() => {
+                    window.location.reload();
+                }, 5000);
+                
+            } else {
+                // Error en el proceso
+                alertElement.className = 'alert alert-danger';
+                alertElement.innerHTML = `
+                    <h6><i class="fas fa-times-circle"></i> Error en Autorización</h6>
+                    <p>${mensaje}</p>
+                `;
+                
+                if (datos && Array.isArray(datos)) {
+                    let errores = '<hr><small><strong>Detalles:</strong><ul>';
+                    datos.forEach(error => {
+                        errores += `<li>${error}</li>`;
+                    });
+                    errores += '</ul></small>';
+                    alertElement.innerHTML += errores;
+                }
+                
+                // Mostrar botón para reintentar
+                document.getElementById('btn_autorizar').style.display = 'inline-block';
+                
+                console.error('ERROR: Error al autorizar la factura:', mensaje, datos);
             }
-            
-            // Mostrar botón para reintentar
-            document.getElementById('btn_autorizar').style.display = 'inline-block';
-            
-            console.error('ERROR: Error al autorizar la factura:', mensaje, datos);
         }
     }
     
