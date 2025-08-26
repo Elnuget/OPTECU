@@ -1517,6 +1517,12 @@ class FacturaController extends Controller
 
     /**
      * Enviar XML firmado al SRI
+     * 
+     * IMPORTANTE: En el proceso de facturación electrónica del SRI hay dos pasos:
+     * 1. ENVÍO (recepción): Se envía solo el XML firmado (sin encapsular)
+     * 2. AUTORIZACIÓN: Se solicita autorización usando solo la clave de acceso
+     * 
+     * Esta función maneja el primer paso (envío/recepción)
      *
      * @param  string  $xmlFirmado
      * @return array
@@ -1528,10 +1534,10 @@ class FacturaController extends Controller
                 'xml_length' => strlen($xmlFirmado)
             ]);
 
-            // Convertir XML a Base64
+            // Convertir XML firmado directamente a Base64 (SIN ENCAPSULAR)
             $xmlBase64 = base64_encode($xmlFirmado);
             
-            \Log::info('XML convertido a Base64', [
+            \Log::info('XML firmado convertido a Base64', [
                 'xml_base64_length' => strlen($xmlBase64),
                 'xml_base64_preview' => substr($xmlBase64, 0, 100) . '...'
             ]);
@@ -2437,6 +2443,78 @@ class FacturaController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+        }
+    }
+
+    /**
+     * Extraer clave de acceso del contenido XML
+     *
+     * @param  string  $xmlContent
+     * @return string|null
+     */
+    private function extraerClaveAccesoDelXMLContent($xmlContent)
+    {
+        try {
+            $dom = new \DOMDocument();
+            if (!$dom->loadXML($xmlContent)) {
+                return null;
+            }
+
+            $xpath = new \DOMXPath($dom);
+            $claveAccesoNode = $xpath->query('//claveAcceso');
+            
+            if ($claveAccesoNode->length > 0) {
+                return $claveAccesoNode->item(0)->textContent;
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            \Log::error('Error extrayendo clave de acceso del XML: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Encapsular XML firmado en estructura de autorización
+     * 
+     * NOTA: Esta función se creó para casos especiales donde se necesite
+     * encapsular el XML en una estructura de autorización. En el flujo
+     * normal del SRI, esto NO se usa para el envío inicial.
+     *
+     * @param  string  $xmlFirmado
+     * @param  string  $claveAcceso
+     * @return string
+     */
+    private function encapsularXMLEnAutorizacion($xmlFirmado, $claveAcceso)
+    {
+        try {
+            // Crear la estructura de autorización
+            $fechaActual = date('Y-m-d H:i:s');
+            
+            // Determinar el ambiente (se puede hacer configurable en config/app.php)
+            $ambiente = config('app.sri_ambiente', 'PRUEBAS'); // Por defecto PRUEBAS
+            
+            $xmlAutorizacion = '<?xml version="1.0" encoding="UTF-8"?>
+<autorizacion>
+    <estado>AUTORIZADO</estado>
+    <numeroAutorizacion>' . htmlspecialchars($claveAcceso) . '</numeroAutorizacion>
+    <fechaAutorizacion>' . $fechaActual . '</fechaAutorizacion>
+    <ambiente>' . $ambiente . '</ambiente>
+    <comprobante><![CDATA[' . $xmlFirmado . ']]></comprobante>
+    <mensajes/>
+</autorizacion>';
+
+            \Log::info('XML encapsulado en estructura de autorización creado', [
+                'clave_acceso' => $claveAcceso,
+                'fecha_autorizacion' => $fechaActual,
+                'ambiente' => $ambiente,
+                'xml_autorizacion_length' => strlen($xmlAutorizacion)
+            ]);
+
+            return $xmlAutorizacion;
+        } catch (\Exception $e) {
+            \Log::error('Error encapsulando XML en autorización: ' . $e->getMessage());
+            throw new \Exception('Error al encapsular XML en estructura de autorización: ' . $e->getMessage());
         }
     }
 }
