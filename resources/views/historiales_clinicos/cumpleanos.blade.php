@@ -7,6 +7,7 @@ use App\Models\MensajePredeterminado;
 @endphp
 
 @section('content_header')
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <div class="row mb-2">
     <div class="col-sm-6">
         <h1>CUMPLEAÑOS DEL MES DE {{ strtoupper($mes_actual) }}</h1>
@@ -204,7 +205,14 @@ use App\Models\MensajePredeterminado;
                                         <button type="button" 
                                             class="btn {{ $mensajeEnviado ? 'btn-warning' : 'btn-success' }} btn-sm btn-enviar-mensaje"
                                             data-paciente-id="{{ $paciente['id'] }}"
-                                            onclick="mostrarModalMensaje({{ $paciente['id'] }}, '{{ $paciente['nombres'] }}')">
+                                            onclick="mostrarModalMensaje(
+                                                {{ $paciente['id'] }}, 
+                                                '{{ $paciente['nombres'] }}',
+                                                '{{ $paciente['apellidos'] }}',
+                                                {{ $paciente['edad_cumplir'] }},
+                                                {{ $paciente['dia_cumpleanos'] }},
+                                                '{{ $paciente['empresa_nombre'] ?? 'Óptica' }}'
+                                            )">
                                             <i class="fab fa-whatsapp"></i> 
                                             {{ $mensajeEnviado ? 'VOLVER A ENVIAR' : 'ENVIAR FELICITACIÓN' }}
                                         </button>
@@ -222,7 +230,7 @@ use App\Models\MensajePredeterminado;
 
 <!-- Modal para editar mensaje predeterminado -->
 <div class="modal fade" id="editarMensajeModal" tabindex="-1" role="dialog" aria-labelledby="editarMensajeModalLabel">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">EDITAR MENSAJE PREDETERMINADO</h5>
@@ -234,7 +242,34 @@ use App\Models\MensajePredeterminado;
                 <form id="mensajePredeterminadoForm">
                     <div class="form-group">
                         <label>MENSAJE DE FELICITACIÓN:</label>
-                        <textarea class="form-control" id="mensajePredeterminado" rows="6">{{ MensajePredeterminado::obtenerMensaje('cumpleanos') }}</textarea>
+                        <div class="alert alert-info mb-3">
+                            <strong><i class="fas fa-info-circle"></i> VARIABLES DISPONIBLES:</strong>
+                            <br>
+                            <small>
+                                • <code>[NOMBRE]</code> - Nombre del paciente<br>
+                                • <code>[APELLIDOS]</code> - Apellidos del paciente<br>
+                                • <code>[EDAD]</code> - Edad que está cumpliendo<br>
+                                • <code>[DIA]</code> - Día del cumpleaños (número)<br>
+                                • <code>[MES]</code> - Mes actual en texto<br>
+                                • <code>[EMPRESA]</code> - Nombre de la sucursal/óptica
+                            </small>
+                        </div>
+                        <div class="alert alert-success mb-3" style="font-size: 0.85em;">
+                            <strong><i class="fas fa-eye"></i> EJEMPLO:</strong><br>
+                            <em>"¡Feliz cumpleaños [NOMBRE]! 🎉 Esperamos que pases un día maravilloso cumpliendo [EDAD] años."</em><br>
+                            <strong>Se convierte en:</strong><br>
+                            <em>"¡Feliz cumpleaños María! 🎉 Esperamos que pases un día maravilloso cumpliendo 25 años."</em>
+                        </div>
+                        <textarea class="form-control" id="mensajePredeterminado" rows="8" placeholder="Ejemplo: ¡Feliz cumpleaños [NOMBRE]! 🎉 Esperamos que pases un día maravilloso cumpliendo [EDAD] años...">{{ MensajePredeterminado::obtenerMensaje('cumpleanos') ?: '¡Feliz cumpleaños [NOMBRE]! 🎉
+
+Esperamos que tengas un día maravilloso cumpliendo [EDAD] años.
+
+🎂 En [EMPRESA] queremos ser parte de este día especial y desearte que todos tus sueños se hagan realidad.
+
+🎈 ¡Que disfrutes mucho tu día especial!
+
+Con cariño,
+El equipo de [EMPRESA] 👓✨' }}</textarea>
                     </div>
                 </form>
             </div>
@@ -248,7 +283,7 @@ use App\Models\MensajePredeterminado;
 
 <!-- Modal para enviar mensaje -->
 <div class="modal fade" id="enviarMensajeModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">ENVIAR MENSAJE DE FELICITACIÓN</h5>
@@ -439,10 +474,44 @@ function mostrarTextoParaCopiar(texto) {
     });
 }
 
-function mostrarModalMensaje(pacienteId, nombrePaciente) {
+function mostrarModalMensaje(pacienteId, nombrePaciente, apellidosPaciente, edadPaciente, diaPaciente, empresaNombre) {
     $('#pacienteId').val(pacienteId);
-    $('#nombrePaciente').text(nombrePaciente);
-    $('#mensajePersonalizado').val($('#mensajePredeterminado').val());
+    $('#nombrePaciente').text(nombrePaciente + ' ' + apellidosPaciente);
+    
+    // Obtener el mensaje predeterminado y reemplazar las variables
+    let mensaje = $('#mensajePredeterminado').val();
+    
+    // Si no hay mensaje predeterminado, usar uno por defecto
+    if (!mensaje || mensaje.trim() === '') {
+        mensaje = `¡Feliz cumpleaños [NOMBRE]! 🎉
+
+Esperamos que tengas un día maravilloso cumpliendo [EDAD] años.
+
+🎂 En [EMPRESA] queremos ser parte de este día especial y desearte que todos tus sueños se hagan realidad.
+
+🎈 ¡Que disfrutes mucho tu día especial!
+
+Con cariño,
+El equipo de [EMPRESA] 👓✨`;
+    }
+    
+    // Obtener el nombre del mes actual en español
+    const meses = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+    ];
+    const mesActual = meses[new Date().getMonth()];
+    
+    // Reemplazar las variables en el mensaje
+    mensaje = mensaje
+        .replace(/\[NOMBRE\]/g, nombrePaciente)
+        .replace(/\[APELLIDOS\]/g, apellidosPaciente)
+        .replace(/\[EDAD\]/g, edadPaciente)
+        .replace(/\[DIA\]/g, diaPaciente)
+        .replace(/\[MES\]/g, mesActual)
+        .replace(/\[EMPRESA\]/g, empresaNombre);
+    
+    $('#mensajePersonalizado').val(mensaje);
     $('#enviarMensajeModal').modal('show');
 }
 
@@ -604,6 +673,18 @@ function enviarMensaje() {
 
 // Cargar mensaje predeterminado al iniciar la página
 $(document).ready(function() {
+    // Agregar el token CSRF si no existe
+    if (!$('meta[name="csrf-token"]').length) {
+        $('head').append('<meta name="csrf-token" content="{{ csrf_token() }}">');
+    }
+    
+    // Configurar AJAX para usar el token CSRF
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+    
     // No necesitamos verificar mensajes enviados aquí ya que lo hacemos en el servidor con @php
     
     // Preseleccionar sucursal desde caché y aplicar automáticamente
