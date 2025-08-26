@@ -106,13 +106,18 @@ class FirmaDigitalXAdES {
             const signedPropsRefId = 'SignedPropertiesID' + Math.floor(Math.random() * 1000000);
             const refId = 'Reference-ID-' + Math.floor(Math.random() * 1000000);
             
-            // Crear elemento Signature con namespaces correctos
+            // Crear elemento Signature con namespaces exactos del SRI Ecuador
             const signatureElement = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Signature');
             signatureElement.setAttribute('xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
             signatureElement.setAttribute('xmlns:etsi', 'http://uri.etsi.org/01903/v1.3.2#');
             signatureElement.setAttribute('Id', signatureId);
             
-            // SignedInfo
+            console.log('=== DEBUGGING NAMESPACES Y ESTRUCTURA ===');
+            console.log('SignatureId generado:', signatureId);
+            console.log('Namespace ds:', 'http://www.w3.org/2000/09/xmldsig#');
+            console.log('Namespace etsi:', 'http://uri.etsi.org/01903/v1.3.2#');
+            
+            // SignedInfos
             const signedInfoElement = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:SignedInfo');
             signedInfoElement.setAttribute('Id', signedInfoId);
             
@@ -254,22 +259,29 @@ class FirmaDigitalXAdES {
             // SignedSignatureProperties
             const signedSignatureProperties = xmlDoc.createElementNS('http://uri.etsi.org/01903/v1.3.2#', 'etsi:SignedSignatureProperties');
             
-            // SigningTime con formato ISO 8601 con zona horaria
+            // SigningTime con formato ISO 8601 EXACTO para SRI Ecuador
             const signingTime = xmlDoc.createElementNS('http://uri.etsi.org/01903/v1.3.2#', 'etsi:SigningTime');
             const now = new Date();
-            // Formato: 2025-08-01T10:53:11-05:00
-            const offset = -now.getTimezoneOffset();
-            const offsetHours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
-            const offsetMinutes = String(Math.abs(offset) % 60).padStart(2, '0');
-            const offsetSign = offset >= 0 ? '+' : '-';
-            const isoTime = now.getFullYear() + '-' + 
-                           String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                           String(now.getDate()).padStart(2, '0') + 'T' + 
-                           String(now.getHours()).padStart(2, '0') + ':' + 
-                           String(now.getMinutes()).padStart(2, '0') + ':' + 
-                           String(now.getSeconds()).padStart(2, '0') + 
-                           offsetSign + offsetHours + ':' + offsetMinutes;
+            // Ecuador está en UTC-5 (zona horaria fija)
+            const ecuadorTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+            
+            // Formato EXACTO del SRI: 2025-08-26T14:30:45-05:00
+            const isoTime = ecuadorTime.getUTCFullYear() + '-' + 
+                           String(ecuadorTime.getUTCMonth() + 1).padStart(2, '0') + '-' + 
+                           String(ecuadorTime.getUTCDate()).padStart(2, '0') + 'T' + 
+                           String(ecuadorTime.getUTCHours()).padStart(2, '0') + ':' + 
+                           String(ecuadorTime.getUTCMinutes()).padStart(2, '0') + ':' + 
+                           String(ecuadorTime.getUTCSeconds()).padStart(2, '0') + 
+                           '-05:00'; // Zona horaria fija de Ecuador
+            
             signingTime.textContent = isoTime;
+            
+            console.log('=== DEBUGGING SIGNING TIME ===');
+            console.log('Fecha/hora actual:', now.toISOString());
+            console.log('Fecha/hora Ecuador UTC:', ecuadorTime.toISOString());
+            console.log('SigningTime formato SRI:', isoTime);
+            console.log('=== FIN DEBUG SIGNING TIME ===');
+            
             signedSignatureProperties.appendChild(signingTime);
             
             // SigningCertificate
@@ -294,17 +306,25 @@ class FirmaDigitalXAdES {
             const issuerSerial = xmlDoc.createElementNS('http://uri.etsi.org/01903/v1.3.2#', 'etsi:IssuerSerial');
             const x509IssuerName = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:X509IssuerName');
             
-            // Construir el IssuerName en el orden correcto (como en el ejemplo)
+            // Construir el IssuerName exacto según formato SRI
             let issuerName = '';
             const issuerFields = this.certificado.issuer.attributes;
             
-            // Buscar campos específicos en orden
+            console.log('=== DEBUGGING ISSUER SERIAL ===');
+            console.log('Campos del issuer disponibles:', issuerFields.map(f => ({
+                shortName: f.shortName,
+                name: f.name,
+                value: f.value
+            })));
+            
+            // Orden específico del SRI Ecuador (basado en ejemplos válidos)
             const cnField = issuerFields.find(f => f.shortName === 'CN');
             const cField = issuerFields.find(f => f.shortName === 'C');
             const lField = issuerFields.find(f => f.shortName === 'L');
             const oField = issuerFields.find(f => f.shortName === 'O');
             const ouField = issuerFields.find(f => f.shortName === 'OU');
             
+            // Construir DN en orden estricto del SRI
             const parts = [];
             if (cnField) parts.push('CN=' + cnField.value);
             if (cField) parts.push('C=' + cField.value);
@@ -313,6 +333,11 @@ class FirmaDigitalXAdES {
             if (ouField) parts.push('OU=' + ouField.value);
             
             issuerName = parts.join(',');
+            
+            console.log('IssuerName construido:', issuerName);
+            console.log('Serial Number certificado:', this.certificado.serialNumber);
+            console.log('=== FIN DEBUG ISSUER SERIAL ===');
+            
             x509IssuerName.textContent = issuerName;
             issuerSerial.appendChild(x509IssuerName);
             
@@ -361,7 +386,7 @@ class FirmaDigitalXAdES {
             // Serializar el XML firmado completo
             const xmlFirmado = serializer.serializeToString(xmlDoc);
             
-            console.log('=== DEBUG XML FIRMADO XAdES-BES (CORREGIDO) ===');
+            console.log('=== ANÁLISIS FINAL XML FIRMADO XAdES-BES ===');
             console.log('XML Size:', xmlFirmado.length);
             console.log('Contiene <ds:Signature:', xmlFirmado.includes('<ds:Signature'));
             console.log('Contiene <etsi:QualifyingProperties:', xmlFirmado.includes('<etsi:QualifyingProperties'));
@@ -369,9 +394,51 @@ class FirmaDigitalXAdES {
             console.log('Contiene <etsi:SigningTime:', xmlFirmado.includes('<etsi:SigningTime'));
             console.log('Contiene <etsi:SigningCertificate:', xmlFirmado.includes('<etsi:SigningCertificate'));
             console.log('Contiene <ds:KeyValue:', xmlFirmado.includes('<ds:KeyValue'));
-            console.log('XML Preview (primeros 2000 caracteres):', xmlFirmado.substring(0, 2000));
-            console.log('XML Final (últimos 1500 caracteres):', xmlFirmado.substring(xmlFirmado.length - 1500));
-            console.log('=== FIN DEBUG XML XAdES-BES (CORREGIDO) ===');
+            
+            // Extraer secciones críticas para debugging
+            const etsiStart = xmlFirmado.indexOf('<etsi:QualifyingProperties');
+            const etsiEnd = xmlFirmado.indexOf('</etsi:QualifyingProperties>') + 29;
+            if (etsiStart !== -1 && etsiEnd !== -1) {
+                const etsiSection = xmlFirmado.substring(etsiStart, etsiEnd);
+                console.log('=== SECCIÓN XAdES (CRÍTICA PARA SRI) ===');
+                console.log(etsiSection);
+                console.log('=== FIN SECCIÓN XAdES ===');
+            }
+            
+            // Extraer SigningTime específico
+            const signingTimeMatch = xmlFirmado.match(/<etsi:SigningTime[^>]*>([^<]+)<\/etsi:SigningTime>/);
+            if (signingTimeMatch) {
+                console.log('SigningTime extraído:', signingTimeMatch[1]);
+            }
+            
+            // Extraer IssuerSerial específico
+            const issuerNameMatch = xmlFirmado.match(/<ds:X509IssuerName[^>]*>([^<]+)<\/ds:X509IssuerName>/);
+            const serialNumberMatch = xmlFirmado.match(/<ds:X509SerialNumber[^>]*>([^<]+)<\/ds:X509SerialNumber>/);
+            if (issuerNameMatch && serialNumberMatch) {
+                console.log('X509IssuerName extraído:', issuerNameMatch[1]);
+                console.log('X509SerialNumber extraído:', serialNumberMatch[1]);
+            }
+            
+            // Verificar estructura de Referencias
+            const referencesCount = (xmlFirmado.match(/<ds:Reference/g) || []).length;
+            console.log('Número de References:', referencesCount);
+            console.log('=== ESTRUCTURA REFERENCES ===');
+            if (xmlFirmado.includes('Type="http://uri.etsi.org/01903#SignedProperties"')) {
+                console.log('✓ Reference a SignedProperties presente');
+            } else {
+                console.log('✗ Reference a SignedProperties FALTANTE');
+            }
+            if (xmlFirmado.includes('URI="#comprobante"')) {
+                console.log('✓ Reference al documento presente');
+            } else {
+                console.log('✗ Reference al documento FALTANTE');
+            }
+            
+            console.log('XML Preview (primeros 2000 caracteres):');
+            console.log(xmlFirmado.substring(0, 2000));
+            console.log('XML Final (últimos 1500 caracteres):');
+            console.log(xmlFirmado.substring(xmlFirmado.length - 1500));
+            console.log('=== FIN ANÁLISIS FINAL XML XAdES-BES ===');
             
             console.log('XML firmado exitosamente con XAdES-BES (formato SRI) para Ecuador');
             return xmlFirmado;

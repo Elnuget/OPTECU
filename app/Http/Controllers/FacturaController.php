@@ -2055,7 +2055,7 @@ class FacturaController extends Controller
     }
 
     /**
-     * Procesar respuesta XML del SRI
+     * Procesar respuesta XML del SRI con debugging mejorado
      *
      * @param  string  $xmlResponse
      * @param  Factura|null  $factura
@@ -2064,7 +2064,11 @@ class FacturaController extends Controller
     private function procesarRespuestaSRI($xmlResponse, $factura = null)
     {
         try {
-            \Log::info('Procesando respuesta XML del SRI');
+            \Log::info('=== INICIO PROCESAMIENTO RESPUESTA SRI ===', [
+                'factura_id' => $factura ? $factura->id : 'N/A',
+                'xml_response_length' => strlen($xmlResponse),
+                'xml_response_preview' => substr($xmlResponse, 0, 1000) . '...'
+            ]);
             
             // Limpiar posibles BOM y espacios
             $xmlResponse = trim($xmlResponse);
@@ -2093,17 +2097,25 @@ class FacturaController extends Controller
             $estadoNode = $xpath->query('//ns2:validarComprobanteResponse/RespuestaRecepcionComprobante/estado');
             $estado = $estadoNode->length > 0 ? $estadoNode->item(0)->textContent : '';
             
-            \Log::info('Estado extraído del XML', ['estado' => $estado]);
+            \Log::info('Estado extraído del XML SRI', [
+                'estado' => $estado,
+                'factura_id' => $factura ? $factura->id : 'N/A'
+            ]);
             
             $respuesta = [
                 'estado' => $estado,
                 'comprobantes' => []
             ];
             
-            // Si hay errores, extraer los mensajes
+            // Si hay errores, extraer los mensajes con MÁXIMO DETALLE
             $comprobantesNodes = $xpath->query('//ns2:validarComprobanteResponse/RespuestaRecepcionComprobante/comprobantes/comprobante');
             
-            foreach ($comprobantesNodes as $comprobanteNode) {
+            \Log::info('Número de comprobantes en respuesta SRI', [
+                'num_comprobantes' => $comprobantesNodes->length,
+                'factura_id' => $factura ? $factura->id : 'N/A'
+            ]);
+            
+            foreach ($comprobantesNodes as $index => $comprobanteNode) {
                 $comprobante = [];
                 
                 $claveAccesoNode = $xpath->query('.//claveAcceso', $comprobanteNode);
@@ -2114,7 +2126,14 @@ class FacturaController extends Controller
                 $mensajesNodes = $xpath->query('.//mensajes/mensaje', $comprobanteNode);
                 $comprobante['mensajes'] = [];
                 
-                foreach ($mensajesNodes as $mensajeNode) {
+                \Log::info('Procesando comprobante', [
+                    'comprobante_index' => $index,
+                    'clave_acceso' => $comprobante['claveAcceso'] ?? 'N/A',
+                    'num_mensajes' => $mensajesNodes->length,
+                    'factura_id' => $factura ? $factura->id : 'N/A'
+                ]);
+                
+                foreach ($mensajesNodes as $mensajeIndex => $mensajeNode) {
                     $mensaje = [];
                     
                     $identificadorNode = $xpath->query('.//identificador', $mensajeNode);
@@ -2137,27 +2156,167 @@ class FacturaController extends Controller
                         $mensaje['tipo'] = $tipoNode->item(0)->textContent;
                     }
                     
+                    // Log detallado de cada mensaje individual
+                    \Log::info('MENSAJE SRI DETALLADO', [
+                        'factura_id' => $factura ? $factura->id : 'N/A',
+                        'comprobante_index' => $index,
+                        'mensaje_index' => $mensajeIndex,
+                        'identificador' => $mensaje['identificador'] ?? 'SIN_IDENTIFICADOR',
+                        'codigo_error' => $mensaje['identificador'] ?? 'SIN_CODIGO',
+                        'mensaje_texto' => $mensaje['mensaje'] ?? 'SIN_MENSAJE',
+                        'info_adicional' => $mensaje['informacionAdicional'] ?? 'SIN_INFO_ADICIONAL',
+                        'tipo_mensaje' => $mensaje['tipo'] ?? 'SIN_TIPO',
+                        'mensaje_completo' => $mensaje
+                    ]);
+                    
+                    // Análisis específico para errores de firma
+                    if (isset($mensaje['identificador'])) {
+                        $codigo = $mensaje['identificador'];
+                        $textoMensaje = $mensaje['mensaje'] ?? '';
+                        $infoAdicional = $mensaje['informacionAdicional'] ?? '';
+                        
+                        // Mapear códigos de error conocidos del SRI
+                        $analisisError = $this->analizarCodigoErrorSRI($codigo, $textoMensaje, $infoAdicional);
+                        
+                        \Log::warning('ANÁLISIS DETALLADO ERROR SRI', [
+                            'factura_id' => $factura ? $factura->id : 'N/A',
+                            'codigo_error' => $codigo,
+                            'descripcion_error' => $textoMensaje,
+                            'info_adicional' => $infoAdicional,
+                            'categoria_error' => $analisisError['categoria'],
+                            'causa_probable' => $analisisError['causa_probable'],
+                            'solucion_sugerida' => $analisisError['solucion_sugerida'],
+                            'es_error_critico' => $analisisError['es_critico']
+                        ]);
+                        
+                        // Agregar análisis al mensaje
+                        $mensaje['analisis'] = $analisisError;
+                    }
+                    
                     $comprobante['mensajes'][] = $mensaje;
                 }
                 
                 $respuesta['comprobantes'][] = $comprobante;
             }
             
-            \Log::info('Respuesta XML procesada exitosamente', [
-                'estado' => $respuesta['estado'],
-                'num_comprobantes' => count($respuesta['comprobantes'])
+            \Log::info('=== FIN PROCESAMIENTO RESPUESTA SRI ===', [
+                'factura_id' => $factura ? $factura->id : 'N/A',
+                'estado_final' => $respuesta['estado'],
+                'total_comprobantes' => count($respuesta['comprobantes']),
+                'total_mensajes' => array_sum(array_map(function($comp) { 
+                    return count($comp['mensajes'] ?? []); 
+                }, $respuesta['comprobantes']))
             ]);
             
             return $respuesta;
             
         } catch (\Exception $e) {
-            \Log::error('Error procesando respuesta SRI: ' . $e->getMessage());
+            \Log::error('=== ERROR PROCESANDO RESPUESTA SRI ===', [
+                'factura_id' => $factura ? $factura->id : 'N/A',
+                'error_message' => $e->getMessage(),
+                'error_line' => $e->getLine(),
+                'error_file' => $e->getFile(),
+                'xml_response_debug' => substr($xmlResponse, 0, 2000)
+            ]);
+            
             return [
                 'estado' => 'ERROR',
                 'comprobantes' => [],
                 'error' => 'Error procesando respuesta: ' . $e->getMessage()
             ];
         }
+    }
+    
+    /**
+     * Analizar código de error del SRI para proporcionar información útil
+     */
+    private function analizarCodigoErrorSRI($codigo, $mensaje, $infoAdicional)
+    {
+        $analisis = [
+            'categoria' => 'DESCONOCIDO',
+            'causa_probable' => 'Error no catalogado',
+            'solucion_sugerida' => 'Revisar documentación del SRI',
+            'es_critico' => true
+        ];
+        
+        // Mapeo de códigos de error conocidos del SRI Ecuador
+        switch ($codigo) {
+            case '39':
+                $analisis = [
+                    'categoria' => 'FIRMA_DIGITAL',
+                    'causa_probable' => 'Firma digital inválida o incorrecta',
+                    'solucion_sugerida' => 'Verificar certificado, algoritmos de firma y estructura XAdES-BES',
+                    'es_critico' => true
+                ];
+                
+                // Análisis más específico basado en el mensaje
+                if (strpos(strtolower($mensaje), 'certificado') !== false) {
+                    $analisis['causa_probable'] = 'Problema con el certificado digital';
+                    $analisis['solucion_sugerida'] = 'Verificar validez y fecha del certificado digital';
+                } elseif (strpos(strtolower($mensaje), 'algoritmo') !== false) {
+                    $analisis['causa_probable'] = 'Algoritmo de firma no compatible';
+                    $analisis['solucion_sugerida'] = 'Usar RSA-SHA1 para SignatureMethod y SHA1 para DigestMethod';
+                } elseif (strpos(strtolower($mensaje), 'estructura') !== false) {
+                    $analisis['causa_probable'] = 'Estructura XAdES-BES incorrecta';
+                    $analisis['solucion_sugerida'] = 'Verificar orden de elementos y namespaces XAdES';
+                } elseif (strpos(strtolower($mensaje), 'ruc') !== false) {
+                    $analisis['causa_probable'] = 'RUC del certificado no coincide con el declarante';
+                    $analisis['solucion_sugerida'] = 'Usar certificado digital emitido para el mismo RUC';
+                } elseif (strpos(strtolower($infoAdicional), 'timestamp') !== false || 
+                         strpos(strtolower($infoAdicional), 'fecha') !== false) {
+                    $analisis['causa_probable'] = 'Problema con SigningTime o fechas en XAdES';
+                    $analisis['solucion_sugerida'] = 'Verificar formato de fechas ISO 8601 con zona horaria';
+                }
+                break;
+                
+            case '70':
+                $analisis = [
+                    'categoria' => 'ESTRUCTURA_XML',
+                    'causa_probable' => 'Estructura del XML no conforme',
+                    'solucion_sugerida' => 'Verificar esquema XSD del comprobante',
+                    'es_critico' => true
+                ];
+                break;
+                
+            case '35':
+                $analisis = [
+                    'categoria' => 'CERTIFICADO',
+                    'causa_probable' => 'Certificado digital no válido o expirado',
+                    'solucion_sugerida' => 'Renovar o verificar el certificado digital',
+                    'es_critico' => true
+                ];
+                break;
+                
+            case '60':
+                $analisis = [
+                    'categoria' => 'CLAVE_ACCESO',
+                    'causa_probable' => 'Clave de acceso incorrecta o duplicada',
+                    'solucion_sugerida' => 'Verificar algoritmo de generación de clave de acceso',
+                    'es_critico' => true
+                ];
+                break;
+                
+            default:
+                // Para códigos desconocidos, intentar análisis por palabras clave
+                $mensajeCompleto = strtolower($mensaje . ' ' . $infoAdicional);
+                
+                if (strpos($mensajeCompleto, 'firma') !== false) {
+                    $analisis['categoria'] = 'FIRMA_DIGITAL';
+                    $analisis['causa_probable'] = 'Problema relacionado con firma digital';
+                } elseif (strpos($mensajeCompleto, 'certificado') !== false) {
+                    $analisis['categoria'] = 'CERTIFICADO';
+                    $analisis['causa_probable'] = 'Problema con certificado digital';
+                } elseif (strpos($mensajeCompleto, 'xml') !== false) {
+                    $analisis['categoria'] = 'ESTRUCTURA_XML';
+                    $analisis['causa_probable'] = 'Problema con estructura XML';
+                } elseif (strpos($mensajeCompleto, 'clave') !== false) {
+                    $analisis['categoria'] = 'CLAVE_ACCESO';
+                    $analisis['causa_probable'] = 'Problema con clave de acceso';
+                }
+                break;
+        }
+        
+        return $analisis;
     }
     
     /**
