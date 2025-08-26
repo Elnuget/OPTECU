@@ -316,24 +316,29 @@ function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-// Función para limpiar y formatear número de teléfono chileno
-function formatChileanPhone(phone) {
+// Función para limpiar y formatear número de teléfono ecuatoriano
+function formatEcuadorianPhone(phone) {
     // Remover todos los caracteres no numéricos
     let cleanPhone = phone.replace(/\D/g, '');
     
-    // Si empieza con 56 (código de Chile), mantenerlo
-    if (cleanPhone.startsWith('56')) {
+    // Si empieza con 593 (código de Ecuador), mantenerlo
+    if (cleanPhone.startsWith('593')) {
         return cleanPhone;
     }
     
-    // Si empieza con 9 (celular chileno), agregar código de país
-    if (cleanPhone.startsWith('9') && cleanPhone.length === 9) {
-        return '56' + cleanPhone;
+    // Si empieza con 09 (celular ecuatoriano), agregar código de país
+    if (cleanPhone.startsWith('09') && cleanPhone.length === 10) {
+        return '593' + cleanPhone.substring(1); // Quitar el 0 inicial
     }
     
-    // Si tiene 8 dígitos, asumir que falta el 9 inicial
-    if (cleanPhone.length === 8) {
-        return '569' + cleanPhone;
+    // Si empieza con 9 (celular ecuatoriano sin el 0), agregar código de país
+    if (cleanPhone.startsWith('9') && cleanPhone.length === 9) {
+        return '593' + cleanPhone;
+    }
+    
+    // Si tiene 8 dígitos y empieza con números válidos de Ecuador, agregar código completo
+    if (cleanPhone.length === 8 && /^[2-7]/.test(cleanPhone)) {
+        return '593' + cleanPhone;
     }
     
     // Si no cumple ningún patrón, devolver tal como está para validación posterior
@@ -342,7 +347,7 @@ function formatChileanPhone(phone) {
 
 // Función para generar URL de WhatsApp más segura
 function generateWhatsAppURL(phoneNumber, message) {
-    const formattedPhone = formatChileanPhone(phoneNumber);
+    const formattedPhone = formatEcuadorianPhone(phoneNumber);
     const encodedMessage = encodeURIComponent(message);
     
     if (isMobileDevice()) {
@@ -358,7 +363,7 @@ function mostrarModalMensaje(pacienteId, nombrePaciente, fechaConsulta) {
     $('#pacienteId').val(pacienteId);
     $('#nombrePaciente').text(nombrePaciente);
     
-    // Crear mensaje personalizado para Chile
+    // Crear mensaje personalizado para Ecuador
     let mensaje = $('#mensajePredeterminado').val();
     if (!mensaje || mensaje.trim() === '') {
         mensaje = `Estimado/a ${nombrePaciente} 👋
@@ -484,7 +489,7 @@ function enviarMensaje() {
             setTimeout(() => {
                 if (!whatsappWindow || whatsappWindow.closed) {
                     // Si no se abrió, intentar con URL alternativa
-                    const alternativeURL = `https://web.whatsapp.com/send?phone=${formatChileanPhone(celular)}&text=${encodeURIComponent(mensaje)}`;
+                    const alternativeURL = `https://web.whatsapp.com/send?phone=${formatEcuadorianPhone(celular)}&text=${encodeURIComponent(mensaje)}`;
                     window.open(alternativeURL, '_blank');
                 }
             }, 1000);
@@ -538,7 +543,7 @@ function enviarMensaje() {
                                 // Verificar si se abrió correctamente
                                 setTimeout(() => {
                                     if (!whatsappWindow || whatsappWindow.closed) {
-                                        const alternativeURL = `https://web.whatsapp.com/send?phone=${formatChileanPhone(celular)}&text=${encodeURIComponent(mensaje)}`;
+                                        const alternativeURL = `https://web.whatsapp.com/send?phone=${formatEcuadorianPhone(celular)}&text=${encodeURIComponent(mensaje)}`;
                                         window.open(alternativeURL, '_blank');
                                     }
                                 }, 1000);
