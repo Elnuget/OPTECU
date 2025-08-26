@@ -555,8 +555,6 @@
             procesarFirmaYEnvio();
         }
     });
-</script>
-@stop
     
     // Función para mostrar modal de autorización
     function autorizarComprobante(facturaId) {

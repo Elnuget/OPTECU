@@ -279,7 +279,8 @@ class FacturaController extends Controller
                     'subtotal' => $subtotal,
                     'iva' => $iva,
                     'total' => $total
-                ]
+                ],
+                'redirect_url' => route('facturas.show', $factura->id)
             ]);
         } catch (\Exception $e) {
             \Log::error('Error en FacturaController::store: ' . $e->getMessage());

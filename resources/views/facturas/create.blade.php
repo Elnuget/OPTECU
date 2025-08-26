@@ -455,10 +455,14 @@
                                 <p><strong>Total:</strong> $${response.data.total.toFixed(2)}</p>
                             `,
                             icon: 'success',
-                            confirmButtonText: 'OK'
+                            confirmButtonText: 'Ver Factura'
                         }).then((result) => {
-                            // Redirigir a la lista de facturas
-                            window.location.href = "{{ route('facturas.index') }}";
+                            // Redirigir a la vista show de la factura creada
+                            if (response.redirect_url) {
+                                window.location.href = response.redirect_url;
+                            } else {
+                                window.location.href = "{{ route('facturas.index') }}";
+                            }
                         });
                     } else {
                         // Mostrar mensaje de error
