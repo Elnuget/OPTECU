@@ -78,7 +78,7 @@
             margin-left: 5px;
         }
         
-        .tc-button {
+        .tc-button, .tarjeta-button {
             animation: pulse 2s infinite;
         }
         
@@ -88,12 +88,12 @@
             100% { opacity: 1; }
         }
         
-        .tc-status-pendiente {
+        .tc-status-pendiente, .tarjeta-status-pendiente {
             background-color: #ffc107 !important;
             border-color: #ffc107 !important;
         }
         
-        .tc-status-recibido {
+        .tc-status-recibido, .tarjeta-status-recibido {
             background-color: #28a745 !important;
             border-color: #28a745 !important;
         }
@@ -256,7 +256,7 @@
                 </div>
             </div>
 
-            {{-- Botones de Filtro TC y Añadir Pago --}}
+            {{-- Botones de Filtro Tarjetas y Añadir Pago --}}
             <div class="btn-toolbar mb-3" role="toolbar" aria-label="Toolbar with button groups">
                 <div class="btn-group mr-2" role="group" aria-label="Grupo Añadir">
                     <a type="button" class="btn btn-success" href="{{ route('pagos.create') }}">
@@ -264,35 +264,35 @@
                     </a>
                 </div>
                 
-                <div class="btn-group mr-2" role="group" aria-label="Grupo Filtros TC">
-                    <button type="button" class="btn btn-warning" id="filtrarTCPendientes">
-                        <i class="fas fa-credit-card"></i> TC PENDIENTES
+                <div class="btn-group mr-2" role="group" aria-label="Grupo Filtros Tarjetas">
+                    <button type="button" class="btn btn-warning" id="filtrarTarjetasPendientes">
+                        <i class="fas fa-credit-card"></i> TARJETAS PENDIENTES
                         @php
-                            $tcPendientes = $pagos->filter(function($pago) {
-                                return $pago->mediodepago->medio_de_pago === 'Tarjeta Crédito' && !$pago->TC;
+                            $tarjetasPendientes = $pagos->filter(function($pago) {
+                                return in_array($pago->mediodepago->medio_de_pago, ['Tarjeta Crédito', 'Tarjeta Débito', 'Tarjeta Banco']) && !$pago->TC;
                             })->count();
                         @endphp
-                        <span class="badge badge-light">{{ $tcPendientes }}</span>
+                        <span class="badge badge-light">{{ $tarjetasPendientes }}</span>
                     </button>
                     
-                    <button type="button" class="btn btn-info" id="filtrarTCRecibidos">
-                        <i class="fas fa-check-circle"></i> TC RECIBIDOS
+                    <button type="button" class="btn btn-info" id="filtrarTarjetasRecibidas">
+                        <i class="fas fa-check-circle"></i> TARJETAS RECIBIDAS
                         @php
-                            $tcRecibidos = $pagos->filter(function($pago) {
-                                return $pago->mediodepago->medio_de_pago === 'Tarjeta Crédito' && $pago->TC;
+                            $tarjetasRecibidas = $pagos->filter(function($pago) {
+                                return in_array($pago->mediodepago->medio_de_pago, ['Tarjeta Crédito', 'Tarjeta Débito', 'Tarjeta Banco']) && $pago->TC;
                             })->count();
                         @endphp
-                        <span class="badge badge-light">{{ $tcRecibidos }}</span>
+                        <span class="badge badge-light">{{ $tarjetasRecibidas }}</span>
                     </button>
                     
-                    <button type="button" class="btn btn-secondary" id="limpiarFiltroTC" style="display: none;">
-                        <i class="fas fa-times"></i> LIMPIAR FILTRO TC
+                    <button type="button" class="btn btn-secondary" id="limpiarFiltroTarjetas" style="display: none;">
+                        <i class="fas fa-times"></i> LIMPIAR FILTRO TARJETAS
                     </button>
                 </div>
                 
-                <div class="btn-group" role="group" aria-label="Grupo Acciones Masivas TC">
-                    <button type="button" class="btn btn-outline-success" id="marcarTodosTCRecibidos" style="display: none;">
-                        <i class="fas fa-check-double"></i> MARCAR TODOS COMO RECIBIDOS
+                <div class="btn-group" role="group" aria-label="Grupo Acciones Masivas Tarjetas">
+                    <button type="button" class="btn btn-outline-success" id="marcarTodasTarjetasRecibidas" style="display: none;">
+                        <i class="fas fa-check-double"></i> MARCAR TODAS COMO RECIBIDAS
                     </button>
                 </div>
             </div>
@@ -311,7 +311,7 @@
                             <td>EMPRESA</td>
                             <!-- Removed Paciente column -->
                             <td>MÉTODO DE PAGO</td>
-                            <td>ESTADO TC</td>
+                            <td>ESTADO TARJETA</td>
                             <td>PAGO</td>
                             <td style="display: none;">TC</td>
                             <td>ACCIONES</td>
@@ -328,7 +328,7 @@
                                 <!-- Removed Paciente data -->
                                 <td>{{ $pago->mediodepago->medio_de_pago }}</td>
                                 <td>
-                                    @if($pago->mediodepago->medio_de_pago === 'Tarjeta Crédito')
+                                    @if(in_array($pago->mediodepago->medio_de_pago, ['Tarjeta Crédito', 'Tarjeta Débito', 'Tarjeta Banco']))
                                         @if($pago->TC)
                                             <span class="badge badge-success">RECIBIDO</span>
                                         @else
@@ -361,14 +361,15 @@
                                     </a>
                                     @endcan
 
-                                    @if(!$pago->TC && $pago->mediodepago->medio_de_pago === 'Tarjeta Crédito')
-                                    <button class="btn btn-xs btn-warning mx-1 shadow tc-button" 
+                                    @if(!$pago->TC && in_array($pago->mediodepago->medio_de_pago, ['Tarjeta Crédito', 'Tarjeta Débito', 'Tarjeta Banco']))
+                                    <button class="btn btn-xs btn-warning mx-1 shadow tarjeta-button" 
                                         data-id="{{ $pago->id }}"
                                         data-status="pending"
+                                        data-tipo="{{ $pago->mediodepago->medio_de_pago }}"
                                         onclick="updateTC({{ $pago->id }}, this)">
                                         PENDIENTE
                                     </button>
-                                    @elseif($pago->TC && $pago->mediodepago->medio_de_pago === 'Tarjeta Crédito')
+                                    @elseif($pago->TC && in_array($pago->mediodepago->medio_de_pago, ['Tarjeta Crédito', 'Tarjeta Débito', 'Tarjeta Banco']))
                                     <button class="btn btn-xs btn-success mx-1 shadow" disabled>
                                         RECIBIDO
                                     </button>
@@ -417,7 +418,8 @@
 
     <script>
         function updateTC(id, button) {
-            if (!confirm('¿Está seguro de marcar este pago como recibido?')) {
+            const tipoTarjeta = $(button).data('tipo') || 'Tarjeta';
+            if (!confirm(`¿Está seguro de marcar este pago de ${tipoTarjeta} como recibido?`)) {
                 return;
             }
 
@@ -438,6 +440,9 @@
                         
                         // Actualizar la celda oculta de TC
                         $(button).closest('tr').find('td:nth-child(9)').text('SÍ');
+                        
+                        // Actualizar el badge de estado
+                        $(button).closest('tr').find('td:nth-child(7)').html('<span class="badge badge-success">RECIBIDO</span>');
                     } else {
                         alert('Error al actualizar el estado');
                     }
@@ -626,38 +631,38 @@
                 }
             });
 
-            // NUEVA FUNCIONALIDAD: Filtros para Tarjetas de Crédito
-            let filtroTCActivo = false;
+            // NUEVA FUNCIONALIDAD: Filtros para Todas las Tarjetas
+            let filtroTarjetasActivo = false;
 
-            // Filtrar TC Pendientes
-            $('#filtrarTCPendientes').click(function() {
-                filtrarTarjetasCredito('pendientes');
-                mostrarBotonesTC(true);
-                $('#limpiarFiltroTC').show();
+            // Filtrar Tarjetas Pendientes
+            $('#filtrarTarjetasPendientes').click(function() {
+                console.log('Iniciando filtro de tarjetas pendientes...');
+                filtrarTarjetas('pendientes');
+                mostrarBotonesTarjetas(true);
+                $('#limpiarFiltroTarjetas').show();
             });
 
-            // Filtrar TC Recibidos
-            $('#filtrarTCRecibidos').click(function() {
-                filtrarTarjetasCredito('recibidos');
-                mostrarBotonesTC(false);
-                $('#limpiarFiltroTC').show();
+            // Filtrar Tarjetas Recibidas
+            $('#filtrarTarjetasRecibidas').click(function() {
+                console.log('Iniciando filtro de tarjetas recibidas...');
+                filtrarTarjetas('recibidas');
+                mostrarBotonesTarjetas(false);
+                $('#limpiarFiltroTarjetas').show();
             });
 
-            // Limpiar filtro TC
-            $('#limpiarFiltroTC').click(function() {
-                pagosTable.search('').columns().search('').draw();
-                filtroTCActivo = false;
-                $('#limpiarFiltroTC').hide();
-                $('#marcarTodosTCRecibidos').hide();
+            // Limpiar filtro Tarjetas
+            $('#limpiarFiltroTarjetas').click(function() {
+                // Recargar la página para limpiar todos los filtros
+                location.reload();
             });
 
-            // Marcar todos los TC como recibidos
-            $('#marcarTodosTCRecibidos').click(function() {
-                if (!confirm('¿Está seguro de marcar TODOS los pagos con tarjeta de crédito pendientes como recibidos?')) {
+            // Marcar todas las Tarjetas como recibidas
+            $('#marcarTodasTarjetasRecibidas').click(function() {
+                if (!confirm('¿Está seguro de marcar TODAS las tarjetas pendientes como recibidas?')) {
                     return;
                 }
 
-                const botonesPendientes = $('.tc-button[data-status="pending"]');
+                const botonesPendientes = $('.tarjeta-button[data-status="pending"]');
                 let promesas = [];
 
                 botonesPendientes.each(function() {
@@ -681,6 +686,9 @@
                             
                             // Actualizar la celda oculta de TC
                             button.closest('tr').find('td:nth-child(9)').text('SÍ');
+                            
+                            // Actualizar el badge de estado
+                            button.closest('tr').find('td:nth-child(7)').html('<span class="badge badge-success">RECIBIDO</span>');
                         }
                     });
                     
@@ -691,69 +699,68 @@
                     // Actualizar los contadores
                     location.reload();
                 }).catch(function() {
-                    alert('Error al procesar algunos pagos');
+                    alert('Error al procesar algunas tarjetas');
                 });
             });
 
-            function filtrarTarjetasCredito(tipo) {
-                // Resetear búsqueda anterior
+            function filtrarTarjetas(tipo) {
+                console.log('Aplicando filtro:', tipo);
+                
+                // Limpiar filtros anteriores y mostrar todas las filas
                 pagosTable.search('').columns().search('').draw();
                 
-                if (tipo === 'pendientes') {
-                    // Mostrar solo filas con TC pendiente (botón PENDIENTE visible)
-                    pagosTable.column(5).search('TARJETA CRÉDITO', true, false).draw();
-                    
-                    // Después del filtro inicial, ocultar filas con TC recibido
-                    setTimeout(function() {
-                        pagosTable.rows().every(function() {
-                            const row = this.node();
-                            const tcButton = $(row).find('.tc-button[data-status="pending"]');
-                            const recibidoButton = $(row).find('button:contains("RECIBIDO")');
-                            
-                            if (recibidoButton.length > 0) {
-                                $(row).hide();
-                            } else if (tcButton.length === 0) {
-                                // Si no es tarjeta de crédito, también ocultar
-                                const metodoPago = $(row).find('td:eq(5)').text().trim();
-                                if (metodoPago !== 'TARJETA CRÉDITO') {
-                                    $(row).hide();
-                                }
-                            }
-                        });
-                    }, 100);
-                    
-                } else if (tipo === 'recibidos') {
-                    // Mostrar solo filas con TC recibido
-                    pagosTable.column(5).search('TARJETA CRÉDITO', true, false).draw();
-                    
-                    // Después del filtro inicial, ocultar filas con TC pendiente
-                    setTimeout(function() {
-                        pagosTable.rows().every(function() {
-                            const row = this.node();
-                            const tcButton = $(row).find('.tc-button[data-status="pending"]');
-                            const recibidoButton = $(row).find('button:contains("RECIBIDO")');
-                            
-                            if (tcButton.length > 0) {
-                                $(row).hide();
-                            } else if (recibidoButton.length === 0) {
-                                // Si no es tarjeta de crédito recibida, también ocultar
-                                const metodoPago = $(row).find('td:eq(5)').text().trim();
-                                if (metodoPago !== 'TARJETA CRÉDITO') {
-                                    $(row).hide();
-                                }
-                            }
-                        });
-                    }, 100);
-                }
+                let filasVisibles = 0;
                 
-                filtroTCActivo = true;
+                // Procesar cada fila después de un pequeño delay
+                setTimeout(function() {
+                    pagosTable.rows().every(function() {
+                        const row = this.node();
+                        const $row = $(row);
+                        
+                        // Obtener el método de pago (columna 6)
+                        const metodoPago = $row.find('td:eq(5)').text().trim();
+                        console.log('Método de pago encontrado:', metodoPago);
+                        
+                        // Verificar si es una tarjeta (cualquier tipo)
+                        const esTarjeta = metodoPago.toLowerCase().includes('tarjeta');
+                        
+                        if (!esTarjeta) {
+                            $row.hide();
+                            return;
+                        }
+                        
+                        let mostrar = false;
+                        
+                        if (tipo === 'pendientes') {
+                            // Buscar si tiene botón PENDIENTE
+                            const tienePendiente = $row.find('button:contains("PENDIENTE")').length > 0;
+                            mostrar = tienePendiente;
+                        } else if (tipo === 'recibidas') {
+                            // Buscar si tiene botón RECIBIDO o badge RECIBIDO
+                            const tieneRecibido = $row.find('button:contains("RECIBIDO")').length > 0 || 
+                                                 $row.find('.badge:contains("RECIBIDO")').length > 0;
+                            mostrar = tieneRecibido;
+                        }
+                        
+                        if (mostrar) {
+                            $row.show();
+                            filasVisibles++;
+                        } else {
+                            $row.hide();
+                        }
+                    });
+                    
+                    console.log(`Filtro completado. Filas visibles: ${filasVisibles}`);
+                }, 200);
+                
+                filtroTarjetasActivo = true;
             }
 
-            function mostrarBotonesTC(mostrarMarcarTodos) {
+            function mostrarBotonesTarjetas(mostrarMarcarTodos) {
                 if (mostrarMarcarTodos) {
-                    $('#marcarTodosTCRecibidos').show();
+                    $('#marcarTodasTarjetasRecibidas').show();
                 } else {
-                    $('#marcarTodosTCRecibidos').hide();
+                    $('#marcarTodasTarjetasRecibidas').hide();
                 }
             }
         });

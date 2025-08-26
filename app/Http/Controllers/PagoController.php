@@ -560,7 +560,7 @@ class PagoController extends Controller
     }
 
     /**
-     * Update TC status for a payment
+     * Update TC status for a payment (works for all card types: Credit, Debit, Bank)
      *
      * @param  int  $id
      * @return \Illuminate\Http\Response
