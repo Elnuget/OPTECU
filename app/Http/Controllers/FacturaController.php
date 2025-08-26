@@ -3493,17 +3493,22 @@ class FacturaController extends Controller
             // Enviar al webservice del SRI
             $respuesta = $this->enviarSoapRequestCurl($soapEnvelope);
             
-            if (!$respuesta['success']) {
-                throw new \Exception('Error al comunicarse con el SRI: ' . $respuesta['error']);
+            if ($respuesta === false) {
+                \Log::error('Error al conectar con el servicio del SRI');
+                return [
+                    'success' => false,
+                    'message' => 'Error al conectar con el servicio del SRI',
+                    'estado' => 'ERROR_CONEXION'
+                ];
             }
             
             \Log::info('Respuesta del SRI recibida', [
                 'factura_id' => $factura->id,
-                'respuesta_length' => strlen($respuesta['response'])
+                'respuesta_length' => strlen($respuesta)
             ]);
             
             // Procesar respuesta del SRI
-            $resultadoProcesamiento = $this->procesarRespuestaSRI($respuesta['response'], $factura);
+            $resultadoProcesamiento = $this->procesarRespuestaSRI($respuesta, $factura);
             
             if ($resultadoProcesamiento['success']) {
                 // Actualizar estado de la factura
