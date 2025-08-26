@@ -75,7 +75,7 @@ class AdminController extends Controller
                 ->get();
 
             try {
-                // Obtener datos de ventas por usuario incluyendo cantidades (excluyendo administradores)
+                // Obtener datos de ventas por usuario incluyendo cantidades (incluyendo administradores)
                 $users = DB::table('pedidos')
                     ->join('users', 'pedidos.usuario', '=', 'users.name')
                     ->select(
@@ -83,7 +83,7 @@ class AdminController extends Controller
                         DB::raw('SUM(pedidos.total) as total_ventas'),
                         DB::raw('COUNT(*) as total_cantidad') // Usamos COUNT como alternativa si no existe columna cantidad
                     )
-                    ->where('users.is_admin', false) // Excluir administradores
+                    // Removido el filtro where('users.is_admin', false) para incluir administradores
                     ->whereYear('pedidos.fecha', $selectedYear)
                     ->when($selectedMonth, function($query) use ($selectedMonth) {
                         return $query->whereMonth('pedidos.fecha', $selectedMonth);
@@ -267,8 +267,8 @@ class AdminController extends Controller
             DB::raw('SUM(pedidos.total) as total')
         )
         ->join('users', 'pedidos.usuario', '=', 'users.name')
-        ->whereNotNull('pedidos.usuario')
-        ->where('users.is_admin', false); // Excluir administradores
+        ->whereNotNull('pedidos.usuario');
+        // Removido el filtro where('users.is_admin', false) para incluir administradores
 
         if ($year) {
             $query->whereYear('pedidos.fecha', $year);
@@ -337,7 +337,7 @@ class AdminController extends Controller
             ->join('users', 'pedidos.usuario', '=', 'users.name')
             ->whereNotNull('pedidos.calificacion')
             ->whereNotNull('pedidos.usuario')
-            ->where('users.is_admin', false) // Excluir administradores
+            // Removido el filtro where('users.is_admin', false) para incluir administradores
             ->whereYear('pedidos.fecha', $year);
 
             if ($month) {
@@ -385,7 +385,7 @@ class AdminController extends Controller
             )
             ->join('users', 'pedidos.usuario', '=', 'users.name')
             ->whereNotNull('pedidos.usuario')
-            ->where('users.is_admin', false) // Excluir administradores
+            // Removido el filtro where('users.is_admin', false) para incluir administradores
             ->whereYear('pedidos.fecha', $year);
 
             if ($month) {
