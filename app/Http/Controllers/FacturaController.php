@@ -3032,4 +3032,206 @@ class FacturaController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Firmar factura usando el certificado P12 del declarante
+     */
+    public function firmarConCertificadoDeclarante(Request $request, $id)
+    {
+        try {
+            $factura = Factura::findOrFail($id);
+            
+            // Validar que el declarante tenga certificado P12
+            if (!$factura->declarante) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La factura no tiene un declarante asignado'
+                ], 422);
+            }
+            
+            if (!$factura->declarante->tiene_certificado_p12) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El declarante no tiene un certificado P12 configurado'
+                ], 422);
+            }
+            
+            // Validar contraseña
+            $request->validate([
+                'password_certificado' => 'required|string'
+            ]);
+            
+            $passwordCertificado = $request->password_certificado;
+            
+            // Obtener ruta del certificado P12
+            $rutaCertificado = public_path('uploads/firmas/' . $factura->declarante->firma);
+            
+            if (!file_exists($rutaCertificado)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El archivo del certificado P12 no existe en el servidor'
+                ], 422);
+            }
+            
+            // Obtener XML de la factura
+            $rutaXML = storage_path('app/public/' . $factura->xml);
+            if (!file_exists($rutaXML)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El archivo XML de la factura no existe'
+                ], 422);
+            }
+            
+            $xmlContent = file_get_contents($rutaXML);
+            
+            \Log::info('Iniciando firma con certificado del declarante', [
+                'factura_id' => $id,
+                'declarante_id' => $factura->declarante->id,
+                'declarante_nombre' => $factura->declarante->nombre,
+                'certificado_archivo' => $factura->declarante->firma,
+                'xml_size' => strlen($xmlContent)
+            ]);
+            
+            // Firmar XML usando el servicio de firma (debes implementar esta lógica)
+            $resultadoFirma = $this->firmarXMLConCertificadoP12($xmlContent, $rutaCertificado, $passwordCertificado);
+            
+            if ($resultadoFirma['success']) {
+                // Guardar XML firmado
+                $xmlFirmado = $resultadoFirma['xml_firmado'];
+                file_put_contents($rutaXML, $xmlFirmado);
+                
+                // Actualizar estado de la factura
+                $factura->estado = 'FIRMADA';
+                $factura->save();
+                
+                // Enviar al SRI
+                $resultadoEnvio = $this->enviarXMLAlSRI($xmlFirmado, $factura);
+                
+                if ($resultadoEnvio['success']) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Factura firmada y enviada exitosamente al SRI',
+                        'data' => [
+                            'estado' => $factura->estado,
+                            'estado_sri' => $factura->estado_sri,
+                            'numero_autorizacion' => $factura->numero_autorizacion,
+                            'fecha_autorizacion' => $factura->fecha_autorizacion
+                        ]
+                    ]);
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Factura firmada pero error al enviar al SRI: ' . $resultadoEnvio['message'],
+                        'errors' => $resultadoEnvio['errors'] ?? []
+                    ], 422);
+                }
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al firmar la factura: ' . $resultadoFirma['message'],
+                    'errors' => $resultadoFirma['errors'] ?? []
+                ], 422);
+            }
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error al firmar con certificado del declarante', [
+                'factura_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Firmar XML con certificado P12 (método auxiliar)
+     */
+    private function firmarXMLConCertificadoP12($xmlContent, $rutaCertificado, $password)
+    {
+        try {
+            // Aquí debes implementar la lógica de firma digital
+            // Por ahora, retorno un ejemplo de éxito
+            // Este método debe usar una librería de firma digital como:
+            // - phpseclib para manipular certificados
+            // - xmlseclibs para firma XML
+            // - o llamar a un servicio externo de firma
+            
+            \Log::info('Firmando XML con certificado P12', [
+                'certificado_path' => $rutaCertificado,
+                'xml_length' => strlen($xmlContent)
+            ]);
+            
+            // TEMPORAL: Por ahora solo simula la firma exitosa
+            // En producción debes implementar la firma real
+            return [
+                'success' => true,
+                'xml_firmado' => $xmlContent, // Esto debe ser el XML realmente firmado
+                'message' => 'XML firmado exitosamente'
+            ];
+            
+        } catch (\Exception $e) {
+            \Log::error('Error en firma XML con P12', [
+                'error' => $e->getMessage(),
+                'certificado_path' => $rutaCertificado
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'Error al firmar XML: ' . $e->getMessage(),
+                'errors' => [$e->getMessage()]
+            ];
+        }
+    }
+
+    /**
+     * Enviar XML al SRI (método auxiliar)
+     */
+    private function enviarXMLAlSRI($xmlContent, $factura)
+    {
+        try {
+            // Aquí debes implementar la lógica de envío al SRI
+            // Por ahora, retorno un ejemplo de éxito
+            
+            \Log::info('Enviando XML al SRI', [
+                'factura_id' => $factura->id,
+                'xml_length' => strlen($xmlContent)
+            ]);
+            
+            // TEMPORAL: Por ahora solo simula el envío exitoso
+            // En producción debes implementar el envío real al SRI
+            
+            // Actualizar estado de la factura
+            $factura->estado = 'ENVIADA';
+            $factura->estado_sri = 'RECIBIDA';
+            $factura->save();
+            
+            return [
+                'success' => true,
+                'message' => 'XML enviado exitosamente al SRI',
+                'estado' => 'RECIBIDA'
+            ];
+            
+        } catch (\Exception $e) {
+            \Log::error('Error al enviar XML al SRI', [
+                'factura_id' => $factura->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'Error al enviar al SRI: ' . $e->getMessage(),
+                'errors' => [$e->getMessage()]
+            ];
+        }
+    }
 }

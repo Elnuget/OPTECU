@@ -340,6 +340,8 @@ Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guard
     // Nuevas rutas para firma con JavaScript y P12
     Route::get('facturas/{id}/xml', [App\Http\Controllers\FacturaController::class, 'obtenerXML'])->name('facturas.obtener-xml');
     Route::post('facturas/{id}/enviar-xml-firmado', [App\Http\Controllers\FacturaController::class, 'recibirXMLFirmado'])->name('facturas.recibir-xml-firmado');
+    // Ruta para firmar con certificado del declarante
+    Route::post('facturas/{id}/firmar-con-certificado-declarante', [App\Http\Controllers\FacturaController::class, 'firmarConCertificadoDeclarante'])->name('facturas.firmar-con-certificado-declarante');
     
     // Rutas para el controlador de Sueldos
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
