@@ -61,11 +61,11 @@ class FirmaDigitalJS {
     }
 
     /**
-     * Firmar XML
+     * Firmar XML según especificaciones del SRI Ecuador
      */
     async firmarXML(xmlContent) {
         try {
-            console.log('Iniciando firma XML...');
+            console.log('Iniciando firma XML para SRI Ecuador...');
             
             if (!this.certificado || !this.clavePrivada) {
                 throw new Error('Certificado no cargado. Use cargarCertificadoP12() primero.');
@@ -81,14 +81,11 @@ class FirmaDigitalJS {
             
             const rootElement = xmlDoc.documentElement;
             
-            // Agregar Id al elemento raíz si no existe
-            if (!rootElement.hasAttribute('Id')) {
-                rootElement.setAttribute('Id', 'comprobante');
-            }
+            // No agregar Id al elemento raíz (factura) - no permitido por SRI
             
-            // Crear elemento Signature
+            // Crear elemento Signature con namespace correcto y prefijo ds:
             const signatureElement = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Signature');
-            signatureElement.setAttribute('Id', 'Signature' + Date.now());
+            signatureElement.setAttribute('xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
             
             // Crear SignedInfo
             const signedInfoElement = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:SignedInfo');
@@ -98,14 +95,14 @@ class FirmaDigitalJS {
             canonicalizationMethod.setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
             signedInfoElement.appendChild(canonicalizationMethod);
             
-            // SignatureMethod
+            // SignatureMethod - SRI requiere RSA-SHA1
             const signatureMethod = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:SignatureMethod');
             signatureMethod.setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#rsa-sha1');
             signedInfoElement.appendChild(signatureMethod);
             
-            // Reference
+            // Reference - URI vacío para referenciar todo el documento
             const reference = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Reference');
-            reference.setAttribute('URI', '#comprobante');
+            reference.setAttribute('URI', '');
             
             // Transforms
             const transforms = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Transforms');
@@ -114,12 +111,12 @@ class FirmaDigitalJS {
             transforms.appendChild(transform);
             reference.appendChild(transforms);
             
-            // DigestMethod
+            // DigestMethod - SHA1 requerido por SRI
             const digestMethod = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:DigestMethod');
             digestMethod.setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
             reference.appendChild(digestMethod);
             
-            // Calcular digest del documento
+            // Calcular digest del documento sin la firma (enveloped-signature)
             const serializer = new XMLSerializer();
             const documentToDigest = serializer.serializeToString(rootElement);
             const digest = forge.util.encode64(forge.md.sha1.create().update(documentToDigest, 'utf8').digest().getBytes());
@@ -157,13 +154,21 @@ class FirmaDigitalJS {
             keyInfo.appendChild(x509Data);
             signatureElement.appendChild(keyInfo);
             
-            // Agregar la firma al final del documento
+            // Agregar la firma al final del documento raíz
             rootElement.appendChild(signatureElement);
             
-            // Serializar el XML firmado
+            // Serializar el XML firmado completo
             const xmlFirmado = serializer.serializeToString(xmlDoc);
             
-            console.log('XML firmado exitosamente');
+            console.log('=== DEBUG XML FIRMADO ===');
+            console.log('XML Size:', xmlFirmado.length);
+            console.log('Contiene <ds:Signature:', xmlFirmado.includes('<ds:Signature'));
+            console.log('Contiene <Signature:', xmlFirmado.includes('<Signature'));
+            console.log('XML Preview (primeros 2000 caracteres):', xmlFirmado.substring(0, 2000));
+            console.log('XML Final (últimos 1000 caracteres):', xmlFirmado.substring(xmlFirmado.length - 1000));
+            console.log('=== FIN DEBUG XML ===');
+            
+            console.log('XML firmado exitosamente para SRI Ecuador');
             return xmlFirmado;
             
         } catch (error) {

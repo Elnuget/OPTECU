@@ -3362,8 +3362,30 @@ class FacturaController extends Controller
             
             $xmlFirmado = $request->input('xml_firmado');
             
-            // Validar que el XML tenga firma digital
-            if (strpos($xmlFirmado, '<ds:Signature') === false) {
+            \Log::info('XML recibido para validación', [
+                'factura_id' => $id,
+                'xml_size' => strlen($xmlFirmado),
+                'xml_preview' => substr($xmlFirmado, 0, 1000),
+                'tiene_ds_signature' => strpos($xmlFirmado, '<ds:Signature') !== false,
+                'tiene_signature' => strpos($xmlFirmado, '<Signature') !== false,
+                'tiene_ns1_signature' => strpos($xmlFirmado, '<ns1:Signature') !== false,
+                'contiene_xmlns_ds' => strpos($xmlFirmado, 'xmlns:ds') !== false
+            ]);
+            
+            // Validar que el XML tenga firma digital (con o sin prefijo ds:, ns1:)
+            $tieneDsSignature = strpos($xmlFirmado, '<ds:Signature') !== false;
+            $tieneSignature = strpos($xmlFirmado, '<Signature') !== false;
+            $tieneNs1Signature = strpos($xmlFirmado, '<ns1:Signature') !== false;
+            
+            if (!$tieneDsSignature && !$tieneSignature && !$tieneNs1Signature) {
+                \Log::error('XML sin firma digital válida', [
+                    'factura_id' => $id,
+                    'xml_size' => strlen($xmlFirmado),
+                    'tiene_ds_signature' => $tieneDsSignature,
+                    'tiene_signature' => $tieneSignature,
+                    'tiene_ns1_signature' => $tieneNs1Signature,
+                    'xml_completo' => $xmlFirmado // Log completo para debug
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'El XML recibido no contiene firma digital válida'
@@ -3389,8 +3411,18 @@ class FacturaController extends Controller
                 'ruta_xml' => $rutaXML
             ]);
             
-            // Enviar al SRI
-            $resultadoEnvio = $this->enviarXMLAlSRI($xmlFirmado, $factura);
+            // Leer el XML guardado para asegurar consistencia
+            $xmlParaEnvio = file_get_contents($rutaXML);
+            
+            \Log::info('XML leído para envío al SRI', [
+                'factura_id' => $id,
+                'xml_size_guardado' => strlen($xmlFirmado),
+                'xml_size_leido' => strlen($xmlParaEnvio),
+                'son_iguales' => ($xmlFirmado === $xmlParaEnvio)
+            ]);
+            
+            // Enviar al SRI usando el XML leído del archivo
+            $resultadoEnvio = $this->enviarXMLAlSRI($xmlParaEnvio, $factura);
             
             if ($resultadoEnvio['success']) {
                 // Si el envío fue exitoso, intentar autorización inmediata
@@ -3474,10 +3506,27 @@ class FacturaController extends Controller
                 'xml_length' => strlen($xmlContent)
             ]);
             
-            // Validar que el XML esté firmado
-            if (strpos($xmlContent, '<ds:Signature') === false) {
+            // Validar que el XML esté firmado (con cualquier prefijo: ds:, ns1:, o sin prefijo)
+            $tieneDsSignature = strpos($xmlContent, '<ds:Signature') !== false;
+            $tieneSignature = strpos($xmlContent, '<Signature') !== false;
+            $tieneNs1Signature = strpos($xmlContent, '<ns1:Signature') !== false;
+            
+            if (!$tieneDsSignature && !$tieneSignature && !$tieneNs1Signature) {
+                \Log::error('XML sin firma digital para envío al SRI', [
+                    'factura_id' => $factura->id,
+                    'tiene_ds_signature' => $tieneDsSignature,
+                    'tiene_signature' => $tieneSignature,
+                    'tiene_ns1_signature' => $tieneNs1Signature
+                ]);
                 throw new \Exception('El XML debe estar firmado digitalmente antes de enviar al SRI');
             }
+            
+            \Log::info('XML firmado validado para envío al SRI', [
+                'factura_id' => $factura->id,
+                'tiene_ds_signature' => $tieneDsSignature,
+                'tiene_signature' => $tieneSignature,
+                'tiene_ns1_signature' => $tieneNs1Signature
+            ]);
             
             // Codificar XML en base64
             $xmlBase64 = base64_encode($xmlContent);
