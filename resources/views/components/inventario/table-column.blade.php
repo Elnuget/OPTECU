@@ -1,6 +1,6 @@
 @props(['columna', 'items', 'empresas'])
 
-<div class="col-md-6 mb-4">
+<div class="col-12 mb-4">
     <div class="card h-100">
         <div class="card-header bg-secondary text-white">
             <h5 class="card-title mb-0 d-flex justify-content-between align-items-center">
@@ -29,18 +29,19 @@
             </h5>
         </div>
         <div class="card-body p-0">
-            <table class="table table-hover inventario-table mb-0" style="width: 100%">
-                <thead>
-                    <tr>
-                        <th style="width: 10%">Número</th>
-                        <th style="width: 15%">Lugar</th>
-                        <th style="width: 10%">Columna</th>
-                        <th style="width: 25%">Código</th>
-                        <th style="width: 15%">Empresa</th>
-                        <th style="width: 10%">Cantidad</th>
-                        <th style="width: 15%">Acciones</th>
-                    </tr>
-                </thead>
+            <div class="table-responsive">
+                <table class="table table-hover inventario-table mb-0" style="width: 100%">
+                    <thead>
+                        <tr>
+                            <th style="width: 8%">Número</th>
+                            <th style="width: 15%">Lugar</th>
+                            <th style="width: 8%">Columna</th>
+                            <th style="width: 20%">Código</th>
+                            <th style="width: 15%">Empresa</th>
+                            <th style="width: 10%">Cantidad</th>
+                            <th style="width: 24%">Acciones</th>
+                        </tr>
+                    </thead>
                 <tbody>
                     @if(Str::startsWith(strtoupper($items->first()->lugar), 'SOPORTE'))
                         <x-inventario.table-soporte-rows :items="$items" :empresas="$empresas" />
@@ -91,6 +92,7 @@
                     </tr>
                 </tfoot>
             </table>
+            </div>
         </div>
     </div>
 </div> 
