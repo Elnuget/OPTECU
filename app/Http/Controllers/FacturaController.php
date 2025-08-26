@@ -3510,14 +3510,17 @@ class FacturaController extends Controller
             // Procesar respuesta del SRI
             $resultadoProcesamiento = $this->procesarRespuestaSRI($respuesta, $factura);
             
-            if ($resultadoProcesamiento['success']) {
+            // Verificar si el procesamiento fue exitoso basándose en el estado
+            $estadoExitoso = in_array($resultadoProcesamiento['estado'], ['RECIBIDA', 'DEVUELTA']);
+            
+            if ($estadoExitoso) {
                 // Actualizar estado de la factura
                 $factura->estado = 'RECIBIDA';
-                $factura->estado_sri = $resultadoProcesamiento['estado_sri'];
+                $factura->estado_sri = $resultadoProcesamiento['estado'];
                 $factura->fecha_envio_sri = now();
                 
-                if (isset($resultadoProcesamiento['mensajes'])) {
-                    $factura->mensajes_sri = json_encode($resultadoProcesamiento['mensajes']);
+                if (isset($resultadoProcesamiento['comprobantes']) && !empty($resultadoProcesamiento['comprobantes'])) {
+                    $factura->mensajes_sri = json_encode($resultadoProcesamiento['comprobantes']);
                 }
                 
                 $factura->save();
@@ -3536,7 +3539,27 @@ class FacturaController extends Controller
                     'datos_sri' => $resultadoProcesamiento
                 ];
             } else {
-                throw new \Exception('Error al procesar respuesta del SRI: ' . $resultadoProcesamiento['message']);
+                // El SRI rechazó el comprobante
+                $mensajesError = [];
+                if (isset($resultadoProcesamiento['comprobantes'])) {
+                    foreach ($resultadoProcesamiento['comprobantes'] as $comprobante) {
+                        if (isset($comprobante['mensajes'])) {
+                            foreach ($comprobante['mensajes'] as $mensaje) {
+                                $mensajesError[] = $mensaje['mensaje'] ?? 'Error desconocido';
+                            }
+                        }
+                    }
+                }
+                
+                $errorMessage = !empty($mensajesError) ? implode('; ', $mensajesError) : 'Error desconocido del SRI';
+                
+                \Log::error('SRI rechazó el comprobante', [
+                    'factura_id' => $factura->id,
+                    'estado_sri' => $resultadoProcesamiento['estado'],
+                    'mensajes_error' => $mensajesError
+                ]);
+                
+                throw new \Exception('SRI rechazó el comprobante: ' . $errorMessage);
             }
             
         } catch (\Exception $e) {
