@@ -176,12 +176,14 @@ class FirmaDigitalJS {
 // Función global para procesar firma con certificado P12
 window.procesarFirmaConP12 = async function(facturaId, password) {
     try {
-        console.log('Iniciando proceso de firma con P12 para factura:', facturaId);
+        console.log('=== INICIO PROCESO FIRMA DIGITAL JS ===');
+        console.log('Factura ID:', facturaId);
         
         // Actualizar progreso
-        actualizarProgreso(10, 'Preparando datos para firma...');
+        actualizarProgreso(0, 'Preparando datos para firma...');
         
         // Obtener datos del servidor
+        console.log('Solicitando datos al servidor...');
         const response = await fetch(`/facturas/${facturaId}/preparar-xml-firma`, {
             method: 'POST',
             headers: {
@@ -195,12 +197,20 @@ window.procesarFirmaConP12 = async function(facturaId, password) {
             })
         });
         
+        console.log('Respuesta del servidor:', response.status, response.statusText);
+        
         if (!response.ok) {
             const errorData = await response.json();
+            console.error('Error del servidor:', errorData);
             throw new Error(errorData.message || 'Error al preparar datos para firma');
         }
         
         const datos = await response.json();
+        console.log('Datos recibidos:', {
+            success: datos.success,
+            xml_size: datos.data?.xml_content?.length || 0,
+            cert_size: datos.data?.certificado_p12_base64?.length || 0
+        });
         
         if (!datos.success) {
             throw new Error(datos.message || 'Error al obtener datos para firma');
@@ -212,16 +222,21 @@ window.procesarFirmaConP12 = async function(facturaId, password) {
         const firmaDigital = new FirmaDigitalJS();
         
         // Cargar certificado P12
+        console.log('Cargando certificado P12...');
         await firmaDigital.cargarCertificadoP12(datos.data.certificado_p12_base64, password);
+        console.log('Certificado P12 cargado exitosamente');
         
         actualizarProgreso(60, 'Firmando XML digitalmente...');
         
         // Firmar XML
+        console.log('Iniciando firma XML...');
         const xmlFirmado = await firmaDigital.firmarXML(datos.data.xml_content);
+        console.log('XML firmado exitosamente, tamaño:', xmlFirmado.length);
         
         actualizarProgreso(80, 'Enviando XML firmado al servidor...');
         
         // Enviar XML firmado de vuelta al servidor
+        console.log('Enviando XML firmado al servidor...');
         const responseEnvio = await fetch(`/facturas/${facturaId}/procesar-xml-firmado-js`, {
             method: 'POST',
             headers: {
@@ -235,19 +250,26 @@ window.procesarFirmaConP12 = async function(facturaId, password) {
             })
         });
         
+        console.log('Respuesta envío:', responseEnvio.status, responseEnvio.statusText);
+        
         if (!responseEnvio.ok) {
             const errorData = await responseEnvio.json();
+            console.error('Error al procesar XML firmado:', errorData);
             throw new Error(errorData.message || 'Error al procesar XML firmado');
         }
         
         const resultado = await responseEnvio.json();
+        console.log('Resultado final:', resultado);
         
         actualizarProgreso(100, 'Proceso completado exitosamente');
+        console.log('=== FIN PROCESO FIRMA DIGITAL JS ===');
         
         return resultado;
         
     } catch (error) {
-        console.error('Error en proceso de firma P12:', error);
+        console.error('=== ERROR EN PROCESO FIRMA DIGITAL JS ===');
+        console.error('Error completo:', error);
+        console.error('Stack trace:', error.stack);
         throw error;
     }
 };
@@ -262,5 +284,8 @@ function actualizarProgreso(porcentaje, mensaje) {
     if (progressText) progressText.textContent = porcentaje + '%';
     if (estadoProceso) estadoProceso.textContent = mensaje;
     
-    console.log(`Progreso: ${porcentaje}% - ${mensaje}`);
+    // Solo log importantes, no de progreso
+    if (porcentaje === 100 || porcentaje === 0) {
+        console.log(`Proceso: ${porcentaje === 100 ? 'Completado' : 'Iniciado'} - ${mensaje}`);
+    }
 }

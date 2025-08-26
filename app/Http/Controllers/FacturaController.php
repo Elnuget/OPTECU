@@ -3219,10 +3219,13 @@ class FacturaController extends Controller
     public function prepararXMLParaFirma(Request $request, $id)
     {
         try {
+            \Log::info('=== PREPARANDO XML PARA FIRMA JS ===', ['factura_id' => $id]);
+            
             $factura = Factura::findOrFail($id);
             
             // Validar que el declarante tenga certificado P12
             if (!$factura->declarante) {
+                \Log::error('Factura sin declarante', ['factura_id' => $id]);
                 return response()->json([
                     'success' => false,
                     'message' => 'La factura no tiene un declarante asignado'
@@ -3230,6 +3233,10 @@ class FacturaController extends Controller
             }
             
             if (!$factura->declarante->firma) {
+                \Log::error('Declarante sin certificado', [
+                    'factura_id' => $id,
+                    'declarante_id' => $factura->declarante->id
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'El declarante no tiene un certificado configurado'
@@ -3240,6 +3247,11 @@ class FacturaController extends Controller
             $rutaCertificado = public_path('uploads/firmas/' . $factura->declarante->firma);
             
             if (!file_exists($rutaCertificado)) {
+                \Log::error('Archivo de certificado no encontrado', [
+                    'factura_id' => $id,
+                    'ruta_certificado' => $rutaCertificado,
+                    'archivo_nombre' => $factura->declarante->firma
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'El archivo del certificado no existe en el servidor',
@@ -3252,8 +3264,21 @@ class FacturaController extends Controller
             }
             
             // Obtener XML de la factura
+            if (!$factura->xml) {
+                \Log::error('Factura sin archivo XML', ['factura_id' => $id]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La factura no tiene archivo XML asignado'
+                ], 422);
+            }
+            
             $rutaXML = storage_path('app/public/' . $factura->xml);
             if (!file_exists($rutaXML)) {
+                \Log::error('Archivo XML no encontrado', [
+                    'factura_id' => $id,
+                    'ruta_xml' => $rutaXML,
+                    'xml_nombre' => $factura->xml
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'El archivo XML de la factura no existe'
@@ -3261,11 +3286,33 @@ class FacturaController extends Controller
             }
             
             $xmlContent = file_get_contents($rutaXML);
+            if ($xmlContent === false) {
+                \Log::error('No se pudo leer el archivo XML', [
+                    'factura_id' => $id,
+                    'ruta_xml' => $rutaXML
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo leer el archivo XML'
+                ], 500);
+            }
             
             // Convertir certificado P12 a base64 para enviar al frontend
-            $certificadoP12Base64 = base64_encode(file_get_contents($rutaCertificado));
+            $certificadoContent = file_get_contents($rutaCertificado);
+            if ($certificadoContent === false) {
+                \Log::error('No se pudo leer el certificado P12', [
+                    'factura_id' => $id,
+                    'ruta_certificado' => $rutaCertificado
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo leer el certificado P12'
+                ], 500);
+            }
             
-            \Log::info('XML preparado para firma en JavaScript', [
+            $certificadoP12Base64 = base64_encode($certificadoContent);
+            
+            \Log::info('XML preparado exitosamente para firma JS', [
                 'factura_id' => $id,
                 'xml_size' => strlen($xmlContent),
                 'certificado_size' => strlen($certificadoP12Base64)
@@ -3285,9 +3332,11 @@ class FacturaController extends Controller
             ]);
             
         } catch (\Exception $e) {
-            \Log::error('Error al preparar XML para firma', [
+            \Log::error('=== ERROR PREPARANDO XML PARA FIRMA JS ===', [
                 'factura_id' => $id,
-                'error' => $e->getMessage(),
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
 
@@ -3311,7 +3360,7 @@ class FacturaController extends Controller
                 'xml_firmado' => 'required|string'
             ]);
             
-            $xmlFirmado = $request->xml_firmado;
+            $xmlFirmado = $request->input('xml_firmado');
             
             // Validar que el XML tenga firma digital
             if (strpos($xmlFirmado, '<ds:Signature') === false) {

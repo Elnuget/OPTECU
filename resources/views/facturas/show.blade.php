@@ -742,13 +742,9 @@
         if (progressText) progressText.textContent = porcentaje + '%';
         if (estadoProceso) estadoProceso.textContent = mensaje;
         
-        console.log(`Progreso: ${porcentaje}% - ${mensaje}`);
-        
-        // Simular progreso gradual
-        if (porcentaje < 100) {
-            setTimeout(() => {
-                actualizarProgreso(Math.min(porcentaje + 10, 90), 'Procesando...');
-            }, 1000);
+        // Solo logs importantes, no de progreso intermedio
+        if (porcentaje === 0 || porcentaje === 100) {
+            console.log(`Proceso: ${porcentaje === 100 ? 'Completado' : 'Iniciado'} - ${mensaje}`);
         }
     }
 
