@@ -558,7 +558,7 @@
 <!-- Librería Forge.js para firma digital -->
 <script src="https://cdn.jsdelivr.net/npm/node-forge@1.3.1/dist/forge.min.js"></script>
 <!-- Librería propia para firma digital -->
-<script src="{{ asset('js/firma-digital.js') }}"></script>
+<script src="{{ asset('js/firma-digital-xades.js') }}"></script>
 <script>
     let facturaIdActual = null;
     let facturaIdAutorizacion = null;

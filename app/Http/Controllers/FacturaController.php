@@ -3362,20 +3362,24 @@ class FacturaController extends Controller
             
             $xmlFirmado = $request->input('xml_firmado');
             
-            \Log::info('XML recibido para validación', [
+            \Log::info('XML recibido para validación XAdES', [
                 'factura_id' => $id,
                 'xml_size' => strlen($xmlFirmado),
                 'xml_preview' => substr($xmlFirmado, 0, 1000),
                 'tiene_ds_signature' => strpos($xmlFirmado, '<ds:Signature') !== false,
                 'tiene_signature' => strpos($xmlFirmado, '<Signature') !== false,
                 'tiene_ns1_signature' => strpos($xmlFirmado, '<ns1:Signature') !== false,
-                'contiene_xmlns_ds' => strpos($xmlFirmado, 'xmlns:ds') !== false
+                'tiene_xades_properties' => strpos($xmlFirmado, '<xades:QualifyingProperties') !== false,
+                'tiene_xades_signed_props' => strpos($xmlFirmado, '<xades:SignedProperties') !== false,
+                'contiene_xmlns_ds' => strpos($xmlFirmado, 'xmlns:ds') !== false,
+                'contiene_xmlns_xades' => strpos($xmlFirmado, 'xmlns:xades') !== false
             ]);
             
-            // Validar que el XML tenga firma digital (con o sin prefijo ds:, ns1:)
+            // Validar que el XML tenga firma digital XAdES-BES
             $tieneDsSignature = strpos($xmlFirmado, '<ds:Signature') !== false;
             $tieneSignature = strpos($xmlFirmado, '<Signature') !== false;
             $tieneNs1Signature = strpos($xmlFirmado, '<ns1:Signature') !== false;
+            $tieneXAdESProperties = strpos($xmlFirmado, '<xades:QualifyingProperties') !== false;
             
             if (!$tieneDsSignature && !$tieneSignature && !$tieneNs1Signature) {
                 \Log::error('XML sin firma digital válida', [
@@ -3384,6 +3388,7 @@ class FacturaController extends Controller
                     'tiene_ds_signature' => $tieneDsSignature,
                     'tiene_signature' => $tieneSignature,
                     'tiene_ns1_signature' => $tieneNs1Signature,
+                    'tiene_xades_properties' => $tieneXAdESProperties,
                     'xml_completo' => $xmlFirmado // Log completo para debug
                 ]);
                 return response()->json([
@@ -3521,11 +3526,13 @@ class FacturaController extends Controller
                 throw new \Exception('El XML debe estar firmado digitalmente antes de enviar al SRI');
             }
             
-            \Log::info('XML firmado validado para envío al SRI', [
+            \Log::info('XML firmado XAdES validado para envío al SRI', [
                 'factura_id' => $factura->id,
                 'tiene_ds_signature' => $tieneDsSignature,
                 'tiene_signature' => $tieneSignature,
-                'tiene_ns1_signature' => $tieneNs1Signature
+                'tiene_ns1_signature' => $tieneNs1Signature,
+                'tiene_xades_properties' => strpos($xmlContent, '<xades:QualifyingProperties') !== false,
+                'tiene_xades_signed_props' => strpos($xmlContent, '<xades:SignedProperties') !== false
             ]);
             
             // Codificar XML en base64
