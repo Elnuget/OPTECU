@@ -161,11 +161,22 @@
                     $extension = $tieneArchivo ? strtolower(pathinfo($factura->declarante->firma, PATHINFO_EXTENSION)) : '';
                     $esExtensionValida = in_array($extension, ['p12', 'pfx']);
                     $tieneCertificadoP12 = $existeArchivo && $esExtensionValida;
+                    
+                    // Información de depuración
+                    $debug = [
+                        'tiene_archivo' => $tieneArchivo,
+                        'ruta_archivo' => $rutaArchivo,
+                        'existe_archivo' => $existeArchivo ? 'SÍ' : 'NO',
+                        'extension' => $extension,
+                        'es_extension_valida' => $esExtensionValida ? 'SÍ' : 'NO',
+                        'tiene_certificado_p12_vista' => $tieneCertificadoP12 ? 'SÍ' : 'NO',
+                        'tiene_certificado_p12_modelo' => $factura->declarante && $factura->declarante->tiene_certificado_p12 ? 'SÍ' : 'NO',
+                    ];
                 @endphp
 
                 @if($factura->declarante && $tieneCertificadoP12)
                     <button type="button" class="btn btn-sm btn-warning" onclick="firmarYEnviar({{ $factura->id }})">
-                        <i class="fas fa-certificate"></i> Firmar y Enviar al SRI
+                        <ksi class="fas fa-certificate"></i> Firmar y Enviar al SRI
                     </button>
                 @else
                     <button type="button" class="btn btn-sm btn-secondary" disabled title="El declarante no tiene certificado P12 configurado">
@@ -185,6 +196,27 @@
                             La extensión del archivo debe ser .p12 o .pfx, no .{{ $extension }}
                         @endif
                     </small>
+                    
+                    <!-- Información de depuración -->
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-info" type="button" data-toggle="collapse" data-target="#debugInfo">
+                            Mostrar información de depuración
+                        </button>
+                        <div class="collapse mt-2" id="debugInfo">
+                            <div class="card card-body bg-light">
+                                <h6>Información de Depuración:</h6>
+                                <ul class="small mb-0">
+                                    <li><strong>¿Tiene archivo?</strong> {{ $debug['tiene_archivo'] ? 'SÍ' : 'NO' }}</li>
+                                    <li><strong>Ruta del archivo:</strong> {{ $debug['ruta_archivo'] }}</li>
+                                    <li><strong>¿Existe el archivo?</strong> {{ $debug['existe_archivo'] }}</li>
+                                    <li><strong>Extensión:</strong> {{ $debug['extension'] }}</li>
+                                    <li><strong>¿Es extensión válida?</strong> {{ $debug['es_extension_valida'] }}</li>
+                                    <li><strong>¿Tiene certificado P12 (Vista)?</strong> {{ $debug['tiene_certificado_p12_vista'] }}</li>
+                                    <li><strong>¿Tiene certificado P12 (Modelo)?</strong> {{ $debug['tiene_certificado_p12_modelo'] }}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 @endif
             @elseif($factura->estado === 'RECIBIDA')
                 <button type="button" class="btn btn-sm btn-info" onclick="procesarAutorizacionDirecta({{ $factura->id }})">
@@ -294,7 +326,7 @@
                         <input type="password" class="form-control" id="password_certificado" 
                                name="password_certificado" required 
                                placeholder="Ingrese la contraseña del certificado P12 del declarante"
-                               @if(!$factura->declarante || !$factura->declarante->tiene_certificado_p12) disabled @endif>
+                               @if(!$factura->declarante || !$tieneCertificadoP12) disabled @endif>
                         <small class="form-text text-muted">
                             Se requiere la contraseña del certificado digital P12 del declarante para firmar digitalmente el documento.
                         </small>
@@ -523,6 +555,7 @@
 @section('plugins.Tempusdominus', true)
 
 @section('js')
+<script src="{{ asset('js/certificado-diagnostico.js') }}"></script>
 <script>
     let facturaIdActual = null;
     let facturaIdAutorizacion = null;
@@ -545,12 +578,18 @@
     function firmarYEnviar(facturaId) {
         facturaIdActual = facturaId;
         
+        console.log('Abriendo modal de certificado para factura:', facturaId);
+        console.log('Tiene certificado P12:', {{ $tieneCertificadoP12 ? 'true' : 'false' }});
+        console.log('Declarante disponible:', {{ $factura->declarante ? 'true' : 'false' }});
+        
         // Resetear formulario de manera segura (verificando que los elementos existen)
         const formCertificado = document.getElementById('formCertificado');
         const progresoFirma = document.getElementById('progreso_firma');
         const resultadoFirma = document.getElementById('resultado_firma');
         const btnFirmar = document.getElementById('btn_firmar');
         const btnCerrarExitoso = document.getElementById('btn_cerrar_exitoso');
+        const passwordInput = document.getElementById('password_certificado');
+        const confirmarCheckbox = document.getElementById('confirmar_envio');
         
         // Comprobar si los elementos existen antes de manipularlos
         if (formCertificado) formCertificado.reset();
@@ -558,6 +597,15 @@
         if (resultadoFirma) resultadoFirma.style.display = 'none';
         if (btnFirmar) btnFirmar.style.display = 'inline-block';
         if (btnCerrarExitoso) btnCerrarExitoso.style.display = 'none';
+        
+        // Habilitar campos si hay certificado P12
+        @if($factura->declarante && $tieneCertificadoP12)
+        if (passwordInput) {
+            passwordInput.disabled = false;
+            passwordInput.focus();
+        }
+        if (confirmarCheckbox) confirmarCheckbox.disabled = false;
+        @endif
         
         // Mostrar modal
         $('#modalCertificado').modal('show');
@@ -639,8 +687,17 @@
                 const errorData = await response.json();
                 // Si el error está relacionado con el certificado, mostrar información más detallada
                 if (errorData.message && errorData.message.toLowerCase().includes('certificado')) {
+                    // Mostrar información de depuración adicional
+                    const infoDebug = document.querySelector('#debugInfo');
+                    if (infoDebug) {
+                        const debugButton = document.querySelector('[data-target="#debugInfo"]');
+                        if (debugButton) {
+                            debugButton.click(); // Mostrar automáticamente la info de depuración
+                        }
+                    }
+                    
                     const ruta = document.querySelector('.text-info') ? document.querySelector('.text-info').textContent : 'public/uploads/firmas/';
-                    throw new Error(`Error con el certificado digital: ${errorData.message}. Verificar que el archivo existe en ${ruta}`);
+                    throw new Error(`Error con el certificado digital: ${errorData.message}.\n\nPosibles causas:\n1. El archivo no existe físicamente en el servidor\n2. Los permisos del archivo son incorrectos\n3. La ruta del archivo ha cambiado\n\nRuta esperada: ${ruta}`);
                 }
                 throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
             }

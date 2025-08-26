@@ -771,8 +771,16 @@ class FacturaController extends Controller
                 ]);
             }
             
+            // Verificar si el declarante tiene certificado P12
+            $tieneCertificadoP12 = false;
+            if ($factura->declarante && $factura->declarante->firma) {
+                $rutaCertificado = public_path('uploads/firmas/' . $factura->declarante->firma);
+                $tieneCertificadoP12 = file_exists($rutaCertificado) && 
+                                      (pathinfo($factura->declarante->firma, PATHINFO_EXTENSION) === 'p12');
+            }
+
             // Si no es AJAX, devolver vista HTML
-            return view('facturas.show', compact('factura', 'xmlContent', 'xmlFormatted'));
+            return view('facturas.show', compact('factura', 'xmlContent', 'xmlFormatted', 'tieneCertificadoP12'));
             
         } catch (\Exception $e) {
             if (request()->wantsJson()) {
@@ -3049,10 +3057,29 @@ class FacturaController extends Controller
                 ], 422);
             }
             
-            if (!$factura->declarante->tiene_certificado_p12) {
+            if (!$factura->declarante->firma) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'El declarante no tiene un certificado P12 configurado'
+                    'message' => 'El declarante no tiene un certificado configurado'
+                ], 422);
+            }
+            
+            // Verificar que el archivo de certificado existe y es P12
+            $rutaCertificado = public_path('uploads/firmas/' . $factura->declarante->firma);
+            
+            if (!file_exists($rutaCertificado)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El archivo del certificado no existe en el servidor'
+                ], 422);
+            }
+            
+            // Verificar que sea un archivo P12
+            $extensionCertificado = pathinfo($factura->declarante->firma, PATHINFO_EXTENSION);
+            if (strtolower($extensionCertificado) !== 'p12') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El archivo del certificado debe ser de tipo P12'
                 ], 422);
             }
             
@@ -3062,16 +3089,6 @@ class FacturaController extends Controller
             ]);
             
             $passwordCertificado = $request->password_certificado;
-            
-            // Obtener ruta del certificado P12
-            $rutaCertificado = public_path('uploads/firmas/' . $factura->declarante->firma);
-            
-            if (!file_exists($rutaCertificado)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'El archivo del certificado P12 no existe en el servidor'
-                ], 422);
-            }
             
             // Obtener XML de la factura
             $rutaXML = storage_path('app/public/' . $factura->xml);
