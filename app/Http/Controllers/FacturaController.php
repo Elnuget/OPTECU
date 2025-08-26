@@ -353,6 +353,14 @@ class FacturaController extends Controller
             $fechaEmision = date('dmY'); // 8 dígitos: ddmmaaaa
             $tipoComprobante = '01'; // 2 dígitos: 01 = Factura
             $ruc = str_pad($declarante->ruc ?? '9999999999999', 13, '0', STR_PAD_LEFT); // 13 dígitos exactos
+            
+            \Log::info('Generando clave de acceso', [
+                'declarante_id' => $declarante->id,
+                'ruc_original' => $declarante->ruc,
+                'ruc_formateado' => $ruc,
+                'ruc_length' => strlen($ruc)
+            ]);
+            
             $tipoAmbiente = '1'; // 1 dígito: 1 = Pruebas, 2 = Producción
             $establecimiento = str_pad($declarante->establecimiento ?? '001', 3, '0', STR_PAD_LEFT); // 3 dígitos exactos
             $puntoEmision = str_pad($declarante->punto_emision ?? '001', 3, '0', STR_PAD_LEFT); // 3 dígitos exactos
@@ -1307,6 +1315,9 @@ class FacturaController extends Controller
                 'private_key_type' => gettype($clavePrivada)
             ]);
 
+            // VALIDACIÓN CRÍTICA: Verificar que el RUC del certificado coincida con el del declarante
+            $this->validarRUCCertificado($certificado, $declarante);
+
             // Aplicar firma XAdES-BES con PEM
             $xmlFirmado = $this->aplicarFirmaXAdESPEM($xmlContent, $certificado, $clavePrivada);
 
@@ -1385,8 +1396,7 @@ class FacturaController extends Controller
 
     /**
      * Aplicar firma XAdES-BES al XML usando certificado PEM
-     * NOTA: Esta es una implementación simplificada
-     * En producción se recomienda usar librerías especializadas como XMLSecLibs
+     * Implementación completa según estándares del SRI Ecuador
      *
      * @param  string  $xmlContent
      * @param  \OpenSSLCertificate|bool  $cert
@@ -1396,7 +1406,7 @@ class FacturaController extends Controller
     private function aplicarFirmaXAdESPEM($xmlContent, $cert, $privateKey)
     {
         try {
-            \Log::info('Aplicando firma XAdES-BES con certificado PEM');
+            \Log::info('=== INICIANDO FIRMA XAdES-BES COMPLETA ===');
             
             // Validar parámetros de entrada
             if (!$cert) {
@@ -1407,9 +1417,11 @@ class FacturaController extends Controller
                 throw new \Exception('Clave privada no válida');
             }
             
-            // Por ahora, retornamos el XML original con una marca de firmado
-            // En una implementación real, aquí se aplicaría la firma XAdES-BES
-            $dom = new \DOMDocument();
+            // Cargar el XML
+            $dom = new \DOMDocument('1.0', 'UTF-8');
+            $dom->preserveWhiteSpace = false;
+            $dom->formatOutput = false;
+            
             if (!$dom->loadXML($xmlContent)) {
                 throw new \Exception('Error al cargar XML para firmar');
             }
@@ -1419,100 +1431,415 @@ class FacturaController extends Controller
             $certData = null;
             openssl_x509_export($cert, $certData);
             
-            // Agregar elemento de firma XAdES-BES (simplificado)
+            \Log::info('Información del certificado extraída', [
+                'subject_CN' => $certInfo['subject']['CN'] ?? 'N/A',
+                'subject_complete' => $certInfo['subject'] ?? [],
+                'issuer_CN' => $certInfo['issuer']['CN'] ?? 'N/A',
+                'issuer_complete' => $certInfo['issuer'] ?? [],
+                'serial_number' => $certInfo['serialNumber'] ?? 'N/A',
+                'serial_hex_length' => strlen($certInfo['serialNumber'] ?? ''),
+                'valid_from' => date('Y-m-d H:i:s', $certInfo['validFrom_time_t'] ?? 0),
+                'valid_to' => date('Y-m-d H:i:s', $certInfo['validTo_time_t'] ?? 0),
+                'cert_data_length' => strlen($certData),
+                'extensions_available' => isset($certInfo['extensions']) ? array_keys($certInfo['extensions']) : []
+            ]);
+            
+            // Generar IDs únicos para los elementos
+            $signatureId = 'Signature' . mt_rand(100000, 999999);
+            $signedInfoId = 'Signature-SignedInfo' . mt_rand(100000, 999999);
+            $signedPropsId = $signatureId . '-SignedProperties' . mt_rand(100000, 999999);
+            $certificateId = 'Certificate' . mt_rand(100000, 999999);
+            $objectId = $signatureId . '-Object' . mt_rand(100000, 999999);
+            $signatureValueId = 'SignatureValue' . mt_rand(100000, 999999);
+            $referenceId = 'Reference-ID-' . mt_rand(100000, 999999);
+            $signedPropsRefId = 'SignedPropertiesID' . mt_rand(100000, 999999);
+            
+            \Log::info('IDs generados para firma', [
+                'signatureId' => $signatureId,
+                'signedInfoId' => $signedInfoId,
+                'signedPropsId' => $signedPropsId
+            ]);
+            
+            // Crear elemento de firma XAdES-BES
             $signature = $dom->createElement('ds:Signature');
             $signature->setAttribute('xmlns:ds', 'http://www.w3.org/2000/09/xmldsig#');
             $signature->setAttribute('xmlns:etsi', 'http://uri.etsi.org/01903/v1.3.2#');
-            $signature->setAttribute('Id', 'Signature-' . uniqid());
+            $signature->setAttribute('Id', $signatureId);
             
-            // SignedInfo
+            // 1. SignedInfo
             $signedInfo = $dom->createElement('ds:SignedInfo');
+            $signedInfo->setAttribute('Id', $signedInfoId);
+            
+            // CanonicalizationMethod
             $canonicalizationMethod = $dom->createElement('ds:CanonicalizationMethod');
             $canonicalizationMethod->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
             $signedInfo->appendChild($canonicalizationMethod);
             
+            // SignatureMethod
             $signatureMethod = $dom->createElement('ds:SignatureMethod');
             $signatureMethod->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#rsa-sha1');
             $signedInfo->appendChild($signatureMethod);
             
-            // Reference
-            $reference = $dom->createElement('ds:Reference');
-            $reference->setAttribute('URI', '#comprobante');
+            // Referencia a SignedProperties (requerida para XAdES)
+            $signedPropsRef = $dom->createElement('ds:Reference');
+            $signedPropsRef->setAttribute('Id', $signedPropsRefId);
+            $signedPropsRef->setAttribute('Type', 'http://uri.etsi.org/01903#SignedProperties');
+            $signedPropsRef->setAttribute('URI', '#' . $signedPropsId);
+            
+            $digestMethodSignedProps = $dom->createElement('ds:DigestMethod');
+            $digestMethodSignedProps->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+            $signedPropsRef->appendChild($digestMethodSignedProps);
+            
+            // Placeholder para DigestValue de SignedProperties (se calculará después)
+            $digestValueSignedProps = $dom->createElement('ds:DigestValue', 'SIGNED_PROPS_DIGEST_PLACEHOLDER');
+            $signedPropsRef->appendChild($digestValueSignedProps);
+            $signedInfo->appendChild($signedPropsRef);
+            
+            // Referencia al certificado
+            $certificateRef = $dom->createElement('ds:Reference');
+            $certificateRef->setAttribute('URI', '#' . $certificateId);
+            
+            $digestMethodCert = $dom->createElement('ds:DigestMethod');
+            $digestMethodCert->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+            $certificateRef->appendChild($digestMethodCert);
+            
+            // Placeholder para DigestValue del certificado
+            $digestValueCert = $dom->createElement('ds:DigestValue', 'CERTIFICATE_DIGEST_PLACEHOLDER');
+            $certificateRef->appendChild($digestValueCert);
+            $signedInfo->appendChild($certificateRef);
+            
+            // Referencia al documento principal
+            $documentRef = $dom->createElement('ds:Reference');
+            $documentRef->setAttribute('Id', $referenceId);
+            $documentRef->setAttribute('URI', '#comprobante');
             
             $transforms = $dom->createElement('ds:Transforms');
             $transform = $dom->createElement('ds:Transform');
             $transform->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#enveloped-signature');
             $transforms->appendChild($transform);
-            $reference->appendChild($transforms);
+            $documentRef->appendChild($transforms);
             
-            $digestMethod = $dom->createElement('ds:DigestMethod');
-            $digestMethod->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
-            $reference->appendChild($digestMethod);
+            $digestMethodDoc = $dom->createElement('ds:DigestMethod');
+            $digestMethodDoc->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+            $documentRef->appendChild($digestMethodDoc);
             
-            // Calcular digest del documento
-            $canonicalXML = $dom->C14N();
-            $digestValue = base64_encode(sha1($canonicalXML, true));
-            $digestValueNode = $dom->createElement('ds:DigestValue', $digestValue);
-            $reference->appendChild($digestValueNode);
+            // Placeholder para DigestValue del documento
+            $digestValueDoc = $dom->createElement('ds:DigestValue', 'DOCUMENT_DIGEST_PLACEHOLDER');
+            $documentRef->appendChild($digestValueDoc);
+            $signedInfo->appendChild($documentRef);
             
-            $signedInfo->appendChild($reference);
             $signature->appendChild($signedInfo);
             
-            // Calcular SignatureValue real usando la clave privada
-            $signedInfoCanonical = $signedInfo->C14N();
-            $signatureBinary = '';
-            
-            // Firmar el SignedInfo con la clave privada
-            if (openssl_sign($signedInfoCanonical, $signatureBinary, $privateKey, OPENSSL_ALGO_SHA1)) {
-                $signatureValueBase64 = base64_encode($signatureBinary);
-                \Log::info('Firma digital generada exitosamente', [
-                    'signedInfo_length' => strlen($signedInfoCanonical),
-                    'signature_binary_length' => strlen($signatureBinary),
-                    'signature_base64_length' => strlen($signatureValueBase64)
-                ]);
-            } else {
-                \Log::error('Error al generar firma digital');
-                throw new \Exception('No se pudo generar la firma digital con la clave privada');
-            }
-            
-            $signatureValue = $dom->createElement('ds:SignatureValue', $signatureValueBase64);
+            // 2. SignatureValue (placeholder)
+            $signatureValue = $dom->createElement('ds:SignatureValue', 'SIGNATURE_VALUE_PLACEHOLDER');
+            $signatureValue->setAttribute('Id', $signatureValueId);
             $signature->appendChild($signatureValue);
             
-            // KeyInfo
+            // 3. KeyInfo
             $keyInfo = $dom->createElement('ds:KeyInfo');
+            $keyInfo->setAttribute('Id', $certificateId);
+            
             $x509Data = $dom->createElement('ds:X509Data');
             
             // Limpiar y formatear el certificado
             $certPEM = str_replace([
                 '-----BEGIN CERTIFICATE-----',
                 '-----END CERTIFICATE-----',
-                "\r", "\n", " "
+                "\r", "\n", " ", "\t"
             ], '', $certData);
             
             $x509Certificate = $dom->createElement('ds:X509Certificate', $certPEM);
             $x509Data->appendChild($x509Certificate);
+            
+            // Obtener la clave pública del certificado
+            $publicKey = openssl_pkey_get_public($cert);
+            $keyDetails = openssl_pkey_get_details($publicKey);
+            
+            if (isset($keyDetails['rsa'])) {
+                $keyValue = $dom->createElement('ds:KeyValue');
+                $rsaKeyValue = $dom->createElement('ds:RSAKeyValue');
+                
+                $modulus = $dom->createElement('ds:Modulus', base64_encode($keyDetails['rsa']['n']));
+                $exponent = $dom->createElement('ds:Exponent', base64_encode($keyDetails['rsa']['e']));
+                
+                $rsaKeyValue->appendChild($modulus);
+                $rsaKeyValue->appendChild($exponent);
+                $keyValue->appendChild($rsaKeyValue);
+                $keyInfo->appendChild($keyValue);
+            }
+            
             $keyInfo->appendChild($x509Data);
             $signature->appendChild($keyInfo);
             
-            // Agregar información del certificado al log
-            \Log::info('Información del certificado PEM usado', [
-                'subject' => $certInfo['subject']['CN'] ?? 'N/A',
-                'issuer' => $certInfo['issuer']['CN'] ?? 'N/A',
-                'valid_from' => date('Y-m-d H:i:s', $certInfo['validFrom_time_t'] ?? 0),
-                'valid_to' => date('Y-m-d H:i:s', $certInfo['validTo_time_t'] ?? 0)
+            // 4. Object con QualifyingProperties (XAdES)
+            $object = $dom->createElement('ds:Object');
+            $object->setAttribute('Id', $objectId);
+            
+            $qualifyingProperties = $dom->createElement('etsi:QualifyingProperties');
+            $qualifyingProperties->setAttribute('Target', '#' . $signatureId);
+            
+            $signedProperties = $dom->createElement('etsi:SignedProperties');
+            $signedProperties->setAttribute('Id', $signedPropsId);
+            
+            $signedSignatureProperties = $dom->createElement('etsi:SignedSignatureProperties');
+            
+            // SigningTime con formato específico para Ecuador
+            $now = new \DateTime('now', new \DateTimeZone('America/Guayaquil'));
+            $signingTimeFormatted = $now->format('c'); // ISO 8601 con zona horaria -05:00
+            $signingTime = $dom->createElement('etsi:SigningTime', $signingTimeFormatted);
+            $signedSignatureProperties->appendChild($signingTime);
+            
+            // SigningCertificate
+            $signingCertificate = $dom->createElement('etsi:SigningCertificate');
+            $cert_element = $dom->createElement('etsi:Cert');
+            
+            $certDigest = $dom->createElement('etsi:CertDigest');
+            $digestMethodCertXAdES = $dom->createElement('ds:DigestMethod');
+            $digestMethodCertXAdES->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+            $certDigest->appendChild($digestMethodCertXAdES);
+            
+            // Calcular digest del certificado
+            $certBinary = base64_decode($certPEM);
+            $certDigestValue = base64_encode(sha1($certBinary, true));
+            $digestValueCertXAdES = $dom->createElement('ds:DigestValue', $certDigestValue);
+            $certDigest->appendChild($digestValueCertXAdES);
+            $cert_element->appendChild($certDigest);
+            
+            // IssuerSerial
+            $issuerSerial = $dom->createElement('etsi:IssuerSerial');
+            $x509IssuerName = $this->formatearDN($certInfo['issuer']);
+            
+            // Convertir serial number de hex a decimal si es necesario
+            $x509SerialNumber = $certInfo['serialNumber'];
+            if (is_string($x509SerialNumber) && ctype_xdigit($x509SerialNumber)) {
+                $x509SerialNumber = base_convert($x509SerialNumber, 16, 10);
+            }
+            
+            $issuerName = $dom->createElement('ds:X509IssuerName', $x509IssuerName);
+            $serialNumber = $dom->createElement('ds:X509SerialNumber', $x509SerialNumber);
+            
+            $issuerSerial->appendChild($issuerName);
+            $issuerSerial->appendChild($serialNumber);
+            $cert_element->appendChild($issuerSerial);
+            
+            $signingCertificate->appendChild($cert_element);
+            $signedSignatureProperties->appendChild($signingCertificate);
+            
+            $signedProperties->appendChild($signedSignatureProperties);
+            $qualifyingProperties->appendChild($signedProperties);
+            $object->appendChild($qualifyingProperties);
+            $signature->appendChild($object);
+            
+            // Agregar la firma al documento
+            $root = $dom->documentElement;
+            $root->appendChild($signature);
+            
+            \Log::info('Estructura XAdES creada, calculando digestos...');
+            
+            // Ahora calcular los digestos reales
+            
+            // 1. Digest del documento (sin la firma)
+            $docCopy = clone $dom;
+            $signatureNodes = $docCopy->getElementsByTagNameNS('http://www.w3.org/2000/09/xmldsig#', 'Signature');
+            if ($signatureNodes->length > 0) {
+                $signatureNodes->item(0)->parentNode->removeChild($signatureNodes->item(0));
+            }
+            $documentCanonical = $docCopy->C14N();
+            $documentDigest = base64_encode(sha1($documentCanonical, true));
+            
+            // 2. Digest de SignedProperties
+            $signedPropertiesCanonical = $signedProperties->C14N();
+            $signedPropertiesDigest = base64_encode(sha1($signedPropertiesCanonical, true));
+            
+            // Actualizar los digestos en el XML
+            $digestValueDoc->nodeValue = $documentDigest;
+            $digestValueSignedProps->nodeValue = $signedPropertiesDigest;
+            $digestValueCert->nodeValue = $certDigestValue;
+            
+            \Log::info('Digestos calculados', [
+                'document_digest' => $documentDigest,
+                'signed_props_digest' => $signedPropertiesDigest,
+                'cert_digest' => $certDigestValue,
+                'document_canonical_length' => strlen($documentCanonical),
+                'signed_props_canonical_length' => strlen($signedPropertiesCanonical)
             ]);
             
-            // Insertar firma antes del cierre del elemento raíz
-            $dom->documentElement->appendChild($signature);
+            // 3. Firmar SignedInfo
+            $signedInfoCanonical = $signedInfo->C14N();
+            $signatureBinary = '';
             
-            \Log::info('Firma XAdES-BES aplicada exitosamente con PEM');
+            \Log::info('Firmando SignedInfo', [
+                'signedInfo_canonical_length' => strlen($signedInfoCanonical),
+                'signedInfo_preview' => substr($signedInfoCanonical, 0, 200) . '...'
+            ]);
             
-            return $dom->saveXML();
+            if (!openssl_sign($signedInfoCanonical, $signatureBinary, $privateKey, OPENSSL_ALGO_SHA1)) {
+                $opensslError = openssl_error_string();
+                \Log::error('Error en openssl_sign', ['error' => $opensslError]);
+                throw new \Exception('Error al generar la firma digital con la clave privada: ' . $opensslError);
+            }
+            
+            $signatureValueBase64 = base64_encode($signatureBinary);
+            $signatureValue->nodeValue = $signatureValueBase64;
+            
+            \Log::info('Firma digital generada exitosamente', [
+                'signedInfo_length' => strlen($signedInfoCanonical),
+                'signature_length' => strlen($signatureBinary),
+                'signature_base64_length' => strlen($signatureValueBase64)
+            ]);
+            
+            // Formatear el XML final
+            $dom->formatOutput = false;
+            $xmlFirmado = $dom->saveXML();
+            
+            \Log::info('=== FIRMA XAdES-BES COMPLETADA EXITOSAMENTE ===', [
+                'xml_firmado_length' => strlen($xmlFirmado),
+                'tiene_signature' => strpos($xmlFirmado, '<ds:Signature') !== false,
+                'tiene_xades' => strpos($xmlFirmado, 'etsi:QualifyingProperties') !== false,
+                'tiene_signing_time' => strpos($xmlFirmado, 'etsi:SigningTime') !== false
+            ]);
+            
+            return $xmlFirmado;
             
         } catch (\Exception $e) {
-            \Log::error('Error al aplicar firma XAdES-BES con PEM: ' . $e->getMessage());
-            throw new \Exception('Error al aplicar firma digital PEM: ' . $e->getMessage());
+            \Log::error('=== ERROR EN FIRMA XAdES-BES ===', [
+                'error_message' => $e->getMessage(),
+                'error_file' => $e->getFile(),
+                'error_line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw new \Exception('Error al aplicar firma XAdES-BES: ' . $e->getMessage());
         }
+    }
+    
+    /**
+     * Validar que el RUC del certificado coincida con el RUC del declarante
+     */
+    private function validarRUCCertificado($certificado, $declarante)
+    {
+        try {
+            \Log::info('=== VALIDANDO RUC DEL CERTIFICADO ===');
+            
+            // Obtener información del certificado
+            $certInfo = openssl_x509_parse($certificado);
+            
+            // El RUC del declarante
+            $rucDeclarante = $declarante->ruc;
+            \Log::info('RUC del declarante', ['ruc' => $rucDeclarante]);
+            
+            // Extraer RUC del certificado (puede estar en diferentes campos)
+            $rucCertificado = null;
+            
+            // 1. Buscar en el Subject
+            if (isset($certInfo['subject']['CN'])) {
+                $cn = $certInfo['subject']['CN'];
+                if (preg_match('/(\d{13})/', $cn, $matches)) {
+                    $rucCertificado = $matches[1];
+                    \Log::info('RUC encontrado en CN', ['cn' => $cn, 'ruc' => $rucCertificado]);
+                }
+            }
+            
+            // 2. Buscar en extensiones del certificado
+            if (!$rucCertificado && isset($certInfo['extensions'])) {
+                foreach ($certInfo['extensions'] as $oid => $extension) {
+                    if (preg_match('/(\d{13})/', $extension, $matches)) {
+                        $rucCertificado = $matches[1];
+                        \Log::info('RUC encontrado en extensión', ['oid' => $oid, 'ruc' => $rucCertificado]);
+                        break;
+                    }
+                }
+            }
+            
+            // 3. Buscar en Subject Alternative Name si existe
+            if (!$rucCertificado && isset($certInfo['extensions']['subjectAltName'])) {
+                $san = $certInfo['extensions']['subjectAltName'];
+                if (preg_match('/(\d{13})/', $san, $matches)) {
+                    $rucCertificado = $matches[1];
+                    \Log::info('RUC encontrado en SAN', ['san' => $san, 'ruc' => $rucCertificado]);
+                }
+            }
+            
+            // Log de toda la información del certificado para debuggear
+            \Log::info('Información completa del certificado', [
+                'subject' => $certInfo['subject'] ?? 'N/A',
+                'extensions_keys' => isset($certInfo['extensions']) ? array_keys($certInfo['extensions']) : [],
+                'serial_number' => $certInfo['serialNumber'] ?? 'N/A'
+            ]);
+            
+            // Validar concordancia
+            if (!$rucCertificado) {
+                \Log::warning('No se pudo extraer RUC del certificado digital');
+                // No lanzamos excepción aquí, solo advertencia
+                return;
+            }
+            
+            // Limpiar ambos RUCs para comparación (remover caracteres no numéricos)
+            $rucDeclaranteLimpio = preg_replace('/[^0-9]/', '', $rucDeclarante);
+            $rucCertificadoLimpio = preg_replace('/[^0-9]/', '', $rucCertificado);
+            
+            \Log::info('Comparación de RUCs', [
+                'declarante_original' => $rucDeclarante,
+                'declarante_limpio' => $rucDeclaranteLimpio,
+                'certificado_original' => $rucCertificado,
+                'certificado_limpio' => $rucCertificadoLimpio,
+                'coinciden' => $rucDeclaranteLimpio === $rucCertificadoLimpio
+            ]);
+            
+            if ($rucDeclaranteLimpio !== $rucCertificadoLimpio) {
+                \Log::error('RUC DEL CERTIFICADO NO COINCIDE CON EL DECLARANTE', [
+                    'ruc_declarante' => $rucDeclaranteLimpio,
+                    'ruc_certificado' => $rucCertificadoLimpio
+                ]);
+                
+                throw new \Exception(
+                    "El RUC del certificado digital ($rucCertificadoLimpio) no coincide con el RUC del declarante ($rucDeclaranteLimpio). " .
+                    "Para firmar electrónicamente, debe usar un certificado digital emitido para el mismo RUC."
+                );
+            }
+            
+            \Log::info('✓ RUC del certificado coincide con el declarante', [
+                'ruc' => $rucDeclaranteLimpio
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error al validar RUC del certificado', [
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+    
+    /**
+     * Formatear Distinguished Name según estándar X.500
+     */
+    private function formatearDN($dnArray)
+    {
+        $components = [];
+        
+        // Orden específico según el ejemplo del SRI Ecuador
+        $order = ['CN', 'C', 'L', '2.5.4.97', 'O', 'OU'];
+        
+        foreach ($order as $component) {
+            if (isset($dnArray[$component])) {
+                if ($component === '2.5.4.97') {
+                    // Formatear el OID 2.5.4.97 como en el ejemplo
+                    $value = $dnArray[$component];
+                    if (is_string($value)) {
+                        $hexValue = strtoupper(bin2hex($value));
+                        $components[] = '2.5.4.97=#0C' . sprintf('%02X', strlen($value)) . $hexValue;
+                    }
+                } else {
+                    $components[] = $component . '=' . $dnArray[$component];
+                }
+            }
+        }
+        
+        \Log::info('DN formateado', [
+            'original' => $dnArray,
+            'formatted' => implode(',', $components)
+        ]);
+        
+        return implode(',', $components);
     }
 
     /**
@@ -2515,6 +2842,194 @@ class FacturaController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error encapsulando XML en autorización: ' . $e->getMessage());
             throw new \Exception('Error al encapsular XML en estructura de autorización: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Obtener XML de la factura para firma en JavaScript
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function obtenerXML($id)
+    {
+        try {
+            $factura = Factura::findOrFail($id);
+            
+            if (!$factura->xml) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La factura no tiene un XML generado'
+                ], 422);
+            }
+            
+            $xmlPath = storage_path('app/public/' . $factura->xml);
+            
+            if (!file_exists($xmlPath)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se encontró el archivo XML de la factura'
+                ], 422);
+            }
+            
+            $xmlContent = file_get_contents($xmlPath);
+            
+            if (!$xmlContent) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo leer el contenido del archivo XML'
+                ], 422);
+            }
+            
+            \Log::info('XML obtenido para firma JavaScript', [
+                'factura_id' => $id,
+                'xml_length' => strlen($xmlContent)
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'xml_content' => $xmlContent
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Error al obtener XML para firma JavaScript', [
+                'factura_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener XML: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Recibir XML firmado desde JavaScript y enviarlo al SRI
+     *
+     * @param  int  $id
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function recibirXMLFirmado($id, Request $request)
+    {
+        try {
+            \Log::info('=== RECIBIENDO XML FIRMADO DESDE JAVASCRIPT ===', [
+                'factura_id' => $id
+            ]);
+            
+            // Validar entrada
+            $validator = Validator::make($request->all(), [
+                'xml_firmado' => 'required|string|min:100',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'XML firmado requerido',
+                    'errors' => $validator->errors()->all()
+                ], 422);
+            }
+
+            $factura = Factura::findOrFail($id);
+            $xmlFirmado = $request->xml_firmado;
+            
+            \Log::info('XML firmado recibido desde JavaScript', [
+                'factura_id' => $id,
+                'xml_length' => strlen($xmlFirmado),
+                'xml_preview' => substr($xmlFirmado, 0, 200) . '...'
+            ]);
+
+            // Guardar XML firmado
+            $xmlFirmadoPath = str_replace('.xml', '_firmado_js.xml', storage_path('app/public/' . $factura->xml));
+            if (!file_put_contents($xmlFirmadoPath, $xmlFirmado)) {
+                \Log::error('Error al guardar XML firmado desde JavaScript', [
+                    'factura_id' => $id,
+                    'xml_firmado_path' => $xmlFirmadoPath
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo guardar el XML firmado'
+                ], 500);
+            }
+
+            // Actualizar estado de la factura
+            $factura->estado = 'FIRMADA';
+            $factura->xml_firmado = str_replace(storage_path('app/public/'), '', $xmlFirmadoPath);
+            $factura->fecha_firma = now();
+            $factura->save();
+
+            \Log::info('Factura marcada como FIRMADA (JavaScript)', [
+                'factura_id' => $id,
+                'xml_firmado_path' => $factura->xml_firmado
+            ]);
+
+            // Enviar al SRI
+            \Log::info('Iniciando envío al SRI (XML firmado por JavaScript)', ['factura_id' => $id]);
+            $factura->fecha_envio_sri = now();
+            $factura->estado = 'ENVIADA';
+            $factura->save();
+
+            $resultadoSRI = $this->enviarAlSRI($xmlFirmado);
+
+            if ($resultadoSRI['success']) {
+                // Actualizar factura con respuesta del SRI
+                $factura->estado = 'RECIBIDA';
+                $factura->estado_sri = $resultadoSRI['estado'];
+                if (isset($resultadoSRI['mensajes'])) {
+                    $factura->mensajes_sri = json_encode($resultadoSRI['mensajes']);
+                }
+                $factura->save();
+
+                \Log::info('XML enviado exitosamente al SRI (JavaScript)', [
+                    'factura_id' => $id,
+                    'estado_sri' => $resultadoSRI['estado']
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Factura firmada y enviada exitosamente al SRI',
+                    'data' => [
+                        'estado' => $factura->estado,
+                        'estado_sri' => $factura->estado_sri,
+                        'fecha_firma' => $factura->fecha_firma ? $factura->fecha_firma->format('d/m/Y H:i:s') : 'N/A',
+                        'fecha_envio_sri' => $factura->fecha_envio_sri ? $factura->fecha_envio_sri->format('d/m/Y H:i:s') : 'N/A',
+                        'xml_firmado_path' => $factura->xml_firmado
+                    ]
+                ]);
+            } else {
+                // Error en el SRI
+                $factura->estado = 'ERROR_SRI';
+                $factura->estado_sri = $resultadoSRI['estado'] ?? 'ERROR';
+                if (isset($resultadoSRI['mensajes'])) {
+                    $factura->mensajes_sri = json_encode($resultadoSRI['mensajes']);
+                }
+                $factura->save();
+
+                \Log::error('Error al enviar XML al SRI (JavaScript)', [
+                    'factura_id' => $id,
+                    'error_sri' => $resultadoSRI['message']
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al enviar al SRI: ' . $resultadoSRI['message'],
+                    'errors' => $resultadoSRI['mensajes'] ?? []
+                ], 422);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Error al procesar XML firmado desde JavaScript', [
+                'factura_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

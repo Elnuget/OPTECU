@@ -205,7 +205,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-certificate"></i> Firmar y Enviar al SRI (Certificado PEM)
+                    <i class="fas fa-certificate"></i> Firmar y Enviar al SRI (Certificado P12)
                 </h5>
                 <button type="button" class="close" data-dismiss="modal">
                     <span>&times;</span>
@@ -214,14 +214,23 @@
             <div class="modal-body">
                 <form id="formCertificado">
                     <div class="form-group">
+                        <label for="certificado_p12">
+                            <i class="fas fa-certificate"></i> Certificado Digital P12
+                        </label>
+                        <input type="file" class="form-control-file" id="certificado_p12" accept=".p12,.pfx" required>
+                        <small class="form-text text-muted">
+                            Seleccione su certificado digital en formato P12/PFX del SRI.
+                        </small>
+                    </div>
+                    <div class="form-group">
                         <label for="password_certificado">
-                            <i class="fas fa-key"></i> Contraseña del Certificado Digital PEM
+                            <i class="fas fa-key"></i> Contraseña del Certificado Digital P12
                         </label>
                         <input type="password" class="form-control" id="password_certificado" 
                                name="password_certificado" required 
-                               placeholder="Ingrese la contraseña del certificado PEM">
+                               placeholder="Ingrese la contraseña del certificado P12">
                         <small class="form-text text-muted">
-                            Se requiere la contraseña del certificado digital (.pem) para firmar el documento.
+                            Se requiere la contraseña del certificado digital (.p12) para firmar el documento.
                         </small>
                     </div>
                     <div class="form-group">
@@ -423,6 +432,12 @@
 </style>
 @stop
 
+<!-- Librerías para firma digital JavaScript -->
+@section('plugins.Tempusdominus', true)
+<!-- FirmaEC - Librería para firma digital en Ecuador -->
+<script src="https://cdn.jsdelivr.net/npm/node-forge@1.3.1/dist/forge.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xmldom@0.6.0/lib/dom-parser.js"></script>
+
 @section('js')
 <script>
     let facturaIdActual = null;
@@ -458,16 +473,24 @@
     }
 
     function procesarFirmaYEnvio() {
+        const certificadoFile = document.getElementById('certificado_p12').files[0];
         const password = document.getElementById('password_certificado').value;
         const confirmar = document.getElementById('confirmar_envio').checked;
         
-        console.log('Iniciando proceso de firma y envío', {
+        console.log('Iniciando proceso de firma digital con JavaScript', {
+            tiene_certificado: !!certificadoFile,
             password_length: password.length,
             confirmado: confirmar,
             factura_id: facturaIdActual
         });
         
         // Validaciones
+        if (!certificadoFile) {
+            console.error('Error: No se seleccionó certificado');
+            alert('Debe seleccionar un certificado P12');
+            return;
+        }
+        
         if (!password.trim()) {
             console.error('Error: Contraseña vacía');
             alert('Debe ingresar la contraseña del certificado');
@@ -486,22 +509,221 @@
         document.getElementById('resultado_firma').style.display = 'none';
         
         // Inicializar progreso
-        actualizarProgreso(20, 'Validando certificado digital...');
+        actualizarProgreso(10, 'Leyendo certificado P12...');
         
-        // Verificar token CSRF
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
-        if (!csrfToken) {
-            console.error('Error: Token CSRF no encontrado');
-            mostrarResultado(false, 'Error de configuración: Token CSRF no encontrado', null);
-            return;
+        // Leer el certificado P12
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                actualizarProgreso(20, 'Procesando certificado digital...');
+                
+                // Obtener el XML actual de la factura
+                obtenerXMLFactura(facturaIdActual)
+                    .then(xmlContent => {
+                        actualizarProgreso(40, 'Obteniendo XML de la factura...');
+                        return firmarXMLConP12(xmlContent, e.target.result, password);
+                    })
+                    .then(xmlFirmado => {
+                        actualizarProgreso(80, 'Enviando al SRI...');
+                        return enviarXMLFirmadoAlSRI(xmlFirmado);
+                    })
+                    .then(resultado => {
+                        actualizarProgreso(100, 'Proceso completado');
+                        mostrarResultado(true, 'Factura firmada y enviada exitosamente al SRI', resultado);
+                    })
+                    .catch(error => {
+                        console.error('Error en el proceso de firma:', error);
+                        mostrarResultado(false, error.message, null);
+                    });
+                    
+            } catch (error) {
+                console.error('Error al leer certificado P12:', error);
+                mostrarResultado(false, 'Error al procesar el certificado P12: ' + error.message, null);
+            }
+        };
+        
+        reader.onerror = function() {
+            console.error('Error al leer archivo de certificado');
+            mostrarResultado(false, 'Error al leer el archivo del certificado', null);
+        };
+        
+        reader.readAsArrayBuffer(certificadoFile);
+    }
+
+    // Función para obtener el XML de la factura
+    async function obtenerXMLFactura(facturaId) {
+        const response = await fetch(`/facturas/${facturaId}/xml`, {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error al obtener XML de la factura');
         }
         
-        // Preparar datos para envío
-        const formData = new FormData();
-        formData.append('password_certificado', password);
-        formData.append('_token', csrfToken.getAttribute('content'));
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Error al obtener XML');
+        }
         
-        console.log('Enviando petición a:', `/facturas/${facturaIdActual}/firmar-y-enviar`);
+        return data.xml_content;
+    }
+
+    // Función para firmar XML con certificado P12 usando JavaScript
+    async function firmarXMLConP12(xmlContent, p12Buffer, password) {
+        try {
+            console.log('Iniciando firma digital con Node-Forge');
+            
+            // Convertir ArrayBuffer a string base64
+            const p12Base64 = btoa(String.fromCharCode(...new Uint8Array(p12Buffer)));
+            
+            // Decodificar P12 con Node-Forge
+            const p12Der = forge.util.decode64(p12Base64);
+            const p12Asn1 = forge.asn1.fromDer(p12Der);
+            const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, password);
+            
+            // Extraer certificado y clave privada
+            const bags = p12.getBags({bagType: forge.pki.oids.certBag});
+            const certBag = bags[forge.pki.oids.certBag][0];
+            const certificate = certBag.cert;
+            
+            const keyBags = p12.getBags({bagType: forge.pki.oids.pkcs8ShroudedKeyBag});
+            const keyBag = keyBags[forge.pki.oids.pkcs8ShroudedKeyBag][0];
+            const privateKey = keyBag.key;
+            
+            console.log('Certificado y clave privada extraídos exitosamente');
+            
+            // Crear parser DOM para XML
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+            
+            // Generar IDs únicos
+            const signatureId = 'Signature' + Date.now();
+            const signedInfoId = 'SignedInfo' + Date.now();
+            const keyInfoId = 'KeyInfo' + Date.now();
+            
+            // Crear elemento Signature
+            const signatureElement = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Signature');
+            signatureElement.setAttribute('Id', signatureId);
+            
+            // SignedInfo
+            const signedInfo = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:SignedInfo');
+            signedInfo.setAttribute('Id', signedInfoId);
+            
+            // CanonicalizationMethod
+            const canonMethod = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:CanonicalizationMethod');
+            canonMethod.setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
+            signedInfo.appendChild(canonMethod);
+            
+            // SignatureMethod
+            const signatureMethod = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:SignatureMethod');
+            signatureMethod.setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#rsa-sha1');
+            signedInfo.appendChild(signatureMethod);
+            
+            // Reference
+            const reference = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Reference');
+            reference.setAttribute('URI', '#comprobante');
+            
+            const transforms = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Transforms');
+            const transform = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Transform');
+            transform.setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#enveloped-signature');
+            transforms.appendChild(transform);
+            reference.appendChild(transforms);
+            
+            const digestMethod = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:DigestMethod');
+            digestMethod.setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+            reference.appendChild(digestMethod);
+            
+            // Calcular digest del documento
+            const serializer = new XMLSerializer();
+            const facturaElement = xmlDoc.getElementById('comprobante');
+            const documentCanonical = serializer.serializeToString(facturaElement);
+            
+            // Usar forge para calcular SHA1
+            const md = forge.md.sha1.create();
+            md.update(documentCanonical, 'utf8');
+            const digestValue = forge.util.encode64(md.digest().data);
+            
+            const digestValueElement = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:DigestValue');
+            digestValueElement.textContent = digestValue;
+            reference.appendChild(digestValueElement);
+            
+            signedInfo.appendChild(reference);
+            signatureElement.appendChild(signedInfo);
+            
+            // Calcular SignatureValue
+            const signedInfoCanonical = serializer.serializeToString(signedInfo);
+            const signatureMd = forge.md.sha1.create();
+            signatureMd.update(signedInfoCanonical, 'utf8');
+            const signature = privateKey.sign(signatureMd);
+            const signatureValueBase64 = forge.util.encode64(signature);
+            
+            const signatureValue = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:SignatureValue');
+            signatureValue.textContent = signatureValueBase64;
+            signatureElement.appendChild(signatureValue);
+            
+            // KeyInfo
+            const keyInfo = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:KeyInfo');
+            keyInfo.setAttribute('Id', keyInfoId);
+            
+            const x509Data = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:X509Data');
+            const x509Certificate = xmlDoc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:X509Certificate');
+            
+            // Convertir certificado a base64
+            const certDer = forge.asn1.toDer(forge.pki.certificateToAsn1(certificate)).getBytes();
+            const certBase64 = forge.util.encode64(certDer);
+            x509Certificate.textContent = certBase64;
+            
+            x509Data.appendChild(x509Certificate);
+            keyInfo.appendChild(x509Data);
+            signatureElement.appendChild(keyInfo);
+            
+            // Agregar la firma al XML
+            const rootElement = xmlDoc.documentElement;
+            rootElement.appendChild(signatureElement);
+            
+            // Serializar XML firmado
+            const xmlFirmado = serializer.serializeToString(xmlDoc);
+            
+            console.log('XML firmado exitosamente con JavaScript');
+            return xmlFirmado;
+            
+        } catch (error) {
+            console.error('Error al firmar XML:', error);
+            throw new Error('Error al firmar digitalmente el XML: ' + error.message);
+        }
+    }
+
+    // Función para enviar XML firmado al SRI
+    async function enviarXMLFirmadoAlSRI(xmlFirmado) {
+        const response = await fetch(`/facturas/${facturaIdActual}/enviar-xml-firmado`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                xml_firmado: xmlFirmado
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error al enviar XML firmado al SRI');
+        }
+        
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || 'Error al procesar en el SRI');
+        }
+        
+        return data.data;
+    }
         
         // Realizar petición AJAX
         fetch(`/facturas/${facturaIdActual}/firmar-y-enviar`, {

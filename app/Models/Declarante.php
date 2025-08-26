@@ -37,11 +37,42 @@ class Declarante extends Model
     }
 
     /**
-     * Verificar si el declarante tiene certificado PEM
+     * Verificar si el declarante tiene certificado digital P12/PFX
      */
-    public function tieneCertificadoPemAttribute()
+    public function tieneCertificadoAttribute()
     {
         return !empty($this->firma) && file_exists(public_path('uploads/firmas/' . $this->firma));
+    }
+
+    /**
+     * Verificar si el declarante tiene certificado P12 (método principal)
+     */
+    public function tieneCertificadoP12Attribute()
+    {
+        if (empty($this->firma)) {
+            return false;
+        }
+        
+        $extension = strtolower(pathinfo($this->firma, PATHINFO_EXTENSION));
+        return in_array($extension, ['p12', 'pfx']) && file_exists(public_path('uploads/firmas/' . $this->firma));
+    }
+
+    /**
+     * Obtener el tipo de certificado (siempre P12 ahora)
+     */
+    public function getTipoCertificadoAttribute()
+    {
+        if (empty($this->firma)) {
+            return 'ninguno';
+        }
+        
+        $extension = strtolower(pathinfo($this->firma, PATHINFO_EXTENSION));
+        
+        if (in_array($extension, ['p12', 'pfx'])) {
+            return 'p12';
+        }
+        
+        return 'desconocido';
     }
 
     /**
