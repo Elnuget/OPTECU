@@ -337,10 +337,16 @@ Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guard
     Route::delete('facturas/{id}', [App\Http\Controllers\FacturaController::class, 'destroy'])->name('facturas.destroy');
     Route::post('facturas/{id}/firmar-y-enviar', [App\Http\Controllers\FacturaController::class, 'firmarYEnviar'])->name('facturas.firmar-y-enviar');
     Route::post('facturas/{id}/autorizar', [App\Http\Controllers\FacturaController::class, 'autorizarComprobante'])->name('facturas.autorizar');
-    // Nuevas rutas para firma con JavaScript y P12
+    
+    // Rutas adicionales para firma digital
     Route::get('facturas/{id}/xml', [App\Http\Controllers\FacturaController::class, 'obtenerXML'])->name('facturas.obtener-xml');
     Route::post('facturas/{id}/enviar-xml-firmado', [App\Http\Controllers\FacturaController::class, 'recibirXMLFirmado'])->name('facturas.recibir-xml-firmado');
-    // Ruta para firmar con certificado del declarante
+    
+    // Rutas para firma con JavaScript
+    Route::post('facturas/{id}/preparar-xml-firma', [App\Http\Controllers\FacturaController::class, 'prepararXMLParaFirma'])->name('facturas.preparar-xml-firma');
+    Route::post('facturas/{id}/procesar-xml-firmado-js', [App\Http\Controllers\FacturaController::class, 'procesarXMLFirmadoJS'])->name('facturas.procesar-xml-firmado-js');
+    
+    // Ruta para firmar con certificado del declarante (método PHP legacy)
     Route::post('facturas/{id}/firmar-con-certificado-declarante', [App\Http\Controllers\FacturaController::class, 'firmarConCertificadoDeclarante'])->name('facturas.firmar-con-certificado-declarante');
     
     // Rutas para el controlador de Sueldos

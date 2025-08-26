@@ -555,7 +555,10 @@
 @section('plugins.Tempusdominus', true)
 
 @section('js')
-<script src="{{ asset('js/certificado-diagnostico.js') }}"></script>
+<!-- Librería Forge.js para firma digital -->
+<script src="https://cdn.jsdelivr.net/npm/node-forge@1.3.1/dist/forge.min.js"></script>
+<!-- Librería propia para firma digital -->
+<script src="{{ asset('js/firma-digital.js') }}"></script>
 <script>
     let facturaIdActual = null;
     let facturaIdAutorizacion = null;
@@ -630,7 +633,7 @@
         const password = passwordInput.value;
         const confirmar = confirmarCheckbox.checked;
         
-        console.log('Iniciando proceso de firma digital con certificado del declarante', {
+        console.log('Iniciando proceso de firma digital con JavaScript', {
             password_length: password.length,
             confirmado: confirmar,
             factura_id: facturaIdActual
@@ -655,14 +658,24 @@
         if (resultadoFirma) resultadoFirma.style.display = 'none';
         
         try {
-            // Inicializar progreso
-            actualizarProgreso(10, 'Obteniendo certificado del declarante...');
+            // Usar la nueva función JavaScript para procesar la firma
+            procesarFirmaConP12(facturaIdActual, password).then(resultado => {
+                if (resultado.success) {
+                    mostrarResultado(true, resultado.message, resultado.data);
+                } else {
+                    mostrarResultado(false, resultado.message, resultado.errors);
+                }
+            }).catch(error => {
+                console.error('Error en firma con JavaScript:', error);
+                mostrarResultado(false, 'Error en firma digital: ' + error.message, null);
+            }).finally(() => {
+                if (btnFirmar) btnFirmar.disabled = false;
+            });
         } catch(e) {
-            console.error('Error al actualizar el progreso:', e);
+            console.error('Error al procesar firma:', e);
+            mostrarResultado(false, 'Error inesperado: ' + e.message, null);
+            if (btnFirmar) btnFirmar.disabled = false;
         }
-        
-        // Enviar solicitud al backend con la contraseña
-        enviarSolicitudFirmaConCertificadoDeclarante(password);
     }
 
     // Nueva función para enviar solicitud al backend usando el certificado del declarante
