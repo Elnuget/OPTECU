@@ -1,0 +1,60 @@
+<factura id="comprobante" version="1.0.0">
+    <infoTributaria>
+        <ambiente>1</ambiente>
+        <tipoEmision>1</tipoEmision>
+        <razonSocial>EMPRESA DE PRUEBA S.A.</razonSocial>
+        <nombreComercial>EMPRESA DE PRUEBA</nombreComercial>
+        <ruc>1234567890001</ruc>
+        <claveAcceso>01234567890123456789012345678901234567890123456789</claveAcceso>
+        <codDoc>01</codDoc>
+        <estab>001</estab>
+        <ptoEmi>001</ptoEmi>
+        <secuencial>000000001</secuencial>
+        <dirMatriz>Dirección Matriz</dirMatriz>
+    </infoTributaria>
+    <infoFactura>
+        <fechaEmision>2024-01-01</fechaEmision>
+        <obligadoContabilidad>NO</obligadoContabilidad>
+        <tipoIdentificacionComprador>04</tipoIdentificacionComprador>
+        <razonSocialComprador>Cliente de Prueba</razonSocialComprador>
+        <identificacionComprador>1234567890</identificacionComprador>
+        <direccionComprador>Dirección Cliente</direccionComprador>
+        <totalSinImpuestos>100.00</totalSinImpuestos>
+        <totalDescuento>0.00</totalDescuento>
+        <totalConImpuestos>
+            <totalImpuesto>
+                <codigo>2</codigo>
+                <codigoPorcentaje>0</codigoPorcentaje>
+                <baseImponible>100.00</baseImponible>
+                <valor>0.00</valor>
+            </totalImpuesto>
+        </totalConImpuestos>
+        <propina>0.00</propina>
+        <importeTotal>100.00</importeTotal>
+        <pagos>
+            <pago>
+                <formaPago>01</formaPago>
+                <total>100.00</total>
+            </pago>
+        </pagos>
+    </infoFactura>
+    <detalles>
+        <detalle>
+            <codigoPrincipal>001</codigoPrincipal>
+            <descripcion>Producto de Prueba</descripcion>
+            <cantidad>1.00</cantidad>
+            <precioUnitario>100.00</precioUnitario>
+            <descuento>0.00</descuento>
+            <precioTotalSinImpuesto>100.00</precioTotalSinImpuesto>
+            <impuestos>
+                <impuesto>
+                    <codigo>2</codigo>
+                    <codigoPorcentaje>0</codigoPorcentaje>
+                    <tarifa>0.00</tarifa>
+                    <baseImponible>100.00</baseImponible>
+                    <valor>0.00</valor>
+                </impuesto>
+            </impuestos>
+        </detalle>
+    </detalles>
+<ns0:Signature xmlns:ns0="http://www.w3.org/2000/09/xmldsig#" Id="Signature-1"><ns0:SignedInfo><ns0:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/><ns0:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><ns0:Reference URI=""><ns0:Transforms><ns0:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/></ns0:Transforms><ns0:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><ns0:DigestValue>EBVUAqoo5YqQ+82IHUHAfYwQ04A=</ns0:DigestValue></ns0:Reference></ns0:SignedInfo><ns0:SignatureValue>IUJ6MPDRYzxA/g9XUkjx66g/1UqWnMd9zN2s7z2dvrgMoSOQaoBvwPXsX6Mbq1FPtW/tmkcDzGzCNFoC23NiccyjDUbzWeu2ExMC3YDaRFs07CgXBChND/1cv3aN2mN2rHg5FTu5mqrG8TVS6Q6hMfEymXRYqxs4UHiJ4WEAGBcCOZW2a5jFSgbsHcUfNm5Yzh4wfeIX5pokO35hnIt8B+r/8ZQpkI/PczjujN1t2y+T4AnF9NTkzYUhhTxG/p3IuoYS/sl9T4eDu6fDIkhrkpWcOA5oIfeFYCzw6mOx7jgG/pCBsJ2QWZ2NqB21m3tKT50TKt0QVB/oaGXmTZrzwQ==</ns0:SignatureValue><ns0:KeyInfo><ns0:X509Data><ns0:X509Certificate>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</ns0:X509Certificate></ns0:X509Data></ns0:KeyInfo></ns0:Signature></factura>

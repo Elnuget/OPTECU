@@ -175,8 +175,8 @@
                 @endphp
 
                 @if($factura->declarante && $tieneCertificadoP12)
-                    <button type="button" class="btn btn-sm btn-warning" onclick="firmarYEnviar({{ $factura->id }})">
-                        <ksi class="fas fa-certificate"></i> Firmar y Enviar al SRI
+                    <button type="button" class="btn btn-sm btn-warning" onclick="firmarYEnviarServidor({{ $factura->id }})">
+                        <i class="fas fa-certificate"></i> Firmar y Enviar al SRI
                     </button>
                 @else
                     <button type="button" class="btn btn-sm btn-secondary" disabled title="El declarante no tiene certificado P12 configurado">
@@ -237,7 +237,7 @@
                 </span>
             @elseif($factura->estado === 'DEVUELTA')
                 @if($factura->declarante && $tieneCertificadoP12)
-                    <button type="button" class="btn btn-sm btn-warning" onclick="firmarYEnviar({{ $factura->id }})">
+                    <button type="button" class="btn btn-sm btn-warning" onclick="firmarYEnviarServidor({{ $factura->id }})">
                         <i class="fas fa-redo"></i> Reintentar Envío
                     </button>
                 @else
@@ -1115,6 +1115,60 @@
                 console.error('ERROR: Error al autorizar la factura:', mensaje, datos);
             }
         }
+    }
+    
+    // Nueva función para firmar y enviar usando el servidor
+    function firmarYEnviarServidor(facturaId) {
+        console.log('Iniciando firma en servidor para factura:', facturaId);
+        
+        // Mostrar indicador de carga
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Firmando...';
+        
+        // Solicitar contraseña al usuario
+        const password = prompt('Ingrese la contraseña del certificado digital:');
+        if (!password) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
+        }
+        
+        // Enviar solicitud al servidor
+        fetch(`/facturas/${facturaId}/firmar-con-certificado-declarante`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                password_certificado: password
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Respuesta del servidor:', data);
+            
+            if (data.success) {
+                alert('Factura firmada y enviada exitosamente al SRI');
+                // Recargar la página para mostrar el nuevo estado
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error en la solicitud:', error);
+            alert('Error de conexión: ' + error.message);
+        })
+        .finally(() => {
+            // Restaurar el botón
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
     }
     
     // Manejar eventos del modal de autorización

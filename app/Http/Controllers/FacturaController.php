@@ -8,6 +8,7 @@ use App\Models\Pedido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use App\Services\FirmaElectronicaService;
 
 class FacturaController extends Controller
 {
@@ -3208,7 +3209,7 @@ class FacturaController extends Controller
     {
         try {
             $factura = Factura::findOrFail($id);
-            
+
             // Validar que el declarante tenga certificado P12
             if (!$factura->declarante) {
                 return response()->json([
@@ -3216,24 +3217,24 @@ class FacturaController extends Controller
                     'message' => 'La factura no tiene un declarante asignado'
                 ], 422);
             }
-            
+
             if (!$factura->declarante->firma) {
                 return response()->json([
                     'success' => false,
                     'message' => 'El declarante no tiene un certificado configurado'
                 ], 422);
             }
-            
+
             // Verificar que el archivo de certificado existe y es P12
             $rutaCertificado = public_path('uploads/firmas/' . $factura->declarante->firma);
-            
+
             if (!file_exists($rutaCertificado)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'El archivo del certificado no existe en el servidor'
                 ], 422);
             }
-            
+
             // Verificar que sea un archivo P12
             $extensionCertificado = pathinfo($factura->declarante->firma, PATHINFO_EXTENSION);
             if (strtolower($extensionCertificado) !== 'p12') {
@@ -3242,13 +3243,23 @@ class FacturaController extends Controller
                     'message' => 'El archivo del certificado debe ser de tipo P12'
                 ], 422);
             }
-            
+
             // Validar contraseña
             $request->validate([
                 'password_certificado' => 'required|string'
             ]);
-            
+
             $passwordCertificado = $request->password_certificado;
+            
+            // Log detallado para diagnóstico
+            \Log::info('Intentando firmar factura', [
+                'factura_id' => $id,
+                'ruta_certificado' => $rutaCertificado,
+                'archivo_existe' => file_exists($rutaCertificado),
+                'tamano_archivo' => file_exists($rutaCertificado) ? filesize($rutaCertificado) : 'N/A',
+                'es_legible' => file_exists($rutaCertificado) ? is_readable($rutaCertificado) : 'N/A',
+                'password_length' => strlen($passwordCertificado)
+            ]);
             
             // Obtener XML de la factura
             $rutaXML = storage_path('app/public/' . $factura->xml);
@@ -3269,89 +3280,76 @@ class FacturaController extends Controller
                 'xml_size' => strlen($xmlContent)
             ]);
             
-            // Firmar XML usando el servicio de firma (debes implementar esta lógica)
-            $resultadoFirma = $this->firmarXMLConCertificadoP12($xmlContent, $rutaCertificado, $passwordCertificado);
-            
-            if ($resultadoFirma['success']) {
-                // Guardar XML firmado
-                $xmlFirmado = $resultadoFirma['xml_firmado'];
-                
-                // Guardar el XML firmado en el mismo archivo
-                $rutaXML = storage_path('app/public/' . $factura->xml);
-                file_put_contents($rutaXML, $xmlFirmado);
-                
-                // Actualizar estado de la factura
-                $factura->estado = 'FIRMADA';
-                $factura->fecha_firma = now();
-                $factura->save();
-                
-                \Log::info('XML firmado guardado exitosamente', [
-                    'factura_id' => $id,
-                    'ruta_xml' => $rutaXML,
-                    'tamano_xml' => strlen($xmlFirmado)
-                ]);
-                
-                // Enviar al SRI
-                $resultadoEnvio = $this->enviarXMLAlSRI($xmlFirmado, $factura);
-                
-                if ($resultadoEnvio['success']) {
-                    // Si el envío fue exitoso, intentar autorización inmediata
-                    if ($factura->estado === 'RECIBIDA') {
-                        \Log::info('Factura recibida por SRI, iniciando autorización automática');
-                        
-                        // Esperar un momento para que el SRI procese
-                        sleep(2);
-                        
-                        // Intentar autorización
-                        $claveAcceso = $this->extraerClaveAccesoDeXML($factura);
-                        if (!empty($claveAcceso)) {
-                            $resultadoAutorizacion = $this->solicitarAutorizacionSRI($claveAcceso);
-                            
-                            if ($resultadoAutorizacion['success'] && isset($resultadoAutorizacion['estado'])) {
-                                if ($resultadoAutorizacion['estado'] === 'AUTORIZADO') {
-                                    $factura->estado = 'AUTORIZADA';
-                                    $factura->estado_sri = 'AUTORIZADA';
-                                    $factura->numero_autorizacion = $resultadoAutorizacion['numero_autorizacion'] ?? null;
-                                    $factura->fecha_autorizacion = isset($resultadoAutorizacion['fecha_autorizacion']) && 
-                                        $resultadoAutorizacion['fecha_autorizacion'] ? 
-                                        \Carbon\Carbon::parse($resultadoAutorizacion['fecha_autorizacion']) : now();
-                                    $factura->save();
-                                    
-                                    \Log::info('Factura autorizada automáticamente', [
-                                        'factura_id' => $id,
-                                        'numero_autorizacion' => $factura->numero_autorizacion
-                                    ]);
-                                }
+            // Usar el nuevo servicio de firma electrónica
+            $firmaService = new FirmaElectronicaService($rutaCertificado, $passwordCertificado);
+            $xmlFirmado = $firmaService->firmarXML($xmlContent);            // Guardar el XML firmado
+            file_put_contents($rutaXML, $xmlFirmado);
+
+            // Actualizar estado de la factura
+            $factura->estado = 'FIRMADA';
+            $factura->fecha_firma = now();
+            $factura->save();
+
+            \Log::info('XML firmado guardado exitosamente', [
+                'factura_id' => $id,
+                'ruta_xml' => $rutaXML,
+                'tamano_xml' => strlen($xmlFirmado)
+            ]);
+
+            // Enviar al SRI
+            $resultadoEnvio = $this->enviarXMLAlSRI($xmlFirmado, $factura);
+
+            if ($resultadoEnvio['success']) {
+                // Si el envío fue exitoso, intentar autorización inmediata
+                if ($factura->estado === 'RECIBIDA') {
+                    \Log::info('Factura recibida por SRI, iniciando autorización automática');
+
+                    // Esperar un momento para que el SRI procese
+                    sleep(2);
+
+                    // Intentar autorización
+                    $claveAcceso = $this->extraerClaveAccesoDeXML($factura);
+                    if (!empty($claveAcceso)) {
+                        $resultadoAutorizacion = $this->solicitarAutorizacionSRI($claveAcceso);
+
+                        if ($resultadoAutorizacion['success'] && isset($resultadoAutorizacion['estado'])) {
+                            if ($resultadoAutorizacion['estado'] === 'AUTORIZADO') {
+                                $factura->estado = 'AUTORIZADA';
+                                $factura->estado_sri = 'AUTORIZADA';
+                                $factura->numero_autorizacion = $resultadoAutorizacion['numero_autorizacion'] ?? null;
+                                $factura->fecha_autorizacion = isset($resultadoAutorizacion['fecha_autorizacion']) &&
+                                    $resultadoAutorizacion['fecha_autorizacion'] ?
+                                    \Carbon\Carbon::parse($resultadoAutorizacion['fecha_autorizacion']) : now();
+                                $factura->save();
+
+                                \Log::info('Factura autorizada automáticamente', [
+                                    'factura_id' => $id,
+                                    'numero_autorizacion' => $factura->numero_autorizacion
+                                ]);
                             }
                         }
                     }
-                    
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Factura firmada y enviada exitosamente al SRI',
-                        'data' => [
-                            'estado' => $factura->estado,
-                            'estado_sri' => $factura->estado_sri,
-                            'numero_autorizacion' => $factura->numero_autorizacion,
-                            'fecha_autorizacion' => $factura->fecha_autorizacion,
-                            'fecha_firma' => $factura->fecha_firma
-                        ]
-                    ]);
-                } else {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Factura firmada pero error al enviar al SRI: ' . $resultadoEnvio['message'],
-                        'errors' => $resultadoEnvio['errors'] ?? []
-                    ], 422);
                 }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Factura firmada y enviada exitosamente al SRI',
+                    'data' => [
+                        'estado' => $factura->estado,
+                        'estado_sri' => $factura->estado_sri,
+                        'numero_autorizacion' => $factura->numero_autorizacion,
+                        'fecha_autorizacion' => $factura->fecha_autorizacion,
+                        'fecha_firma' => $factura->fecha_firma
+                    ]
+                ]);
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error al firmar la factura: ' . $resultadoFirma['message'],
-                    'errors' => $resultadoFirma['errors'] ?? []
+                    'message' => 'Factura firmada pero error al enviar al SRI: ' . $resultadoEnvio['message'],
+                    'errors' => $resultadoEnvio['errors'] ?? []
                 ], 422);
             }
-            
+
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
