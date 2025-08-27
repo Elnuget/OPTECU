@@ -346,15 +346,35 @@ class AdminController extends Controller
 
             $resultados = $query->groupBy('pedidos.usuario')
                 ->having('total_calificaciones', '>', 0)
-                ->orderBy('promedio_calificacion', 'desc')
                 ->get();
 
             if ($resultados->isEmpty()) {
                 return [
                     'usuarios' => ['Sin calificaciones'],
                     'promedios' => [0],
-                    'totales' => [0]
+                    'totales' => [0],
+                    'scores' => [0],
+                    'posiciones' => [1]
                 ];
+            }
+
+            // Calcular score ponderado: (promedio * 0.7) + (factor_volumen * 0.3)
+            // El factor_volumen se calcula como: min(total_calificaciones / 10, 1) * 5
+            // Esto da más peso al promedio pero considera el volumen de calificaciones
+            $maxCalificaciones = $resultados->max('total_calificaciones');
+            
+            $resultados = $resultados->map(function($item) use ($maxCalificaciones) {
+                $factorVolumen = min($item->total_calificaciones / max($maxCalificaciones * 0.2, 1), 1) * 5;
+                $score = ($item->promedio_calificacion * 0.7) + ($factorVolumen * 0.3);
+                
+                $item->score_ponderado = round($score, 2);
+                return $item;
+            })->sortByDesc('score_ponderado')->values();
+
+            // Agregar posiciones en el ranking
+            $posiciones = [];
+            for ($i = 0; $i < $resultados->count(); $i++) {
+                $posiciones[] = $i + 1;
             }
 
             return [
@@ -362,7 +382,9 @@ class AdminController extends Controller
                 'promedios' => $resultados->pluck('promedio_calificacion')->map(function($valor) {
                     return round($valor, 2);
                 })->toArray(),
-                'totales' => $resultados->pluck('total_calificaciones')->toArray()
+                'totales' => $resultados->pluck('total_calificaciones')->toArray(),
+                'scores' => $resultados->pluck('score_ponderado')->toArray(),
+                'posiciones' => $posiciones
             ];
 
         } catch (\Exception $e) {
@@ -370,7 +392,9 @@ class AdminController extends Controller
             return [
                 'usuarios' => ['Error'],
                 'promedios' => [0],
-                'totales' => [0]
+                'totales' => [0],
+                'scores' => [0],
+                'posiciones' => [1]
             ];
         }
     }

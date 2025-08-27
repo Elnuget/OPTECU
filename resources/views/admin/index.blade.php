@@ -145,7 +145,7 @@
             <div class="card-header border-0 bg-transparent" data-toggle="collapse" data-target="#puntuacionesUsuario">
                 <div class="header-container">
                     <h3 class="card-title mb-0">
-                        <i class="fas fa-star mr-2"></i>Puntuaciones por Usuario
+                        <i class="fas fa-medal mr-2"></i>Ranking de Calificaciones
                     </h3>
                     <i class="fas fa-chevron-down collapsed"></i>
                 </div>
@@ -353,6 +353,46 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+    }
+
+    /* Estilos específicos para el ranking de calificaciones */
+    #puntuacionesUsuario .card-title {
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 800;
+    }
+
+    /* Indicadores de ranking */
+    .ranking-indicator {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 24px;
+        font-weight: bold;
+        font-size: 12px;
+        color: white;
+        margin-right: 8px;
+    }
+
+    .ranking-indicator.gold {
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+    }
+
+    .ranking-indicator.silver {
+        background: linear-gradient(45deg, #c0c0c0, #e8e8e8);
+        color: #333;
+    }
+
+    .ranking-indicator.bronze {
+        background: linear-gradient(45deg, #cd7f32, #daa520);
+    }
+
+    .ranking-indicator.other {
+        background: linear-gradient(45deg, #6c757d, #adb5bd);
     }
 </style>
 @endpush
@@ -623,32 +663,80 @@
         }
     });
 
-    // Gráfico de Puntuaciones por Usuario
+    // Gráfico de Ranking de Calificaciones
     const ratingChart = new Chart(document.getElementById('ratingChart'), {
         type: 'bar',
         data: {
-            labels: {!! json_encode($datosGraficoPuntuaciones['usuarios']) !!},
+            labels: {!! json_encode($datosGraficoPuntuaciones['usuarios']) !!}.map((usuario, index) => {
+                const posicion = {!! json_encode($datosGraficoPuntuaciones['posiciones']) !!}[index];
+                return `#${posicion} ${usuario}`;
+            }),
             datasets: [{
-                label: 'Promedio de Estrellas',
-                data: {!! json_encode($datosGraficoPuntuaciones['promedios']) !!},
-                backgroundColor: 'rgba(246, 194, 62, 0.8)',
-                borderColor: 'rgba(246, 194, 62, 1)',
+                label: 'Score Ponderado',
+                data: {!! json_encode($datosGraficoPuntuaciones['scores']) !!},
+                backgroundColor: function(context) {
+                    const value = context.parsed;
+                    if (value >= 4.5) return 'rgba(40, 167, 69, 0.8)';   // Verde oscuro - Excelente
+                    if (value >= 4.0) return 'rgba(75, 192, 192, 0.8)';   // Verde claro - Muy bueno
+                    if (value >= 3.5) return 'rgba(255, 193, 7, 0.8)';    // Amarillo - Bueno
+                    if (value >= 3.0) return 'rgba(255, 159, 64, 0.8)';   // Naranja - Regular
+                    return 'rgba(220, 53, 69, 0.8)';                      // Rojo - Necesita mejora
+                },
+                borderColor: function(context) {
+                    const value = context.parsed;
+                    if (value >= 4.5) return 'rgba(40, 167, 69, 1)';
+                    if (value >= 4.0) return 'rgba(75, 192, 192, 1)';
+                    if (value >= 3.5) return 'rgba(255, 193, 7, 1)';
+                    if (value >= 3.0) return 'rgba(255, 159, 64, 1)';
+                    return 'rgba(220, 53, 69, 1)';
+                },
                 borderWidth: 1,
-                borderRadius: 4,
-                yAxisID: 'y'
+                borderRadius: 4
             }]
         },
         options: {
             maintainAspectRatio: false,
             indexAxis: 'y',
+            responsive: true,
             plugins: {
                 legend: {
                     display: false
                 },
                 tooltip: {
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    bodyColor: '#858796',
+                    titleColor: '#5a5c69',
+                    titleMarginBottom: 10,
+                    bodyFont: {
+                        size: 11
+                    },
+                    titleFont: {
+                        size: 12,
+                        weight: 'bold'
+                    },
+                    padding: 12,
+                    borderColor: '#dddfeb',
+                    borderWidth: 1,
                     callbacks: {
+                        title: function(context) {
+                            const index = context[0].dataIndex;
+                            const usuarios = {!! json_encode($datosGraficoPuntuaciones['usuarios']) !!};
+                            const posiciones = {!! json_encode($datosGraficoPuntuaciones['posiciones']) !!};
+                            return `Posición #${posiciones[index]} - ${usuarios[index]}`;
+                        },
                         label: function(context) {
-                            return `${context.parsed.x.toFixed(1)} ⭐ de 5 estrellas`;
+                            const index = context.dataIndex;
+                            const promedios = {!! json_encode($datosGraficoPuntuaciones['promedios']) !!};
+                            const totales = {!! json_encode($datosGraficoPuntuaciones['totales']) !!};
+                            const scores = {!! json_encode($datosGraficoPuntuaciones['scores']) !!};
+                            
+                            return [
+                                `Score Ponderado: ${scores[index]}`,
+                                `Promedio: ${promedios[index]} ⭐`,
+                                `Total Calificaciones: ${totales[index]}`,
+                                '',
+                                'Fórmula: (Promedio × 70%) + (Factor Volumen × 30%)'
+                            ];
                         }
                     }
                 }
@@ -657,26 +745,70 @@
                 x: {
                     beginAtZero: true,
                     max: 5,
+                    grid: {
+                        color: '#eaecf4',
+                        drawBorder: false,
+                        borderDash: [2]
+                    },
                     ticks: {
-                        stepSize: 1,
+                        color: '#858796',
+                        font: {
+                            family: 'Nunito',
+                            size: 10
+                        },
+                        stepSize: 0.5,
                         callback: function(value) {
-                            return '⭐'.repeat(value);
+                            return value.toFixed(1);
                         }
                     },
                     title: {
                         display: true,
-                        text: 'Calificación (estrellas)',
+                        text: 'Score Ponderado (0-5)',
                         font: {
-                            weight: 'bold'
-                        }
+                            weight: 'bold',
+                            size: 11
+                        },
+                        color: '#5a5c69'
                     }
                 },
                 y: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
                     ticks: {
+                        color: '#858796',
                         font: {
-                            weight: 'bold'
+                            family: 'Nunito',
+                            size: 9,
+                            weight: '500'
+                        },
+                        padding: 8,
+                        callback: function(value, index, values) {
+                            const label = this.getLabelForValue(value);
+                            // Truncar nombres largos pero mantener el número de posición
+                            if (typeof label === 'string') {
+                                const parts = label.split(' ');
+                                if (parts.length > 1) {
+                                    const posicion = parts[0]; // #1, #2, etc.
+                                    const nombre = parts.slice(1).join(' ');
+                                    if (nombre.length > 10) {
+                                        return `${posicion} ${nombre.substring(0, 8)}...`;
+                                    }
+                                }
+                                return label;
+                            }
+                            return label;
                         }
                     }
+                }
+            },
+            layout: {
+                padding: {
+                    left: 10,
+                    right: 15,
+                    top: 10,
+                    bottom: 10
                 }
             }
         }
