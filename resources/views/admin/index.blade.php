@@ -145,7 +145,7 @@
             <div class="card-header border-0 bg-transparent" data-toggle="collapse" data-target="#puntuacionesUsuario">
                 <div class="header-container">
                     <h3 class="card-title mb-0">
-                        <i class="fas fa-medal mr-2"></i>Ranking de Calificaciones
+                        <i class="fas fa-star mr-2"></i>Top Usuarios por Calificaciones
                     </h3>
                     <i class="fas fa-chevron-down collapsed"></i>
                 </div>
@@ -663,41 +663,51 @@
         }
     });
 
-    // Gráfico de Ranking de Calificaciones
+    // Gráfico de Ranking de Calificaciones (similar al de pedidos)
+    const calificacionesData = {!! json_encode($datosGraficoPuntuaciones['totales']) !!};
+    const usuariosCalificaciones = {!! json_encode($datosGraficoPuntuaciones['usuarios']) !!};
+    const promediosCalificaciones = {!! json_encode($datosGraficoPuntuaciones['promedios']) !!};
+    
+    // Función para generar colores degradados basados en el número de calificaciones
+    function generateGradientColorsCalificaciones(values) {
+        const maxValue = Math.max(...values);
+        const colors = [];
+        
+        values.forEach(value => {
+            // Calcular intensidad del color basado en el valor (0-1)
+            const intensity = value / maxValue;
+            
+            // Crear degradado de naranja claro a naranja oscuro
+            const hue = 45; // Naranja/dorado
+            const saturation = 85;
+            const lightness = 85 - (intensity * 40); // De 85% (claro) a 45% (oscuro)
+            
+            colors.push(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+        });
+        
+        return colors;
+    }
+    
+    // Generar colores degradados para calificaciones
+    const gradientColorsCalificaciones = generateGradientColorsCalificaciones(calificacionesData);
+
     const ratingChart = new Chart(document.getElementById('ratingChart'), {
         type: 'bar',
         data: {
-            labels: {!! json_encode($datosGraficoPuntuaciones['usuarios']) !!}.map((usuario, index) => {
-                const posicion = {!! json_encode($datosGraficoPuntuaciones['posiciones']) !!}[index];
-                return `#${posicion} ${usuario}`;
-            }),
+            labels: usuariosCalificaciones,
             datasets: [{
-                label: 'Score Ponderado',
-                data: {!! json_encode($datosGraficoPuntuaciones['scores']) !!},
-                backgroundColor: function(context) {
-                    const value = context.parsed;
-                    if (value >= 4.5) return 'rgba(40, 167, 69, 0.8)';   // Verde oscuro - Excelente
-                    if (value >= 4.0) return 'rgba(75, 192, 192, 0.8)';   // Verde claro - Muy bueno
-                    if (value >= 3.5) return 'rgba(255, 193, 7, 0.8)';    // Amarillo - Bueno
-                    if (value >= 3.0) return 'rgba(255, 159, 64, 0.8)';   // Naranja - Regular
-                    return 'rgba(220, 53, 69, 0.8)';                      // Rojo - Necesita mejora
-                },
-                borderColor: function(context) {
-                    const value = context.parsed;
-                    if (value >= 4.5) return 'rgba(40, 167, 69, 1)';
-                    if (value >= 4.0) return 'rgba(75, 192, 192, 1)';
-                    if (value >= 3.5) return 'rgba(255, 193, 7, 1)';
-                    if (value >= 3.0) return 'rgba(255, 159, 64, 1)';
-                    return 'rgba(220, 53, 69, 1)';
-                },
+                label: 'Número de Calificaciones',
+                data: calificacionesData,
+                backgroundColor: gradientColorsCalificaciones,
+                borderColor: gradientColorsCalificaciones.map(color => color.replace('hsl', 'hsla').replace(')', ', 1)')),
                 borderWidth: 1,
                 borderRadius: 4
             }]
         },
         options: {
             maintainAspectRatio: false,
-            indexAxis: 'y',
             responsive: true,
+            indexAxis: 'y', // Barras horizontales
             plugins: {
                 legend: {
                     display: false
@@ -708,10 +718,10 @@
                     titleColor: '#5a5c69',
                     titleMarginBottom: 10,
                     bodyFont: {
-                        size: 11
+                        size: 12
                     },
                     titleFont: {
-                        size: 12,
+                        size: 13,
                         weight: 'bold'
                     },
                     padding: 12,
@@ -719,23 +729,18 @@
                     borderWidth: 1,
                     callbacks: {
                         title: function(context) {
-                            const index = context[0].dataIndex;
-                            const usuarios = {!! json_encode($datosGraficoPuntuaciones['usuarios']) !!};
-                            const posiciones = {!! json_encode($datosGraficoPuntuaciones['posiciones']) !!};
-                            return `Posición #${posiciones[index]} - ${usuarios[index]}`;
+                            return context[0].label;
                         },
                         label: function(context) {
                             const index = context.dataIndex;
-                            const promedios = {!! json_encode($datosGraficoPuntuaciones['promedios']) !!};
-                            const totales = {!! json_encode($datosGraficoPuntuaciones['totales']) !!};
-                            const scores = {!! json_encode($datosGraficoPuntuaciones['scores']) !!};
+                            const numCalificaciones = calificacionesData[index];
+                            const promedio = promediosCalificaciones[index];
                             
                             return [
-                                `Score Ponderado: ${scores[index]}`,
-                                `Promedio: ${promedios[index]} ⭐`,
-                                `Total Calificaciones: ${totales[index]}`,
-                                '',
-                                'Fórmula: (Promedio × 70%) + (Factor Volumen × 30%)'
+                                `Calificaciones: ${numCalificaciones}`,
+                                `Promedio: ${promedio} ⭐ de 5`,
+                                ``,
+                                'Rating: ' + '⭐'.repeat(Math.round(promedio))
                             ];
                         }
                     }
@@ -744,7 +749,6 @@
             scales: {
                 x: {
                     beginAtZero: true,
-                    max: 5,
                     grid: {
                         color: '#eaecf4',
                         drawBorder: false,
@@ -754,19 +758,19 @@
                         color: '#858796',
                         font: {
                             family: 'Nunito',
-                            size: 10
+                            size: 11
                         },
-                        stepSize: 0.5,
+                        stepSize: 1,
                         callback: function(value) {
-                            return value.toFixed(1);
+                            return Math.floor(value);
                         }
                     },
                     title: {
                         display: true,
-                        text: 'Score Ponderado (0-5)',
+                        text: 'Número de Calificaciones',
                         font: {
                             weight: 'bold',
-                            size: 11
+                            size: 12
                         },
                         color: '#5a5c69'
                     }
@@ -780,33 +784,34 @@
                         color: '#858796',
                         font: {
                             family: 'Nunito',
-                            size: 9,
+                            size: 10,
                             weight: '500'
                         },
                         padding: 8,
                         callback: function(value, index, values) {
                             const label = this.getLabelForValue(value);
-                            // Truncar nombres largos pero mantener el número de posición
-                            if (typeof label === 'string') {
-                                const parts = label.split(' ');
-                                if (parts.length > 1) {
-                                    const posicion = parts[0]; // #1, #2, etc.
-                                    const nombre = parts.slice(1).join(' ');
-                                    if (nombre.length > 10) {
-                                        return `${posicion} ${nombre.substring(0, 8)}...`;
-                                    }
-                                }
-                                return label;
+                            // Truncar nombres largos pero mantener legibilidad
+                            if (typeof label === 'string' && label.length > 15) {
+                                return label.substring(0, 12) + '...';
                             }
                             return label;
                         }
+                    },
+                    title: {
+                        display: true,
+                        text: `Usuarios (${usuariosCalificaciones.length} total)`,
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        color: '#5a5c69'
                     }
                 }
             },
             layout: {
                 padding: {
                     left: 10,
-                    right: 15,
+                    right: 25,
                     top: 10,
                     bottom: 10
                 }

@@ -346,6 +346,8 @@ class AdminController extends Controller
 
             $resultados = $query->groupBy('pedidos.usuario')
                 ->having('total_calificaciones', '>', 0)
+                ->orderBy('total_calificaciones', 'desc') // Ordenar por número de calificaciones primero
+                ->orderBy('promedio_calificacion', 'desc') // Luego por promedio como criterio secundario
                 ->get();
 
             if ($resultados->isEmpty()) {
@@ -358,9 +360,7 @@ class AdminController extends Controller
                 ];
             }
 
-            // Calcular score ponderado: (promedio * 0.7) + (factor_volumen * 0.3)
-            // El factor_volumen se calcula como: min(total_calificaciones / 10, 1) * 5
-            // Esto da más peso al promedio pero considera el volumen de calificaciones
+            // Calcular score ponderado para referencia (aunque ya no se use para ordenar)
             $maxCalificaciones = $resultados->max('total_calificaciones');
             
             $resultados = $resultados->map(function($item) use ($maxCalificaciones) {
@@ -369,7 +369,7 @@ class AdminController extends Controller
                 
                 $item->score_ponderado = round($score, 2);
                 return $item;
-            })->sortByDesc('score_ponderado')->values();
+            });
 
             // Agregar posiciones en el ranking
             $posiciones = [];
