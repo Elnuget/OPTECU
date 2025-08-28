@@ -33,7 +33,7 @@ try:
     from models.invoice import Invoice, InfoToSignXml
     from dotenv import dotenv_values
 except ImportError as e:
-    print(f"Error importando módulos: {e}")
+    print(f"Error importando módulos: {e}", file=sys.stderr)
     sys.exit(1)
 
 def load_config():
@@ -52,8 +52,12 @@ def load_config():
     # VALIDACIÓN CRÍTICA: Asegurar ambiente de pruebas
     validar_ambiente_pruebas(config)
     
-    print("CONFIGURACIÓN: Ambiente de PRUEBAS SRI cargado (sin .env)")
+    log_message("CONFIGURACIÓN: Ambiente de PRUEBAS SRI cargado (sin .env)")
     return config
+
+def log_message(message):
+    """Imprimir mensaje de log a stderr para no interferir con el JSON de salida"""
+    print(message, file=sys.stderr)
 
 def validar_ambiente_pruebas(config):
     """
@@ -78,7 +82,7 @@ def validar_ambiente_pruebas(config):
     if config.get('AMBIENTE') != '1':
         raise Exception('PELIGRO: Ambiente no configurado para pruebas')
     
-    print("VALIDACIÓN: Confirmado ambiente de PRUEBAS SRI (celcer)")
+    log_message("VALIDACIÓN: Confirmado ambiente de PRUEBAS SRI (celcer)")
     return True
 
 def procesar_factura_completa(invoice_data, certificate_path, password):
@@ -114,14 +118,14 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
             randomNumber=random_number
         )
         
-        print(f"Clave de acceso generada: {access_key}")
+        log_message(f"Clave de acceso generada: {access_key}")
         
         # Generar XML
         xml_data = createXml(info=invoice, accessKeyInvoice=access_key)
         xml_string = xml_data['xmlString']
         xml_filename = f"{access_key}.xml"
         
-        print(f"📄 XML generado: {len(xml_string)} caracteres")
+        log_message(f"📄 XML generado: {len(xml_string)} caracteres")
         
         # Crear archivos temporales
         xml_no_signed = createTempXmlFile(xml_string, xml_filename)
@@ -140,7 +144,7 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
             passwordSignature=password
         )
         
-        print(f"🔐 Iniciando proceso de firma...")
+        log_message(f"🔐 Iniciando proceso de firma...")
         
         # Firmar XML
         is_xml_created = sign_xml_file(info_to_sign)
@@ -152,7 +156,7 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
                 'result': None
             }
         
-        print(f"XML firmado exitosamente")
+        log_message(f"XML firmado exitosamente")
         
         # Leer XML firmado
         xml_signed_content = None
@@ -170,14 +174,14 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
                     xml_bytes = f.read()
                 xml_signed_content = xml_bytes.decode('utf-8', errors='ignore')
         except Exception as e:
-            print(f"Error leyendo XML firmado: {e}")
+            log_message(f"Error leyendo XML firmado: {e}")
         
         # Enviar al SRI para recepción
         is_received = False
         is_authorized = False
         
         if config.get('URL_RECEPTION'):
-            print(f"📤 Enviando a recepción SRI...")
+            log_message(f"📤 Enviando a recepción SRI...")
             try:
                 # Usar asyncio para las funciones async
                 loop = asyncio.new_event_loop()
@@ -191,11 +195,11 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
                 )
                 
                 if is_received:
-                    print(f"XML recibido por el SRI")
+                    log_message(f"XML recibido por el SRI")
                     
                     # Enviar para autorización
                     if config.get('URL_AUTHORIZATION'):
-                        print(f"📋 Solicitando autorización...")
+                        log_message(f"📋 Solicitando autorización...")
                         response_auth = loop.run_until_complete(
                             send_xml_to_authorization(
                                 access_key,
@@ -206,17 +210,17 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
                         is_authorized = response_auth.get('isValid', False)
                         
                         if is_authorized:
-                            print(f"XML autorizado por el SRI")
+                            log_message(f"XML autorizado por el SRI")
                             # Actualizar XML con la versión autorizada si está disponible
                             if response_auth.get('xml'):
                                 xml_signed_content = response_auth['xml']
                         else:
-                            print(f"⏳ XML recibido, esperando autorización")
+                            log_message(f"⏳ XML recibido, esperando autorización")
                 
                 loop.close()
                 
             except Exception as e:
-                print(f"Error en comunicación con SRI: {e}")
+                log_message(f"Error en comunicación con SRI: {e}")
                 # Continuar con el XML firmado aunque no se pueda enviar al SRI
         
         return {
@@ -286,10 +290,10 @@ def consultar_estado_autorizacion(access_key):
 def main():
     """Función principal del script"""
     if len(sys.argv) < 2:
-        print("Uso: python sri_processor.py <comando> [argumentos]")
-        print("Comandos disponibles:")
-        print("  procesar <json_file> <certificate_path> <password>")
-        print("  consultar <access_key>")
+        log_message("Uso: python sri_processor.py <comando> [argumentos]")
+        log_message("Comandos disponibles:")
+        log_message("  procesar <json_file> <certificate_path> <password>")
+        log_message("  consultar <access_key>")
         sys.exit(1)
     
     comando = sys.argv[1]
@@ -297,7 +301,7 @@ def main():
     try:
         if comando == 'procesar':
             if len(sys.argv) < 5:
-                print("Uso: python sri_processor.py procesar <json_file> <certificate_path> <password>")
+                log_message("Uso: python sri_processor.py procesar <json_file> <certificate_path> <password>")
                 sys.exit(1)
             
             json_file = sys.argv[2]
@@ -313,7 +317,7 @@ def main():
             
         elif comando == 'consultar':
             if len(sys.argv) < 3:
-                print("Uso: python sri_processor.py consultar <access_key>")
+                log_message("Uso: python sri_processor.py consultar <access_key>")
                 sys.exit(1)
             
             access_key = sys.argv[2]
@@ -321,7 +325,7 @@ def main():
             print(json.dumps(resultado, ensure_ascii=False, indent=2))
             
         else:
-            print(f"Comando desconocido: {comando}")
+            log_message(f"Comando desconocido: {comando}")
             sys.exit(1)
             
     except Exception as e:

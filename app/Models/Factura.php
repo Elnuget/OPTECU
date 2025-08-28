@@ -27,6 +27,7 @@ class Factura extends Model
         'declarante_id',
         'xml',
         'xml_firmado',
+        'xml_autorizado',
         'monto',
         'iva',
         'tipo',
@@ -106,5 +107,69 @@ class Factura extends Model
     public function scopeByDeclarante($query, $declaranteId)
     {
         return $query->where('declarante_id', $declaranteId);
+    }
+
+    /**
+     * Obtener el XML más apropiado según el estado de la factura
+     * Prioridad: XML Autorizado > XML Firmado > XML Original
+     */
+    public function getXmlContent()
+    {
+        // Si está autorizada, usar XML autorizado
+        if ($this->estado === 'AUTORIZADA' && !empty($this->xml_autorizado)) {
+            return $this->xml_autorizado;
+        }
+        
+        // Si está firmada o enviada, usar XML firmado
+        if (in_array($this->estado, ['FIRMADA', 'ENVIADA', 'RECIBIDA']) && !empty($this->xml_firmado)) {
+            return $this->xml_firmado;
+        }
+        
+        // Por defecto, usar XML original
+        return $this->xml;
+    }
+
+    /**
+     * Obtener el tipo de XML que se está mostrando
+     */
+    public function getXmlType()
+    {
+        if ($this->estado === 'AUTORIZADA' && !empty($this->xml_autorizado)) {
+            return 'autorizado';
+        }
+        
+        if (in_array($this->estado, ['FIRMADA', 'ENVIADA', 'RECIBIDA']) && !empty($this->xml_firmado)) {
+            return 'firmado';
+        }
+        
+        return 'original';
+    }
+
+    /**
+     * Guardar XML firmado en la base de datos
+     */
+    public function guardarXmlFirmado($xmlContent)
+    {
+        $this->xml_firmado = $xmlContent;
+        $this->fecha_firma = now();
+        
+        // Actualizar estado si aún está en CREADA
+        if ($this->estado === 'CREADA') {
+            $this->estado = 'FIRMADA';
+        }
+        
+        return $this->save();
+    }
+
+    /**
+     * Guardar XML autorizado en la base de datos
+     */
+    public function guardarXmlAutorizado($xmlContent)
+    {
+        $this->xml_autorizado = $xmlContent;
+        $this->fecha_autorizacion = now();
+        $this->estado = 'AUTORIZADA';
+        
+        return $this->save();
     }
 }

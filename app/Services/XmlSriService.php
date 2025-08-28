@@ -190,10 +190,24 @@ class XmlSriService
 
             if ($result && isset($result['success'])) {
                 if ($result['success']) {
-                    Log::info('Procesamiento exitoso', ['tiene_datos' => isset($result['data'])]);
+                    Log::info('Procesamiento exitoso', [
+                        'tiene_datos' => isset($result['data']),
+                        'tiene_xml_firmado' => isset($result['xmlFileSigned']),
+                        'clave_acceso' => $result['accessKey'] ?? null
+                    ]);
+                    
+                    // Asegurar que el resultado incluya el XML firmado
                     return [
                         'success' => true,
-                        'result' => $result
+                        'result' => [
+                            'accessKey' => $result['accessKey'] ?? null,
+                            'xmlFileSigned' => $result['xmlFileSigned'] ?? null,
+                            'isReceived' => $result['isReceived'] ?? false,
+                            'isAuthorized' => $result['isAuthorized'] ?? false,
+                            'sriResponse' => $result['sriResponse'] ?? null,
+                            'xmlAutorizado' => $result['xmlAutorizado'] ?? null,
+                            'data' => $result['data'] ?? null
+                        ]
                     ];
                 } else {
                     // success: false pero respuesta válida del SRI (ej: NO AUTORIZADO)

@@ -159,6 +159,17 @@
     <div class="card-header">
         <h3 class="card-title">
             <i class="fas fa-code"></i> Contenido del XML
+            @if(isset($xmlType))
+                <span class="badge badge-info ml-2">
+                    @if($xmlType === 'autorizado')
+                        <i class="fas fa-certificate"></i> XML Autorizado
+                    @elseif($xmlType === 'firmado')
+                        <i class="fas fa-signature"></i> XML Firmado
+                    @else
+                        <i class="fas fa-file-code"></i> XML Original
+                    @endif
+                </span>
+            @endif
         </h3>
         <div class="card-tools">
             @if($xmlContent)

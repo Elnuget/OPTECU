@@ -259,7 +259,7 @@ class FacturaController extends Controller
                     'cantidad' => 1,
                     'precio_unitario' => $precioArmazon,
                     'subtotal' => $precioArmazon,
-                    'codigo_porcentaje' => '6', // 15% IVA
+                    'codigo_porcentaje' => '4', // 15% IVA
                     'tarifa' => '15',
                     'valor_impuesto' => $ivaArmazon
                 ];
@@ -277,7 +277,7 @@ class FacturaController extends Controller
                     'cantidad' => 1,
                     'precio_unitario' => $precioLuna,
                     'subtotal' => $precioLuna,
-                    'codigo_porcentaje' => '6', // 15% IVA
+                    'codigo_porcentaje' => '4', // 15% IVA
                     'tarifa' => '15',
                     'valor_impuesto' => $ivaLuna
                 ];
@@ -543,7 +543,7 @@ class FacturaController extends Controller
                     'cantidad' => 1,
                     'precio_unitario' => $precioArmazon,
                     'subtotal' => $precioArmazon,
-                    'codigo_porcentaje' => '6', // 15% IVA
+                    'codigo_porcentaje' => '4', // 15% IVA
                     'tarifa' => '15',
                     'valor_impuesto' => $ivaArmazon
                 ];
@@ -561,7 +561,7 @@ class FacturaController extends Controller
                     'cantidad' => 1,
                     'precio_unitario' => $precioLuna,
                     'subtotal' => $precioLuna,
-                    'codigo_porcentaje' => '6', // 15% IVA
+                    'codigo_porcentaje' => '4', // 15% IVA
                     'tarifa' => '15',
                     'valor_impuesto' => $ivaLuna
                 ];
@@ -1084,20 +1084,61 @@ class FacturaController extends Controller
             // Agregar los mensajes procesados a la factura
             $factura->mensajes_sri_procesados = $mensajesSriProcesados;
             
-            // Leer el contenido del XML si existe
+            // Obtener el contenido XML más apropiado según el estado
             $xmlContent = null;
             $xmlFormatted = null;
-            if ($factura->xml) {
-                $xmlPath = storage_path('app/public/' . $factura->xml);
-                if (file_exists($xmlPath)) {
-                    $xmlContent = file_get_contents($xmlPath);
-                    
-                    // Formatear el XML para mejor visualización
-                    $dom = new \DOMDocument();
-                    $dom->preserveWhiteSpace = false;
-                    $dom->formatOutput = true;
-                    if ($dom->loadXML($xmlContent)) {
-                        $xmlFormatted = $dom->saveXML();
+            $xmlType = 'original';
+            $xmlContentRaw = null;
+            
+            // Intentar obtener XML en orden de prioridad
+            try {
+                $xmlContentRaw = $factura->getXmlContent();
+                $xmlType = $factura->getXmlType();
+            } catch (\Exception $e) {
+                \Log::error('Error obteniendo XML content', [
+                    'factura_id' => $id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
+            \Log::info('Obteniendo XML para mostrar', [
+                'factura_id' => $id,
+                'estado' => $factura->estado,
+                'xml_type' => $xmlType,
+                'tiene_xml_autorizado' => !empty($factura->xml_autorizado),
+                'tiene_xml_firmado' => !empty($factura->xml_firmado),
+                'tiene_xml_original' => !empty($factura->xml)
+            ]);
+            
+            if ($xmlContentRaw) {
+                // Si el XML está directamente en la base de datos
+                if (strpos($xmlContentRaw, '<?xml') === 0) {
+                    $xmlContent = $xmlContentRaw;
+                } else {
+                    // Si es una ruta de archivo
+                    $xmlPath = storage_path('app/public/' . $xmlContentRaw);
+                    if (file_exists($xmlPath)) {
+                        $xmlContent = file_get_contents($xmlPath);
+                    }
+                }
+                
+                // Formatear el XML para mejor visualización
+                if ($xmlContent) {
+                    try {
+                        $dom = new \DOMDocument();
+                        $dom->preserveWhiteSpace = false;
+                        $dom->formatOutput = true;
+                        if ($dom->loadXML($xmlContent)) {
+                            $xmlFormatted = $dom->saveXML();
+                        } else {
+                            $xmlFormatted = $xmlContent; // Usar contenido original si no se puede formatear
+                        }
+                    } catch (\Exception $e) {
+                        \Log::warning('No se pudo formatear el XML', [
+                            'factura_id' => $id,
+                            'error' => $e->getMessage()
+                        ]);
+                        $xmlFormatted = $xmlContent; // Usar contenido original
                     }
                 }
             }
@@ -1112,10 +1153,13 @@ class FacturaController extends Controller
                 $data = $factura->toArray();
                 $data['pedidos'] = $pedidos;
                 $data['xml_content'] = $xmlContent;
+                $data['xml_type'] = $xmlType;
                 $data['mensajes_sri_procesados'] = $mensajesSriProcesados;
                 
                 \Log::info('Devolviendo factura via JSON', [
                     'factura_id' => $id,
+                    'xml_type' => $xmlType,
+                    'tiene_xml_content' => !empty($xmlContent),
                     'tiene_mensajes_sri' => !empty($mensajesSriProcesados),
                     'total_mensajes' => $mensajesSriProcesados ? count($mensajesSriProcesados) : 0
                 ]);
@@ -1135,7 +1179,7 @@ class FacturaController extends Controller
             }
 
             // Si no es AJAX, devolver vista HTML
-            return view('facturas.show', compact('factura', 'xmlContent', 'xmlFormatted', 'tieneCertificadoP12'));
+            return view('facturas.show', compact('factura', 'xmlContent', 'xmlFormatted', 'xmlType', 'tieneCertificadoP12'));
             
         } catch (\Exception $e) {
             if (request()->wantsJson()) {

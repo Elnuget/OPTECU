@@ -73,6 +73,22 @@ class SriPythonService
             // Guardar XML firmado si está disponible
             if (isset($result['xmlFileSigned']) && !empty($result['xmlFileSigned'])) {
                 $this->guardarXMLFirmado($factura, $result['xmlFileSigned']);
+                Log::info('XML firmado guardado exitosamente desde procesamiento');
+            } else {
+                Log::warning('XML firmado no disponible en resultado', [
+                    'result_keys' => array_keys($result),
+                    'tiene_xmlFileSigned' => isset($result['xmlFileSigned']),
+                    'xmlFileSigned_empty' => empty($result['xmlFileSigned'] ?? '')
+                ]);
+            }
+            
+            // Guardar XML autorizado si está disponible
+            if (isset($result['xmlAutorizado']) && !empty($result['xmlAutorizado'])) {
+                $this->guardarXMLAutorizado($factura, $result['xmlAutorizado']);
+                Log::info('XML autorizado guardado exitosamente desde procesamiento');
+            } elseif (isset($result['sriResponse']['comprobante']) && !empty($result['sriResponse']['comprobante'])) {
+                $this->guardarXMLAutorizado($factura, $result['sriResponse']['comprobante']);
+                Log::info('XML autorizado guardado desde respuesta SRI');
             }
             
             Log::info('=== FIN PROCESAMIENTO EXITOSO CON SERVICIO LOCAL ===', [
@@ -190,7 +206,7 @@ class SriPythonService
         if ($iva > 0) {
             $totalsWithTax[] = [
                 'taxCode' => '2', // IVA
-                'percentageCode' => '6', // 15%
+                'percentageCode' => '4', // 15%
                 'taxableBase' => number_format($subtotal - $this->calcularSubtotalExento($elementos), 2, '.', ''),
                 'taxValue' => number_format($iva, 2, '.', '')
             ];
@@ -316,42 +332,109 @@ class SriPythonService
     }
     
     /**
-     * Guardar XML firmado en el sistema de archivos
+     * Guardar XML firmado en el sistema de archivos y base de datos
      */
     private function guardarXMLFirmado($factura, $xmlContent)
     {
         try {
-            // Crear directorio si no existe
-            $xmlPath = 'facturas/' . date('Y/m');
-            $xmlFullPath = storage_path('app/public/' . $xmlPath);
+            Log::info('Iniciando guardado de XML firmado', [
+                'factura_id' => $factura->id,
+                'xml_length' => strlen($xmlContent ?? '')
+            ]);
             
-            if (!is_dir($xmlFullPath)) {
-                mkdir($xmlFullPath, 0755, true);
+            if (empty($xmlContent)) {
+                throw new \Exception('Contenido XML vacío');
             }
             
-            // Nombre del archivo XML firmado
-            $xmlFileName = 'factura_firmada_' . ($factura->clave_acceso ?? $factura->id) . '_' . time() . '.xml';
-            $xmlFilePath = $xmlFullPath . DIRECTORY_SEPARATOR . $xmlFileName;
+            // Opción 1: Guardar directamente en la base de datos (más confiable)
+            $factura->xml_firmado = $xmlContent;
+            $factura->fecha_firma = now();
             
-            // Guardar XML firmado
-            file_put_contents($xmlFilePath, $xmlContent);
+            // Actualizar estado si aún está en CREADA
+            if ($factura->estado === 'CREADA') {
+                $factura->estado = 'FIRMADA';
+            }
             
-            // Actualizar ruta en la factura
-            $factura->xml_firmado = $xmlPath . '/' . $xmlFileName;
             $factura->save();
             
-            Log::info('XML firmado guardado exitosamente', [
+            Log::info('XML firmado guardado exitosamente en BD', [
                 'factura_id' => $factura->id,
-                'ruta_xml' => $xmlFilePath
+                'xml_firmado_length' => strlen($factura->xml_firmado),
+                'nuevo_estado' => $factura->estado
             ]);
+            
+            // Opción 2: También guardar en archivo como respaldo (opcional)
+            try {
+                $xmlPath = 'facturas/' . date('Y/m');
+                $xmlFullPath = storage_path('app/public/' . $xmlPath);
+                
+                if (!is_dir($xmlFullPath)) {
+                    mkdir($xmlFullPath, 0755, true);
+                }
+                
+                $xmlFileName = 'factura_firmada_' . ($factura->clave_acceso ?? $factura->id) . '_' . time() . '.xml';
+                $xmlFilePath = $xmlFullPath . DIRECTORY_SEPARATOR . $xmlFileName;
+                
+                file_put_contents($xmlFilePath, $xmlContent);
+                
+                Log::info('XML firmado también guardado como archivo de respaldo', [
+                    'factura_id' => $factura->id,
+                    'archivo_respaldo' => $xmlFilePath
+                ]);
+                
+            } catch (\Exception $fileError) {
+                Log::warning('No se pudo crear archivo de respaldo (pero XML se guardó en BD)', [
+                    'factura_id' => $factura->id,
+                    'error_archivo' => $fileError->getMessage()
+                ]);
+            }
             
         } catch (\Exception $e) {
             Log::error('Error guardando XML firmado', [
+                'factura_id' => $factura->id,
                 'error' => $e->getMessage()
             ]);
+            throw $e;
         }
     }
     
+    /**
+     * Guardar XML autorizado en la base de datos
+     */
+    private function guardarXMLAutorizado($factura, $xmlContent)
+    {
+        try {
+            Log::info('Iniciando guardado de XML autorizado', [
+                'factura_id' => $factura->id,
+                'xml_length' => strlen($xmlContent ?? '')
+            ]);
+            
+            if (empty($xmlContent)) {
+                throw new \Exception('Contenido XML autorizado vacío');
+            }
+            
+            // Guardar XML autorizado directamente en la base de datos
+            $factura->xml_autorizado = $xmlContent;
+            $factura->fecha_autorizacion = now();
+            $factura->estado = 'AUTORIZADA';
+            
+            $factura->save();
+            
+            Log::info('XML autorizado guardado exitosamente en BD', [
+                'factura_id' => $factura->id,
+                'xml_autorizado_length' => strlen($factura->xml_autorizado),
+                'estado_final' => $factura->estado
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error guardando XML autorizado', [
+                'factura_id' => $factura->id,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
     /**
      * Mapear medio de pago a códigos SRI
      */
