@@ -40,9 +40,14 @@ def copiar_certificado(origen, destino, password):
         
         # Crear archivo .env con la configuración
         env_path = os.path.join(dest_dir, '.env')
-        env_content = f"""URL_RECEPTION=https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl
+        env_content = f"""# CONFIGURACION SRI ECUADOR - AMBIENTE DE PRUEBAS
+# IMPORTANTE: NO CAMBIAR A PRODUCCION SIN AUTORIZACION
+URL_RECEPTION=https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl
 URL_AUTHORIZATION=https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl
 PASSWORD={password}
+AMBIENTE=1
+TIPO_EMISION=1
+# NOTA: celcer = pruebas, cel = produccion
 """
         
         with open(env_path, 'w', encoding='utf-8') as f:

@@ -21,6 +21,9 @@ class SriPythonService
     public function procesarFacturaCompleta($factura, $declarante, $pedido, $elementos, $subtotal, $iva, $total, $medioPago, $passwordCertificado)
     {
         try {
+            // ⚠️ VALIDACIÓN OBLIGATORIA: Verificar que estemos en ambiente de pruebas
+            $this->validarAmbientePruebas();
+            
             Log::info('=== INICIO PROCESAMIENTO FACTURA CON API PYTHON ===', [
                 'factura_id' => $factura->id
             ]);
@@ -118,8 +121,8 @@ class SriPythonService
             'yearEmission' => $fecha->format('Y'),
             'codDoc' => '01', // Factura
             'rucBusiness' => str_pad($declarante->ruc ?? '9999999999999', 13, '0', STR_PAD_LEFT),
-            'environment' => '1', // Pruebas
-            'typeEmission' => '1', // Normal
+            'environment' => '1', // ⚠️ AMBIENTE DE PRUEBAS SRI (1=pruebas, 2=producción)
+            'typeEmission' => '1', // ⚠️ EMISIÓN NORMAL (1=normal, 2=contingencia)
             'establishment' => str_pad($declarante->establecimiento ?? '001', 3, '0', STR_PAD_LEFT),
             'establishmentAddress' => $this->limpiarTexto($declarante->direccion_matriz ?? 'DIRECCION NO ESPECIFICADA'),
             'emissionPoint' => str_pad($declarante->punto_emision ?? '001', 3, '0', STR_PAD_LEFT),
@@ -453,6 +456,32 @@ class SriPythonService
         return trim($textoLimpio);
     }
     
+    /**
+     * Validar que estemos en ambiente de pruebas SRI
+     * ⚠️ SEGURIDAD: Previene envío accidental a producción
+     */
+    private function validarAmbientePruebas()
+    {
+        // Verificar archivo .env del SRI
+        $envPath = public_path('SriSignXml/.env');
+        if (file_exists($envPath)) {
+            $envContent = file_get_contents($envPath);
+            
+            // Verificar que las URLs sean de pruebas (celcer)
+            if (strpos($envContent, 'celcer.sri.gob.ec') === false) {
+                throw new \Exception('⚠️ PELIGRO: URLs no configuradas para ambiente de pruebas. Debe usar celcer.sri.gob.ec');
+            }
+            
+            // Verificar que no contenga URLs de producción (cel)
+            if (strpos($envContent, '://cel.sri.gob.ec') !== false) {
+                throw new \Exception('⚠️ PELIGRO: Detectadas URLs de PRODUCCIÓN. Cambiar a celcer.sri.gob.ec para pruebas');
+            }
+        }
+        
+        // Log de seguridad
+        Log::warning('✅ VALIDACIÓN AMBIENTE: Confirmado uso de webservices de PRUEBAS SRI');
+    }
+
     /**
      * Generar mensaje de éxito según resultados
      */

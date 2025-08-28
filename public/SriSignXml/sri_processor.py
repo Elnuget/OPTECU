@@ -36,6 +36,9 @@ def load_config():
     if os.path.exists(env_path):
         config = {**dotenv_values(env_path)}
     
+    # ⚠️ VALIDACIÓN CRÍTICA: Asegurar ambiente de pruebas
+    validar_ambiente_pruebas(config)
+    
     # Configuración por defecto para ambiente de pruebas
     if not config.get('URL_RECEPTION'):
         config['URL_RECEPTION'] = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl'
@@ -43,6 +46,28 @@ def load_config():
         config['URL_AUTHORIZATION'] = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl'
     
     return config
+
+def validar_ambiente_pruebas(config):
+    """
+    Validación de seguridad: asegurar que estemos en ambiente de pruebas
+    ⚠️ CRÍTICO: Previene envío accidental a producción SRI
+    """
+    urls_to_check = [
+        config.get('URL_RECEPTION', ''),
+        config.get('URL_AUTHORIZATION', '')
+    ]
+    
+    for url in urls_to_check:
+        if url:
+            # Verificar que sea ambiente de pruebas (celcer)
+            if 'celcer.sri.gob.ec' not in url:
+                if 'cel.sri.gob.ec' in url:
+                    raise Exception('⚠️ PELIGRO: Detectada URL de PRODUCCIÓN. Cambiar a celcer.sri.gob.ec para pruebas')
+                else:
+                    raise Exception('⚠️ PELIGRO: URL no reconocida. Debe usar celcer.sri.gob.ec para pruebas')
+    
+    print("✅ VALIDACIÓN: Confirmado ambiente de PRUEBAS SRI (celcer)")
+    return True
 
 def procesar_factura_completa(invoice_data, certificate_path, password):
     """
