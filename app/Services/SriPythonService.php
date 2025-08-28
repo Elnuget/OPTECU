@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Factura;
+use App\Models\SecuencialSri;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 
@@ -66,6 +67,23 @@ class SriPythonService
             }
             
             $result = $resultado['result'];
+            
+            // Verificar si el SRI devolvió la factura (error secuencial registrado, etc.)
+            if (isset($result['isReceived']) && !$result['isReceived']) {
+                // Analizar motivo del rechazo
+                $motivoRechazo = $this->analizarRespuestaSRI($result);
+                
+                if ($motivoRechazo['requiere_nuevo_secuencial']) {
+                    Log::warning('SRI rechazó por secuencial duplicado, generando nuevo secuencial', [
+                        'factura_id' => $factura->id,
+                        'secuencial_anterior' => $result['accessKey'] ?? 'NO_DISPONIBLE',
+                        'motivo' => $motivoRechazo['mensaje']
+                    ]);
+                    
+                    // Generar nuevo secuencial y reintentar una vez
+                    return $this->reintentarConNuevoSecuencial($factura, $declarante, $pedido, $elementos, $subtotal, $iva, $total, $medioPago, $passwordCertificado);
+                }
+            }
             
             // Actualizar factura en base de datos
             $this->actualizarEstadoFactura($factura, $result);
@@ -141,14 +159,16 @@ class SriPythonService
      */
     private function prepararDatosFactura($factura, $declarante, $pedido, $elementos, $subtotal, $iva, $total, $medioPago)
     {
-        // Generar secuencial
-        $secuencial = '000000001';
-        if (is_object($pedido) && isset($pedido->numero_orden) && !empty($pedido->numero_orden)) {
-            $numerosExtraidos = preg_replace('/[^0-9]/', '', $pedido->numero_orden);
-            if (!empty($numerosExtraidos)) {
-                $secuencial = str_pad($numerosExtraidos, 9, '0', STR_PAD_LEFT);
-            }
-        }
+        // Generar secuencial único usando el nuevo sistema
+        $secuencial = $this->generarSecuencialUnico($factura, $declarante, $pedido);
+        
+        Log::info('Secuencial generado para factura', [
+            'factura_id' => $factura->id,
+            'secuencial' => $secuencial,
+            'ruc' => $declarante->ruc,
+            'establecimiento' => $declarante->establecimiento ?? '001',
+            'punto_emision' => $declarante->punto_emision ?? '001'
+        ]);
         
         // Fecha actual
         $fecha = now();
@@ -346,6 +366,9 @@ class SriPythonService
             }
             
             $factura->save();
+            
+            // Registrar secuencial en la base de datos para evitar duplicados futuros
+            $this->registrarSecuencialEnBD($factura, $result);
             
             Log::info('Estado de factura actualizado completamente', [
                 'factura_id' => $factura->id,
@@ -573,16 +596,365 @@ class SriPythonService
      */
     private function generarMensajeExito($result)
     {
-        $mensaje = 'Factura procesada exitosamente. ';
+        $mensaje = 'Procesamiento completado exitosamente';
         
         if (isset($result['isAuthorized']) && $result['isAuthorized']) {
-            $mensaje .= 'XML firmado y AUTORIZADO por el SRI.';
+            $mensaje = 'Factura firmada y autorizada por el SRI exitosamente';
         } elseif (isset($result['isReceived']) && $result['isReceived']) {
-            $mensaje .= 'XML firmado y RECIBIDO por el SRI. Esperando autorización.';
-        } else {
-            $mensaje .= 'XML firmado correctamente.';
+            $mensaje = 'Factura firmada y recibida por el SRI. Pendiente de autorización.';
+        } elseif (isset($result['xmlFileSigned']) && !empty($result['xmlFileSigned'])) {
+            $mensaje = 'Factura firmada digitalmente. Lista para envío al SRI.';
         }
         
         return $mensaje;
+    }
+    
+    /**
+     * Analizar respuesta del SRI para determinar causa del rechazo
+     */
+    private function analizarRespuestaSRI($result)
+    {
+        $analisis = [
+            'requiere_nuevo_secuencial' => false,
+            'mensaje' => 'Error desconocido del SRI',
+            'codigo_error' => null,
+            'solucion_sugerida' => ''
+        ];
+        
+        // Verificar si hay respuesta del SRI en el resultado
+        if (isset($result['sriResponse']['mensajes'])) {
+            $mensajes = $result['sriResponse']['mensajes'];
+            
+            foreach ($mensajes as $mensaje) {
+                $identificador = $mensaje['identificador'] ?? '';
+                $mensajeTexto = $mensaje['mensaje'] ?? '';
+                
+                // Error secuencial registrado (código 45)
+                if ($identificador === '45' || stripos($mensajeTexto, 'SECUENCIAL REGISTRADO') !== false) {
+                    $analisis['requiere_nuevo_secuencial'] = true;
+                    $analisis['mensaje'] = 'Número secuencial ya fue utilizado anteriormente';
+                    $analisis['codigo_error'] = '45';
+                    $analisis['solucion_sugerida'] = 'Generar nuevo número secuencial único';
+                    
+                    // Marcar secuencial como devuelto en BD si tenemos clave de acceso
+                    $this->marcarSecuencialComoDevuelto($result, $mensajeTexto);
+                    break;
+                }
+                
+                // Otros códigos de error que requieren nuevo secuencial
+                if (in_array($identificador, ['43', '44', '45'])) {
+                    $analisis['requiere_nuevo_secuencial'] = true;
+                    $analisis['mensaje'] = $mensajeTexto;
+                    $analisis['codigo_error'] = $identificador;
+                    $analisis['solucion_sugerida'] = 'Generar nuevo número secuencial';
+                    
+                    // Marcar como devuelto
+                    $this->marcarSecuencialComoDevuelto($result, $mensajeTexto);
+                    break;
+                }
+            }
+        }
+        
+        // Si no se encontró información específica en mensajes, verificar estado general
+        if (!$analisis['requiere_nuevo_secuencial'] && isset($result['sriResponse']['estado'])) {
+            $estado = $result['sriResponse']['estado'];
+            if ($estado === 'DEVUELTA') {
+                $analisis['mensaje'] = 'Comprobante devuelto por el SRI';
+                $analisis['solucion_sugerida'] = 'Revisar datos del comprobante';
+                
+                // Marcar como devuelto
+                $this->marcarSecuencialComoDevuelto($result, 'Comprobante devuelto');
+            }
+        }
+        
+        return $analisis;
+    }
+    
+    /**
+     * Marcar secuencial como devuelto en la base de datos
+     */
+    private function marcarSecuencialComoDevuelto($result, $motivo)
+    {
+        try {
+            $claveAcceso = $result['accessKey'] ?? null;
+            if (!$claveAcceso) {
+                return;
+            }
+            
+            $registro = SecuencialSri::where('clave_acceso', $claveAcceso)->first();
+            if ($registro) {
+                $registro->marcarComoDevuelta($motivo);
+                Log::info('Secuencial marcado como devuelto por SRI', [
+                    'clave_acceso' => $claveAcceso,
+                    'motivo' => $motivo
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error marcando secuencial como devuelto', [
+                'error' => $e->getMessage(),
+                'clave_acceso' => $result['accessKey'] ?? 'N/A'
+            ]);
+        }
+    }
+    
+    /**
+     * Reintentar procesamiento con nuevo secuencial
+     */
+    private function reintentarConNuevoSecuencial($factura, $declarante, $pedido, $elementos, $subtotal, $iva, $total, $medioPago, $passwordCertificado)
+    {
+        try {
+            Log::info('=== REINTENTO CON NUEVO SECUENCIAL ===', [
+                'factura_id' => $factura->id
+            ]);
+            
+            // Generar nuevo secuencial único basado en timestamp actual + ID factura
+            $nuevoSecuencial = $this->generarSecuencialUnico($factura, $pedido);
+            
+            Log::info('Nuevo secuencial generado', [
+                'secuencial_anterior' => $pedido->numero_orden ?? 'N/A',
+                'secuencial_nuevo' => $nuevoSecuencial
+            ]);
+            
+            // Actualizar temporalmente el número de orden del pedido
+            $numeroOrdenOriginal = null;
+            if (is_object($pedido) && isset($pedido->numero_orden)) {
+                $numeroOrdenOriginal = $pedido->numero_orden;
+                $pedido->numero_orden = $nuevoSecuencial;
+            }
+            
+            // Preparar datos con nuevo secuencial
+            $invoiceData = $this->prepararDatosFactura($factura, $declarante, $pedido, $elementos, $subtotal, $iva, $total, $medioPago);
+            
+            // Restaurar número de orden original
+            if ($numeroOrdenOriginal !== null && is_object($pedido)) {
+                $pedido->numero_orden = $numeroOrdenOriginal;
+            }
+            
+            // Usar certificado del declarante
+            $certificatePath = $declarante->ruta_certificado;
+            
+            if (!file_exists($certificatePath)) {
+                throw new \Exception('Certificado del declarante no encontrado: ' . $certificatePath);
+            }
+            
+            // Procesar con nuevo secuencial
+            $resultado = $this->xmlSriService->procesarFacturaCompleta(
+                $invoiceData, 
+                $certificatePath, 
+                $passwordCertificado
+            );
+            
+            if (!$resultado['success']) {
+                throw new \Exception('Fallo en reintento: ' . ($resultado['message'] ?? 'Error desconocido'));
+            }
+            
+            $result = $resultado['result'];
+            
+            // Verificar que esta vez sí fue recibida
+            if (isset($result['isReceived']) && !$result['isReceived']) {
+                Log::error('Reintento también fue rechazado por el SRI', [
+                    'factura_id' => $factura->id,
+                    'nuevo_secuencial' => $nuevoSecuencial
+                ]);
+                
+                // No hacer más reintentos para evitar bucle infinito
+                throw new \Exception('SRI rechazó la factura incluso con nuevo secuencial. Revisar configuración.');
+            }
+            
+            // Actualizar factura en base de datos
+            $this->actualizarEstadoFactura($factura, $result);
+            
+            // Guardar XML firmado si está disponible
+            if (isset($result['xmlFileSigned']) && !empty($result['xmlFileSigned'])) {
+                $this->guardarXMLFirmado($factura, $result['xmlFileSigned']);
+                Log::info('XML firmado guardado exitosamente desde reintento', [
+                    'factura_id' => $factura->id,
+                    'xml_length' => strlen($result['xmlFileSigned'])
+                ]);
+            }
+            
+            // Guardar XML autorizado si está disponible
+            if (isset($result['xmlAutorizado']) && !empty($result['xmlAutorizado'])) {
+                $this->guardarXMLAutorizado($factura, $result['xmlAutorizado']);
+                Log::info('XML autorizado guardado exitosamente desde reintento');
+            }
+            
+            Log::info('=== REINTENTO EXITOSO ===', [
+                'clave_acceso' => $result['accessKey'] ?? 'NO_DISPONIBLE',
+                'recibida' => $result['isReceived'] ?? false,
+                'autorizada' => $result['isAuthorized'] ?? false
+            ]);
+            
+            return [
+                'success' => true,
+                'factura' => $factura->fresh(),
+                'clave_acceso' => $result['accessKey'] ?? null,
+                'recibida' => $result['isReceived'] ?? false,
+                'autorizada' => $result['isAuthorized'] ?? false,
+                'xml_firmado' => $result['xmlFileSigned'] ?? null,
+                'message' => 'Factura procesada exitosamente con nuevo secuencial (reintento automático)'
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('=== ERROR EN REINTENTO ===', [
+                'error' => $e->getMessage(),
+                'factura_id' => $factura->id
+            ]);
+            
+            throw new \Exception('Error en reintento con nuevo secuencial: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Generar secuencial único para evitar duplicados
+     */
+    private function generarSecuencialUnico($factura, $declarante, $pedido = null)
+    {
+        try {
+            $ruc = $declarante->ruc ?? '9999999999999';
+            $establecimiento = str_pad($declarante->establecimiento ?? '001', 3, '0', STR_PAD_LEFT);
+            $puntoEmision = str_pad($declarante->punto_emision ?? '001', 3, '0', STR_PAD_LEFT);
+            
+            // Estrategia 1: Intentar usar número de orden del pedido si está disponible y no está en uso
+            if (is_object($pedido) && isset($pedido->numero_orden) && !empty($pedido->numero_orden)) {
+                $numerosExtraidos = preg_replace('/[^0-9]/', '', $pedido->numero_orden);
+                if (!empty($numerosExtraidos) && strlen($numerosExtraidos) <= 9) {
+                    $secuencialPedido = str_pad($numerosExtraidos, 9, '0', STR_PAD_LEFT);
+                    
+                    // Verificar si este secuencial no está en uso
+                    if (!SecuencialSri::secuencialEnUso($secuencialPedido, $ruc, $establecimiento, $puntoEmision)) {
+                        Log::info('Usando secuencial del pedido', [
+                            'secuencial' => $secuencialPedido,
+                            'numero_orden_original' => $pedido->numero_orden
+                        ]);
+                        return $secuencialPedido;
+                    } else {
+                        Log::warning('Secuencial del pedido ya está en uso, generando nuevo', [
+                            'secuencial_ocupado' => $secuencialPedido,
+                            'numero_orden' => $pedido->numero_orden
+                        ]);
+                    }
+                }
+            }
+            
+            // Estrategia 2: Generar próximo secuencial disponible automáticamente
+            $secuencialUnico = SecuencialSri::generarProximoSecuencial($ruc, $establecimiento, $puntoEmision);
+            
+            Log::info('Secuencial único generado automáticamente', [
+                'secuencial' => $secuencialUnico,
+                'metodo' => 'proximo_disponible'
+            ]);
+            
+            return $secuencialUnico;
+            
+        } catch (\Exception $e) {
+            Log::error('Error generando secuencial único', [
+                'error' => $e->getMessage(),
+                'factura_id' => $factura->id
+            ]);
+            
+            // Fallback: usar timestamp + ID factura como antes
+            $timestamp = time();
+            $facturaId = str_pad($factura->id, 3, '0', STR_PAD_LEFT);
+            
+            // Tomar los últimos 6 dígitos del timestamp + 3 dígitos del ID factura = 9 dígitos
+            $secuencialFallback = substr($timestamp, -6) . $facturaId;
+            
+            // Asegurar que tenga exactamente 9 dígitos
+            $secuencialFallback = str_pad($secuencialFallback, 9, '0', STR_PAD_LEFT);
+            
+            Log::warning('Usando secuencial fallback por error', [
+                'secuencial_fallback' => $secuencialFallback,
+                'error_original' => $e->getMessage()
+            ]);
+            
+            return $secuencialFallback;
+        }
+    }
+    
+    /**
+     * Registrar secuencial en base de datos para control de duplicados
+     */
+    private function registrarSecuencialEnBD($factura, $result)
+    {
+        try {
+            // Extraer información necesaria
+            $claveAcceso = $result['accessKey'] ?? null;
+            if (!$claveAcceso) {
+                Log::warning('No se puede registrar secuencial sin clave de acceso', [
+                    'factura_id' => $factura->id
+                ]);
+                return;
+            }
+            
+            // Extraer secuencial de la clave de acceso (posiciones 25-33, 9 dígitos)
+            $secuencial = substr($claveAcceso, 24, 9);
+            
+            // Extraer otros datos de la clave de acceso
+            $ruc = substr($claveAcceso, 10, 13);
+            $establecimiento = substr($claveAcceso, 23, 3);
+            $puntoEmision = substr($claveAcceso, 26, 3);
+            
+            // Verificar si ya está registrado
+            $registroExistente = SecuencialSri::where('clave_acceso', $claveAcceso)->first();
+            if ($registroExistente) {
+                Log::info('Secuencial ya está registrado en BD', [
+                    'clave_acceso' => $claveAcceso,
+                    'registro_id' => $registroExistente->id
+                ]);
+                return;
+            }
+            
+            // Determinar estado inicial
+            $estado = 'USADO';
+            if (isset($result['sriResponse']['estado'])) {
+                switch ($result['sriResponse']['estado']) {
+                    case 'AUTORIZADA':
+                        $estado = 'AUTORIZADA';
+                        break;
+                    case 'DEVUELTA':
+                        $estado = 'DEVUELTA';
+                        break;
+                    case 'RECIBIDA':
+                        $estado = 'USADO';
+                        break;
+                }
+            }
+            
+            // Preparar metadata
+            $metadata = [
+                'fecha_registro' => now()->toISOString(),
+                'usuario_sistema' => 'Sistema Facturación OPTECU',
+                'resultado_sri' => $result['sriResponse'] ?? null
+            ];
+            
+            // Registrar en base de datos
+            $registro = SecuencialSri::registrarSecuencial([
+                'secuencial' => $secuencial,
+                'clave_acceso' => $claveAcceso,
+                'establecimiento' => $establecimiento,
+                'punto_emision' => $puntoEmision,
+                'ruc' => $ruc,
+                'estado' => $estado,
+                'factura_id' => $factura->id,
+                'fecha_emision' => now()->toDateString(),
+                'metadata' => $metadata
+            ]);
+            
+            Log::info('Secuencial registrado exitosamente en BD', [
+                'registro_id' => $registro->id,
+                'secuencial' => $secuencial,
+                'clave_acceso' => $claveAcceso,
+                'estado' => $estado
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error registrando secuencial en BD', [
+                'error' => $e->getMessage(),
+                'factura_id' => $factura->id,
+                'clave_acceso' => $result['accessKey'] ?? 'N/A'
+            ]);
+            // No lanzar excepción para que no afecte el flujo principal
+        }
     }
 }

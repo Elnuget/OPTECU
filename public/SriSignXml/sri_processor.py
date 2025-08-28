@@ -179,6 +179,7 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
         # Enviar al SRI para recepción
         is_received = False
         is_authorized = False
+        sri_response = None
         
         if config.get('URL_RECEPTION'):
             log_message(f"📤 Enviando a recepción SRI...")
@@ -187,12 +188,22 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 
-                is_received = loop.run_until_complete(
+                # Obtener resultado completo del envío al SRI
+                sri_result = loop.run_until_complete(
                     send_xml_to_reception(
                         pathXmlSigned=xml_signed.name,
                         urlToReception=config['URL_RECEPTION']
                     )
                 )
+                
+                # Verificar si sri_result es un booleano (versión antigua) o un dict (versión nueva)
+                if isinstance(sri_result, bool):
+                    is_received = sri_result
+                elif isinstance(sri_result, dict):
+                    is_received = sri_result.get('success', False)
+                    sri_response = sri_result
+                else:
+                    is_received = False
                 
                 if is_received:
                     log_message(f"XML recibido por el SRI")
@@ -216,6 +227,11 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
                                 xml_signed_content = response_auth['xml']
                         else:
                             log_message(f"⏳ XML recibido, esperando autorización")
+                else:
+                    # Log adicional si no fue recibido
+                    if sri_response:
+                        log_message(f"❌ SRI rechazó comprobante: {sri_response.get('estado', 'ERROR')}")
+                        log_message(f"📋 Mensajes SRI: {sri_response.get('mensajes', [])}")
                 
                 loop.close()
                 
@@ -230,7 +246,8 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
                 'accessKey': access_key,
                 'isReceived': is_received,
                 'isAuthorized': is_authorized,
-                'xmlFileSigned': xml_signed_content
+                'xmlFileSigned': xml_signed_content,
+                'sriResponse': sri_response  # Incluir respuesta completa del SRI
             }
         }
         

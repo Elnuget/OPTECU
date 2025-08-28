@@ -472,18 +472,38 @@
                 dataType: "json",
                 success: function(response) {
                     if (response.success) {
+                        // Detectar si hubo reintento automático
+                        let mensajeReintento = '';
+                        let iconoMensaje = 'success';
+                        
+                        if (response.message && response.message.includes('reintento automático')) {
+                            mensajeReintento = `
+                                <div class="alert alert-warning mt-2">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Información:</strong> El SRI rechazó el primer intento por número secuencial duplicado. 
+                                    El sistema generó automáticamente un nuevo secuencial único y la factura fue procesada exitosamente.
+                                </div>
+                            `;
+                            iconoMensaje = 'warning';
+                        }
+                        
                         // Mostrar mensaje de éxito con información del XML
                         Swal.fire({
                             title: '¡Éxito!',
                             html: `
                                 <p>${response.message}</p>
-                                <p><strong>Archivo XML:</strong> ${response.data.xml_path}</p>
-                                <p><strong>Subtotal:</strong> $${response.data.subtotal.toFixed(2)}</p>
-                                <p><strong>IVA:</strong> $${response.data.iva.toFixed(2)}</p>
-                                <p><strong>Total:</strong> $${response.data.total.toFixed(2)}</p>
+                                ${mensajeReintento}
+                                <div class="text-left mt-3">
+                                    <p><strong>Subtotal:</strong> $${response.data.subtotal.toFixed(2)}</p>
+                                    <p><strong>IVA:</strong> $${response.data.iva.toFixed(2)}</p>
+                                    <p><strong>Total:</strong> $${response.data.total.toFixed(2)}</p>
+                                    ${response.data.clave_acceso ? `<p><strong>Clave de Acceso:</strong> ${response.data.clave_acceso}</p>` : ''}
+                                    ${response.data.estado ? `<p><strong>Estado:</strong> <span class="badge badge-info">${response.data.estado}</span></p>` : ''}
+                                </div>
                             `,
-                            icon: 'success',
-                            confirmButtonText: 'Ver Factura'
+                            icon: iconoMensaje,
+                            confirmButtonText: 'Ver Factura',
+                            width: '600px'
                         }).then((result) => {
                             // Redirigir a la vista show de la factura creada
                             if (response.redirect_url) {
@@ -494,11 +514,24 @@
                         });
                     } else {
                         // Mostrar mensaje de error
+                        let mensajeError = response.message;
+                        let detallesError = '';
+                        
+                        // Si hay información específica del SRI
+                        if (response.errors && Array.isArray(response.errors)) {
+                            detallesError = '<br><br><strong>Detalles:</strong><ul>';
+                            response.errors.forEach(function(error) {
+                                detallesError += `<li>${error}</li>`;
+                            });
+                            detallesError += '</ul>';
+                        }
+                        
                         Swal.fire({
-                            title: 'Error',
-                            text: response.message,
+                            title: 'Error al Procesar Factura',
+                            html: mensajeError + detallesError,
                             icon: 'error',
-                            confirmButtonText: 'OK'
+                            confirmButtonText: 'OK',
+                            width: '500px'
                         });
                         
                         // Habilitar botón de guardar

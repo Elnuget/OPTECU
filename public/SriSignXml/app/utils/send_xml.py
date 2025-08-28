@@ -24,13 +24,19 @@ async def send_xml_to_reception(pathXmlSigned: str, urlToReception: str):
         
         print(f"🎯 Resultado recepción SRI: {resultado}")
         
-        return resultado['success']
+        # Devolver resultado completo en lugar de solo el booleano
+        return resultado
         
     except Exception as e:
         error_msg = f'Error to send xml for reception: {str(e)}'
         print(f"❌ {error_msg}")
         logging.error(error_msg)
-        return False
+        return {
+            'success': False,
+            'estado': 'ERROR',
+            'mensajes': [{'mensaje': error_msg, 'tipo': 'ERROR'}],
+            'error': error_msg
+        }
 
 
 async def send_xml_to_authorization(accessKey: str, urlToAuthorization: str):
