@@ -26,17 +26,40 @@ class XmlSriService
             
             // 1. Generar archivo JSON temporal con los datos de la factura
             $tempFile = tempnam(sys_get_temp_dir(), 'invoice_') . '.json';
-            file_put_contents($tempFile, json_encode($invoiceData, JSON_PRETTY_PRINT));
+            $jsonData = json_encode($invoiceData, JSON_PRETTY_PRINT);
+            
+            // Log para depuración
+            Log::info('Datos JSON que se enviarán a Python', [
+                'temp_file' => $tempFile,
+                'json_size' => strlen($jsonData),
+                'json_preview' => substr($jsonData, 0, 500) . '...'
+            ]);
+            
+            file_put_contents($tempFile, $jsonData);
+            
+            // Verificar que el archivo se escribió correctamente
+            if (!file_exists($tempFile) || filesize($tempFile) === 0) {
+                throw new \Exception('Error escribiendo archivo temporal JSON');
+            }
             
             // 2. Crear comando Python para procesar la factura
             $pythonCommand = $this->buildPythonCommand($tempFile, $certificatePath, $password);
             
             Log::info('Ejecutando comando Python', ['command' => $pythonCommand]);
             
-            // 3. Ejecutar el comando Python
+            // 3. Ejecutar el comando Python capturando STDERR también
             $output = [];
             $returnCode = 0;
-            exec($pythonCommand, $output, $returnCode);
+            
+            // Agregar 2>&1 para capturar tanto stdout como stderr
+            $commandWithError = $pythonCommand . ' 2>&1';
+            exec($commandWithError, $output, $returnCode);
+            
+            Log::info('Resultado ejecución Python', [
+                'return_code' => $returnCode,
+                'output_lines' => count($output),
+                'output' => $output
+            ]);
             
             // 4. Limpiar archivo temporal
             @unlink($tempFile);
@@ -84,8 +107,31 @@ class XmlSriService
     private function processSuccessResult($output)
     {
         try {
+            Log::info('Procesando resultado Python', ['output' => $output]);
+            
             $jsonOutput = implode("\n", $output);
+            
+            // Verificar si hay salida JSON válida
+            if (empty($jsonOutput)) {
+                Log::warning('Salida Python vacía');
+                return [
+                    'success' => false,
+                    'message' => 'Respuesta vacía del script Python'
+                ];
+            }
+            
             $result = json_decode($jsonOutput, true);
+            
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('Error parseando JSON Python', [
+                    'json_error' => json_last_error_msg(),
+                    'raw_output' => $jsonOutput
+                ]);
+                return [
+                    'success' => false,
+                    'message' => 'Error parseando respuesta JSON: ' . json_last_error_msg()
+                ];
+            }
             
             if ($result && isset($result['success']) && $result['success']) {
                 Log::info('Procesamiento exitoso', $result);
@@ -96,7 +142,8 @@ class XmlSriService
             } else {
                 return [
                     'success' => false,
-                    'message' => $result['message'] ?? 'Error desconocido en el procesamiento'
+                    'message' => $result['message'] ?? 'Error desconocido en el procesamiento',
+                    'error' => $result['error'] ?? null
                 ];
             }
         } catch (\Exception $e) {

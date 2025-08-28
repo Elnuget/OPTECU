@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Procesador local SRI para OPTECU
 Este script maneja el procesamiento completo de facturas SRI sin API HTTP
@@ -12,6 +13,12 @@ import random
 import asyncio
 import tempfile
 from pathlib import Path
+
+# Configurar encoding para Windows
+if sys.platform.startswith('win'):
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
 
 # Agregar el directorio app al path para importaciones
 sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
@@ -32,7 +39,7 @@ except ImportError as e:
 def load_config():
     """
     Cargar configuración para ambiente de PRUEBAS SRI
-    ⚠️ CONFIGURACIÓN HARDCODEADA PARA SEGURIDAD Y AMBIENTE DE PRUEBAS
+    CONFIGURACIÓN HARDCODEADA PARA SEGURIDAD Y AMBIENTE DE PRUEBAS
     """
     # Configuración fija para ambiente de pruebas - NO cambiar sin autorización
     config = {
@@ -42,16 +49,16 @@ def load_config():
         'TIPO_EMISION': '1'  # 1 = Normal, 2 = Contingencia
     }
     
-    # ⚠️ VALIDACIÓN CRÍTICA: Asegurar ambiente de pruebas
+    # VALIDACIÓN CRÍTICA: Asegurar ambiente de pruebas
     validar_ambiente_pruebas(config)
     
-    print("✅ CONFIGURACIÓN: Ambiente de PRUEBAS SRI cargado (sin .env)")
+    print("CONFIGURACIÓN: Ambiente de PRUEBAS SRI cargado (sin .env)")
     return config
 
 def validar_ambiente_pruebas(config):
     """
     Validación de seguridad: asegurar que estemos en ambiente de pruebas
-    ⚠️ CRÍTICO: Previene envío accidental a producción SRI
+    CRÍTICO: Previene envío accidental a producción SRI
     """
     urls_to_check = [
         config.get('URL_RECEPTION', ''),
@@ -63,15 +70,15 @@ def validar_ambiente_pruebas(config):
             # Verificar que sea ambiente de pruebas (celcer)
             if 'celcer.sri.gob.ec' not in url:
                 if 'cel.sri.gob.ec' in url:
-                    raise Exception('⚠️ PELIGRO: Detectada URL de PRODUCCIÓN. Sistema configurado solo para pruebas')
+                    raise Exception('PELIGRO: Detectada URL de PRODUCCIÓN. Sistema configurado solo para pruebas')
                 else:
-                    raise Exception('⚠️ PELIGRO: URL no reconocida. Sistema configurado solo para pruebas')
+                    raise Exception('PELIGRO: URL no reconocida. Sistema configurado solo para pruebas')
     
     # Verificar ambiente
     if config.get('AMBIENTE') != '1':
-        raise Exception('⚠️ PELIGRO: Ambiente no configurado para pruebas')
+        raise Exception('PELIGRO: Ambiente no configurado para pruebas')
     
-    print("✅ VALIDACIÓN: Confirmado ambiente de PRUEBAS SRI (celcer)")
+    print("VALIDACIÓN: Confirmado ambiente de PRUEBAS SRI (celcer)")
     return True
 
 def procesar_factura_completa(invoice_data, certificate_path, password):
@@ -107,7 +114,7 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
             randomNumber=random_number
         )
         
-        print(f"🔑 Clave de acceso generada: {access_key}")
+        print(f"Clave de acceso generada: {access_key}")
         
         # Generar XML
         xml_data = createXml(info=invoice, accessKeyInvoice=access_key)
@@ -145,7 +152,7 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
                 'result': None
             }
         
-        print(f"✅ XML firmado exitosamente")
+        print(f"XML firmado exitosamente")
         
         # Leer XML firmado
         xml_signed_content = None
@@ -163,7 +170,7 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
                     xml_bytes = f.read()
                 xml_signed_content = xml_bytes.decode('utf-8', errors='ignore')
         except Exception as e:
-            print(f"❌ Error leyendo XML firmado: {e}")
+            print(f"Error leyendo XML firmado: {e}")
         
         # Enviar al SRI para recepción
         is_received = False
@@ -184,7 +191,7 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
                 )
                 
                 if is_received:
-                    print(f"✅ XML recibido por el SRI")
+                    print(f"XML recibido por el SRI")
                     
                     # Enviar para autorización
                     if config.get('URL_AUTHORIZATION'):
@@ -199,7 +206,7 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
                         is_authorized = response_auth.get('isValid', False)
                         
                         if is_authorized:
-                            print(f"✅ XML autorizado por el SRI")
+                            print(f"XML autorizado por el SRI")
                             # Actualizar XML con la versión autorizada si está disponible
                             if response_auth.get('xml'):
                                 xml_signed_content = response_auth['xml']
@@ -209,7 +216,7 @@ def procesar_factura_completa(invoice_data, certificate_path, password):
                 loop.close()
                 
             except Exception as e:
-                print(f"❌ Error en comunicación con SRI: {e}")
+                print(f"Error en comunicación con SRI: {e}")
                 # Continuar con el XML firmado aunque no se pueda enviar al SRI
         
         return {
