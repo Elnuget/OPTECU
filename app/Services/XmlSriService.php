@@ -107,8 +107,9 @@ class XmlSriService
     private function processSuccessResult($output)
     {
         try {
-            Log::info('Procesando resultado Python', ['output' => $output]);
+            Log::info('Procesando resultado Python', ['output_lines' => count($output)]);
             
+            // Unir todas las líneas de salida
             $jsonOutput = implode("\n", $output);
             
             // Verificar si hay salida JSON válida
@@ -119,117 +120,101 @@ class XmlSriService
                     'message' => 'Respuesta vacía del script Python'
                 ];
             }
-            
-            // Buscar el inicio del JSON principal que contiene "success": true
-            $cleanJsonOutput = '';
-            $jsonStartFound = false;
-            $braceLevel = 0;
-            $jsonLines = [];
-            
-            foreach ($output as $line) {
-                // Detectar el inicio del JSON principal
-                if (!$jsonStartFound && strpos($line, '"success": true') !== false) {
-                    $jsonStartFound = true;
-                    // Buscar hacia atrás para encontrar la línea que empieza con {
-                    for ($i = count($jsonLines); $i >= 0; $i--) {
-                        if ($i < count($jsonLines) && trim($jsonLines[$i]) === '{') {
-                            $jsonLines = array_slice($jsonLines, $i);
-                            break;
-                        }
-                    }
-                    if (empty($jsonLines) || trim($jsonLines[0]) !== '{') {
-                        $jsonLines = ['{'];
-                    }
-                }
-                
-                if ($jsonStartFound) {
-                    $jsonLines[] = $line;
-                    
-                    // Contar llaves para detectar el final del JSON
-                    $braceLevel += substr_count($line, '{') - substr_count($line, '}');
-                    
-                    if ($braceLevel <= 0 && strpos($line, '}') !== false) {
-                        break;
-                    }
-                } else {
-                    $jsonLines[] = $line;
-                }
-            }
-            
-            $cleanJsonOutput = implode("\n", $jsonLines);
-            
-            Log::info('JSON procesado para parsing', [
-                'json_lines_count' => count($jsonLines),
-                'json_preview' => substr($cleanJsonOutput, 0, 500)
-            ]);
-            
-            $result = json_decode($cleanJsonOutput, true);
+
+            // Intentar parsear el JSON directamente
+            $result = json_decode($jsonOutput, true);
             
             if (json_last_error() !== JSON_ERROR_NONE) {
-                // Si falla el parsing, intentar reconstruir desde los datos que sabemos que están ahí
-                Log::warning('JSON parsing falló, intentando reconstrucción desde datos detectados');
+                Log::warning('Error parseando JSON completo, intentando limpieza', [
+                    'json_error' => json_last_error_msg(),
+                    'first_500_chars' => substr($jsonOutput, 0, 500)
+                ]);
                 
-                // Buscar datos específicos en el output
-                $accessKey = '';
-                $isReceived = false;
-                $isAuthorized = false;
-                $xmlSigned = '';
+                // Buscar el JSON válido en el output
+                $cleanJsonOutput = '';
+                $jsonStartFound = false;
+                $braceLevel = 0;
+                $jsonLines = [];
                 
                 foreach ($output as $line) {
-                    if (strpos($line, 'accessKey') !== false && preg_match('/"accessKey":\s*"([^"]+)"/', $line, $matches)) {
-                        $accessKey = $matches[1];
-                    }
-                    if (strpos($line, 'isReceived') !== false && strpos($line, 'true') !== false) {
-                        $isReceived = true;
-                    }
-                    if (strpos($line, 'isAuthorized') !== false && strpos($line, 'true') !== false) {
-                        $isAuthorized = true;
-                    }
-                    if (strpos($line, 'xmlFileSigned') !== false) {
-                        // Extraer XML completo que puede estar en múltiples líneas
-                        if (preg_match('/"xmlFileSigned":\s*"([^"]*(?:\\.[^"]*)*)"/', implode(' ', $output), $matches)) {
-                            $xmlSigned = str_replace('\\"', '"', $matches[1]);
-                            $xmlSigned = str_replace('\\n', "\n", $xmlSigned);
+                    // Detectar el inicio del JSON principal - puede ser success true o false
+                    if (!$jsonStartFound && (strpos($line, '"success": true') !== false || strpos($line, '"success": false') !== false)) {
+                        $jsonStartFound = true;
+                        // Buscar hacia atrás para encontrar la línea que empieza con {
+                        for ($i = count($jsonLines); $i >= 0; $i--) {
+                            if ($i < count($jsonLines) && trim($jsonLines[$i]) === '{') {
+                                $jsonLines = array_slice($jsonLines, $i);
+                                break;
+                            }
                         }
+                        if (empty($jsonLines) || trim($jsonLines[0]) !== '{') {
+                            $jsonLines = ['{'];
+                        }
+                    }
+                    
+                    if ($jsonStartFound) {
+                        $jsonLines[] = $line;
+                        
+                        // Contar llaves para detectar el final del JSON
+                        $braceLevel += substr_count($line, '{') - substr_count($line, '}');
+                        
+                        if ($braceLevel <= 0 && strpos($line, '}') !== false) {
+                            break;
+                        }
+                    } else {
+                        $jsonLines[] = $line;
                     }
                 }
                 
-                // Crear respuesta reconstruida
-                if (!empty($accessKey)) {
-                    Log::info('JSON reconstruido exitosamente con datos extraídos', [
-                        'accessKey' => $accessKey,
-                        'isReceived' => $isReceived,
-                        'isAuthorized' => $isAuthorized
+                $cleanJsonOutput = implode("\n", $jsonLines);
+                
+                Log::info('JSON procesado para parsing', [
+                    'json_lines_count' => count($jsonLines),
+                    'json_preview' => substr($cleanJsonOutput, 0, 500)
+                ]);
+                
+                $result = json_decode($cleanJsonOutput, true);
+                
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    Log::error('Error parseando JSON Python', [
+                        'json_error' => json_last_error_msg(),
+                        'first_1000_chars' => substr($cleanJsonOutput, 0, 1000)
                     ]);
                     
                     return [
+                        'success' => false,
+                        'message' => 'Error parseando respuesta JSON: ' . json_last_error_msg()
+                    ];
+                }
+            }
+
+            if ($result && isset($result['success'])) {
+                if ($result['success']) {
+                    Log::info('Procesamiento exitoso', ['tiene_datos' => isset($result['data'])]);
+                    return [
                         'success' => true,
+                        'result' => $result
+                    ];
+                } else {
+                    // success: false pero respuesta válida del SRI (ej: NO AUTORIZADO)
+                    Log::info('Respuesta válida del SRI pero no autorizada', [
+                        'estado' => $result['estado'] ?? 'desconocido',
+                        'tiene_mensajes' => isset($result['mensajes'])
+                    ]);
+                    
+                    return [
+                        'success' => true, // La comunicación fue exitosa
                         'result' => [
-                            'accessKey' => $accessKey,
-                            'isReceived' => $isReceived,
-                            'isAuthorized' => $isAuthorized,
-                            'xmlFileSigned' => $xmlSigned
+                            'isAuthorized' => false,
+                            'estado' => $result['estado'] ?? 'NO_AUTORIZADO',
+                            'mensajes' => $result['mensajes'] ?? [],
+                            'numeroAutorizacion' => $result['numero_autorizacion'] ?? null,
+                            'fechaAutorizacion' => $result['fecha_autorizacion'] ?? null,
+                            'xmlAutorizado' => $result['comprobante'] ?? null,
+                            'respuestaCompleta' => $result['respuesta_completa'] ?? null
                         ]
                     ];
                 }
-                
-                Log::error('Error parseando JSON Python', [
-                    'json_error' => json_last_error_msg(),
-                    'raw_output' => $jsonOutput,
-                    'extracted_json' => $cleanJsonOutput
-                ]);
-                return [
-                    'success' => false,
-                    'message' => 'Error parseando respuesta JSON: ' . json_last_error_msg()
-                ];
-            }
-            
-            if ($result && isset($result['success']) && $result['success']) {
-                Log::info('Procesamiento exitoso', $result);
-                return [
-                    'success' => true,
-                    'result' => $result
-                ];
             } else {
                 return [
                     'success' => false,
@@ -238,10 +223,13 @@ class XmlSriService
                 ];
             }
         } catch (\Exception $e) {
-            Log::error('Error parseando resultado Python', ['output' => $output]);
+            Log::error('Error procesando resultado Python', [
+                'error' => $e->getMessage(),
+                'output_lines' => count($output)
+            ]);
             return [
                 'success' => false,
-                'message' => 'Error parseando respuesta: ' . $e->getMessage()
+                'message' => 'Error procesando respuesta: ' . $e->getMessage()
             ];
         }
     }
