@@ -335,6 +335,10 @@ Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guard
     Route::get('facturas/{id}', [App\Http\Controllers\FacturaController::class, 'show'])->name('facturas.show');
     Route::put('facturas/{id}', [App\Http\Controllers\FacturaController::class, 'update'])->name('facturas.update');
     Route::delete('facturas/{id}', [App\Http\Controllers\FacturaController::class, 'destroy'])->name('facturas.destroy');
+    
+    // Nueva ruta para procesamiento con Python API
+    Route::post('facturas/{id}/procesar-python', [App\Http\Controllers\FacturaController::class, 'procesarConPython'])->name('facturas.procesar-python');
+    
     Route::post('facturas/{id}/firmar-y-enviar', [App\Http\Controllers\FacturaController::class, 'firmarYEnviar'])->name('facturas.firmar-y-enviar');
     Route::post('facturas/{id}/autorizar', [App\Http\Controllers\FacturaController::class, 'autorizarComprobante'])->name('facturas.autorizar');
     

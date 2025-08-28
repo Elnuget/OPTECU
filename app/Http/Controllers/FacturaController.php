@@ -12,21 +12,25 @@ use App\Services\FirmaElectronicaService;
 use App\Services\Factura\FacturaListService;
 use App\Services\Factura\FacturaCalculationService;
 use App\Services\Factura\FirmaDigitalService;
+use App\Services\SriPythonService;
 
 class FacturaController extends Controller
 {
     protected $facturaListService;
     protected $facturaCalculationService;
     protected $firmaDigitalService;
+    protected $sriPythonService;
 
     public function __construct(
         FacturaListService $facturaListService, 
         FacturaCalculationService $facturaCalculationService,
-        FirmaDigitalService $firmaDigitalService
+        FirmaDigitalService $firmaDigitalService,
+        SriPythonService $sriPythonService
     ) {
         $this->facturaListService = $facturaListService;
         $this->facturaCalculationService = $facturaCalculationService;
         $this->firmaDigitalService = $firmaDigitalService;
+        $this->sriPythonService = $sriPythonService;
     }
     /**
      * Display a listing of the resource.
@@ -99,6 +103,7 @@ class FacturaController extends Controller
                 'medio_pago_xml' => 'required|numeric',
                 'pedido_id' => 'nullable|exists:pedidos,id',
                 'correo_cliente' => 'nullable|email|max:255',
+                'password_certificado' => 'required|string|min:1', // Nueva validación para contraseña
                 // Campos de elementos a facturar
                 'incluir_examen' => 'nullable',
                 'incluir_armazon' => 'nullable',
@@ -252,35 +257,87 @@ class FacturaController extends Controller
                 ], 422);
             }
             
-            // Generar XML
-            $xmlPath = $this->generarXMLFactura($pedido, $declarante, $elementos, $subtotal, $iva, $total, $medioPago);
+            // Verificar que el declarante tenga certificado P12
+            if (!$declarante->firma || !file_exists(public_path('uploads/firmas/' . $declarante->firma))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El declarante no tiene un certificado P12 válido configurado.'
+                ], 422);
+            }
             
-            // Crear la factura
+            // Crear la factura primero con estado temporal
             $factura = new Factura();
             $factura->declarante_id = $request->declarante_id;
             $factura->pedido_id = $request->pedido_id ?: null;
-            $factura->xml = $xmlPath;
+            $factura->xml = 'temp'; // Se actualizará después del procesamiento
             $factura->monto = round($subtotal, 2);
             $factura->iva = round($iva, 2);
             $factura->tipo = 'comprobante';
-            $factura->estado = 'CREADA'; // Estado inicial
+            $factura->estado = 'PROCESANDO'; // Estado temporal mientras se procesa
             
             if (!$factura->save()) {
                 throw new \Exception('No se pudo guardar la factura en la base de datos');
             }
             
-            return response()->json([
-                'success' => true,
-                'message' => 'Factura creada correctamente',
-                'data' => [
-                    'factura_id' => $factura->id,
-                    'xml_path' => $xmlPath,
-                    'subtotal' => $subtotal,
-                    'iva' => $iva,
-                    'total' => $total
-                ],
-                'redirect_url' => route('facturas.show', $factura->id)
-            ]);
+            // Procesar con API Python directamente
+            try {
+                $resultado = $this->sriPythonService->procesarFacturaCompleta(
+                    $factura,
+                    $declarante,
+                    $elementos,
+                    $medioPago,
+                    $pedido,
+                    $request->password_certificado
+                );
+                
+                if ($resultado['success']) {
+                    // La factura ya fue actualizada por el servicio
+                    $factura->refresh(); // Recargar desde la base de datos
+                    
+                    return response()->json([
+                        'success' => true,
+                        'message' => $resultado['message'] ?? 'Factura procesada exitosamente con Python API',
+                        'data' => [
+                            'factura_id' => $factura->id,
+                            'estado' => $factura->estado,
+                            'estado_sri' => $factura->estado_sri,
+                            'clave_acceso' => $factura->clave_acceso,
+                            'numero_autorizacion' => $factura->numero_autorizacion,
+                            'fecha_autorizacion' => $factura->fecha_autorizacion?->format('Y-m-d H:i:s'),
+                            'subtotal' => $subtotal,
+                            'iva' => $iva,
+                            'total' => $total
+                        ],
+                        'redirect_url' => route('facturas.show', $factura->id)
+                    ]);
+                } else {
+                    // Error en el procesamiento - actualizar estado de la factura
+                    $factura->estado = 'ERROR';
+                    if (isset($resultado['error'])) {
+                        $factura->mensajes_sri = is_array($resultado['error']) 
+                            ? json_encode($resultado['error'])
+                            : $resultado['error'];
+                    }
+                    $factura->save();
+                    
+                    return response()->json([
+                        'success' => false,
+                        'message' => $resultado['message'] ?? 'Error al procesar la factura con Python API',
+                        'error' => $resultado['error'] ?? 'Error desconocido'
+                    ], 500);
+                }
+            } catch (\Exception $pythonError) {
+                // Error en el procesamiento con Python - actualizar estado de la factura
+                $factura->estado = 'ERROR';
+                $factura->save();
+                
+                \Log::error('Error en procesamiento Python: ' . $pythonError->getMessage());
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al procesar con Python API: ' . $pythonError->getMessage()
+                ], 500);
+            }
         } catch (\Exception $e) {
             \Log::error('Error en FacturaController::store: ' . $e->getMessage());
             \Log::error('Stack trace: ' . $e->getTraceAsString());
@@ -293,7 +350,244 @@ class FacturaController extends Controller
     }
     
     /**
+     * Procesar factura completa: generar, firmar y enviar usando API Python
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function procesarConPython(Request $request)
+    {
+        try {
+            \Log::info('=== INICIO PROCESAMIENTO CON API PYTHON ===', $request->all());
+            
+            $validator = Validator::make($request->all(), [
+                'declarante_id' => 'required|exists:declarante,id',
+                'medio_pago_xml' => 'required|numeric',
+                'pedido_id' => 'nullable|exists:pedidos,id',
+                'password_certificado' => 'required|string|min:1',
+                'correo_cliente' => 'nullable|email|max:255',
+                // Campos de elementos a facturar
+                'incluir_examen' => 'nullable',
+                'incluir_armazon' => 'nullable',
+                'incluir_luna' => 'nullable',
+                'incluir_compra_rapida' => 'nullable',
+                'precio_examen' => 'nullable|numeric|min:0',
+                'precio_armazon' => 'nullable|numeric|min:0',
+                'precio_luna' => 'nullable|numeric|min:0',
+                'precio_compra_rapida' => 'nullable|numeric|min:0',
+            ]);
+            
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+            
+            // Validar que al menos un elemento esté seleccionado
+            if (!$request->has('incluir_examen') && !$request->has('incluir_armazon') && 
+                !$request->has('incluir_luna') && !$request->has('incluir_compra_rapida')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Debe seleccionar al menos un elemento para facturar.'
+                ], 422);
+            }
+            
+            // Obtener datos necesarios
+            $declarante = Declarante::findOrFail($request->declarante_id);
+            $medioPago = \App\Models\mediosdepago::findOrFail($request->medio_pago_xml);
+            
+            // Verificar que el declarante tenga certificado P12
+            if (!$declarante->firma || !file_exists(public_path('uploads/firmas/' . $declarante->firma))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El declarante no tiene un certificado P12 válido configurado.'
+                ], 422);
+            }
+            
+            // Obtener pedido si existe
+            $pedido = null;
+            if ($request->pedido_id) {
+                $pedido = Pedido::find($request->pedido_id);
+                
+                // Actualizar correo del pedido si se proporcionó uno nuevo
+                if ($pedido && $request->filled('correo_cliente')) {
+                    $pedido->correo_electronico = $request->correo_cliente;
+                    $pedido->save();
+                }
+            }
+            
+            // Si no hay pedido, crear datos por defecto
+            if (!$pedido) {
+                $pedido = (object) [
+                    'id' => 0,
+                    'numero_orden' => null,
+                    'cliente' => 'CLIENTE GENERICO',
+                    'cedula' => '9999999999',
+                    'celular' => null,
+                    'correo_electronico' => $request->correo_cliente,
+                    'examen_visual' => null,
+                    'motivo_compra' => null
+                ];
+            }
+            
+            // Preparar elementos para facturación (misma lógica que store original)
+            $subtotal = 0;
+            $iva = 0;
+            $elementos = [];
+            
+            // Examen Visual - 0% IVA (exento)
+            if ($request->has('incluir_examen') && $request->precio_examen > 0) {
+                $precioExamen = floatval($request->precio_examen);
+                $subtotal += $precioExamen;
+                $elementos[] = [
+                    'codigo' => 'EXA001',
+                    'descripcion' => (is_object($pedido) && property_exists($pedido, 'examen_visual') && $pedido->examen_visual) ? $pedido->examen_visual : 'Examen Visual',
+                    'cantidad' => 1,
+                    'precio_unitario' => $precioExamen,
+                    'subtotal' => $precioExamen,
+                    'codigo_porcentaje' => '0', // 0% IVA
+                    'tarifa' => '0',
+                    'valor_impuesto' => 0
+                ];
+            }
+            
+            // Armazón/Accesorios - 15% IVA
+            if ($request->has('incluir_armazon') && $request->precio_armazon > 0) {
+                $precioArmazon = floatval($request->precio_armazon);
+                $ivaArmazon = $precioArmazon * 0.15;
+                $subtotal += $precioArmazon;
+                $iva += $ivaArmazon;
+                $elementos[] = [
+                    'codigo' => 'ARM001',
+                    'descripcion' => 'Armazon/Accesorios',
+                    'cantidad' => 1,
+                    'precio_unitario' => $precioArmazon,
+                    'subtotal' => $precioArmazon,
+                    'codigo_porcentaje' => '6', // 15% IVA
+                    'tarifa' => '15',
+                    'valor_impuesto' => $ivaArmazon
+                ];
+            }
+            
+            // Luna - 15% IVA
+            if ($request->has('incluir_luna') && $request->precio_luna > 0) {
+                $precioLuna = floatval($request->precio_luna);
+                $ivaLuna = $precioLuna * 0.15;
+                $subtotal += $precioLuna;
+                $iva += $ivaLuna;
+                $elementos[] = [
+                    'codigo' => 'LUN001',
+                    'descripcion' => 'Cristaleria',
+                    'cantidad' => 1,
+                    'precio_unitario' => $precioLuna,
+                    'subtotal' => $precioLuna,
+                    'codigo_porcentaje' => '6', // 15% IVA
+                    'tarifa' => '15',
+                    'valor_impuesto' => $ivaLuna
+                ];
+            }
+            
+            // Compra Rápida - 0% IVA (exento)
+            if ($request->has('incluir_compra_rapida') && $request->precio_compra_rapida >= 0) {
+                $precioCompraRapida = floatval($request->precio_compra_rapida);
+                $subtotal += $precioCompraRapida;
+                $elementos[] = [
+                    'codigo' => 'COM001',
+                    'descripcion' => (is_object($pedido) && property_exists($pedido, 'motivo_compra') && $pedido->motivo_compra) ? $pedido->motivo_compra : 'Servicio de compra rapida',
+                    'cantidad' => 1,
+                    'precio_unitario' => $precioCompraRapida,
+                    'subtotal' => $precioCompraRapida,
+                    'codigo_porcentaje' => '0', // 0% IVA
+                    'tarifa' => '0',
+                    'valor_impuesto' => 0
+                ];
+            }
+            
+            $total = $subtotal + $iva;
+            
+            // Validar que se calcularon elementos
+            if (empty($elementos)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se pudo calcular ningún elemento para la factura. Verifique los precios ingresados.'
+                ], 422);
+            }
+            
+            // Crear la factura inicialmente
+            $factura = new Factura();
+            $factura->declarante_id = $request->declarante_id;
+            $factura->pedido_id = $request->pedido_id ?: null;
+            $factura->monto = round($subtotal, 2);
+            $factura->iva = round($iva, 2);
+            $factura->tipo = 'comprobante';
+            $factura->estado = 'PROCESANDO'; // Estado temporal
+            
+            if (!$factura->save()) {
+                throw new \Exception('No se pudo guardar la factura en la base de datos');
+            }
+            
+            // Procesar con API Python
+            $resultado = $this->sriPythonService->procesarFacturaCompleta(
+                $factura,
+                $declarante,
+                $pedido,
+                $elementos,
+                $subtotal,
+                $iva,
+                $total,
+                $medioPago,
+                $request->password_certificado
+            );
+            
+            if (!$resultado['success']) {
+                // Si falla, actualizar estado de la factura
+                $factura->estado = 'ERROR';
+                $factura->save();
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => $resultado['message'],
+                    'errors' => $resultado['errors'] ?? []
+                ], 500);
+            }
+            
+            \Log::info('=== FIN PROCESAMIENTO EXITOSO CON API PYTHON ===', [
+                'factura_id' => $factura->id,
+                'estado_final' => $resultado['factura']->estado
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => $resultado['message'],
+                'data' => [
+                    'factura_id' => $factura->id,
+                    'clave_acceso' => $resultado['clave_acceso'],
+                    'recibida' => $resultado['recibida'],
+                    'autorizada' => $resultado['autorizada'],
+                    'subtotal' => $subtotal,
+                    'iva' => $iva,
+                    'total' => $total
+                ],
+                'redirect_url' => route('facturas.show', $factura->id)
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('=== ERROR EN PROCESAMIENTO CON API PYTHON ===', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al procesar factura: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
      * Generar XML de la factura según formato Ecuador
+```
      */
     private function generarXMLFactura($pedido, $declarante, $elementos, $subtotal, $iva, $total, $medioPago)
     {

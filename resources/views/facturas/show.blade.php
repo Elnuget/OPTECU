@@ -196,6 +196,23 @@
                 <!-- Botón de reintentar envío removido por solicitud del usuario -->
             @endif
             @endif
+            
+            {{-- Botón de procesamiento según el estado --}}
+            @if(in_array($factura->estado, ['CREADA', 'FIRMADA']))
+                <button type="button" class="btn btn-sm btn-warning" onclick="abrirModalPythonProcesar()">
+                    <i class="fas fa-cogs"></i> Procesar con Python
+                </button>
+            @elseif($factura->estado === 'RECIBIDA')
+                <button type="button" class="btn btn-sm btn-info" onclick="procesarAutorizacionDirecta({{ $factura->id }})">
+                    <i class="fas fa-check"></i> Autorizar
+                </button>
+                <div id="estado_autorizacion_proceso" style="display: none;" class="mt-2">
+                    <div class="alert alert-info">
+                        <i class="fas fa-spinner fa-spin"></i> Solicitando autorización al SRI...
+                    </div>
+                </div>
+            @endif
+            
             <a href="{{ route('facturas.index') }}" class="btn btn-sm btn-secondary">
                 <i class="fas fa-arrow-left"></i> Volver
             </a>
@@ -271,6 +288,73 @@
                     <i class="fas fa-check"></i> Solicitar Autorización
                 </button>
                 <button type="button" class="btn btn-success" id="btn_cerrar_autorizacion_exitoso" style="display: none;" data-dismiss="modal">
+                    <i class="fas fa-check"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para procesar con Python API -->
+<div class="modal fade" id="modalPythonProcesar" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cogs"></i> Procesar con Python API
+                </h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="password_certificado">Contraseña del Certificado P12:</label>
+                    <input type="password" class="form-control" id="password_certificado" 
+                           placeholder="Ingrese la contraseña del certificado" required>
+                    <small class="form-text text-muted">
+                        Esta contraseña será utilizada para firmar digitalmente el XML.
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="confirmar_python_proceso" required>
+                        <label class="custom-control-label" for="confirmar_python_proceso">
+                            Confirmo que deseo generar, firmar y enviar este comprobante al SRI usando Python API
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Área de progreso -->
+                <div id="progreso_python" style="display: none;">
+                    <div class="text-center mb-3">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" 
+                                 role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <div class="progress-text mt-2"><strong>Procesando...</strong></div>
+                    </div>
+                    <div class="text-muted text-center">
+                        <small id="estado_python">Iniciando proceso...</small>
+                    </div>
+                </div>
+
+                <!-- Área de resultado -->
+                <div id="resultado_python" style="display: none;">
+                    <div id="alert_resultado_python" class="alert">
+                        <!-- El contenido se llenará dinámicamente -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-warning" id="btn_procesar_python" onclick="procesarConPython()">
+                    <i class="fas fa-cogs"></i> Procesar
+                </button>
+                <button type="button" class="btn btn-success" id="btn_cerrar_python_exitoso" style="display: none;" data-dismiss="modal">
                     <i class="fas fa-check"></i> Cerrar
                 </button>
             </div>
@@ -905,5 +989,130 @@
     // Manejar eventos del modal de autorización
     $('#modalAutorizacion').on('hidden.bs.modal', function () {
     });
+    
+    // NUEVAS FUNCIONES PARA PROCESAMIENTO CON PYTHON API
+    function abrirModalPythonProcesar() {
+        // Limpiar el modal
+        document.getElementById('password_certificado').value = '';
+        document.getElementById('confirmar_python_proceso').checked = false;
+        document.getElementById('progreso_python').style.display = 'none';
+        document.getElementById('resultado_python').style.display = 'none';
+        document.getElementById('btn_procesar_python').style.display = 'inline-block';
+        document.getElementById('btn_cerrar_python_exitoso').style.display = 'none';
+        
+        // Mostrar el modal
+        $('#modalPythonProcesar').modal('show');
+    }
+    
+    function procesarConPython() {
+        const password = document.getElementById('password_certificado').value;
+        const confirmado = document.getElementById('confirmar_python_proceso').checked;
+        
+        if (!password) {
+            alert('Por favor ingrese la contraseña del certificado');
+            return;
+        }
+        
+        if (!confirmado) {
+            alert('Por favor confirme el procesamiento');
+            return;
+        }
+        
+        // Mostrar progreso y ocultar botón
+        document.getElementById('progreso_python').style.display = 'block';
+        document.getElementById('btn_procesar_python').style.display = 'none';
+        document.getElementById('resultado_python').style.display = 'none';
+        
+        // Actualizar progreso
+        actualizarProgresoP(20, 'Conectando con Python API...');
+        
+        // Realizar petición AJAX
+        fetch(`{{ route('facturas.procesar-python', $factura->id) }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                password: password
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            mostrarResultadoPython(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarResultadoPython({
+                success: false,
+                message: 'Error de conexión con el servidor',
+                error: error.message
+            });
+        });
+    }
+    
+    function actualizarProgresoP(porcentaje, estado) {
+        const progressBar = document.querySelector('#progreso_python .progress-bar');
+        const estadoText = document.getElementById('estado_python');
+        
+        progressBar.style.width = porcentaje + '%';
+        estadoText.textContent = estado;
+    }
+    
+    function mostrarResultadoPython(respuesta) {
+        // Ocultar progreso y mostrar resultado
+        document.getElementById('progreso_python').style.display = 'none';
+        document.getElementById('resultado_python').style.display = 'block';
+        
+        const alertElement = document.getElementById('alert_resultado_python');
+        
+        if (respuesta.success) {
+            alertElement.className = 'alert alert-success';
+            alertElement.innerHTML = `
+                <h6><i class="fas fa-check-circle"></i> Procesamiento Exitoso</h6>
+                <p>${respuesta.message}</p>
+            `;
+            
+            if (respuesta.data) {
+                let detalles = '<hr><small><strong>Detalles del procesamiento:</strong><br>';
+                if (respuesta.data.clave_acceso) {
+                    detalles += `<strong>Clave de Acceso:</strong> ${respuesta.data.clave_acceso}<br>`;
+                }
+                if (respuesta.data.estado_sri) {
+                    detalles += `<strong>Estado SRI:</strong> ${respuesta.data.estado_sri}<br>`;
+                }
+                if (respuesta.data.numero_autorizacion) {
+                    detalles += `<strong>Número de Autorización:</strong> ${respuesta.data.numero_autorizacion}<br>`;
+                }
+                if (respuesta.data.fecha_autorizacion) {
+                    detalles += `<strong>Fecha de Autorización:</strong> ${respuesta.data.fecha_autorizacion}<br>`;
+                }
+                detalles += '</small>';
+                alertElement.innerHTML += detalles;
+            }
+            
+            // Mostrar botón de cerrar exitoso
+            document.getElementById('btn_cerrar_python_exitoso').style.display = 'inline-block';
+            
+            // Recargar página después de 3 segundos
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
+            
+        } else {
+            alertElement.className = 'alert alert-danger';
+            alertElement.innerHTML = `
+                <h6><i class="fas fa-times-circle"></i> Error en el Procesamiento</h6>
+                <p>${respuesta.message}</p>
+            `;
+            
+            if (respuesta.error) {
+                alertElement.innerHTML += `<hr><small><strong>Detalles del error:</strong> ${respuesta.error}</small>`;
+            }
+            
+            // Mostrar botón para reintentar
+            document.getElementById('btn_procesar_python').style.display = 'inline-block';
+        }
+    }
 </script>
 @stop

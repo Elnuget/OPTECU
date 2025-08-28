@@ -154,7 +154,7 @@
             @endif
             
             <div class="row">
-                <div class="col-md-12">
+                <div class="col-md-8">
                     <div class="form-group">
                         <label for="declarante_id">Declarante <span class="text-danger">*</span></label>
                         <select id="declarante_id" name="declarante_id" class="form-control" required>
@@ -164,6 +164,15 @@
                             @endforeach
                         </select>
                         <div class="invalid-feedback" id="declarante_id-error"></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="password_certificado">Contraseña del Certificado <span class="text-danger">*</span></label>
+                        <input type="password" id="password_certificado" name="password_certificado" class="form-control" 
+                               placeholder="Contraseña del certificado P12" required>
+                        <small class="form-text text-muted">Necesaria para firmar digitalmente el XML</small>
+                        <div class="invalid-feedback" id="password_certificado-error"></div>
                     </div>
                 </div>
             </div>
@@ -415,6 +424,17 @@
                 return;
             }
             
+            // Validar que hay contraseña del certificado
+            if (!$('#password_certificado').val()) {
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Debe ingresar la contraseña del certificado.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
             // Validar que hay un medio de pago seleccionado
             if (!$('#medio_pago_xml').val()) {
                 Swal.fire({
@@ -431,7 +451,7 @@
             $('.invalid-feedback').text('');
             
             // Deshabilitar botón de guardar
-            $('#guardarFactura').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Generando XML...');
+            $('#guardarFactura').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Procesando con Python API...');
             
             // Obtener datos del formulario
             const formData = $(this).serialize();
