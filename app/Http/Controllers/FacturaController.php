@@ -1058,11 +1058,12 @@ class FacturaController extends Controller
                 'factura_id' => $id,
                 'xml_tiene_infoAdicional' => strpos($xmlFirmado, '<infoAdicional>') !== false,
                 'xml_tiene_campoAdicional' => strpos($xmlFirmado, '<campoAdicional') !== false,
-                'xml_tiene_signature' => strpos($xmlFirmado, '<ds:Signature') !== false,
-                'xml_tiene_signature_value' => strpos($xmlFirmado, '<ds:SignatureValue>') !== false,
+                'xml_tiene_signature_ds' => strpos($xmlFirmado, '<ds:Signature') !== false,
+                'xml_tiene_signature_ns0' => strpos($xmlFirmado, '<ns0:Signature') !== false,
+                'xml_tiene_signature_value' => strpos($xmlFirmado, '<ds:SignatureValue>') !== false || strpos($xmlFirmado, '<ns0:SignatureValue>') !== false,
                 'xml_tiene_placeholder' => strpos($xmlFirmado, 'PEM_SIGNATURE_PLACEHOLDER') !== false,
                 'xml_preview_infoAdicional' => $this->extraerSeccionXML($xmlFirmado, 'infoAdicional'),
-                'xml_preview_signature' => substr($this->extraerSeccionXML($xmlFirmado, 'ds:SignatureValue'), 0, 200) . '...'
+                'xml_preview_signature' => substr($this->extraerSeccionXML($xmlFirmado, 'ds:SignatureValue') ?: $this->extraerSeccionXML($xmlFirmado, 'ns0:SignatureValue'), 0, 200) . '...'
             ]);
 
             $resultadoSRI = $this->enviarAlSRI($xmlFirmado);
@@ -1703,7 +1704,7 @@ class FacturaController extends Controller
             
             \Log::info('=== FIRMA XAdES-BES COMPLETADA EXITOSAMENTE ===', [
                 'xml_firmado_length' => strlen($xmlFirmado),
-                'tiene_signature' => strpos($xmlFirmado, '<ds:Signature') !== false,
+                'tiene_signature' => strpos($xmlFirmado, '<ds:Signature') !== false || strpos($xmlFirmado, '<ns0:Signature') !== false,
                 'tiene_xades' => strpos($xmlFirmado, 'etsi:QualifyingProperties') !== false,
                 'tiene_signing_time' => strpos($xmlFirmado, 'etsi:SigningTime') !== false
             ]);
@@ -1870,32 +1871,42 @@ class FacturaController extends Controller
                 'xml_length' => strlen($xmlFirmado)
             ]);
 
-            // Convertir XML firmado directamente a Base64 (SIN ENCAPSULAR)
+            // Convertir XML firmado a base64 (método estándar del SRI)
             $xmlBase64 = base64_encode($xmlFirmado);
             
-            \Log::info('XML firmado convertido a Base64', [
+            \Log::info('XML firmado preparado para envío', [
+                'xml_length' => strlen($xmlFirmado),
                 'xml_base64_length' => strlen($xmlBase64),
-                'xml_base64_preview' => substr($xmlBase64, 0, 100) . '...'
+                'xml_preview' => substr($xmlFirmado, 0, 100) . '...'
             ]);
 
-            // Crear SOAP envelope manualmente (como en el código funcional)
-            $soapEnvelope = $this->crearSoapEnvelope($xmlBase64);
+            // Crear SOAP envelope con base64 (método estándar)
+            $soapEnvelope = $this->crearSoapEnvelopeBase64($xmlBase64);
             
             \Log::info('SOAP envelope creado', [
                 'soap_length' => strlen($soapEnvelope),
-                'soap_preview' => substr($soapEnvelope, 0, 500) . '...'
+                'soap_preview' => substr($soapEnvelope, 0, 500) . '...',
+                'uses_base64' => strpos($soapEnvelope, 'base64') === false ? 'NO' : 'SI'
             ]);
 
             // Enviar con cURL (como en el código funcional)
             $respuesta = $this->enviarSoapRequestCurl($soapEnvelope);
             
             if ($respuesta === false) {
-                \Log::error('Error al conectar con el servicio del SRI');
-                return [
-                    'success' => false,
-                    'message' => 'Error al conectar con el servicio del SRI',
-                    'estado' => 'ERROR_CONEXION'
-                ];
+                \Log::error('Error al conectar con el servicio del SRI - Intentando método alternativo');
+                
+                // Intentar con CDATA como método alternativo
+                $soapEnvelopeCDATA = $this->crearSoapEnvelope($xmlFirmado);
+                $respuesta = $this->enviarSoapRequestCurl($soapEnvelopeCDATA);
+                
+                if ($respuesta === false) {
+                    return [
+                        'success' => false,
+                        'message' => 'Error al conectar con el servicio del SRI (métodos Base64 y CDATA fallaron)',
+                        'estado' => 'ERROR_CONEXION'
+                    ];
+                }
+                \Log::info('Método alternativo CDATA funcionó');
             }
 
             \Log::info('Respuesta del SRI recibida', [
@@ -1980,10 +1991,30 @@ class FacturaController extends Controller
     /**
      * Crear SOAP envelope para enviar al SRI
      *
+     * @param  string  $xmlContent
+     * @return string
+     */
+    private function crearSoapEnvelope($xmlContent)
+    {
+        return '<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+               xmlns:rec="http://ec.gob.sri.ws.recepcion">
+    <soap:Header />
+    <soap:Body>
+        <rec:validarComprobante>
+            <xml><![CDATA[' . $xmlContent . ']]></xml>
+        </rec:validarComprobante>
+    </soap:Body>
+</soap:Envelope>';
+    }
+
+    /**
+     * Crear SOAP envelope para enviar al SRI con Base64 (método alternativo)
+     *
      * @param  string  $xmlBase64
      * @return string
      */
-    private function crearSoapEnvelope($xmlBase64)
+    private function crearSoapEnvelopeBase64($xmlBase64)
     {
         return '<?xml version="1.0" encoding="UTF-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
@@ -2005,54 +2036,81 @@ class FacturaController extends Controller
      */
     private function enviarSoapRequestCurl($soapEnvelope)
     {
-        $url = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline';
-        
-        $headers = [
-            'Content-Type: text/xml; charset=utf-8',
-            'SOAPAction: ""',
-            'Content-Length: ' . strlen($soapEnvelope)
+        // SIEMPRE USAR PRUEBAS - No usar producción
+        $urls = [
+            'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline', // SOLO PRUEBAS
         ];
         
-        \Log::info('Enviando petición cURL al SRI', [
-            'url' => $url,
-            'headers' => $headers
-        ]);
-        
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $soapEnvelope);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'Sistema Facturacion Electronica OPTECU');
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        
-        curl_close($ch);
-        
-        \Log::info('Respuesta cURL del SRI', [
-            'http_code' => $httpCode,
-            'curl_error' => $error,
-            'response_length' => $response ? strlen($response) : 0
-        ]);
-        
-        if ($error) {
-            \Log::error('Error CURL: ' . $error);
-            return false;
+        foreach ($urls as $index => $url) {
+            \Log::info('Intentando envío con URL DE PRUEBAS', [
+                'url_index' => $index + 1,
+                'url' => $url,
+                'ambiente' => 'PRUEBAS'
+            ]);
+            
+            $headers = [
+                'Content-Type: text/xml; charset=utf-8',
+                'SOAPAction: ""',
+                'Content-Length: ' . strlen($soapEnvelope)
+            ];
+            
+            \Log::info('Enviando petición cURL al SRI PRUEBAS', [
+                'url' => $url,
+                'headers' => $headers
+            ]);
+            
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $soapEnvelope);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'Sistema Facturacion Electronica OPTECU');
+            
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            
+            curl_close($ch);
+            
+            \Log::info('Respuesta cURL del SRI PRUEBAS', [
+                'url_index' => $index + 1,
+                'http_code' => $httpCode,
+                'curl_error' => $error,
+                'response_length' => $response ? strlen($response) : 0,
+                'response_preview' => $response ? substr($response, 0, 500) . '...' : 'N/A'
+            ]);
+            
+            if ($error) {
+                \Log::error('Error CURL con URL ' . ($index + 1) . ': ' . $error);
+                continue; // Intentar con la siguiente URL
+            }
+            
+            if ($httpCode === 200) {
+                \Log::info('Éxito con URL DE PRUEBAS ' . ($index + 1));
+                return $response;
+            } else if ($httpCode === 500) {
+                // Error 500 puede ser un problema temporal del SRI, intentar siguiente URL
+                \Log::warning('Error 500 temporal del SRI con URL ' . ($index + 1) . ', intentando siguiente URL');
+                continue;
+            } else {
+                \Log::error('HTTP Error con URL ' . ($index + 1) . ': ' . $httpCode, [
+                    'response_body' => $response ? $response : 'Sin respuesta',
+                    'response_length' => $response ? strlen($response) : 0
+                ]);
+                
+                // Si es la última URL, continuar al return false
+                if ($index === count($urls) - 1) {
+                    break;
+                }
+            }
         }
         
-        if ($httpCode !== 200) {
-            \Log::error('HTTP Error: ' . $httpCode);
-            return false;
-        }
-        
-        return $response;
+        return false;
     }
 
     /**
@@ -3523,7 +3581,7 @@ class FacturaController extends Controller
                 'factura_id' => $id,
                 'xml_size' => strlen($xmlFirmado),
                 'xml_preview' => substr($xmlFirmado, 0, 1000),
-                'tiene_ds_signature' => strpos($xmlFirmado, '<ds:Signature') !== false,
+                'tiene_ds_signature' => strpos($xmlFirmado, '<ds:Signature') !== false || strpos($xmlFirmado, '<ns0:Signature') !== false,
                 'tiene_signature' => strpos($xmlFirmado, '<Signature') !== false,
                 'tiene_ns1_signature' => strpos($xmlFirmado, '<ns1:Signature') !== false,
                 'tiene_xades_properties' => strpos($xmlFirmado, '<xades:QualifyingProperties') !== false,
@@ -3533,7 +3591,7 @@ class FacturaController extends Controller
             ]);
             
             // Validar que el XML tenga firma digital XAdES-BES
-            $tieneDsSignature = strpos($xmlFirmado, '<ds:Signature') !== false;
+            $tieneDsSignature = strpos($xmlFirmado, '<ds:Signature') !== false || strpos($xmlFirmado, '<ns0:Signature') !== false;
             $tieneSignature = strpos($xmlFirmado, '<Signature') !== false;
             $tieneNs1Signature = strpos($xmlFirmado, '<ns1:Signature') !== false;
             $tieneXAdESProperties = strpos($xmlFirmado, '<xades:QualifyingProperties') !== false;
@@ -3669,7 +3727,7 @@ class FacturaController extends Controller
             ]);
             
             // Validar que el XML esté firmado (con cualquier prefijo: ds:, ns1:, o sin prefijo)
-            $tieneDsSignature = strpos($xmlContent, '<ds:Signature') !== false;
+            $tieneDsSignature = strpos($xmlContent, '<ds:Signature') !== false || strpos($xmlContent, '<ns0:Signature') !== false;
             $tieneSignature = strpos($xmlContent, '<Signature') !== false;
             $tieneNs1Signature = strpos($xmlContent, '<ns1:Signature') !== false;
             
@@ -3692,15 +3750,16 @@ class FacturaController extends Controller
                 'tiene_xades_signed_props' => strpos($xmlContent, '<xades:SignedProperties') !== false
             ]);
             
-            // Codificar XML en base64
+            // Usar XML en base64 (método estándar del SRI)
             $xmlBase64 = base64_encode($xmlContent);
             
-            // Crear SOAP envelope manualmente 
-            $soapEnvelope = $this->crearSoapEnvelope($xmlBase64);
+            // Crear SOAP envelope con base64
+            $soapEnvelope = $this->crearSoapEnvelopeBase64($xmlBase64);
             
             \Log::info('SOAP envelope creado para envío', [
                 'soap_length' => strlen($soapEnvelope),
-                'factura_id' => $factura->id
+                'factura_id' => $factura->id,
+                'uses_base64' => strpos($soapEnvelope, 'base64') === false ? 'NO' : 'SI'
             ]);
             
             // Enviar al webservice del SRI

@@ -3,7 +3,11 @@
 
 """
 Servicio de Firma Digital Electrónica para Ecuador (SRI)
-Implementación en Python para superar limitaciones de OpenSSL 3.0+
+Implementación en Python pa            // Calcular digest del documento (sin la firma)
+            doc_without_signature = etree.tostring(root, method="c14n", exclusive=False)
+            digest = hashlib.sha1(doc_without_signature).digest()
+            digest_value = etree.SubElement(reference, "{http://www.w3.org/2000/09/xmldsig#}DigestValue")
+            digest_value.text = base64.b64encode(digest).decode()perar limitaciones de OpenSSL 3.0+
 """
 
 import sys
@@ -18,6 +22,9 @@ from cryptography.hazmat.primitives.asymmetric.utils import Prehashed
 from cryptography import x509
 from lxml import etree
 import traceback
+
+# Register namespace with ds prefix for XML-DSIG
+etree.register_namespace('ds', 'http://www.w3.org/2000/09/xmldsig#')
 
 class FirmaElectronicaService:
     def __init__(self, p12_path, password):
@@ -137,7 +144,7 @@ class FirmaElectronicaService:
             digest_method.set("Algorithm", "http://www.w3.org/2000/09/xmldsig#sha1")
 
             # Calcular digest del documento (sin la firma)
-            doc_without_signature = etree.tostring(root, method="c14n", exclusive=True)
+            doc_without_signature = etree.tostring(root, method="c14n", exclusive=False)
             digest = hashlib.sha1(doc_without_signature).digest()
             digest_value = etree.SubElement(reference, "{http://www.w3.org/2000/09/xmldsig#}DigestValue")
             digest_value.text = base64.b64encode(digest).decode()
