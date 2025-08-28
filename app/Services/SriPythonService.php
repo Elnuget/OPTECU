@@ -315,10 +315,26 @@ class SriPythonService
                 $factura->estado = 'AUTORIZADA';
             } elseif (isset($result['isReceived']) && $result['isReceived']) {
                 $factura->estado = 'RECIBIDA';
+            } elseif (isset($result['sriResponse']['estado'])) {
+                // Si hay respuesta del SRI, usar ese estado
+                $estadoSri = $result['sriResponse']['estado'];
+                if ($estadoSri === 'RECIBIDA') {
+                    $factura->estado = 'RECIBIDA';
+                } elseif ($estadoSri === 'AUTORIZADA') {
+                    $factura->estado = 'AUTORIZADA';
+                } elseif ($estadoSri === 'DEVUELTA') {
+                    $factura->estado = 'DEVUELTA';
+                } elseif ($estadoSri === 'NO_AUTORIZADA') {
+                    $factura->estado = 'NO_AUTORIZADA';
+                } else {
+                    $factura->estado = 'ENVIADA';
+                }
             } elseif (isset($result['isRejected']) && $result['isRejected']) {
                 $factura->estado = 'DEVUELTA';
             } elseif (isset($result['accessKey'])) {
-                $factura->estado = 'ENVIADA';
+                // Si tenemos clave de acceso pero no respuesta clara del SRI, 
+                // es porque se firmó pero no se envió exitosamente al SRI
+                $factura->estado = 'FIRMADA';
             } else {
                 $factura->estado = 'FIRMADA';
             }

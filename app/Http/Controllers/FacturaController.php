@@ -4070,11 +4070,11 @@ class FacturaController extends Controller
         try {
             $factura = Factura::with(['declarante'])->findOrFail($id);
             
-            // Verificar que la factura esté en estado RECIBIDA
-            if ($factura->estado !== 'RECIBIDA') {
+            // Verificar que la factura esté en estado RECIBIDA o DEVUELTA
+            if (!in_array($factura->estado, ['RECIBIDA', 'DEVUELTA'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'La factura debe estar en estado RECIBIDA para poder autorizarla. Estado actual: ' . $factura->estado
+                    'message' => 'La factura debe estar en estado RECIBIDA o DEVUELTA para poder autorizarla. Estado actual: ' . $factura->estado
                 ], 400);
             }
             
