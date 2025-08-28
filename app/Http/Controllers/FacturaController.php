@@ -196,11 +196,14 @@ class FacturaController extends Controller
                 $precioExamen = floatval($request->precio_examen);
                 $subtotal += $precioExamen;
                 $elementos[] = [
-                    'tipo' => 'Examen Visual',
+                    'codigo' => 'EXA001',
                     'descripcion' => (is_object($pedido) && property_exists($pedido, 'examen_visual') && $pedido->examen_visual) ? $pedido->examen_visual : 'Examen Visual',
-                    'precio' => $precioExamen,
-                    'iva_porcentaje' => 0,
-                    'iva_valor' => 0
+                    'cantidad' => 1,
+                    'precio_unitario' => $precioExamen,
+                    'subtotal' => $precioExamen,
+                    'codigo_porcentaje' => '0', // 0% IVA
+                    'tarifa' => '0',
+                    'valor_impuesto' => 0
                 ];
             }
             
@@ -211,11 +214,14 @@ class FacturaController extends Controller
                 $subtotal += $precioArmazon;
                 $iva += $ivaArmazon;
                 $elementos[] = [
-                    'tipo' => 'Armazón/Accesorios',
+                    'codigo' => 'ARM001',
                     'descripcion' => 'Armazón/Accesorios',
-                    'precio' => $precioArmazon,
-                    'iva_porcentaje' => 15,
-                    'iva_valor' => $ivaArmazon
+                    'cantidad' => 1,
+                    'precio_unitario' => $precioArmazon,
+                    'subtotal' => $precioArmazon,
+                    'codigo_porcentaje' => '6', // 15% IVA
+                    'tarifa' => '15',
+                    'valor_impuesto' => $ivaArmazon
                 ];
             }
             
@@ -226,11 +232,14 @@ class FacturaController extends Controller
                 $subtotal += $precioLuna;
                 $iva += $ivaLuna;
                 $elementos[] = [
-                    'tipo' => 'Cristalería',
+                    'codigo' => 'LUN001',
                     'descripcion' => 'Cristalería',
-                    'precio' => $precioLuna,
-                    'iva_porcentaje' => 15,
-                    'iva_valor' => $ivaLuna
+                    'cantidad' => 1,
+                    'precio_unitario' => $precioLuna,
+                    'subtotal' => $precioLuna,
+                    'codigo_porcentaje' => '6', // 15% IVA
+                    'tarifa' => '15',
+                    'valor_impuesto' => $ivaLuna
                 ];
             }
             
@@ -239,11 +248,14 @@ class FacturaController extends Controller
                 $precioCompraRapida = floatval($request->precio_compra_rapida);
                 $subtotal += $precioCompraRapida;
                 $elementos[] = [
-                    'tipo' => 'Compra Rápida',
+                    'codigo' => 'CRA001',
                     'descripcion' => (is_object($pedido) && property_exists($pedido, 'motivo_compra') && $pedido->motivo_compra) ? $pedido->motivo_compra : 'Servicio de compra rápida',
-                    'precio' => $precioCompraRapida,
-                    'iva_porcentaje' => 0,
-                    'iva_valor' => 0
+                    'cantidad' => 1,
+                    'precio_unitario' => $precioCompraRapida,
+                    'subtotal' => $precioCompraRapida,
+                    'codigo_porcentaje' => '0', // 0% IVA
+                    'tarifa' => '0',
+                    'valor_impuesto' => 0
                 ];
             }
             

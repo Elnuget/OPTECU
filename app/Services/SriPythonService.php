@@ -8,12 +8,11 @@ use Illuminate\Support\Facades\Http;
 
 class SriPythonService
 {
-    private $pythonApiUrl;
+    private $xmlSriService;
     
-    public function __construct()
+    public function __construct(XmlSriService $xmlSriService)
     {
-        // URL del API Python (asegúrate de que esté ejecutándose)
-        $this->pythonApiUrl = env('PYTHON_API_URL', 'http://localhost:8000');
+        $this->xmlSriService = $xmlSriService;
     }
     
     /**
@@ -29,29 +28,26 @@ class SriPythonService
             // Generar datos en formato requerido por el API Python
             $invoiceData = $this->prepararDatosFactura($factura, $declarante, $pedido, $elementos, $subtotal, $iva, $total, $medioPago);
             
-            Log::info('Datos de factura preparados para API Python', [
+            Log::info('Datos de factura preparados para procesamiento local', [
                 'invoice_data_keys' => array_keys($invoiceData)
             ]);
             
-            // Copiar certificado P12 del declarante al directorio del API Python
-            $this->copiarCertificadoP12($declarante, $passwordCertificado);
+            // Copiar certificado P12 del declarante al directorio del procesador
+            $certificatePath = $this->copiarCertificadoP12($declarante, $passwordCertificado);
             
-            // Enviar solicitud al API Python
-            $response = Http::timeout(120)->post($this->pythonApiUrl . '/invoice/sign', $invoiceData);
+            // Procesar con servicio local en lugar de API HTTP
+            $resultado = $this->xmlSriService->procesarFacturaCompleta(
+                $invoiceData, 
+                $certificatePath, 
+                $passwordCertificado
+            );
             
-            if (!$response->successful()) {
-                throw new \Exception('Error en comunicación con API Python: ' . $response->body());
-            }
-            
-            $resultado = $response->json();
-            
-            Log::info('Respuesta del API Python recibida', [
-                'success' => isset($resultado['result']),
-                'result_keys' => isset($resultado['result']) ? array_keys($resultado['result']) : []
+            Log::info('Respuesta del procesamiento local recibida', [
+                'success' => $resultado['success'] ?? false
             ]);
             
-            if (!isset($resultado['result']) || !$resultado['result']) {
-                throw new \Exception('El API Python no pudo procesar la factura');
+            if (!$resultado['success']) {
+                throw new \Exception($resultado['message'] ?? 'Error en el procesamiento local');
             }
             
             $result = $resultado['result'];
@@ -64,7 +60,7 @@ class SriPythonService
                 $this->guardarXMLFirmado($factura, $result['xmlFileSigned']);
             }
             
-            Log::info('=== FIN PROCESAMIENTO EXITOSO CON API PYTHON ===', [
+            Log::info('=== FIN PROCESAMIENTO EXITOSO CON SERVICIO LOCAL ===', [
                 'clave_acceso' => $result['accessKey'] ?? 'NO_DISPONIBLE',
                 'recibida' => $result['isReceived'] ?? false,
                 'autorizada' => $result['isAuthorized'] ?? false
@@ -264,16 +260,16 @@ class SriPythonService
                 'origen' => $rutaCertificadoDeclarante,
                 'destino' => $rutaDestinoP12
             ]);
-            
+
+            return $rutaDestinoP12;
+
         } catch (\Exception $e) {
             Log::error('Error copiando certificado P12', [
                 'error' => $e->getMessage()
             ]);
             throw $e;
         }
-    }
-    
-    /**
+    }    /**
      * Actualizar estado de factura según resultado del API Python
      */
     private function actualizarEstadoFactura($factura, $result)
