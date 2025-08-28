@@ -133,6 +133,23 @@
                     </div>
                 </div>
                 @endif
+                @if($factura->observaciones)
+                <hr>
+                <div class="row">
+                    <div class="col-md-12">
+                        <strong>Observaciones:</strong>
+                        <div class="alert alert-warning mt-2" style="margin-bottom: 0;">
+                            <div style="word-wrap: break-word; 
+                                       white-space: pre-wrap; 
+                                       overflow-wrap: break-word; 
+                                       max-width: 100%; 
+                                       line-height: 1.4;">
+                                <i class="fas fa-exclamation-triangle"></i> {{ $factura->observaciones }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
     </div>
@@ -470,10 +487,6 @@
 @section('plugins.Tempusdominus', true)
 
 @section('js')
-<!-- Librería Forge.js para firma digital -->
-<script src="https://cdn.jsdelivr.net/npm/node-forge@1.3.1/dist/forge.min.js"></script>
-<!-- Librería propia para firma digital -->
-<script src="{{ asset('js/firma-digital-xades.js') }}"></script>
 <script>
     let facturaIdActual = null;
     let facturaIdAutorizacion = null;
@@ -493,214 +506,6 @@
         }
     }
 
-    // Función removida por solicitud del usuario
-    /*
-    function firmarYEnviar(facturaId) {
-        // Funcionalidad de firma removida
-    }
-    */
-
-    // Función removida por solicitud del usuario
-    /*
-    function procesarFirmaYEnvio() {
-        // Obtener elementos de manera segura
-        const passwordInput = document.getElementById('password_certificado');
-        const confirmarCheckbox = document.getElementById('confirmar_envio');
-        const btnFirmar = document.getElementById('btn_firmar');
-        const progresoFirma = document.getElementById('progreso_firma');
-        const resultadoFirma = document.getElementById('resultado_firma');
-        
-        if (!passwordInput || !confirmarCheckbox) {
-            console.error('Error: No se encontraron elementos del formulario');
-            alert('Error al cargar el formulario. Por favor, recargue la página.');
-            return;
-        }
-        
-        const password = passwordInput.value;
-        const confirmar = confirmarCheckbox.checked;
-        
-        console.log('Iniciando proceso de firma digital con JavaScript', {
-            password_length: password.length,
-            confirmado: confirmar,
-            factura_id: facturaIdActual
-        });
-        
-        // Validaciones
-        if (!password.trim()) {
-            console.error('Error: Contraseña vacía');
-            alert('Debe ingresar la contraseña del certificado del declarante');
-            return;
-        }
-        // Funcionalidad de firma removida
-    }
-    */
-
-    // Todas las funciones relacionadas con firma han sido removidas por solicitud del usuario
-    /*
-    // ... resto del código de firma comentado ...
-
-    // Nueva función para enviar solicitud al backend usando el certificado del declarante
-    async function enviarSolicitudFirmaConCertificadoDeclarante(password) {
-        try {
-            actualizarProgreso(30, 'Enviando solicitud de firma al servidor...');
-            
-            const response = await fetch(`/facturas/${facturaIdActual}/firmar-con-certificado-declarante`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({
-                    password_certificado: password
-                })
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                // Si el error está relacionado con el certificado, mostrar información más detallada
-                if (errorData.message && errorData.message.toLowerCase().includes('certificado')) {
-                    // Mostrar información de depuración adicional
-                    const infoDebug = document.querySelector('#debugInfo');
-                    if (infoDebug) {
-                        const debugButton = document.querySelector('[data-target="#debugInfo"]');
-                        if (debugButton) {
-                            debugButton.click(); // Mostrar automáticamente la info de depuración
-                        }
-                    }
-                    
-                    const ruta = document.querySelector('.text-info') ? document.querySelector('.text-info').textContent : 'public/uploads/firmas/';
-                    throw new Error(`Error con el certificado digital: ${errorData.message}.\n\nPosibles causas:\n1. El archivo no existe físicamente en el servidor\n2. Los permisos del archivo son incorrectos\n3. La ruta del archivo ha cambiado\n\nRuta esperada: ${ruta}`);
-                }
-                throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                actualizarProgreso(100, 'Proceso completado exitosamente');
-                mostrarResultado(true, data.message, data.data);
-            } else {
-                mostrarResultado(false, data.message, data.errors);
-            }
-            
-        } catch (error) {
-            console.error('Error en firma con certificado del declarante:', error);
-            mostrarResultado(false, 'Error de conexión: ' + error.message, null);
-        } finally {
-            document.getElementById('btn_firmar').disabled = false;
-        }
-    }
-
-    function actualizarProgreso(porcentaje, mensaje) {
-        const progressBar = document.querySelector('.progress-bar');
-        const progressText = document.querySelector('.progress-text');
-        const estadoProceso = document.getElementById('estado_proceso');
-        
-        // Verificar si los elementos existen antes de modificarlos
-        if (progressBar) progressBar.style.width = porcentaje + '%';
-        if (progressText) progressText.textContent = porcentaje + '%';
-        if (estadoProceso) estadoProceso.textContent = mensaje;
-        
-        // Solo logs importantes, no de progreso intermedio
-        if (porcentaje === 0 || porcentaje === 100) {
-            console.log(`Proceso: ${porcentaje === 100 ? 'Completado' : 'Iniciado'} - ${mensaje}`);
-        }
-    }
-
-    function mostrarResultado(exito, mensaje, datos) {
-        console.log('Mostrando resultado:', { exito, mensaje, datos });
-        
-        // Obtener referencias a los elementos DOM de forma segura
-        const progresoFirma = document.getElementById('progreso_firma');
-        const resultadoFirma = document.getElementById('resultado_firma');
-        const alertElement = document.getElementById('alert_resultado');
-        const mensajeElement = document.getElementById('mensaje_resultado');
-        
-        // Verificar que los elementos existan antes de manipularlos
-        if (progresoFirma) progresoFirma.style.display = 'none';
-        if (resultadoFirma) resultadoFirma.style.display = 'block';
-        
-        // Si no hay elemento de alerta, mostrar mensaje en consola y salir
-        if (!alertElement) {
-            console.error('Error: No se encontró el elemento alert_resultado');
-            alert(`${exito ? 'Éxito' : 'Error'}: ${mensaje}`);
-            return;
-        }
-        
-        if (exito) {
-            alertElement.className = 'alert alert-success';
-            alertElement.innerHTML = `
-                <h6><i class="fas fa-check-circle"></i> Proceso Exitoso</h6>
-                <p>${mensaje}</p>
-            `;
-            
-            if (datos) {
-                let detalles = '<hr><small>';
-                if (datos.estado_sri) {
-                    detalles += `<strong>Estado SRI:</strong> ${datos.estado_sri}<br>`;
-                }
-                if (datos.numero_autorizacion) {
-                    detalles += `<strong>Autorización:</strong> ${datos.numero_autorizacion}<br>`;
-                }
-                if (datos.fecha_autorizacion) {
-                    detalles += `<strong>Fecha:</strong> ${datos.fecha_autorizacion}<br>`;
-                }
-                detalles += '</small>';
-                alertElement.innerHTML += detalles;
-            }
-            
-            // Mostrar botón de cerrar exitoso
-            document.getElementById('btn_firmar').style.display = 'none';
-            document.getElementById('btn_cerrar_exitoso').style.display = 'inline-block';
-            
-            console.log('SUCCESS: Factura firmada y enviada correctamente al SRI');
-        } else {
-            alertElement.className = 'alert alert-danger';
-            alertElement.innerHTML = `
-                <h6><i class="fas fa-exclamation-triangle"></i> Error en el Proceso</h6>
-                <p>${mensaje}</p>
-            `;
-            
-            if (datos && Array.isArray(datos)) {
-                let errores = '<hr><small><strong>Detalles:</strong><ul>';
-                datos.forEach(error => {
-                    errores += `<li>${error}</li>`;
-                });
-                errores += '</ul></small>';
-                alertElement.innerHTML += errores;
-            }
-            
-            console.error('ERROR: Error al firmar y enviar la factura:', mensaje, datos);
-        }
-    }
-
-    // Manejar eventos del modal
-    $('#modalCertificado').on('hidden.bs.modal', function () {
-        // Verificar si el proceso fue exitoso
-        const btnCerrarExitoso = document.getElementById('btn_cerrar_exitoso');
-        const procesoExitoso = btnCerrarExitoso && btnCerrarExitoso.style.display !== 'none';
-        
-        facturaIdActual = null;
-        document.getElementById('formCertificado').reset();
-        document.getElementById('progreso_firma').style.display = 'none';
-        document.getElementById('resultado_firma').style.display = 'none';
-        
-        // Si el proceso fue exitoso, recargar la página
-        if (procesoExitoso) {
-            window.location.reload();
-        }
-    });
-
-    // Permitir envío con Enter en el campo de contraseña
-    document.getElementById('password_certificado').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            procesarFirmaYEnvio();
-        }
-    });
-    
     // Función para procesar autorización directamente sin modal
     function procesarAutorizacionDirecta(facturaId) {
         console.log('Iniciando autorización directa para factura:', facturaId);
@@ -777,7 +582,7 @@
             btnAutorizar.innerHTML = '<i class="fas fa-check"></i> Solicitar Autorización';
         });
     }
-    
+
     // Función para mostrar modal de autorización
     function autorizarComprobante(facturaId) {
         facturaIdAutorizacion = facturaId;
@@ -792,7 +597,6 @@
         // Mostrar modal
         $('#modalAutorizacion').modal('show');
     }
-    
     // Función para procesar autorización
     function procesarAutorizacion() {
         const confirmar = document.getElementById('confirmar_autorizacion').checked;
@@ -821,20 +625,20 @@
         
         const intervalo = setInterval(() => {
             progreso += 10;
-            progressBar.style.width = progreso + '%';
+            if (progressBar) progressBar.style.width = progreso + '%';
             
             if (progreso <= 30) {
-                progressText.textContent = 'Conectando con SRI...';
-                estadoTexto.textContent = 'Estableciendo conexión con el servicio de autorización';
+                if (progressText) progressText.textContent = 'Conectando con SRI...';
+                if (estadoTexto) estadoTexto.textContent = 'Estableciendo conexión con el servicio de autorización';
             } else if (progreso <= 60) {
-                progressText.textContent = 'Enviando solicitud...';
-                estadoTexto.textContent = 'Enviando solicitud de autorización';
+                if (progressText) progressText.textContent = 'Enviando solicitud...';
+                if (estadoTexto) estadoTexto.textContent = 'Enviando solicitud de autorización';
             } else if (progreso <= 90) {
-                progressText.textContent = 'Procesando...';
-                estadoTexto.textContent = 'Procesando respuesta del SRI';
+                if (progressText) progressText.textContent = 'Procesando...';
+                if (estadoTexto) estadoTexto.textContent = 'Procesando respuesta del SRI';
             } else {
-                progressText.textContent = 'Finalizando...';
-                estadoTexto.textContent = 'Completando proceso de autorización';
+                if (progressText) progressText.textContent = 'Finalizando...';
+                if (estadoTexto) estadoTexto.textContent = 'Completando proceso de autorización';
             }
             
             if (progreso >= 100) {
@@ -883,10 +687,17 @@
     function mostrarResultadoAutorizacion(exito, mensaje, datos, noAutorizada = false) {
         console.log('Mostrando resultado de autorización:', { exito, mensaje, datos, noAutorizada });
         
-        document.getElementById('progreso_autorizacion').style.display = 'none';
-        document.getElementById('resultado_autorizacion').style.display = 'block';
-        
+        const progresoAutorizacion = document.getElementById('progreso_autorizacion');
+        const resultadoAutorizacion = document.getElementById('resultado_autorizacion');
         const alertElement = document.getElementById('alert_resultado_autorizacion');
+        
+        if (progresoAutorizacion) progresoAutorizacion.style.display = 'none';
+        if (resultadoAutorizacion) resultadoAutorizacion.style.display = 'block';
+        
+        if (!alertElement) {
+            alert(`${exito ? 'Éxito' : 'Error'}: ${mensaje}`);
+            return;
+        }
         
         if (exito) {
             alertElement.className = 'alert alert-success';
@@ -911,7 +722,8 @@
             }
             
             // Mostrar botón de cerrar exitoso
-            document.getElementById('btn_cerrar_autorizacion_exitoso').style.display = 'inline-block';
+            const btnCerrarExitoso = document.getElementById('btn_cerrar_autorizacion_exitoso');
+            if (btnCerrarExitoso) btnCerrarExitoso.style.display = 'inline-block';
             
             // Recargar página después de 3 segundos
             setTimeout(() => {
@@ -946,7 +758,8 @@
                 }
                 
                 // Mostrar botón de cerrar (no de reintentar)
-                document.getElementById('btn_cerrar_autorizacion_exitoso').style.display = 'inline-block';
+                const btnCerrarExitoso = document.getElementById('btn_cerrar_autorizacion_exitoso');
+                if (btnCerrarExitoso) btnCerrarExitoso.style.display = 'inline-block';
                 
                 // Recargar página después de 5 segundos para mostrar el nuevo estado
                 setTimeout(() => {
@@ -971,42 +784,41 @@
                 }
                 
                 // Mostrar botón para reintentar
-                document.getElementById('btn_autorizar').style.display = 'inline-block';
+                const btnAutorizar = document.getElementById('btn_autorizar');
+                if (btnAutorizar) btnAutorizar.style.display = 'inline-block';
                 
                 console.error('ERROR: Error al autorizar la factura:', mensaje, datos);
             }
         }
     }
     
-    // Función removida por solicitud del usuario
-    /*
-    // Nueva función para firmar y enviar usando el servidor
-    function firmarYEnviarServidor(facturaId) {
-        // Funcionalidad de firma removida
-    }
-    */
-    
-    // Manejar eventos del modal de autorización
-    $('#modalAutorizacion').on('hidden.bs.modal', function () {
-    });
-    
-    // NUEVAS FUNCIONES PARA PROCESAMIENTO CON PYTHON API
+    // FUNCIONES PARA PROCESAMIENTO CON PYTHON API
     function abrirModalPythonProcesar() {
         // Limpiar el modal
-        document.getElementById('password_certificado').value = '';
-        document.getElementById('confirmar_python_proceso').checked = false;
-        document.getElementById('progreso_python').style.display = 'none';
-        document.getElementById('resultado_python').style.display = 'none';
-        document.getElementById('btn_procesar_python').style.display = 'inline-block';
-        document.getElementById('btn_cerrar_python_exitoso').style.display = 'none';
+        const passwordField = document.getElementById('password_certificado');
+        const confirmarCheck = document.getElementById('confirmar_python_proceso');
+        const progresoDiv = document.getElementById('progreso_python');
+        const resultadoDiv = document.getElementById('resultado_python');
+        const btnProcesar = document.getElementById('btn_procesar_python');
+        const btnCerrar = document.getElementById('btn_cerrar_python_exitoso');
+        
+        if (passwordField) passwordField.value = '';
+        if (confirmarCheck) confirmarCheck.checked = false;
+        if (progresoDiv) progresoDiv.style.display = 'none';
+        if (resultadoDiv) resultadoDiv.style.display = 'none';
+        if (btnProcesar) btnProcesar.style.display = 'inline-block';
+        if (btnCerrar) btnCerrar.style.display = 'none';
         
         // Mostrar el modal
         $('#modalPythonProcesar').modal('show');
     }
     
     function procesarConPython() {
-        const password = document.getElementById('password_certificado').value;
-        const confirmado = document.getElementById('confirmar_python_proceso').checked;
+        const passwordField = document.getElementById('password_certificado');
+        const confirmarCheck = document.getElementById('confirmar_python_proceso');
+        
+        const password = passwordField ? passwordField.value : '';
+        const confirmado = confirmarCheck ? confirmarCheck.checked : false;
         
         if (!password) {
             alert('Por favor ingrese la contraseña del certificado');
@@ -1019,9 +831,13 @@
         }
         
         // Mostrar progreso y ocultar botón
-        document.getElementById('progreso_python').style.display = 'block';
-        document.getElementById('btn_procesar_python').style.display = 'none';
-        document.getElementById('resultado_python').style.display = 'none';
+        const progresoDiv = document.getElementById('progreso_python');
+        const btnProcesar = document.getElementById('btn_procesar_python');
+        const resultadoDiv = document.getElementById('resultado_python');
+        
+        if (progresoDiv) progresoDiv.style.display = 'block';
+        if (btnProcesar) btnProcesar.style.display = 'none';
+        if (resultadoDiv) resultadoDiv.style.display = 'none';
         
         // Actualizar progreso
         actualizarProgresoP(20, 'Conectando con Python API...');
@@ -1055,16 +871,24 @@
         const progressBar = document.querySelector('#progreso_python .progress-bar');
         const estadoText = document.getElementById('estado_python');
         
-        progressBar.style.width = porcentaje + '%';
-        estadoText.textContent = estado;
+        if (progressBar) progressBar.style.width = porcentaje + '%';
+        if (estadoText) estadoText.textContent = estado;
     }
     
     function mostrarResultadoPython(respuesta) {
         // Ocultar progreso y mostrar resultado
-        document.getElementById('progreso_python').style.display = 'none';
-        document.getElementById('resultado_python').style.display = 'block';
+        const progresoDiv = document.getElementById('progreso_python');
+        const resultadoDiv = document.getElementById('resultado_python');
+        
+        if (progresoDiv) progresoDiv.style.display = 'none';
+        if (resultadoDiv) resultadoDiv.style.display = 'block';
         
         const alertElement = document.getElementById('alert_resultado_python');
+        
+        if (!alertElement) {
+            alert(`${respuesta.success ? 'Éxito' : 'Error'}: ${respuesta.message}`);
+            return;
+        }
         
         if (respuesta.success) {
             alertElement.className = 'alert alert-success';
@@ -1092,7 +916,8 @@
             }
             
             // Mostrar botón de cerrar exitoso
-            document.getElementById('btn_cerrar_python_exitoso').style.display = 'inline-block';
+            const btnCerrarExitoso = document.getElementById('btn_cerrar_python_exitoso');
+            if (btnCerrarExitoso) btnCerrarExitoso.style.display = 'inline-block';
             
             // Recargar página después de 3 segundos
             setTimeout(() => {
@@ -1111,7 +936,8 @@
             }
             
             // Mostrar botón para reintentar
-            document.getElementById('btn_procesar_python').style.display = 'inline-block';
+            const btnProcesar = document.getElementById('btn_procesar_python');
+            if (btnProcesar) btnProcesar.style.display = 'inline-block';
         }
     }
 </script>

@@ -12,7 +12,7 @@ class XmlSriService
     
     public function __construct()
     {
-        $this->pythonScriptPath = public_path('SriSignXml');
+        $this->pythonScriptPath = base_path(); // Raíz del proyecto donde está sri_service.py
         $this->certificatePath = public_path('SriSignXml/app');
     }
     

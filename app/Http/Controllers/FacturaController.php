@@ -2629,7 +2629,7 @@ class FacturaController extends Controller
                 $factura->mensajes_sri = json_encode($resultadoSRI['errores_detallados'] ?? ['No autorizada por el SRI']);
                 
             } else {
-                $factura->estado = 'ERROR_AUTORIZACION';
+                $factura->estado = 'ERROR';
                 $factura->estado_sri = $estadoSRI;
                 $factura->mensajes_sri = json_encode($resultadoSRI['errores_detallados'] ?? ['Estado desconocido: ' . $estadoSRI]);
             }
@@ -4048,8 +4048,8 @@ class FacturaController extends Controller
                 'estado_actual' => $factura->estado
             ]);
             
-            // Actualizar estado a "AUTORIZANDO"
-            $factura->estado = 'AUTORIZANDO';
+            // Actualizar estado a "PROCESANDO" mientras se autoriza
+            $factura->estado = 'PROCESANDO';
             $factura->save();
             
             // Usar el servicio XML para solicitar autorización
@@ -4057,6 +4057,7 @@ class FacturaController extends Controller
             
             if ($resultado['success']) {
                 $result = $resultado['result'];
+                $mensajesError = []; // Definir aquí para usar en el response
                 
                 // Actualizar estado según el resultado
                 if (isset($result['isAuthorized']) && $result['isAuthorized']) {
@@ -4076,54 +4077,88 @@ class FacturaController extends Controller
                     ]);
                     
                 } else {
-                    $factura->estado = 'DEVUELTA';
-                    $factura->estado_sri = 'DEVUELTA';
+                    // No autorizada - mantener en RECIBIDA para permitir reintentos
+                    $factura->estado = 'RECIBIDA';
+                    $factura->estado_sri = 'NO_AUTORIZADA';
                     
-                    // Guardar mensajes de error si existen
+                    // Guardar mensajes de error en observaciones para mostrar al usuario
+                    $mensajesError = [];
                     if (isset($result['mensajes']) && !empty($result['mensajes'])) {
                         $factura->mensajes_sri = json_encode($result['mensajes']);
+                        
+                        // Formatear mensajes para observaciones
+                        foreach ($result['mensajes'] as $mensaje) {
+                            if (is_array($mensaje)) {
+                                $texto = $mensaje['mensaje'] ?? 'Error desconocido';
+                                if (!empty($mensaje['informacionAdicional'])) {
+                                    $texto .= ': ' . $mensaje['informacionAdicional'];
+                                }
+                                $mensajesError[] = $texto;
+                            } else {
+                                $mensajesError[] = $mensaje;
+                            }
+                        }
                     }
                     
-                    Log::warning('Factura devuelta por el SRI', [
+                    // Guardar en observaciones
+                    if (!empty($mensajesError)) {
+                        $observacionError = "ERROR SRI: " . implode('. ', $mensajesError);
+                        $factura->observaciones = $observacionError;
+                    }
+                    
+                    Log::warning('Factura NO autorizada por el SRI - manteniendo estado RECIBIDA para reintento', [
                         'factura_id' => $factura->id,
-                        'mensajes' => $result['mensajes'] ?? []
+                        'mensajes' => $result['mensajes'] ?? [],
+                        'observaciones' => $factura->observaciones
                     ]);
                 }
                 
                 $factura->save();
                 
                 return response()->json([
-                    'success' => true,
+                    'success' => $factura->estado === 'AUTORIZADA',
+                    'authorized' => $factura->estado === 'AUTORIZADA',
                     'message' => $factura->estado === 'AUTORIZADA' 
                         ? 'Factura autorizada exitosamente' 
-                        : 'Factura devuelta por el SRI',
+                        : 'Factura NO autorizada por el SRI. Puede reintentar la autorización.',
                     'data' => [
                         'factura_id' => $factura->id,
                         'estado' => $factura->estado,
                         'estado_sri' => $factura->estado_sri,
                         'numero_autorizacion' => $factura->numero_autorizacion,
                         'fecha_autorizacion' => $factura->fecha_autorizacion?->format('Y-m-d H:i:s'),
-                        'mensajes_sri' => $factura->mensajes_sri ? json_decode($factura->mensajes_sri, true) : null
+                        'mensajes_sri' => $factura->mensajes_sri ? json_decode($factura->mensajes_sri, true) : null,
+                        'observaciones' => $factura->observaciones,
+                        'motivo_rechazo' => !empty($mensajesError) ? $mensajesError : null
                     ]
                 ]);
                 
             } else {
-                // Error en la consulta de autorización
-                $factura->estado = 'ERROR_AUTORIZACION';
+                // Error en la consulta de autorización - mantener RECIBIDA para reintentar
+                $factura->estado = 'RECIBIDA';
+                $errorMsg = $resultado['message'] ?? 'Error desconocido en el procesamiento';
+                $factura->observaciones = "ERROR CONSULTA: " . $errorMsg;
                 $factura->save();
                 
                 Log::error('Error consultando autorización', [
                     'factura_id' => $factura->id,
-                    'error' => $resultado['message'] ?? 'Error desconocido'
+                    'error' => $errorMsg
                 ]);
                 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error consultando autorización: ' . ($resultado['message'] ?? 'Error desconocido')
+                    'message' => 'Error consultando autorización: ' . $errorMsg
                 ], 500);
             }
             
         } catch (\Exception $e) {
+            // Mantener estado RECIBIDA para permitir reintentos en caso de excepción
+            if (isset($factura)) {
+                $factura->estado = 'RECIBIDA';
+                $factura->observaciones = "ERROR EXCEPCIÓN: " . $e->getMessage();
+                $factura->save();
+            }
+            
             Log::error('=== ERROR EN PROCESO DE AUTORIZACIÓN ===', [
                 'factura_id' => $id ?? 'N/A',
                 'error' => $e->getMessage(),
