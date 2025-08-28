@@ -130,78 +130,67 @@ class XmlSriService
                     'first_500_chars' => substr($jsonOutput, 0, 500)
                 ]);
                 
-                // Buscar el JSON válido en el output
-                $cleanJsonOutput = '';
-                $jsonStartFound = false;
-                $braceLevel = 0;
-                $jsonLines = [];
+                // Nueva lógica mejorada para extraer JSON válido
+                $cleanJsonOutput = $this->extractValidJsonFromOutput($output);
                 
-                foreach ($output as $line) {
-                    // Detectar el inicio del JSON principal - puede ser success true o false
-                    if (!$jsonStartFound && (strpos($line, '"success": true') !== false || strpos($line, '"success": false') !== false)) {
-                        $jsonStartFound = true;
-                        // Buscar hacia atrás para encontrar la línea que empieza con {
-                        for ($i = count($jsonLines); $i >= 0; $i--) {
-                            if ($i < count($jsonLines) && trim($jsonLines[$i]) === '{') {
-                                $jsonLines = array_slice($jsonLines, $i);
-                                break;
-                            }
-                        }
-                        if (empty($jsonLines) || trim($jsonLines[0]) !== '{') {
-                            $jsonLines = ['{'];
-                        }
-                    }
-                    
-                    if ($jsonStartFound) {
-                        $jsonLines[] = $line;
-                        
-                        // Contar llaves para detectar el final del JSON
-                        $braceLevel += substr_count($line, '{') - substr_count($line, '}');
-                        
-                        if ($braceLevel <= 0 && strpos($line, '}') !== false) {
-                            break;
-                        }
-                    } else {
-                        $jsonLines[] = $line;
-                    }
+                if ($cleanJsonOutput === null) {
+                    Log::error('No se pudo extraer JSON válido del output');
+                    return [
+                        'success' => false,
+                        'message' => 'No se pudo extraer JSON válido de la respuesta Python'
+                    ];
                 }
                 
-                $cleanJsonOutput = implode("\n", $jsonLines);
-                
-                Log::info('JSON procesado para parsing', [
-                    'json_lines_count' => count($jsonLines),
+                Log::info('JSON extraído para parsing', [
+                    'json_length' => strlen($cleanJsonOutput),
                     'json_preview' => substr($cleanJsonOutput, 0, 500)
                 ]);
                 
                 $result = json_decode($cleanJsonOutput, true);
                 
                 if (json_last_error() !== JSON_ERROR_NONE) {
-                    Log::error('Error parseando JSON Python', [
+                    Log::error('Error parseando JSON Python después de limpieza', [
                         'json_error' => json_last_error_msg(),
-                        'first_1000_chars' => substr($cleanJsonOutput, 0, 1000)
+                        'json_content' => substr($cleanJsonOutput, 0, 1000)
                     ]);
                     
                     return [
                         'success' => false,
-                        'message' => 'Error parseando respuesta JSON: ' . json_last_error_msg()
+                        'message' => 'Error parseando respuesta JSON después de limpieza: ' . json_last_error_msg()
                     ];
                 }
             }
 
             if ($result && isset($result['success'])) {
                 if ($result['success']) {
-                    Log::info('Procesamiento exitoso', [
+                    // Debugging extendido del resultado
+                    Log::info('Procesamiento exitoso - análisis detallado', [
+                        'result_keys' => array_keys($result),
                         'tiene_datos' => isset($result['data']),
                         'tiene_xml_firmado' => isset($result['xmlFileSigned']),
+                        'xmlFileSigned_existe' => array_key_exists('xmlFileSigned', $result),
+                        'xmlFileSigned_vacio' => empty($result['xmlFileSigned'] ?? ''),
+                        'xmlFileSigned_length' => isset($result['xmlFileSigned']) ? strlen($result['xmlFileSigned']) : 0,
+                        'xmlFileSigned_preview' => isset($result['xmlFileSigned']) ? substr($result['xmlFileSigned'], 0, 100) : 'NO_EXISTE',
                         'clave_acceso' => $result['accessKey'] ?? null
                     ]);
+                    
+                    // Verificar si xmlFileSigned está en el result
+                    $xmlFirmado = null;
+                    if (isset($result['result']['xmlFileSigned']) && !empty($result['result']['xmlFileSigned'])) {
+                        $xmlFirmado = $result['result']['xmlFileSigned'];
+                        Log::info('XML firmado encontrado en result.result.xmlFileSigned');
+                    } elseif (isset($result['xmlFileSigned']) && !empty($result['xmlFileSigned'])) {
+                        $xmlFirmado = $result['xmlFileSigned'];
+                        Log::info('XML firmado encontrado en result.xmlFileSigned');
+                    }
                     
                     // Asegurar que el resultado incluya el XML firmado
                     return [
                         'success' => true,
                         'result' => [
                             'accessKey' => $result['accessKey'] ?? null,
-                            'xmlFileSigned' => $result['xmlFileSigned'] ?? null,
+                            'xmlFileSigned' => $xmlFirmado,
                             'isReceived' => $result['isReceived'] ?? false,
                             'isAuthorized' => $result['isAuthorized'] ?? false,
                             'sriResponse' => $result['sriResponse'] ?? null,
@@ -245,6 +234,151 @@ class XmlSriService
                 'success' => false,
                 'message' => 'Error procesando respuesta: ' . $e->getMessage()
             ];
+        }
+    }
+    
+    /**
+     * Extraer JSON válido del output mezclado con logs
+     */
+    private function extractValidJsonFromOutput($output)
+    {
+        try {
+            Log::info('Iniciando extracción de JSON válido', ['total_lines' => count($output)]);
+            
+            // Método 1: Buscar líneas que empiecen con { seguidas de "success":
+            $jsonStartIndex = -1;
+            $jsonEndIndex = -1;
+            
+            for ($i = 0; $i < count($output); $i++) {
+                $line = trim($output[$i]);
+                
+                // Buscar la línea que comienza el JSON principal
+                if ($line === '{' && $i + 1 < count($output)) {
+                    $nextLine = trim($output[$i + 1]);
+                    if (strpos($nextLine, '"success":') !== false) {
+                        $jsonStartIndex = $i;
+                        break;
+                    }
+                }
+            }
+            
+            // Si encontramos el inicio, buscar el final
+            if ($jsonStartIndex !== -1) {
+                $braceCount = 0;
+                for ($i = $jsonStartIndex; $i < count($output); $i++) {
+                    $line = $output[$i];
+                    $braceCount += substr_count($line, '{') - substr_count($line, '}');
+                    
+                    if ($braceCount <= 0 && strpos($line, '}') !== false) {
+                        $jsonEndIndex = $i;
+                        break;
+                    }
+                }
+                
+                if ($jsonEndIndex !== -1) {
+                    $jsonLines = array_slice($output, $jsonStartIndex, $jsonEndIndex - $jsonStartIndex + 1);
+                    $jsonContent = implode("\n", $jsonLines);
+                    
+                    Log::info('JSON extraído por método 1', [
+                        'start_index' => $jsonStartIndex,
+                        'end_index' => $jsonEndIndex,
+                        'json_preview' => substr($jsonContent, 0, 200)
+                    ]);
+                    
+                    // Verificar que es JSON válido
+                    $testJson = json_decode($jsonContent, true);
+                    if (json_last_error() === JSON_ERROR_NONE && isset($testJson['success'])) {
+                        return $jsonContent;
+                    }
+                }
+            }
+            
+            // Método 2: Buscar desde el final hacia atrás
+            Log::info('Intentando método 2: búsqueda desde el final');
+            
+            $jsonLines = [];
+            $foundEnd = false;
+            $braceCount = 0;
+            
+            for ($i = count($output) - 1; $i >= 0; $i--) {
+                $line = trim($output[$i]);
+                
+                if (!$foundEnd && $line === '}') {
+                    $foundEnd = true;
+                    array_unshift($jsonLines, $output[$i]);
+                    $braceCount = 1;
+                    continue;
+                }
+                
+                if ($foundEnd) {
+                    array_unshift($jsonLines, $output[$i]);
+                    $braceCount += substr_count($line, '{') - substr_count($line, '}');
+                    
+                    if ($braceCount <= 0 && strpos($line, '{') !== false) {
+                        break;
+                    }
+                }
+            }
+            
+            if (!empty($jsonLines)) {
+                $jsonContent = implode("\n", $jsonLines);
+                
+                Log::info('JSON extraído por método 2', [
+                    'lines_count' => count($jsonLines),
+                    'json_preview' => substr($jsonContent, 0, 200)
+                ]);
+                
+                // Verificar que es JSON válido
+                $testJson = json_decode($jsonContent, true);
+                if (json_last_error() === JSON_ERROR_NONE && isset($testJson['success'])) {
+                    return $jsonContent;
+                }
+            }
+            
+            // Método 3: Buscar patrones específicos en el output
+            Log::info('Intentando método 3: búsqueda por patrones');
+            
+            $outputString = implode("\n", $output);
+            
+            // Buscar el patrón: {\n  "success": 
+            if (preg_match('/\{\s*\n\s*"success":\s*(true|false).*?\n\}/s', $outputString, $matches)) {
+                $jsonContent = $matches[0];
+                
+                Log::info('JSON extraído por método 3 (regex)', [
+                    'json_preview' => substr($jsonContent, 0, 200)
+                ]);
+                
+                $testJson = json_decode($jsonContent, true);
+                if (json_last_error() === JSON_ERROR_NONE && isset($testJson['success'])) {
+                    return $jsonContent;
+                }
+            }
+            
+            // Método 4: Extraer todo lo que está entre el último { y el último }
+            Log::info('Intentando método 4: último bloque JSON completo');
+            
+            $lastOpenBrace = strrpos($outputString, '{');
+            $lastCloseBrace = strrpos($outputString, '}');
+            
+            if ($lastOpenBrace !== false && $lastCloseBrace !== false && $lastCloseBrace > $lastOpenBrace) {
+                $jsonContent = substr($outputString, $lastOpenBrace, $lastCloseBrace - $lastOpenBrace + 1);
+                
+                Log::info('JSON extraído por método 4', [
+                    'json_preview' => substr($jsonContent, 0, 200)
+                ]);
+                
+                $testJson = json_decode($jsonContent, true);
+                if (json_last_error() === JSON_ERROR_NONE && isset($testJson['success'])) {
+                    return $jsonContent;
+                }
+            }
+            
+            Log::error('Todos los métodos de extracción fallaron');
+            return null;
+            
+        } catch (\Exception $e) {
+            Log::error('Error extrayendo JSON válido del output', ['error' => $e->getMessage()]);
+            return null;
         }
     }
     

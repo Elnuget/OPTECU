@@ -71,15 +71,30 @@ class SriPythonService
             $this->actualizarEstadoFactura($factura, $result);
             
             // Guardar XML firmado si está disponible
+            $xmlFirmadoGuardado = false;
+            
             if (isset($result['xmlFileSigned']) && !empty($result['xmlFileSigned'])) {
                 $this->guardarXMLFirmado($factura, $result['xmlFileSigned']);
-                Log::info('XML firmado guardado exitosamente desde procesamiento');
+                $xmlFirmadoGuardado = true;
+                Log::info('XML firmado guardado exitosamente desde procesamiento', [
+                    'factura_id' => $factura->id,
+                    'xml_length' => strlen($result['xmlFileSigned'])
+                ]);
             } else {
                 Log::warning('XML firmado no disponible en resultado', [
                     'result_keys' => array_keys($result),
                     'tiene_xmlFileSigned' => isset($result['xmlFileSigned']),
-                    'xmlFileSigned_empty' => empty($result['xmlFileSigned'] ?? '')
+                    'xmlFileSigned_empty' => empty($result['xmlFileSigned'] ?? ''),
+                    'xmlFileSigned_type' => gettype($result['xmlFileSigned'] ?? null),
+                    'xmlFileSigned_preview' => isset($result['xmlFileSigned']) ? substr($result['xmlFileSigned'], 0, 200) : 'NO_EXISTE'
                 ]);
+                
+                // Intentar buscar el XML en otros lugares del resultado
+                if (isset($result['data']['xmlFileSigned']) && !empty($result['data']['xmlFileSigned'])) {
+                    $this->guardarXMLFirmado($factura, $result['data']['xmlFileSigned']);
+                    $xmlFirmadoGuardado = true;
+                    Log::info('XML firmado encontrado y guardado desde result.data.xmlFileSigned');
+                }
             }
             
             // Guardar XML autorizado si está disponible
