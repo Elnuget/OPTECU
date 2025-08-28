@@ -302,11 +302,24 @@ class SriPythonService
             // Actualizar clave de acceso si está disponible
             if (isset($result['accessKey'])) {
                 $factura->clave_acceso = $result['accessKey'];
+                Log::info('Clave de acceso actualizada en factura', [
+                    'factura_id' => $factura->id,
+                    'clave_acceso' => $result['accessKey']
+                ]);
+            } else {
+                Log::warning('Clave de acceso no encontrada en resultado', [
+                    'result_keys' => array_keys($result),
+                    'factura_id' => $factura->id
+                ]);
             }
             
             // Actualizar estado SRI si está disponible
             if (isset($result['sriResponse']['estado'])) {
                 $factura->estado_sri = $result['sriResponse']['estado'];
+                Log::info('Estado SRI actualizado', [
+                    'factura_id' => $factura->id,
+                    'estado_sri' => $result['sriResponse']['estado']
+                ]);
             }
             
             // Actualizar número de autorización si está disponible

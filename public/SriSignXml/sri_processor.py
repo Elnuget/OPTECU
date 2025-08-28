@@ -332,7 +332,7 @@ def main():
             resultado = procesar_factura_completa(invoice_data, certificate_path, password)
             print(json.dumps(resultado, ensure_ascii=False, indent=2))
             
-        elif comando == 'consultar':
+        elif comando == 'consultar' or comando == 'verificar_autorizacion':
             if len(sys.argv) < 3:
                 log_message("Uso: python sri_processor.py consultar <access_key>")
                 sys.exit(1)

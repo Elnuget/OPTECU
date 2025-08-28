@@ -206,6 +206,9 @@
                 <button type="button" class="btn btn-sm btn-info" onclick="procesarAutorizacionDirecta({{ $factura->id }})">
                     <i class="fas fa-check"></i> Solicitar Autorización
                 </button>
+                <button type="button" class="btn btn-sm btn-warning ml-2" onclick="verificarAutorizacion({{ $factura->id }})">
+                    <i class="fas fa-sync"></i> Verificar Estado
+                </button>
                 @if($factura->estado === 'DEVUELTA')
                     <span class="badge badge-warning ml-2">
                         <i class="fas fa-exclamation-triangle"></i> Devuelta por SRI - Reintentando autorización
@@ -214,6 +217,11 @@
                 <div id="estado_autorizacion_proceso" style="display: none;" class="mt-2">
                     <div class="alert alert-info">
                         <i class="fas fa-spinner fa-spin"></i> Solicitando autorización al SRI...
+                    </div>
+                </div>
+                <div id="estado_verificacion_proceso" style="display: none;" class="mt-2">
+                    <div class="alert alert-info">
+                        <i class="fas fa-spinner fa-spin"></i> Verificando estado en el SRI...
                     </div>
                 </div>
             @elseif($factura->estado === 'AUTORIZADA')
@@ -719,6 +727,82 @@
                 console.error('ERROR: Error al autorizar la factura:', mensaje, datos);
             }
         }
+    }
+    
+    // Función para verificar autorización
+    function verificarAutorizacion(facturaId) {
+        console.log('Verificando autorización para factura:', facturaId);
+        
+        // Mostrar indicador de proceso
+        const estadoVerificacion = document.getElementById('estado_verificacion_proceso');
+        if (estadoVerificacion) {
+            estadoVerificacion.style.display = 'block';
+        }
+        
+        // Deshabilitar botones
+        const botones = document.querySelectorAll('button');
+        const botonesOriginales = [];
+        botones.forEach(btn => {
+            botonesOriginales.push({
+                element: btn,
+                disabled: btn.disabled,
+                innerHTML: btn.innerHTML
+            });
+            btn.disabled = true;
+        });
+        
+        // Enviar solicitud
+        fetch(`{{ url('/facturas') }}/${facturaId}/verificar-autorizacion`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Respuesta de verificación:', data);
+            
+            // Ocultar indicador de proceso
+            if (estadoVerificacion) {
+                estadoVerificacion.style.display = 'none';
+            }
+            
+            // Restaurar botones
+            botonesOriginales.forEach(item => {
+                item.element.disabled = item.disabled;
+                item.element.innerHTML = item.innerHTML;
+            });
+            
+            if (data.success) {
+                const mensaje = data.data.estado_actual !== data.data.estado_anterior 
+                    ? `Estado actualizado de "${data.data.estado_anterior}" a "${data.data.estado_actual}"`
+                    : `Estado confirmado: "${data.data.estado_actual}"`;
+                
+                alert(`✅ Verificación exitosa\n\n${mensaje}\n\nEstado SRI: ${data.data.estado_sri}`);
+                
+                // Recargar la página para mostrar los cambios
+                window.location.reload();
+            } else {
+                alert(`❌ Error en verificación:\n\n${data.message}`);
+            }
+        })
+        .catch(error => {
+            console.error('Error en verificación:', error);
+            
+            // Ocultar indicador de proceso
+            if (estadoVerificacion) {
+                estadoVerificacion.style.display = 'none';
+            }
+            
+            // Restaurar botones
+            botonesOriginales.forEach(item => {
+                item.element.disabled = item.disabled;
+                item.element.innerHTML = item.innerHTML;
+            });
+            
+            alert(`❌ Error de conexión:\n\n${error.message}`);
+        });
     }
 </script>
 @stop

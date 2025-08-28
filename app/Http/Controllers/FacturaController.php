@@ -4249,4 +4249,100 @@ class FacturaController extends Controller
             ]);
         }
     }
+    
+    /**
+     * Verificar estado de autorización de una factura
+     */
+    public function verificarAutorizacion($id)
+    {
+        try {
+            $factura = Factura::findOrFail($id);
+            
+            // Verificar que la factura tenga clave de acceso
+            if (empty($factura->clave_acceso)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La factura no tiene clave de acceso para verificar'
+                ], 400);
+            }
+            
+            Log::info('Verificando autorización de factura', [
+                'factura_id' => $factura->id,
+                'clave_acceso' => $factura->clave_acceso,
+                'estado_actual' => $factura->estado
+            ]);
+            
+            // Usar el servicio para verificar autorización
+            $resultado = $this->sriPythonService->getXmlSriService()->verificarAutorizacion($factura->clave_acceso);
+            
+            if ($resultado['success']) {
+                $estadoAutorizacion = $resultado['estado'] ?? 'DESCONOCIDO';
+                
+                // Actualizar estado de la factura según la respuesta
+                $estadoAnterior = $factura->estado;
+                
+                if ($estadoAutorizacion === 'AUTORIZADA') {
+                    $factura->estado = 'AUTORIZADA';
+                    $factura->estado_sri = 'AUTORIZADA';
+                    $factura->numero_autorizacion = $resultado['numeroAutorizacion'] ?? $factura->clave_acceso;
+                    $factura->fecha_autorizacion = now();
+                    
+                    // Guardar XML autorizado si viene en la respuesta
+                    if (isset($resultado['comprobante']) && !empty($resultado['comprobante'])) {
+                        $this->guardarXMLAutorizado($factura, $resultado['comprobante']);
+                    }
+                } elseif ($estadoAutorizacion === 'DEVUELTA') {
+                    $factura->estado = 'DEVUELTA';
+                    $factura->estado_sri = 'DEVUELTA';
+                } elseif ($estadoAutorizacion === 'NO_AUTORIZADA') {
+                    $factura->estado = 'NO_AUTORIZADA';
+                    $factura->estado_sri = 'NO_AUTORIZADA';
+                }
+                
+                // Guardar mensajes si existen
+                if (isset($resultado['mensajes']) && !empty($resultado['mensajes'])) {
+                    $factura->mensajes_sri = json_encode($resultado['mensajes']);
+                }
+                
+                $factura->save();
+                
+                Log::info('Estado de factura actualizado después de verificación', [
+                    'factura_id' => $factura->id,
+                    'estado_anterior' => $estadoAnterior,
+                    'estado_nuevo' => $factura->estado,
+                    'estado_sri' => $estadoAutorizacion
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Verificación completada exitosamente',
+                    'data' => [
+                        'estado_anterior' => $estadoAnterior,
+                        'estado_actual' => $factura->estado,
+                        'estado_sri' => $estadoAutorizacion,
+                        'numero_autorizacion' => $factura->numero_autorizacion,
+                        'fecha_autorizacion' => $factura->fecha_autorizacion?->format('Y-m-d H:i:s'),
+                        'mensajes' => $resultado['mensajes'] ?? []
+                    ]
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => $resultado['message'] ?? 'Error verificando autorización'
+                ], 500);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Error verificando autorización', [
+                'factura_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error verificando autorización: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

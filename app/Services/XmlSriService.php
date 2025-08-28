@@ -17,6 +17,80 @@ class XmlSriService
     }
     
     /**
+     *         } catch (\Exception $e) {
+            Log::error('Error solicitando autorización', ['error' => $e->getMessage()]);
+            return [
+                'success' => false,
+                'message' => 'Error ejecutando comando: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Verificar el estado de autorización de un comprobante
+     */
+    public function verificarAutorizacion($claveAcceso)
+    {
+        try {
+            Log::info('=== VERIFICANDO ESTADO AUTORIZACIÓN ===', ['clave_acceso' => $claveAcceso]);
+            
+            $pythonScript = public_path('SriSignXml/sri_processor.py');
+            $command = "python \"{$pythonScript}\" verificar_autorizacion \"{$claveAcceso}\"";
+            
+            Log::info('Ejecutando comando verificación', ['command' => $command]);
+            
+            exec($command . ' 2>&1', $output, $returnCode);
+            
+            Log::info('Resultado verificación Python', [
+                'return_code' => $returnCode,
+                'output_lines' => count($output),
+                'output' => $output
+            ]);
+            
+            if ($returnCode !== 0) {
+                return [
+                    'success' => false,
+                    'message' => 'Error ejecutando verificación de autorización',
+                    'output' => implode("\n", $output)
+                ];
+            }
+            
+            // Extraer JSON del output
+            $jsonOutput = $this->extractValidJsonFromOutput($output);
+            
+            if (!$jsonOutput) {
+                Log::warning('No se pudo extraer JSON válido de verificación autorización');
+                return [
+                    'success' => false,
+                    'message' => 'No se pudo extraer respuesta válida'
+                ];
+            }
+            
+            $result = json_decode($jsonOutput, true);
+            
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return [
+                    'success' => false,
+                    'message' => 'Error parseando respuesta JSON: ' . json_last_error_msg()
+                ];
+            }
+            
+            return $result;
+            
+        } catch (\Exception $e) {
+            Log::error('Error en verificación de autorización', [
+                'error' => $e->getMessage(),
+                'clave_acceso' => $claveAcceso
+            ]);
+            
+            return [
+                'success' => false,
+                'message' => 'Error al verificar autorización: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
      * Procesar factura completa: generar XML, firmar y enviar al SRI
      */
     public function procesarFacturaCompleta($invoiceData, $certificatePath, $password)
@@ -166,17 +240,17 @@ class XmlSriService
                     // Debugging extendido del resultado
                     Log::info('Procesamiento exitoso - análisis detallado', [
                         'result_keys' => array_keys($result),
-                        'tiene_datos' => isset($result['data']),
-                        'tiene_xml_firmado' => isset($result['xmlFileSigned']),
-                        'xmlFileSigned_existe' => array_key_exists('xmlFileSigned', $result),
-                        'xmlFileSigned_vacio' => empty($result['xmlFileSigned'] ?? ''),
-                        'xmlFileSigned_length' => isset($result['xmlFileSigned']) ? strlen($result['xmlFileSigned']) : 0,
-                        'xmlFileSigned_preview' => isset($result['xmlFileSigned']) ? substr($result['xmlFileSigned'], 0, 100) : 'NO_EXISTE',
-                        'clave_acceso' => $result['accessKey'] ?? null
+                        'tiene_result' => isset($result['result']),
+                        'result_result_keys' => isset($result['result']) ? array_keys($result['result']) : [],
+                        'clave_acceso_directo' => $result['accessKey'] ?? null,
+                        'clave_acceso_en_result' => isset($result['result']['accessKey']) ? $result['result']['accessKey'] : null
                     ]);
                     
                     // Verificar si xmlFileSigned está en el result
                     $xmlFirmado = null;
+                    $claveAcceso = null;
+                    
+                    // Buscar XML firmado
                     if (isset($result['result']['xmlFileSigned']) && !empty($result['result']['xmlFileSigned'])) {
                         $xmlFirmado = $result['result']['xmlFileSigned'];
                         Log::info('XML firmado encontrado en result.result.xmlFileSigned');
@@ -185,16 +259,25 @@ class XmlSriService
                         Log::info('XML firmado encontrado en result.xmlFileSigned');
                     }
                     
-                    // Asegurar que el resultado incluya el XML firmado
+                    // Buscar clave de acceso
+                    if (isset($result['result']['accessKey']) && !empty($result['result']['accessKey'])) {
+                        $claveAcceso = $result['result']['accessKey'];
+                        Log::info('Clave de acceso encontrada en result.result.accessKey', ['clave' => $claveAcceso]);
+                    } elseif (isset($result['accessKey']) && !empty($result['accessKey'])) {
+                        $claveAcceso = $result['accessKey'];
+                        Log::info('Clave de acceso encontrada en result.accessKey', ['clave' => $claveAcceso]);
+                    }
+                    
+                    // Asegurar que el resultado incluya el XML firmado y clave de acceso
                     return [
                         'success' => true,
                         'result' => [
-                            'accessKey' => $result['accessKey'] ?? null,
+                            'accessKey' => $claveAcceso,
                             'xmlFileSigned' => $xmlFirmado,
-                            'isReceived' => $result['isReceived'] ?? false,
-                            'isAuthorized' => $result['isAuthorized'] ?? false,
-                            'sriResponse' => $result['sriResponse'] ?? null,
-                            'xmlAutorizado' => $result['xmlAutorizado'] ?? null,
+                            'isReceived' => $result['result']['isReceived'] ?? $result['isReceived'] ?? false,
+                            'isAuthorized' => $result['result']['isAuthorized'] ?? $result['isAuthorized'] ?? false,
+                            'sriResponse' => $result['result']['sriResponse'] ?? $result['sriResponse'] ?? null,
+                            'xmlAutorizado' => $result['result']['xmlAutorizado'] ?? $result['xmlAutorizado'] ?? null,
                             'data' => $result['data'] ?? null
                         ]
                     ];

@@ -343,6 +343,7 @@ Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guard
     Route::post('facturas/{id}/firmar-y-enviar', [App\Http\Controllers\FacturaController::class, 'firmarYEnviar'])->name('facturas.firmar-y-enviar');
     Route::post('facturas/{id}/autorizar', [App\Http\Controllers\FacturaController::class, 'autorizarComprobante'])->name('facturas.autorizar');
     Route::post('facturas/{id}/autorizar-sri', [App\Http\Controllers\FacturaController::class, 'autorizar'])->name('facturas.autorizar-sri');
+    Route::post('facturas/{id}/verificar-autorizacion', [App\Http\Controllers\FacturaController::class, 'verificarAutorizacion'])->name('facturas.verificar-autorizacion');
     
     // Rutas adicionales para firma digital
     Route::get('facturas/{id}/xml', [App\Http\Controllers\FacturaController::class, 'obtenerXML'])->name('facturas.obtener-xml');
