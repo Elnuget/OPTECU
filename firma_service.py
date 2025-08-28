@@ -174,12 +174,6 @@ class FirmaElectronicaService:
             digest_method_doc = etree.SubElement(reference_doc, "{http://www.w3.org/2000/09/xmldsig#}DigestMethod")
             digest_method_doc.set("Algorithm", "http://www.w3.org/2000/09/xmldsig#sha1")
 
-            # Calcular digest del documento
-            doc_without_signature = etree.tostring(root, method="c14n", exclusive=False)
-            digest_doc = hashlib.sha1(doc_without_signature).digest()
-            digest_value_doc = etree.SubElement(reference_doc, "{http://www.w3.org/2000/09/xmldsig#}DigestValue")
-            digest_value_doc.text = base64.b64encode(digest_doc).decode()
-
             # Crear SignedProperties para XAdES-BES
             signed_properties_xml = self._create_signed_properties(signed_properties_id, signature_id)
             
@@ -195,6 +189,12 @@ class FirmaElectronicaService:
             digest_cert = hashlib.sha1(cert_canonical).digest()
             digest_value_cert = etree.SubElement(reference_cert, "{http://www.w3.org/2000/09/xmldsig#}DigestValue")
             digest_value_cert.text = base64.b64encode(digest_cert).decode()
+
+            # Calcular digest del documento original (sin firma)
+            doc_without_signature = etree.tostring(root, method="c14n", exclusive=False)
+            digest_doc = hashlib.sha1(doc_without_signature).digest()
+            digest_value_doc = etree.SubElement(reference_doc, "{http://www.w3.org/2000/09/xmldsig#}DigestValue")
+            digest_value_doc.text = base64.b64encode(digest_doc).decode()
 
             # Firmar SignedInfo
             signed_info_canonical = etree.tostring(signed_info, method="c14n", exclusive=False)
