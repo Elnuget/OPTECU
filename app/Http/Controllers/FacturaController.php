@@ -100,13 +100,19 @@ class FacturaController extends Controller
         $declarantes = Declarante::all();
         $mediosPago = \App\Models\mediosdepago::all();
         
+        // Crear array con información de contraseñas guardadas para JavaScript
+        $declarantesPasswords = [];
+        foreach ($declarantes as $declarante) {
+            $declarantesPasswords[$declarante->id] = !empty($declarante->password_certificado);
+        }
+        
         // Verificar si viene un pedido_id en la solicitud
         $pedido = null;
         if ($request->has('pedido_id')) {
             $pedido = \App\Models\Pedido::with(['pagos.mediodepago'])->find($request->pedido_id);
         }
         
-        return view('facturas.create', compact('declarantes', 'pedido', 'mediosPago'));
+        return view('facturas.create', compact('declarantes', 'pedido', 'mediosPago', 'declarantesPasswords'));
     }
 
     /**

@@ -172,7 +172,7 @@
                             <i class="fas fa-lock text-warning"></i> Contraseña del Certificado Digital <span class="text-danger">*</span>
                         </label>
                         <input type="password" id="password_certificado" name="password_certificado" class="form-control" 
-                               placeholder="Ingrese la contraseña de su certificado P12" required>
+                               placeholder="Ingrese la contraseña de su certificado P12">
                         <small class="form-text text-info">
                             <i class="fas fa-shield-alt"></i> Su certificado personal del declarante seleccionado.<br>
                             <i class="fas fa-info-circle"></i> No se almacena - se usa solo para esta factura.
@@ -429,8 +429,11 @@
                 return;
             }
             
-            // Validar que hay contraseña del certificado
-            if (!$('#password_certificado').val()) {
+            // Validar que hay contraseña del certificado (solo si es requerida)
+            const declaranteId = $('#declarante_id').val();
+            const tienePasswordGuardada = declaranteId && declarantesPasswords[declaranteId];
+            
+            if (!tienePasswordGuardada && !$('#password_certificado').val()) {
                 Swal.fire({
                     title: 'Error',
                     text: 'Debe ingresar la contraseña del certificado.',
@@ -526,6 +529,50 @@
                     $('#guardarFactura').prop('disabled', false).html('<i class="fas fa-file-alt"></i> Generar Factura (XML)');
                 }
             });
+        });
+        
+        // Información de contraseñas guardadas por declarante
+        const declarantesPasswords = @json($declarantesPasswords);
+        
+        // Función para mostrar/ocultar campo de contraseña
+        function togglePasswordField() {
+            const declaranteId = $('#declarante_id').val();
+            const passwordField = $('#password_certificado');
+            const passwordGroup = passwordField.closest('.form-group');
+            
+            if (declaranteId && declarantesPasswords[declaranteId]) {
+                // El declarante tiene contraseña guardada - ocultar campo
+                passwordGroup.hide();
+                passwordField.removeAttr('required').val(''); // Quitar required y limpiar valor
+                $('#password_certificado-info').remove(); // Quitar mensaje anterior si existe
+                
+                // Agregar mensaje informativo
+                passwordGroup.after(`
+                    <div id="password_certificado-info" class="alert alert-info">
+                        <i class="fas fa-check-circle text-success"></i> 
+                        <strong>Contraseña del certificado:</strong> Ya está guardada para este declarante.
+                        <br><small class="text-muted">No es necesario ingresarla nuevamente.</small>
+                    </div>
+                `);
+            } else if (declaranteId) {
+                // El declarante NO tiene contraseña guardada - mostrar campo
+                passwordGroup.show();
+                passwordField.attr('required', 'required'); // Agregar required
+                $('#password_certificado-info').remove(); // Quitar mensaje informativo
+            } else {
+                // No hay declarante seleccionado - ocultar campo
+                passwordGroup.hide();
+                passwordField.removeAttr('required').val('');
+                $('#password_certificado-info').remove();
+            }
+        }
+        
+        // Ejecutar al cambiar declarante
+        $('#declarante_id').on('change', togglePasswordField);
+        
+        // Ejecutar al cargar la página
+        $(document).ready(function() {
+            togglePasswordField();
         });
         
         // Inicializar cálculos
