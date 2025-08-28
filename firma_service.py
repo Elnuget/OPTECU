@@ -3,7 +3,12 @@
 
 """
 Servicio de Firma Digital Electrónica para Ecuador (SRI)
-Implementación en Python pa            // Calcular digest del documento (sin la firma)
+Implementación en Python pa            // Calcular digest del documento (sin            # Calcular digest de SignedProperties con canonicalización C14N exclusiva
+            # Usar la misma configuración de canonicalización que para el documento
+            signed_props_canonical = etree.tostring(signed_properties_xml, method="c14n", exclusive=True, with_comments=False, inclusive_ns_prefixes=None)
+            digest_props = hashlib.sha256(signed_props_canonical).digest()
+            digest_value_props = etree.SubElement(reference_signed_props, "{http://www.w3.org/2000/09/xmldsig#}DigestValue")
+            digest_value_props.text = base64.b64encode(digest_props).decode('ascii')irma)
             doc_without_signature = etree.tostring(root, method="c14n", exclusive=False)
             digest = hashlib.sha1(doc_without_signature).digest()
             digest_value = etree.SubElement(reference, "{http://www.w3.org/2000/09/xmldsig#}DigestValue")
@@ -113,8 +118,15 @@ class FirmaElectronicaService:
     def sign_xml(self, xml_content):
         """Firma el XML con XAdES-BES completo según estándares del SRI Ecuador"""
         try:
-            # Parsear el XML
-            root = etree.fromstring(xml_content.encode('utf-8'))
+            # Asegurar que el contenido esté en UTF-8
+            if isinstance(xml_content, str):
+                xml_content_bytes = xml_content.encode('utf-8')
+            else:
+                xml_content_bytes = xml_content
+                
+            # Parsear el XML con codificación UTF-8 explícita
+            parser = etree.XMLParser(encoding='utf-8')
+            root = etree.fromstring(xml_content_bytes, parser)
 
             # Generar IDs únicos para la firma
             import random
@@ -136,13 +148,13 @@ class FirmaElectronicaService:
             signed_info = etree.SubElement(signature, "{http://www.w3.org/2000/09/xmldsig#}SignedInfo")
             signed_info.set("Id", signed_info_id)
 
-            # CanonicalizationMethod
+            # CanonicalizationMethod - Usar Exclusive C14N como requiere SRI
             canonicalization = etree.SubElement(signed_info, "{http://www.w3.org/2000/09/xmldsig#}CanonicalizationMethod")
-            canonicalization.set("Algorithm", "http://www.w3.org/TR/2001/REC-xml-c14n-20010315")
+            canonicalization.set("Algorithm", "http://www.w3.org/2001/10/xml-exc-c14n#")
 
             # SignatureMethod
             signature_method = etree.SubElement(signed_info, "{http://www.w3.org/2000/09/xmldsig#}SignatureMethod")
-            signature_method.set("Algorithm", "http://www.w3.org/2000/09/xmldsig#rsa-sha1")
+            signature_method.set("Algorithm", "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256")
 
             # Reference 1: SignedProperties (XAdES)
             reference_signed_props = etree.SubElement(signed_info, "{http://www.w3.org/2000/09/xmldsig#}Reference")
@@ -151,14 +163,14 @@ class FirmaElectronicaService:
             reference_signed_props.set("URI", f"#{signed_properties_id}")
 
             digest_method_props = etree.SubElement(reference_signed_props, "{http://www.w3.org/2000/09/xmldsig#}DigestMethod")
-            digest_method_props.set("Algorithm", "http://www.w3.org/2000/09/xmldsig#sha1")
+            digest_method_props.set("Algorithm", "http://www.w3.org/2001/04/xmlenc#sha256")
 
             # Reference 2: Certificate
             reference_cert = etree.SubElement(signed_info, "{http://www.w3.org/2000/09/xmldsig#}Reference")
             reference_cert.set("URI", f"#{certificate_id}")
 
             digest_method_cert = etree.SubElement(reference_cert, "{http://www.w3.org/2000/09/xmldsig#}DigestMethod")
-            digest_method_cert.set("Algorithm", "http://www.w3.org/2000/09/xmldsig#sha1")
+            digest_method_cert.set("Algorithm", "http://www.w3.org/2001/04/xmlenc#sha256")
 
             # Reference 3: Documento principal
             reference_doc = etree.SubElement(signed_info, "{http://www.w3.org/2000/09/xmldsig#}Reference")
@@ -170,46 +182,64 @@ class FirmaElectronicaService:
             transform_doc = etree.SubElement(transforms_doc, "{http://www.w3.org/2000/09/xmldsig#}Transform")
             transform_doc.set("Algorithm", "http://www.w3.org/2000/09/xmldsig#enveloped-signature")
 
+            # Agregar transform de canonicalización exclusiva (requerido por SRI)
+            transform_c14n = etree.SubElement(transforms_doc, "{http://www.w3.org/2000/09/xmldsig#}Transform")
+            transform_c14n.set("Algorithm", "http://www.w3.org/2001/10/xml-exc-c14n#")
+
             # DigestMethod para el documento
             digest_method_doc = etree.SubElement(reference_doc, "{http://www.w3.org/2000/09/xmldsig#}DigestMethod")
-            digest_method_doc.set("Algorithm", "http://www.w3.org/2000/09/xmldsig#sha1")
+            digest_method_doc.set("Algorithm", "http://www.w3.org/2001/04/xmlenc#sha256")
 
             # Crear SignedProperties para XAdES-BES
             signed_properties_xml = self._create_signed_properties(signed_properties_id, signature_id)
             
-            # Calcular digest de SignedProperties
-            signed_props_canonical = etree.tostring(signed_properties_xml, method="c14n", exclusive=False)
-            digest_props = hashlib.sha1(signed_props_canonical).digest()
+            # Calcular digest de SignedProperties con canonicalización C14N exclusiva
+            # Usar la misma configuración de canonicalización que para el documento
+            signed_props_canonical = etree.tostring(signed_properties_xml, method="c14n", exclusive=True, with_comments=False, inclusive_ns_prefixes=None)
+            digest_props = hashlib.sha256(signed_props_canonical).digest()
             digest_value_props = etree.SubElement(reference_signed_props, "{http://www.w3.org/2000/09/xmldsig#}DigestValue")
-            digest_value_props.text = base64.b64encode(digest_props).decode()
+            digest_value_props.text = base64.b64encode(digest_props).decode('ascii')
 
-            # Crear KeyInfo y calcular digest del certificado
+            # Crear KeyInfo y calcular digest del certificado CORRECTAMENTE
             key_info_xml = self._create_key_info(certificate_id)
-            cert_canonical = etree.tostring(key_info_xml, method="c14n", exclusive=False)
-            digest_cert = hashlib.sha1(cert_canonical).digest()
+            # Para el digest del certificado, usar SOLO el contenido del certificado DER
+            # NO canonicalizar todo el KeyInfo, solo el certificado
+            cert_der = self.certificate.public_bytes(serialization.Encoding.DER)
+            digest_cert = hashlib.sha256(cert_der).digest()
             digest_value_cert = etree.SubElement(reference_cert, "{http://www.w3.org/2000/09/xmldsig#}DigestValue")
-            digest_value_cert.text = base64.b64encode(digest_cert).decode()
+            digest_value_cert.text = base64.b64encode(digest_cert).decode('ascii')
 
-            # Calcular digest del documento original (sin firma)
-            doc_without_signature = etree.tostring(root, method="c14n", exclusive=False)
-            digest_doc = hashlib.sha1(doc_without_signature).digest()
+            # Calcular digest del documento aplicando transforms correctamente
+            # Primero crear una copia del documento
+            root_copy = etree.fromstring(etree.tostring(root))
+
+            # Aplicar transform enveloped-signature: remover la firma
+            signature_to_remove = root_copy.find('.//{http://www.w3.org/2000/09/xmldsig#}Signature')
+            if signature_to_remove is not None:
+                signature_to_remove.getparent().remove(signature_to_remove)
+
+            # Aplicar transform xml-exc-c14n: canonicalización exclusiva
+            # Usar canonicalización exclusiva SIN namespaces inclusivos para mayor compatibilidad
+            doc_without_signature = etree.tostring(root_copy, method="c14n", exclusive=True, with_comments=False, inclusive_ns_prefixes=None)
+            digest_doc = hashlib.sha256(doc_without_signature).digest()
             digest_value_doc = etree.SubElement(reference_doc, "{http://www.w3.org/2000/09/xmldsig#}DigestValue")
-            digest_value_doc.text = base64.b64encode(digest_doc).decode()
+            digest_value_doc.text = base64.b64encode(digest_doc).decode('ascii')
 
-            # Firmar SignedInfo
-            signed_info_canonical = etree.tostring(signed_info, method="c14n", exclusive=False)
-            signature_digest = hashlib.sha1(signed_info_canonical).digest()
+            # Firmar SignedInfo con canonicalización C14N exclusiva
+            # Usar la misma configuración consistente para canonicalización
+            signed_info_canonical = etree.tostring(signed_info, method="c14n", exclusive=True, with_comments=False, inclusive_ns_prefixes=None)
 
+            # Firmar los bytes canónicos directamente (evitar doble hashing)
             signature_bytes = self.private_key.sign(
-                signature_digest,
+                signed_info_canonical,
                 padding.PKCS1v15(),
-                hashes.SHA1()
+                hashes.SHA256()
             )
 
-            # SignatureValue
+            # SignatureValue - base64 limpio sin saltos extra
             signature_value = etree.SubElement(signature, "{http://www.w3.org/2000/09/xmldsig#}SignatureValue")
             signature_value.set("Id", signature_value_id)
-            signature_value.text = "\n" + base64.b64encode(signature_bytes).decode() + "\n"
+            signature_value.text = base64.b64encode(signature_bytes).decode('ascii')
 
             # Agregar KeyInfo
             signature.append(key_info_xml)
@@ -226,8 +256,10 @@ class FirmaElectronicaService:
             # Agregar la firma al documento
             root.append(signature)
 
-            # Retornar el XML firmado
-            signed_xml = etree.tostring(root, encoding='unicode', method='xml')
+            # Retornar el XML firmado como bytes UTF-8 sin BOM para evitar problemas de encoding
+            signed_xml_bytes = etree.tostring(root, encoding='utf-8', method='xml', pretty_print=False)
+            # Convertir a string UTF-8 para consistencia con el resto del sistema
+            signed_xml = signed_xml_bytes.decode('utf-8')
             return signed_xml
 
         except Exception as e:
@@ -257,13 +289,13 @@ class FirmaElectronicaService:
         # CertDigest
         cert_digest = etree.SubElement(cert, "{http://uri.etsi.org/01903/v1.3.2#}CertDigest")
         digest_method = etree.SubElement(cert_digest, "{http://www.w3.org/2000/09/xmldsig#}DigestMethod")
-        digest_method.set("Algorithm", "http://www.w3.org/2000/09/xmldsig#sha1")
+        digest_method.set("Algorithm", "http://www.w3.org/2001/04/xmlenc#sha256")
 
         # Calcular digest del certificado
         cert_der = self.certificate.public_bytes(serialization.Encoding.DER)
-        cert_digest_value = hashlib.sha1(cert_der).digest()
+        cert_digest_value = hashlib.sha256(cert_der).digest()
         digest_value = etree.SubElement(cert_digest, "{http://www.w3.org/2000/09/xmldsig#}DigestValue")
-        digest_value.text = base64.b64encode(cert_digest_value).decode()
+        digest_value.text = base64.b64encode(cert_digest_value).decode('ascii')
 
         # IssuerSerial
         issuer_serial = etree.SubElement(cert, "{http://uri.etsi.org/01903/v1.3.2#}IssuerSerial")
@@ -288,7 +320,7 @@ class FirmaElectronicaService:
         # X509Certificate - Solo certificado, sin KeyValue para cumplir con esquema SRI
         cert_der = self.certificate.public_bytes(serialization.Encoding.DER)
         x509_cert = etree.SubElement(x509_data, "{http://www.w3.org/2000/09/xmldsig#}X509Certificate")
-        x509_cert.text = "\n" + base64.b64encode(cert_der).decode() + "\n"
+        x509_cert.text = base64.b64encode(cert_der).decode('ascii')
 
         # NOTA: Eliminado KeyValue para cumplir con el esquema XML del SRI
         # El SRI requiere solo elementos X.509 en KeyInfo, no ds:KeyValue
@@ -309,9 +341,13 @@ def main():
         password = sys.argv[2]
         xml_file = sys.argv[3]
 
-        # Leer el XML desde el archivo
-        with open(xml_file, 'r', encoding='utf-8') as f:
+        # Leer el XML desde el archivo con codificación UTF-8 explícita
+        with open(xml_file, 'r', encoding='utf-8-sig') as f:  # utf-8-sig maneja BOM
             xml_content = f.read()
+
+        # Asegurar que el contenido esté limpio (sin BOM)
+        if xml_content.startswith('\ufeff'):
+            xml_content = xml_content[1:]
 
         # Crear servicio de firma
         firma_service = FirmaElectronicaService(p12_path, password)

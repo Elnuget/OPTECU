@@ -9,9 +9,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use App\Services\FirmaElectronicaService;
+use App\Services\Factura\FacturaListService;
+use App\Services\Factura\FacturaCalculationService;
 
 class FacturaController extends Controller
 {
+    protected $facturaListService;
+    protected $facturaCalculationService;
+
+    public function __construct(FacturaListService $facturaListService, FacturaCalculationService $facturaCalculationService)
+    {
+        $this->facturaListService = $facturaListService;
+        $this->facturaCalculationService = $facturaCalculationService;
+    }
     /**
      * Display a listing of the resource.
      *
@@ -19,8 +29,8 @@ class FacturaController extends Controller
      */
     public function index()
     {
-        $declarantes = Declarante::orderBy('nombre')->get();
-        return view('facturas.index', compact('declarantes'));
+        $data = $this->facturaListService->getIndexData();
+        return view('facturas.index', $data);
     }
 
     /**
@@ -31,37 +41,17 @@ class FacturaController extends Controller
      */
     public function listar(Request $request)
     {
-        try {
-            $query = Factura::with('declarante', 'pedido');
-            
-            // Filtros
-            if ($request->has('declarante_id') && $request->declarante_id) {
-                $query->where('declarante_id', $request->declarante_id);
-            }
-            
-            if ($request->has('fecha_desde') && $request->fecha_desde) {
-                $query->whereDate('created_at', '>=', $request->fecha_desde);
-            }
-            
-            if ($request->has('fecha_hasta') && $request->fecha_hasta) {
-                $query->whereDate('created_at', '<=', $request->fecha_hasta);
-            }
-            
-            $facturas = $query->orderBy('id', 'desc')->get();
-            
-            // Devolvemos las facturas completas para que la vista pueda acceder a todas las propiedades
-            // como declarante.nombre, pedido.cliente, etc.
-            
+        $resultado = $this->facturaListService->listarFacturas($request);
+        
+        if ($resultado['success']) {
             return response()->json([
-                'success' => true,
-                'data' => $facturas
+                'data' => $resultado['data']
             ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al cargar facturas: ' . $e->getMessage()
-            ], 500);
         }
+        
+        return response()->json([
+            'message' => $resultado['message']
+        ], 500);
     }
 
     /**
@@ -634,13 +624,7 @@ class FacturaController extends Controller
      */
     private function calcularSubtotalExento($elementos)
     {
-        $subtotalExento = 0;
-        foreach ($elementos as $elemento) {
-            if ($elemento['iva_porcentaje'] == 0) {
-                $subtotalExento += $elemento['precio'];
-            }
-        }
-        return $subtotalExento;
+        return $this->facturaCalculationService->calcularSubtotalExento($elementos);
     }
     
     /**
@@ -648,28 +632,7 @@ class FacturaController extends Controller
      */
     private function calcularDigitoVerificador($claveAcceso48)
     {
-        $factor = 7;
-        $suma = 0;
-        
-        // Recorrer los 48 dígitos de derecha a izquierda
-        for ($i = 47; $i >= 0; $i--) {
-            $suma += intval($claveAcceso48[$i]) * $factor;
-            $factor--;
-            if ($factor == 1) {
-                $factor = 7;
-            }
-        }
-        
-        $residuo = $suma % 11;
-        $digitoVerificador = 11 - $residuo;
-        
-        if ($digitoVerificador == 11) {
-            $digitoVerificador = 0;
-        } elseif ($digitoVerificador == 10) {
-            $digitoVerificador = 1;
-        }
-        
-        return $digitoVerificador;
+        return $this->facturaCalculationService->calcularDigitoVerificador($claveAcceso48);
     }
 
     /**
