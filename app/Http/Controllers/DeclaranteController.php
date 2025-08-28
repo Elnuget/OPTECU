@@ -126,6 +126,11 @@ class DeclaranteController extends Controller
             'obligado_contabilidad' => $request->has('obligado_contabilidad') && $request->obligado_contabilidad != '0' ? true : false
         ];
 
+        // Agregar contraseña del certificado si se proporciona
+        if ($request->filled('password_certificado')) {
+            $data['password_certificado'] = $request->password_certificado;
+        }
+
         // Manejar el archivo de firma si se proporciona
         if ($request->hasFile('firma') && $request->file('firma')->isValid()) {
             $firma = $request->file('firma');
@@ -228,6 +233,11 @@ class DeclaranteController extends Controller
             'obligado_contabilidad' => $request->has('obligado_contabilidad') && $request->obligado_contabilidad != '0' ? true : false
         ];
 
+        // Agregar contraseña del certificado si se proporciona
+        if ($request->filled('password_certificado')) {
+            $data['password_certificado'] = $request->password_certificado;
+        }
+
         // Manejar el archivo de firma si se proporciona
         if ($request->hasFile('firma') && $request->file('firma')->isValid()) {
             // Eliminar firma anterior si existe
@@ -275,6 +285,39 @@ class DeclaranteController extends Controller
 
         return redirect()->route('declarantes.index')
             ->with('success', 'Declarante eliminado exitosamente');
+    }
+
+    /**
+     * Actualizar la contraseña del certificado
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function actualizarPassword(Request $request, $id)
+    {
+        try {
+            $declarante = Declarante::findOrFail($id);
+            
+            $request->validate([
+                'password_certificado' => 'required|string|min:1'
+            ]);
+            
+            $declarante->update([
+                'password_certificado' => $request->password_certificado
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Contraseña del certificado actualizada exitosamente'
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar la contraseña: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

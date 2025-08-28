@@ -19,7 +19,8 @@ class Declarante extends Model
         'direccion_matriz',
         'establecimiento',
         'punto_emision',
-        'obligado_contabilidad'
+        'obligado_contabilidad',
+        'password_certificado'
     ];
 
     protected $casts = [
@@ -55,6 +56,43 @@ class Declarante extends Model
         
         $extension = strtolower(pathinfo($this->firma, PATHINFO_EXTENSION));
         return in_array($extension, ['p12', 'pfx']) && file_exists(public_path('uploads/firmas/' . $this->firma));
+    }
+
+    /**
+     * Verificar si tiene contraseña del certificado guardada
+     */
+    public function tienePasswordGuardadaAttribute()
+    {
+        // Verificar en los atributos originales de la base de datos
+        $valorRaw = $this->getAttributeFromArray('password_certificado');
+        return !empty($valorRaw);
+    }
+
+    /**
+     * Mutator para encriptar la contraseña del certificado
+     */
+    public function setPasswordCertificadoAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['password_certificado'] = encrypt($value);
+        } else {
+            $this->attributes['password_certificado'] = null;
+        }
+    }
+
+    /**
+     * Accessor para desencriptar la contraseña del certificado
+     */
+    public function getPasswordCertificadoAttribute($value)
+    {
+        if (!empty($value)) {
+            try {
+                return decrypt($value);
+            } catch (\Exception $e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     /**

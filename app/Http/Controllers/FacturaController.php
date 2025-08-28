@@ -32,6 +32,29 @@ class FacturaController extends Controller
         $this->firmaDigitalService = $firmaDigitalService;
         $this->sriPythonService = $sriPythonService;
     }
+
+    /**
+     * Obtener la contraseña del certificado desde la request o desde el declarante guardado
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param int $declaranteId
+     * @return string|null
+     */
+    private function obtenerPasswordCertificado(Request $request, $declaranteId)
+    {
+        // Si viene en la request, usar esa
+        if ($request->filled('password_certificado')) {
+            return $request->password_certificado;
+        }
+        
+        // Si no, buscar en el declarante guardado
+        $declarante = Declarante::find($declaranteId);
+        if ($declarante && $declarante->password_certificado) {
+            return $declarante->password_certificado;
+        }
+        
+        return null;
+    }
     /**
      * Display a listing of the resource.
      *
@@ -98,12 +121,15 @@ class FacturaController extends Controller
             // Log para depuración
             \Log::info('Datos recibidos en FacturaController::store', $request->all());
             
-            $validator = Validator::make($request->all(), [
+            // Verificar si la contraseña del certificado es requerida
+            $declarante = Declarante::find($request->declarante_id);
+            $passwordRequerida = !($declarante && $declarante->password_certificado);
+            
+            $reglas = [
                 'declarante_id' => 'required|exists:declarante,id',
                 'medio_pago_xml' => 'required|numeric',
                 'pedido_id' => 'nullable|exists:pedidos,id',
                 'correo_cliente' => 'nullable|email|max:255',
-                'password_certificado' => 'required|string|min:1', // Nueva validación para contraseña
                 // Campos de elementos a facturar
                 'incluir_examen' => 'nullable',
                 'incluir_armazon' => 'nullable',
@@ -113,7 +139,14 @@ class FacturaController extends Controller
                 'precio_armazon' => 'nullable|numeric|min:0',
                 'precio_luna' => 'nullable|numeric|min:0',
                 'precio_compra_rapida' => 'nullable|numeric|min:0',
-            ]);
+            ];
+            
+            // Solo requerir password si no está guardada en el declarante
+            if ($passwordRequerida) {
+                $reglas['password_certificado'] = 'required|string|min:1';
+            }
+            
+            $validator = Validator::make($request->all(), $reglas);
             
             if ($validator->fails()) {
                 return response()->json([
@@ -297,6 +330,16 @@ class FacturaController extends Controller
             
             // Procesar con API Python directamente
             try {
+                // Obtener la contraseña del certificado
+                $passwordCertificado = $this->obtenerPasswordCertificado($request, $request->declarante_id);
+                
+                if (!$passwordCertificado) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Se requiere la contraseña del certificado. Proporcione la contraseña o guárdela en el declarante.'
+                    ], 422);
+                }
+                
                 $resultado = $this->sriPythonService->procesarFacturaCompleta(
                     $factura,
                     $declarante,
@@ -306,7 +349,7 @@ class FacturaController extends Controller
                     $iva,
                     $total,
                     $medioPago,
-                    $request->password_certificado
+                    $passwordCertificado
                 );
                 
                 if ($resultado['success']) {
@@ -379,11 +422,14 @@ class FacturaController extends Controller
         try {
             \Log::info('=== INICIO PROCESAMIENTO CON API PYTHON ===', $request->all());
             
-            $validator = Validator::make($request->all(), [
+            // Verificar si la contraseña del certificado es requerida
+            $declarante = Declarante::find($request->declarante_id);
+            $passwordRequerida = !($declarante && $declarante->password_certificado);
+            
+            $reglas = [
                 'declarante_id' => 'required|exists:declarante,id',
                 'medio_pago_xml' => 'required|numeric',
                 'pedido_id' => 'nullable|exists:pedidos,id',
-                'password_certificado' => 'required|string|min:1',
                 'correo_cliente' => 'nullable|email|max:255',
                 // Campos de elementos a facturar
                 'incluir_examen' => 'nullable',
@@ -394,7 +440,14 @@ class FacturaController extends Controller
                 'precio_armazon' => 'nullable|numeric|min:0',
                 'precio_luna' => 'nullable|numeric|min:0',
                 'precio_compra_rapida' => 'nullable|numeric|min:0',
-            ]);
+            ];
+            
+            // Solo requerir password si no está guardada en el declarante
+            if ($passwordRequerida) {
+                $reglas['password_certificado'] = 'required|string|min:1';
+            }
+            
+            $validator = Validator::make($request->all(), $reglas);
             
             if ($validator->fails()) {
                 return response()->json([
@@ -547,6 +600,16 @@ class FacturaController extends Controller
             }
             
             // Procesar con API Python
+            // Obtener la contraseña del certificado
+            $passwordCertificado = $this->obtenerPasswordCertificado($request, $request->declarante_id);
+            
+            if (!$passwordCertificado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Se requiere la contraseña del certificado. Proporcione la contraseña o guárdela en el declarante.'
+                ], 422);
+            }
+            
             $resultado = $this->sriPythonService->procesarFacturaCompleta(
                 $factura,
                 $declarante,
@@ -556,7 +619,7 @@ class FacturaController extends Controller
                 $iva,
                 $total,
                 $medioPago,
-                $request->password_certificado
+                $passwordCertificado
             );
             
             if (!$resultado['success']) {
@@ -1188,21 +1251,30 @@ class FacturaController extends Controller
                 'user_agent' => $request->userAgent()
             ]);
 
-            // Validar entrada
-            $validator = Validator::make($request->all(), [
-                'password_certificado' => 'required|string|min:1',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Datos de entrada inválidos',
-                    'errors' => $validator->errors()->all()
-                ], 422);
-            }
-
             // Obtener la factura
             $factura = Factura::with('declarante')->findOrFail($id);
+            
+            // Verificar si la contraseña del certificado es requerida
+            $passwordRequerida = !($factura->declarante && $factura->declarante->password_certificado);
+            
+            $reglas = [];
+            
+            // Solo requerir password si no está guardada en el declarante
+            if ($passwordRequerida) {
+                $reglas['password_certificado'] = 'required|string|min:1';
+            }
+            
+            if (!empty($reglas)) {
+                $validator = Validator::make($request->all(), $reglas);
+
+                if ($validator->fails()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Datos de entrada inválidos',
+                        'errors' => $validator->errors()->all()
+                    ], 422);
+                }
+            }
             
             \Log::info('Factura encontrada', [
                 'factura_id' => $factura->id,
@@ -1226,7 +1298,17 @@ class FacturaController extends Controller
             }
 
             // Usar el servicio Python para firmar y enviar
-            $resultado = $this->firmaDigitalService->firmarYEnviarCompleto($factura, $request->password_certificado);
+            // Obtener la contraseña del certificado
+            $passwordCertificado = $this->obtenerPasswordCertificado($request, $factura->declarante_id);
+            
+            if (!$passwordCertificado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Se requiere la contraseña del certificado. Proporcione la contraseña o guárdela en el declarante.'
+                ], 422);
+            }
+            
+            $resultado = $this->firmaDigitalService->firmarYEnviarCompleto($factura, $passwordCertificado);
             
             if (!$resultado['success']) {
                 \Log::error('Error en proceso completo Python', [
@@ -3328,12 +3410,24 @@ class FacturaController extends Controller
                 ], 422);
             }
 
-            // Validar contraseña
-            $request->validate([
-                'password_certificado' => 'required|string'
-            ]);
+            // Validar contraseña solo si no está guardada en el declarante
+            $passwordRequerida = !($factura->declarante && $factura->declarante->password_certificado);
+            
+            if ($passwordRequerida) {
+                $request->validate([
+                    'password_certificado' => 'required|string'
+                ]);
+            }
 
-            $passwordCertificado = $request->password_certificado;
+            // Obtener la contraseña del certificado
+            $passwordCertificado = $this->obtenerPasswordCertificado($request, $factura->declarante_id);
+            
+            if (!$passwordCertificado) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Se requiere la contraseña del certificado. Proporcione la contraseña o guárdela en el declarante.'
+                ], 422);
+            }
             
             // Log detallado para diagnóstico
             \Log::info('Intentando firmar factura', [

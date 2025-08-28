@@ -189,6 +189,7 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Rutas para el recurso completo de declarantes (estas son las rutas estándar)
     Route::resource('declarantes', DeclaranteController::class);
     Route::get('/declarantes/{id}/facturas', [DeclaranteController::class, 'facturas'])->name('declarantes.facturas');
+    Route::put('/declarantes/{id}/password', [DeclaranteController::class, 'actualizarPassword'])->name('declarantes.actualizar-password');
 
     // Historiales Clinicos
     Route::prefix('historiales_clinicos')->group(function () {

@@ -98,6 +98,27 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="password_certificado">Contraseña del Certificado <span class="text-info">(Opcional)</span></label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="password_certificado" name="password_certificado" placeholder="Contraseña del certificado P12">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">
+                                    <i class="fas fa-info-circle text-info"></i> 
+                                    <strong>Opcional:</strong> Si guarda la contraseña, no se le pedirá cada vez que facture.
+                                    <br>
+                                    <i class="fas fa-shield-alt text-success"></i> 
+                                    <strong>Segura:</strong> La contraseña se guarda encriptada en la base de datos.
+                                </small>
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-4">
@@ -996,5 +1017,28 @@ function formatearFecha(fechaStr) {
         minute: '2-digit'
     });
 }
+
+// Función para toggle de contraseña
+document.addEventListener('DOMContentLoaded', function() {
+    const togglePassword = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password_certificado');
+    
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener('click', function() {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Cambiar el ícono
+            const icon = this.querySelector('i');
+            if (type === 'password') {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            } else {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            }
+        });
+    }
+});
 </script>
 @stop
