@@ -111,37 +111,42 @@ class Factura extends Model
 
     /**
      * Obtener el XML más apropiado según el estado de la factura
-     * Prioridad: XML Autorizado > XML Firmado > XML Original
+     * Prioridad: XML Firmado > XML Autorizado > XML Original
+     * MODIFICADO: Siempre mostrar XML firmado cuando esté disponible
      */
     public function getXmlContent()
     {
-        // Si está autorizada, usar XML autorizado
+        // Prioridad 1: Si hay XML firmado, usar siempre (independientemente del estado)
+        if (!empty($this->xml_firmado)) {
+            return $this->xml_firmado;
+        }
+        
+        // Prioridad 2: Si está autorizada y hay XML autorizado
         if ($this->estado === 'AUTORIZADA' && !empty($this->xml_autorizado)) {
             return $this->xml_autorizado;
         }
         
-        // Si está firmada o enviada, usar XML firmado
-        if (in_array($this->estado, ['FIRMADA', 'ENVIADA', 'RECIBIDA']) && !empty($this->xml_firmado)) {
-            return $this->xml_firmado;
-        }
-        
-        // Por defecto, usar XML original
+        // Prioridad 3: Por defecto, usar XML original
         return $this->xml;
     }
 
     /**
      * Obtener el tipo de XML que se está mostrando
+     * MODIFICADO: Siempre mostrar tipo firmado cuando esté disponible
      */
     public function getXmlType()
     {
+        // Prioridad 1: Si hay XML firmado, mostrar como firmado (independientemente del estado)
+        if (!empty($this->xml_firmado)) {
+            return 'firmado';
+        }
+        
+        // Prioridad 2: Si está autorizada y hay XML autorizado
         if ($this->estado === 'AUTORIZADA' && !empty($this->xml_autorizado)) {
             return 'autorizado';
         }
         
-        if (in_array($this->estado, ['FIRMADA', 'ENVIADA', 'RECIBIDA']) && !empty($this->xml_firmado)) {
-            return 'firmado';
-        }
-        
+        // Prioridad 3: Por defecto, original
         return 'original';
     }
 

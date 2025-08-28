@@ -169,16 +169,15 @@
                         <i class="fas fa-file-code"></i> XML Original
                     @endif
                 </span>
+                @if($xmlType === 'firmado')
+                    <small class="text-muted ml-2">
+                        <i class="fas fa-info-circle"></i> Mostrando XML firmado (prioridad sobre otros tipos)
+                    </small>
+                @endif
             @endif
         </h3>
         <div class="card-tools">
-            @if($xmlContent)
-            <button type="button" class="btn btn-sm btn-primary" onclick="copyXmlToClipboard()">
-                <i class="fas fa-copy"></i> Copiar
-            </button>
-            <a href="{{ asset('storage/' . $factura->xml) }}" class="btn btn-sm btn-success" download>
-                <i class="fas fa-download"></i> Descargar
-            @endif
+            {{-- Botones de Copiar y Descargar removidos por solicitud del usuario --}}
             
             {{-- Mostrar botones según el estado --}}
             @if(in_array($factura->estado, ['CREADA', 'FIRMADA']))
@@ -428,20 +427,7 @@
     let facturaIdActual = null;
     let facturaIdAutorizacion = null;
 
-    function copyXmlToClipboard() {
-        const xmlContent = document.getElementById('xmlContent');
-        if (xmlContent) {
-            const tempTextArea = document.createElement('textarea');
-            tempTextArea.value = xmlContent.textContent;
-            document.body.appendChild(tempTextArea);
-            tempTextArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempTextArea);
-            
-            console.log('SUCCESS: XML copiado al portapapeles');
-            alert('XML copiado al portapapeles');
-        }
-    }
+    // Función copyXmlToClipboard() eliminada por solicitud del usuario
 
     // Función para procesar autorización directamente sin modal
     function procesarAutorizacionDirecta(facturaId) {
