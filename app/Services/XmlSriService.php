@@ -120,12 +120,47 @@ class XmlSriService
                 ];
             }
             
-            $result = json_decode($jsonOutput, true);
+            // Extraer solo la parte JSON válida (buscar desde la última línea que contenga '{')
+            $jsonStart = -1;
+            for ($i = count($output) - 1; $i >= 0; $i--) {
+                if (strpos($output[$i], '{') !== false) {
+                    $jsonStart = $i;
+                    break;
+                }
+            }
+            
+            if ($jsonStart !== -1) {
+                // Extraer solo las líneas que contienen el JSON
+                $jsonLines = array_slice($output, $jsonStart);
+                $cleanJsonOutput = implode("\n", $jsonLines);
+                
+                Log::info('JSON extraído para parsing', [
+                    'json_start_line' => $jsonStart,
+                    'json_lines_count' => count($jsonLines),
+                    'json_preview' => substr($cleanJsonOutput, 0, 500)
+                ]);
+                
+                // Si el JSON no empieza con {, probablemente necesitamos reconstruirlo
+                $trimmedJson = trim($cleanJsonOutput);
+                if (!str_starts_with($trimmedJson, '{')) {
+                    // Reconstruir el JSON completo
+                    $cleanJsonOutput = "{\n" . $cleanJsonOutput . "\n}";
+                    Log::info('JSON reconstruido', [
+                        'reconstructed_preview' => substr($cleanJsonOutput, 0, 500)
+                    ]);
+                }
+            } else {
+                $cleanJsonOutput = $jsonOutput;
+                Log::warning('No se encontró inicio de JSON, usando output completo');
+            }
+            
+            $result = json_decode($cleanJsonOutput, true);
             
             if (json_last_error() !== JSON_ERROR_NONE) {
                 Log::error('Error parseando JSON Python', [
                     'json_error' => json_last_error_msg(),
-                    'raw_output' => $jsonOutput
+                    'raw_output' => $jsonOutput,
+                    'extracted_json' => $cleanJsonOutput ?? 'No JSON extraído'
                 ]);
                 return [
                     'success' => false,
