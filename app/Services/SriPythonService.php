@@ -16,6 +16,14 @@ class SriPythonService
     }
     
     /**
+     * Obtener el servicio XML SRI para operaciones directas
+     */
+    public function getXmlSriService()
+    {
+        return $this->xmlSriService;
+    }
+    
+    /**
      * Procesar factura completa: generar XML, firmar y enviar al SRI
      */
     public function procesarFacturaCompleta($factura, $declarante, $pedido, $elementos, $subtotal, $iva, $total, $medioPago, $passwordCertificado)

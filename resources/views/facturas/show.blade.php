@@ -717,7 +717,7 @@
         btnAutorizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Solicitando...';
         
         // Enviar solicitud directa
-        fetch(`{{ url('/facturas') }}/${facturaId}/autorizar`, {
+        fetch(`{{ url('/facturas') }}/${facturaId}/autorizar-sri`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

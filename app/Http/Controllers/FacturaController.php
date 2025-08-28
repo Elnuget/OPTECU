@@ -7,6 +7,7 @@ use App\Models\Factura;
 use App\Models\Pedido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Services\FirmaElectronicaService;
 use App\Services\Factura\FacturaListService;
@@ -4015,5 +4016,158 @@ class FacturaController extends Controller
         $textoLimpio = htmlspecialchars($textoLimpio, ENT_XML1 | ENT_COMPAT, 'UTF-8');
         
         return trim($textoLimpio);
+    }
+
+    /**
+     * Autorizar factura que ya está en estado RECIBIDA
+     */
+    public function autorizar($id)
+    {
+        try {
+            $factura = Factura::with(['declarante'])->findOrFail($id);
+            
+            // Verificar que la factura esté en estado RECIBIDA
+            if ($factura->estado !== 'RECIBIDA') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La factura debe estar en estado RECIBIDA para poder autorizarla. Estado actual: ' . $factura->estado
+                ], 400);
+            }
+            
+            // Verificar que tenga clave de acceso
+            if (empty($factura->clave_acceso)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La factura no tiene clave de acceso. No se puede autorizar.'
+                ], 400);
+            }
+            
+            Log::info('=== INICIO PROCESO DE AUTORIZACIÓN ===', [
+                'factura_id' => $factura->id,
+                'clave_acceso' => $factura->clave_acceso,
+                'estado_actual' => $factura->estado
+            ]);
+            
+            // Actualizar estado a "AUTORIZANDO"
+            $factura->estado = 'AUTORIZANDO';
+            $factura->save();
+            
+            // Usar el servicio XML para solicitar autorización
+            $resultado = $this->sriPythonService->getXmlSriService()->solicitarAutorizacion($factura->clave_acceso);
+            
+            if ($resultado['success']) {
+                $result = $resultado['result'];
+                
+                // Actualizar estado según el resultado
+                if (isset($result['isAuthorized']) && $result['isAuthorized']) {
+                    $factura->estado = 'AUTORIZADA';
+                    $factura->estado_sri = 'AUTORIZADO';
+                    $factura->numero_autorizacion = $result['numeroAutorizacion'] ?? $factura->clave_acceso;
+                    $factura->fecha_autorizacion = now();
+                    
+                    // Guardar XML autorizado si está disponible
+                    if (isset($result['xmlAutorizado']) && !empty($result['xmlAutorizado'])) {
+                        $this->guardarXMLAutorizado($factura, $result['xmlAutorizado']);
+                    }
+                    
+                    Log::info('Factura autorizada exitosamente', [
+                        'factura_id' => $factura->id,
+                        'numero_autorizacion' => $factura->numero_autorizacion
+                    ]);
+                    
+                } else {
+                    $factura->estado = 'DEVUELTA';
+                    $factura->estado_sri = 'DEVUELTA';
+                    
+                    // Guardar mensajes de error si existen
+                    if (isset($result['mensajes']) && !empty($result['mensajes'])) {
+                        $factura->mensajes_sri = json_encode($result['mensajes']);
+                    }
+                    
+                    Log::warning('Factura devuelta por el SRI', [
+                        'factura_id' => $factura->id,
+                        'mensajes' => $result['mensajes'] ?? []
+                    ]);
+                }
+                
+                $factura->save();
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => $factura->estado === 'AUTORIZADA' 
+                        ? 'Factura autorizada exitosamente' 
+                        : 'Factura devuelta por el SRI',
+                    'data' => [
+                        'factura_id' => $factura->id,
+                        'estado' => $factura->estado,
+                        'estado_sri' => $factura->estado_sri,
+                        'numero_autorizacion' => $factura->numero_autorizacion,
+                        'fecha_autorizacion' => $factura->fecha_autorizacion?->format('Y-m-d H:i:s'),
+                        'mensajes_sri' => $factura->mensajes_sri ? json_decode($factura->mensajes_sri, true) : null
+                    ]
+                ]);
+                
+            } else {
+                // Error en la consulta de autorización
+                $factura->estado = 'ERROR_AUTORIZACION';
+                $factura->save();
+                
+                Log::error('Error consultando autorización', [
+                    'factura_id' => $factura->id,
+                    'error' => $resultado['message'] ?? 'Error desconocido'
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error consultando autorización: ' . ($resultado['message'] ?? 'Error desconocido')
+                ], 500);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('=== ERROR EN PROCESO DE AUTORIZACIÓN ===', [
+                'factura_id' => $id ?? 'N/A',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error en el proceso de autorización: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    /**
+     * Guardar XML autorizado
+     */
+    private function guardarXMLAutorizado($factura, $xmlContent)
+    {
+        try {
+            $xmlPath = 'facturas/' . date('Y/m');
+            $xmlFullPath = storage_path('app/public/' . $xmlPath);
+            
+            if (!is_dir($xmlFullPath)) {
+                mkdir($xmlFullPath, 0755, true);
+            }
+            
+            $fileName = 'factura_autorizada_' . $factura->clave_acceso . '.xml';
+            $filePath = $xmlFullPath . '/' . $fileName;
+            
+            file_put_contents($filePath, $xmlContent);
+            
+            $factura->xml_autorizado = $xmlPath . '/' . $fileName;
+            $factura->save();
+            
+            Log::info('XML autorizado guardado', [
+                'factura_id' => $factura->id,
+                'ruta' => $factura->xml_autorizado
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error guardando XML autorizado', [
+                'factura_id' => $factura->id,
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

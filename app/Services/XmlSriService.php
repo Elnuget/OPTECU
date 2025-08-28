@@ -185,8 +185,12 @@ class XmlSriService
                     if (strpos($line, 'isAuthorized') !== false && strpos($line, 'true') !== false) {
                         $isAuthorized = true;
                     }
-                    if (strpos($line, 'xmlFileSigned') !== false && preg_match('/"xmlFileSigned":\s*"([^"]+)"/', $line, $matches)) {
-                        $xmlSigned = $matches[1];
+                    if (strpos($line, 'xmlFileSigned') !== false) {
+                        // Extraer XML completo que puede estar en múltiples líneas
+                        if (preg_match('/"xmlFileSigned":\s*"([^"]*(?:\\.[^"]*)*)"/', implode(' ', $output), $matches)) {
+                            $xmlSigned = str_replace('\\"', '"', $matches[1]);
+                            $xmlSigned = str_replace('\\n', "\n", $xmlSigned);
+                        }
                     }
                 }
                 
@@ -201,14 +205,10 @@ class XmlSriService
                     return [
                         'success' => true,
                         'result' => [
-                            'success' => true,
-                            'message' => 'Procesamiento completado exitosamente',
-                            'result' => [
-                                'accessKey' => $accessKey,
-                                'isReceived' => $isReceived,
-                                'isAuthorized' => $isAuthorized,
-                                'xmlFileSigned' => $xmlSigned
-                            ]
+                            'accessKey' => $accessKey,
+                            'isReceived' => $isReceived,
+                            'isAuthorized' => $isAuthorized,
+                            'xmlFileSigned' => $xmlSigned
                         ]
                     ];
                 }
@@ -298,6 +298,53 @@ class XmlSriService
             return [
                 'success' => false,
                 'message' => 'Error consultando estado: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Solicitar autorización de una factura ya enviada al SRI
+     */
+    public function solicitarAutorizacion($claveAcceso)
+    {
+        try {
+            Log::info('=== SOLICITANDO AUTORIZACIÓN SRI ===', ['clave_acceso' => $claveAcceso]);
+            
+            $pythonScript = $this->pythonScriptPath . DIRECTORY_SEPARATOR . 'sri_service.py';
+            
+            if (!file_exists($pythonScript)) {
+                throw new \Exception('Script de Python no encontrado: ' . $pythonScript);
+            }
+            
+            $escapedClaveAcceso = escapeshellarg($claveAcceso);
+            $command = "python \"{$pythonScript}\" autorizar {$escapedClaveAcceso}";
+            
+            Log::info('Ejecutando solicitud de autorización', ['command' => $command]);
+            
+            $output = [];
+            $returnCode = 0;
+            exec($command . ' 2>&1', $output, $returnCode);
+            
+            if ($returnCode === 0) {
+                $resultado = $this->processSuccessResult($output);
+                
+                // Si obtuvo la autorización correctamente, incluir información adicional
+                if ($resultado['success'] && isset($resultado['data']['numeroAutorizacion'])) {
+                    $resultado['data']['fechaAutorizacion'] = now()->toISOString();
+                    $resultado['data']['estadoAutorizacion'] = 'AUTORIZADA';
+                }
+                
+                return $resultado;
+            } else {
+                return $this->processErrorResult($output, $returnCode);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Error solicitando autorización', ['error' => $e->getMessage()]);
+            return [
+                'success' => false,
+                'message' => 'Error solicitando autorización: ' . $e->getMessage(),
+                'data' => null
             ];
         }
     }
