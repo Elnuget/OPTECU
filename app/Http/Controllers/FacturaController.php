@@ -273,20 +273,27 @@ class FacturaController extends Controller
             $factura->monto = round($subtotal, 2);
             $factura->iva = round($iva, 2);
             $factura->tipo = 'comprobante';
-            $factura->estado = 'PROCESANDO'; // Estado temporal mientras se procesa
+            $factura->estado = 'CREADA'; // Estado inicial, se cambiará a PROCESANDO después
             
             if (!$factura->save()) {
                 throw new \Exception('No se pudo guardar la factura en la base de datos');
             }
+            
+            // Actualizar a estado PROCESANDO
+            $factura->estado = 'PROCESANDO';
+            $factura->save();
             
             // Procesar con API Python directamente
             try {
                 $resultado = $this->sriPythonService->procesarFacturaCompleta(
                     $factura,
                     $declarante,
-                    $elementos,
-                    $medioPago,
                     $pedido,
+                    $elementos,
+                    $subtotal,
+                    $iva,
+                    $total,
+                    $medioPago,
                     $request->password_certificado
                 );
                 
