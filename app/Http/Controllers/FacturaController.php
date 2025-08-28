@@ -408,25 +408,25 @@ class FacturaController extends Controller
             $infoTributaria = $dom->createElement('infoTributaria');
             $infoTributaria->appendChild($dom->createElement('ambiente', '1'));
             $infoTributaria->appendChild($dom->createElement('tipoEmision', '1'));
-            $infoTributaria->appendChild($dom->createElement('razonSocial', htmlspecialchars($declarante->nombre ?? 'RAZON SOCIAL')));
+            $infoTributaria->appendChild($dom->createElement('razonSocial', $this->limpiarTextoParaXML($declarante->nombre ?? 'RAZON SOCIAL')));
             $infoTributaria->appendChild($dom->createElement('ruc', $ruc));
             $infoTributaria->appendChild($dom->createElement('claveAcceso', $claveAcceso));
             $infoTributaria->appendChild($dom->createElement('codDoc', '01'));
             $infoTributaria->appendChild($dom->createElement('estab', $establecimiento));
             $infoTributaria->appendChild($dom->createElement('ptoEmi', $puntoEmision));
             $infoTributaria->appendChild($dom->createElement('secuencial', $secuencial));
-            $infoTributaria->appendChild($dom->createElement('dirMatriz', htmlspecialchars($declarante->direccion_matriz ?? 'DIRECCION NO ESPECIFICADA')));
+            $infoTributaria->appendChild($dom->createElement('dirMatriz', $this->limpiarTextoParaXML($declarante->direccion_matriz ?? 'DIRECCION NO ESPECIFICADA')));
             $factura->appendChild($infoTributaria);
             
             // Información de la factura
             $infoFactura = $dom->createElement('infoFactura');
             $infoFactura->appendChild($dom->createElement('fechaEmision', date('d/m/Y')));
-            $infoFactura->appendChild($dom->createElement('dirEstablecimiento', htmlspecialchars($declarante->direccion_matriz ?? 'DIRECCION NO ESPECIFICADA')));
+            $infoFactura->appendChild($dom->createElement('dirEstablecimiento', $this->limpiarTextoParaXML($declarante->direccion_matriz ?? 'DIRECCION NO ESPECIFICADA')));
             $infoFactura->appendChild($dom->createElement('obligadoContabilidad', ($declarante->obligado_contabilidad ?? false) ? 'SI' : 'NO'));
             
             // Siempre usar datos del pedido para el comprador
             $infoFactura->appendChild($dom->createElement('tipoIdentificacionComprador', '05'));
-            $infoFactura->appendChild($dom->createElement('razonSocialComprador', htmlspecialchars($pedido->cliente ?? 'CLIENTE NO ESPECIFICADO')));
+            $infoFactura->appendChild($dom->createElement('razonSocialComprador', $this->limpiarTextoParaXML($pedido->cliente ?? 'CLIENTE NO ESPECIFICADO')));
             $infoFactura->appendChild($dom->createElement('identificacionComprador', $pedido->cedula ?? '9999999999'));
             
             $infoFactura->appendChild($dom->createElement('totalSinImpuestos', number_format($subtotal, 2, '.', '')));
@@ -548,7 +548,7 @@ class FacturaController extends Controller
             foreach ($elementos as $elemento) {
                 $detalle = $dom->createElement('detalle');
                 $detalle->appendChild($dom->createElement('codigoPrincipal', strtoupper(str_replace([' ', '/'], '', $elemento['tipo']))));
-                $detalle->appendChild($dom->createElement('descripcion', htmlspecialchars($elemento['descripcion'])));
+                $detalle->appendChild($dom->createElement('descripcion', $this->limpiarTextoParaXML($elemento['descripcion'])));
                 $detalle->appendChild($dom->createElement('cantidad', '1.00'));
                 $detalle->appendChild($dom->createElement('precioUnitario', number_format($elemento['precio'], 2, '.', '')));
                 $detalle->appendChild($dom->createElement('descuento', '0.00'));
@@ -581,14 +581,14 @@ class FacturaController extends Controller
             
             // Agregar teléfono si existe
             if (is_object($pedido) && property_exists($pedido, 'celular') && $pedido->celular) {
-                $campoTelefono = $dom->createElement('campoAdicional', htmlspecialchars($pedido->celular));
+                $campoTelefono = $dom->createElement('campoAdicional', $this->limpiarTextoParaXML($pedido->celular));
                 $campoTelefono->setAttribute('nombre', 'Telefono');
                 $infoAdicional->appendChild($campoTelefono);
             }
             
             // Agregar email si existe
             if (is_object($pedido) && property_exists($pedido, 'correo_electronico') && $pedido->correo_electronico) {
-                $campoEmail = $dom->createElement('campoAdicional', htmlspecialchars($pedido->correo_electronico));
+                $campoEmail = $dom->createElement('campoAdicional', $this->limpiarTextoParaXML($pedido->correo_electronico));
                 $campoEmail->setAttribute('nombre', 'Email');
                 $infoAdicional->appendChild($campoEmail);
             }
@@ -3560,5 +3560,47 @@ class FacturaController extends Controller
                 'errors' => [$e->getMessage()]
             ];
         }
+    }
+    
+    /**
+     * Limpiar texto para XML eliminando caracteres especiales y tildes
+     */
+    private function limpiarTextoParaXML($texto)
+    {
+        if (empty($texto)) {
+            return '';
+        }
+        
+        // Convertir a string si no lo es
+        $texto = (string) $texto;
+        
+        // Eliminar caracteres especiales y tildes
+        $caracteresEspeciales = [
+            'á' => 'a', 'à' => 'a', 'ä' => 'a', 'â' => 'a', 'ā' => 'a', 'ă' => 'a', 'ą' => 'a',
+            'é' => 'e', 'è' => 'e', 'ë' => 'e', 'ê' => 'e', 'ē' => 'e', 'ĕ' => 'e', 'ė' => 'e', 'ę' => 'e', 'ě' => 'e',
+            'í' => 'i', 'ì' => 'i', 'ï' => 'i', 'î' => 'i', 'ī' => 'i', 'ĭ' => 'i', 'į' => 'i',
+            'ó' => 'o', 'ò' => 'o', 'ö' => 'o', 'ô' => 'o', 'ō' => 'o', 'ŏ' => 'o', 'ő' => 'o',
+            'ú' => 'u', 'ù' => 'u', 'ü' => 'u', 'û' => 'u', 'ū' => 'u', 'ŭ' => 'u', 'ů' => 'u', 'ű' => 'u', 'ų' => 'u',
+            'ñ' => 'n', 'ń' => 'n', 'ň' => 'n', 'ņ' => 'n',
+            'ç' => 'c', 'ć' => 'c', 'č' => 'c', 'ĉ' => 'c', 'ċ' => 'c',
+            'Á' => 'A', 'À' => 'A', 'Ä' => 'A', 'Â' => 'A', 'Ā' => 'A', 'Ă' => 'A', 'Ą' => 'A',
+            'É' => 'E', 'È' => 'E', 'Ë' => 'E', 'Ê' => 'E', 'Ē' => 'E', 'Ĕ' => 'E', 'Ė' => 'E', 'Ę' => 'E', 'Ě' => 'E',
+            'Í' => 'I', 'Ì' => 'I', 'Ï' => 'I', 'Î' => 'I', 'Ī' => 'I', 'Ĭ' => 'I', 'Į' => 'I',
+            'Ó' => 'O', 'Ò' => 'O', 'Ö' => 'O', 'Ô' => 'O', 'Ō' => 'O', 'Ŏ' => 'O', 'Ő' => 'O',
+            'Ú' => 'U', 'Ù' => 'U', 'Ü' => 'U', 'Û' => 'U', 'Ū' => 'U', 'Ŭ' => 'U', 'Ů' => 'U', 'Ű' => 'U', 'Ų' => 'U',
+            'Ñ' => 'N', 'Ń' => 'N', 'Ň' => 'N', 'Ņ' => 'N',
+            'Ç' => 'C', 'Ć' => 'C', 'Č' => 'C', 'Ĉ' => 'C', 'Ċ' => 'C',
+        ];
+        
+        // Reemplazar caracteres especiales
+        $textoLimpio = strtr($texto, $caracteresEspeciales);
+        
+        // Eliminar otros caracteres que puedan causar problemas en XML
+        $textoLimpio = preg_replace('/[^\x20-\x7E\s]/', '', $textoLimpio);
+        
+        // Escapar caracteres especiales de XML
+        $textoLimpio = htmlspecialchars($textoLimpio, ENT_XML1 | ENT_COMPAT, 'UTF-8');
+        
+        return trim($textoLimpio);
     }
 }

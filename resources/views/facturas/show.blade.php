@@ -174,50 +174,7 @@
                     ];
                 @endphp
 
-                @if($factura->declarante && $tieneCertificadoP12)
-                    <button type="button" class="btn btn-sm btn-warning" onclick="firmarYEnviarServidor({{ $factura->id }})">
-                        <i class="fas fa-certificate"></i> Firmar y Enviar al SRI
-                    </button>
-                @else
-                    <button type="button" class="btn btn-sm btn-secondary" disabled title="El declarante no tiene certificado P12 configurado">
-                        <i class="fas fa-certificate"></i> Sin Certificado P12
-                    </button>
-                    <small class="text-muted d-block mt-1">
-                        Configure el certificado P12 del declarante para poder firmar
-                    </small>
-                    <small class="text-danger d-block">
-                        @if(!$factura->declarante)
-                            No hay declarante asociado.
-                        @elseif(!$tieneArchivo)
-                            El declarante no tiene firma configurada.
-                        @elseif(!$existeArchivo)
-                            El archivo de firma no existe en: {{ $rutaArchivo }}
-                        @elseif(!$esExtensionValida)
-                            La extensión del archivo debe ser .p12 o .pfx, no .{{ $extension }}
-                        @endif
-                    </small>
-                    
-                    <!-- Información de depuración -->
-                    <div class="mt-2">
-                        <button class="btn btn-sm btn-info" type="button" data-toggle="collapse" data-target="#debugInfo">
-                            Mostrar información de depuración
-                        </button>
-                        <div class="collapse mt-2" id="debugInfo">
-                            <div class="card card-body bg-light">
-                                <h6>Información de Depuración:</h6>
-                                <ul class="small mb-0">
-                                    <li><strong>¿Tiene archivo?</strong> {{ $debug['tiene_archivo'] ? 'SÍ' : 'NO' }}</li>
-                                    <li><strong>Ruta del archivo:</strong> {{ $debug['ruta_archivo'] }}</li>
-                                    <li><strong>¿Existe el archivo?</strong> {{ $debug['existe_archivo'] }}</li>
-                                    <li><strong>Extensión:</strong> {{ $debug['extension'] }}</li>
-                                    <li><strong>¿Es extensión válida?</strong> {{ $debug['es_extension_valida'] }}</li>
-                                    <li><strong>¿Tiene certificado P12 (Vista)?</strong> {{ $debug['tiene_certificado_p12_vista'] }}</li>
-                                    <li><strong>¿Tiene certificado P12 (Modelo)?</strong> {{ $debug['tiene_certificado_p12_modelo'] }}</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                @endif
+                <!-- Botón de firmar y enviar removido por solicitud del usuario -->
             @elseif($factura->estado === 'RECIBIDA')
                 <button type="button" class="btn btn-sm btn-info" onclick="procesarAutorizacionDirecta({{ $factura->id }})">
                     <i class="fas fa-check"></i> Solicitar Autorización
@@ -236,26 +193,7 @@
                     <i class="fas fa-ban"></i> No Autorizada por el SRI
                 </span>
             @elseif($factura->estado === 'DEVUELTA')
-                @if($factura->declarante && $tieneCertificadoP12)
-                    <button type="button" class="btn btn-sm btn-warning" onclick="firmarYEnviarServidor({{ $factura->id }})">
-                        <i class="fas fa-redo"></i> Reintentar Envío
-                    </button>
-                @else
-                    <button type="button" class="btn btn-sm btn-secondary" disabled title="El declarante no tiene certificado P12 configurado">
-                        <i class="fas fa-redo"></i> Sin Certificado P12
-                    </button>
-                    <small class="text-danger d-block mt-1">
-                        @if(!$factura->declarante)
-                            No hay declarante asociado.
-                        @elseif(!$tieneArchivo)
-                            El declarante no tiene firma configurada.
-                        @elseif(!$existeArchivo)
-                            El archivo no existe en: {{ $rutaArchivo }}
-                        @elseif(!$esExtensionValida)
-                            La extensión debe ser .p12 o .pfx, no .{{ $extension }}
-                        @endif
-                    </small>
-                @endif
+                <!-- Botón de reintentar envío removido por solicitud del usuario -->
             @endif
             @endif
             <a href="{{ route('facturas.index') }}" class="btn btn-sm btn-secondary">
@@ -277,114 +215,7 @@
     </div>
 </div>
 
-<!-- Modal para contraseña del certificado -->
-<div class="modal fade" id="modalCertificado" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-md" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-certificate"></i> Firmar y Enviar al SRI (Certificado P12)
-                </h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-            <div class="modal-body">
-                <form id="formCertificado">
-                    <div class="form-group">
-                        <label>
-                            <i class="fas fa-certificate"></i> Certificado Digital P12 del Declarante
-                        </label>
-                        @if($factura->declarante && $tieneCertificadoP12)
-                            <div class="alert alert-info">
-                                <div class="row">
-                                    <div class="col-md-8">
-                                        <strong>Declarante:</strong> {{ $factura->declarante->nombre }}<br>
-                                        <strong>RUC:</strong> {{ $factura->declarante->ruc }}<br>
-                                        <strong>Certificado:</strong> {{ $factura->declarante->firma }}
-                                        <small class="d-block text-muted">Ubicación: uploads/firmas/{{ $factura->declarante->firma }}</small>
-                                    </div>
-                                    <div class="col-md-4 text-right">
-                                        <span class="badge badge-success">
-                                            <i class="fas fa-check-circle"></i> P12 Disponible
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        @else
-                            <div class="alert alert-danger">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <strong>Error:</strong> El declarante no tiene un certificado P12 configurado.
-                                <br><small>Debe configurar el certificado P12 en la sección de declarantes antes de poder firmar.</small>
-                            </div>
-                        @endif
-                    </div>
-                    <div class="form-group">
-                        <label for="password_certificado">
-                            <i class="fas fa-key"></i> Contraseña del Certificado Digital P12
-                        </label>
-                        <input type="password" class="form-control" id="password_certificado" 
-                               name="password_certificado" required 
-                               placeholder="Ingrese la contraseña del certificado P12 del declarante"
-                               @if(!$factura->declarante || !$tieneCertificadoP12) disabled @endif>
-                        <small class="form-text text-muted">
-                            Se requiere la contraseña del certificado digital P12 del declarante para firmar digitalmente el documento.
-                        </small>
-                    </div>
-                    <div class="form-group">
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="confirmar_envio" required
-                                   @if(!$factura->declarante || !$tieneCertificadoP12) disabled @endif>
-                            <label class="custom-control-label" for="confirmar_envio">
-                                Confirmo que deseo firmar digitalmente con el certificado P12 del declarante y enviar este comprobante al SRI
-                            </label>
-                        </div>
-                    </div>
-                </form>
-                
-                <!-- Área de progreso -->
-                <div id="progreso_firma" style="display: none;">
-                    <div class="progress mb-3">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                             role="progressbar" style="width: 0%">
-                            <span class="progress-text">Iniciando...</span>
-                        </div>
-                    </div>
-                    <div class="text-center">
-                        <small class="text-muted" id="estado_proceso">Preparando firma digital...</small>
-                        @if($factura->declarante && $factura->declarante->firma)
-                        <small class="d-block text-info">Usando certificado desde: public/uploads/firmas/{{ $factura->declarante->firma }}</small>
-                        @endif
-                    </div>
-                </div>
-                
-                <!-- Área de resultados -->
-                <div id="resultado_firma" style="display: none;">
-                    <div class="alert" id="alert_resultado">
-                        <div id="mensaje_resultado"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-                @if($factura->declarante && $tieneCertificadoP12)
-                    <button type="button" class="btn btn-warning" id="btn_firmar" onclick="procesarFirmaYEnvio()">
-                        <i class="fas fa-certificate"></i> Firmar y Enviar
-                    </button>
-                @else
-                    <button type="button" class="btn btn-secondary" disabled>
-                        <i class="fas fa-certificate"></i> Sin Certificado P12
-                    </button>
-                @endif
-                <button type="button" class="btn btn-success" id="btn_cerrar_exitoso" style="display: none;" data-dismiss="modal">
-                    <i class="fas fa-check"></i> Cerrar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Modal para contraseña del certificado - REMOVIDO por solicitud del usuario -->
 
 <!-- Modal de Autorización -->
 <div class="modal fade" id="modalAutorizacion" tabindex="-1" role="dialog">
@@ -578,44 +409,15 @@
         }
     }
 
+    // Función removida por solicitud del usuario
+    /*
     function firmarYEnviar(facturaId) {
-        facturaIdActual = facturaId;
-        
-        console.log('Abriendo modal de certificado para factura:', facturaId);
-        console.log('Tiene certificado P12:', {{ $tieneCertificadoP12 ? 'true' : 'false' }});
-        console.log('Declarante disponible:', {{ $factura->declarante ? 'true' : 'false' }});
-        
-        // Resetear formulario de manera segura (verificando que los elementos existen)
-        const formCertificado = document.getElementById('formCertificado');
-        const progresoFirma = document.getElementById('progreso_firma');
-        const resultadoFirma = document.getElementById('resultado_firma');
-        const btnFirmar = document.getElementById('btn_firmar');
-        const btnCerrarExitoso = document.getElementById('btn_cerrar_exitoso');
-        const passwordInput = document.getElementById('password_certificado');
-        const confirmarCheckbox = document.getElementById('confirmar_envio');
-        
-        // Comprobar si los elementos existen antes de manipularlos
-        if (formCertificado) formCertificado.reset();
-        if (progresoFirma) progresoFirma.style.display = 'none';
-        if (resultadoFirma) resultadoFirma.style.display = 'none';
-        if (btnFirmar) btnFirmar.style.display = 'inline-block';
-        if (btnCerrarExitoso) btnCerrarExitoso.style.display = 'none';
-        
-        // Habilitar campos si hay certificado P12
-        @if($factura->declarante && $tieneCertificadoP12)
-        if (passwordInput) {
-            passwordInput.disabled = false;
-            passwordInput.focus();
-        }
-        if (confirmarCheckbox) confirmarCheckbox.disabled = false;
-        @endif
-        
-        // Mostrar modal
-        $('#modalCertificado').modal('show');
-        
-        console.log('Modal de certificado abierto para la factura:', facturaId);
+        // Funcionalidad de firma removida
     }
+    */
 
+    // Función removida por solicitud del usuario
+    /*
     function procesarFirmaYEnvio() {
         // Obtener elementos de manera segura
         const passwordInput = document.getElementById('password_certificado');
@@ -645,38 +447,13 @@
             alert('Debe ingresar la contraseña del certificado del declarante');
             return;
         }
-        
-        if (!confirmar) {
-            console.error('Error: No confirmado');
-            alert('Debe confirmar que desea firmar y enviar el comprobante');
-            return;
-        }
-        
-        // Deshabilitar botón y mostrar progreso de manera segura
-        if (btnFirmar) btnFirmar.disabled = true;
-        if (progresoFirma) progresoFirma.style.display = 'block';
-        if (resultadoFirma) resultadoFirma.style.display = 'none';
-        
-        try {
-            // Usar la nueva función JavaScript para procesar la firma
-            procesarFirmaConP12(facturaIdActual, password).then(resultado => {
-                if (resultado.success) {
-                    mostrarResultado(true, resultado.message, resultado.data);
-                } else {
-                    mostrarResultado(false, resultado.message, resultado.errors);
-                }
-            }).catch(error => {
-                console.error('Error en firma con JavaScript:', error);
-                mostrarResultado(false, 'Error en firma digital: ' + error.message, null);
-            }).finally(() => {
-                if (btnFirmar) btnFirmar.disabled = false;
-            });
-        } catch(e) {
-            console.error('Error al procesar firma:', e);
-            mostrarResultado(false, 'Error inesperado: ' + e.message, null);
-            if (btnFirmar) btnFirmar.disabled = false;
-        }
+        // Funcionalidad de firma removida
     }
+    */
+
+    // Todas las funciones relacionadas con firma han sido removidas por solicitud del usuario
+    /*
+    // ... resto del código de firma comentado ...
 
     // Nueva función para enviar solicitud al backend usando el certificado del declarante
     async function enviarSolicitudFirmaConCertificadoDeclarante(password) {
@@ -1117,59 +894,13 @@
         }
     }
     
+    // Función removida por solicitud del usuario
+    /*
     // Nueva función para firmar y enviar usando el servidor
     function firmarYEnviarServidor(facturaId) {
-        console.log('Iniciando firma en servidor para factura:', facturaId);
-        
-        // Mostrar indicador de carga
-        const btn = event.target;
-        const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Firmando...';
-        
-        // Solicitar contraseña al usuario
-        const password = prompt('Ingrese la contraseña del certificado digital:');
-        if (!password) {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-            return;
-        }
-        
-        // Enviar solicitud al servidor
-        fetch(`/facturas/${facturaId}/firmar-con-certificado-declarante`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-                password_certificado: password
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Respuesta del servidor:', data);
-            
-            if (data.success) {
-                alert('Factura firmada y enviada exitosamente al SRI');
-                // Recargar la página para mostrar el nuevo estado
-                window.location.reload();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error en la solicitud:', error);
-            alert('Error de conexión: ' + error.message);
-        })
-        .finally(() => {
-            // Restaurar el botón
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        });
+        // Funcionalidad de firma removida
     }
+    */
     
     // Manejar eventos del modal de autorización
     $('#modalAutorizacion').on('hidden.bs.modal', function () {
