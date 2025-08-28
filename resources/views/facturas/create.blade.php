@@ -116,7 +116,7 @@
                                        placeholder="cliente@ejemplo.com">
                                 <small class="form-text text-muted">
                                     <i class="fas fa-envelope"></i> 
-                                    Se enviará el XML autorizado a este correo
+                                    Se enviará la factura a este correo
                                 </small>
                                 <div class="invalid-feedback" id="correo_cliente-error"></div>
                             </div>
@@ -220,7 +220,15 @@
                                             <input type="number" class="form-control form-control-sm" id="precio_armazon" name="precio_armazon" 
                                                    placeholder="Precio armazón" step="0.01" min="0"
                                                    value="{{ isset($pedido) && $pedido->inventarios ? $pedido->inventarios->sum(function($inv) { return $inv->pivot->precio * (1 - ($inv->pivot->descuento / 100)); }) : '' }}">
-                                            <small class="form-text text-muted">IVA: 15%</small>
+                                            <small class="form-text text-muted">IVA: 15% (incluido en el precio)</small>
+                                            <small class="form-text text-info">
+                                                <strong>Lo que ingresa:</strong> Suma total con IVA incluido<br>
+                                                <span id="desglose_armazon" style="display: none;">
+                                                    <strong>Subtotal:</strong> $<span id="subtotal_armazon">0.00</span> | 
+                                                    <strong>IVA:</strong> $<span id="iva_armazon">0.00</span> | 
+                                                    <strong>Total:</strong> $<span id="total_armazon">0.00</span>
+                                                </span>
+                                            </small>
                                             <small class="form-text text-info">{{ isset($pedido) && $pedido->inventarios ? $pedido->inventarios->count() . ' artículo(s)' : 'Sin artículos' }}</small>
                                         </div>
                                     </div>
@@ -237,7 +245,15 @@
                                             <input type="number" class="form-control form-control-sm" id="precio_luna" name="precio_luna" 
                                                    placeholder="Precio luna" step="0.01" min="0"
                                                    value="{{ isset($pedido) && $pedido->lunas ? $pedido->lunas->sum(function($luna) { return $luna->l_precio * (1 - ($luna->l_precio_descuento / 100)); }) : '' }}">
-                                            <small class="form-text text-muted">IVA: 15%</small>
+                                            <small class="form-text text-muted">IVA: 15% (incluido en el precio)</small>
+                                            <small class="form-text text-info">
+                                                <strong>Lo que ingresa:</strong> Suma total con IVA incluido<br>
+                                                <span id="desglose_luna" style="display: none;">
+                                                    <strong>Subtotal:</strong> $<span id="subtotal_luna">0.00</span> | 
+                                                    <strong>IVA:</strong> $<span id="iva_luna">0.00</span> | 
+                                                    <strong>Total:</strong> $<span id="total_luna">0.00</span>
+                                                </span>
+                                            </small>
                                             <small class="form-text text-info">{{ isset($pedido) && $pedido->lunas ? $pedido->lunas->count() . ' luna(s)' : 'Sin lunas' }}</small>
                                         </div>
                                     </div>
@@ -370,18 +386,38 @@
                 // No se suma IVA para examen visual (0%)
             }
             
-            // Armazón - 15% IVA
-            const precioArmazon = parseFloat($('#precio_armazon').val()) || 0;
-            if ($('#incluir_armazon').is(':checked') && precioArmazon > 0) {
-                subtotal += precioArmazon;
-                iva += precioArmazon * 0.15;
+            // Armazón - 15% IVA (incluido en el precio, se extrae)
+            const precioArmazonConIva = parseFloat($('#precio_armazon').val()) || 0;
+            if ($('#incluir_armazon').is(':checked') && precioArmazonConIva > 0) {
+                const precioArmazonSinIva = precioArmazonConIva / 1.15;
+                const ivaArmazon = precioArmazonSinIva * 0.15;
+                subtotal += precioArmazonSinIva;
+                iva += ivaArmazon;
+                
+                // Mostrar desglose individual del armazón
+                $('#subtotal_armazon').text(precioArmazonSinIva.toFixed(2));
+                $('#iva_armazon').text(ivaArmazon.toFixed(2));
+                $('#total_armazon').text(precioArmazonConIva.toFixed(2));
+                $('#desglose_armazon').show();
+            } else {
+                $('#desglose_armazon').hide();
             }
             
-            // Luna - 15% IVA
-            const precioLuna = parseFloat($('#precio_luna').val()) || 0;
-            if ($('#incluir_luna').is(':checked') && precioLuna > 0) {
-                subtotal += precioLuna;
-                iva += precioLuna * 0.15;
+            // Luna - 15% IVA (incluido en el precio, se extrae)
+            const precioLunaConIva = parseFloat($('#precio_luna').val()) || 0;
+            if ($('#incluir_luna').is(':checked') && precioLunaConIva > 0) {
+                const precioLunaSinIva = precioLunaConIva / 1.15;
+                const ivaLuna = precioLunaSinIva * 0.15;
+                subtotal += precioLunaSinIva;
+                iva += ivaLuna;
+                
+                // Mostrar desglose individual de la luna
+                $('#subtotal_luna').text(precioLunaSinIva.toFixed(2));
+                $('#iva_luna').text(ivaLuna.toFixed(2));
+                $('#total_luna').text(precioLunaConIva.toFixed(2));
+                $('#desglose_luna').show();
+            } else {
+                $('#desglose_luna').hide();
             }
             
             // Compra Rápida - 0% IVA (exento)
@@ -393,7 +429,7 @@
             
             total = subtotal + iva;
             
-            // Mostrar valores calculados
+            // Mostrar valores calculados totales
             $('#subtotalCalculado').text('$' + subtotal.toFixed(2));
             $('#ivaCalculado').text('$' + iva.toFixed(2));
             $('#totalCalculado').text('$' + total.toFixed(2));
