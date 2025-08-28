@@ -12,12 +12,13 @@ from pathlib import Path
 
 def copiar_certificado(origen, destino, password):
     """
-    Copia un certificado P12 y crea el archivo .env correspondiente
+    Copia un certificado P12 al directorio de procesamiento
+    NOTA: Ya no se crea archivo .env - configuración hardcodeada por seguridad
     
     Args:
         origen: Ruta del certificado original
         destino: Ruta donde copiar el certificado  
-        password: Contraseña del certificado
+        password: Contraseña del certificado (se pasa como parámetro)
         
     Returns:
         dict: Resultado de la operación
@@ -38,26 +39,10 @@ def copiar_certificado(origen, destino, password):
         # Copiar certificado
         shutil.copy2(origen, destino)
         
-        # Crear archivo .env con la configuración
-        env_path = os.path.join(dest_dir, '.env')
-        env_content = f"""# CONFIGURACION SRI ECUADOR - AMBIENTE DE PRUEBAS
-# IMPORTANTE: NO CAMBIAR A PRODUCCION SIN AUTORIZACION
-URL_RECEPTION=https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl
-URL_AUTHORIZATION=https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl
-PASSWORD={password}
-AMBIENTE=1
-TIPO_EMISION=1
-# NOTA: celcer = pruebas, cel = produccion
-"""
-        
-        with open(env_path, 'w', encoding='utf-8') as f:
-            f.write(env_content)
-        
         return {
             'success': True,
-            'message': 'Certificado copiado y configuración actualizada',
-            'certificado_path': destino,
-            'env_path': env_path
+            'message': 'Certificado copiado exitosamente (sin archivo .env por seguridad)',
+            'certificado_path': destino
         }
         
     except Exception as e:

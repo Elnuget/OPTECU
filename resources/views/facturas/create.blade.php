@@ -168,10 +168,15 @@
                 </div>
                 <div class="col-md-4">
                     <div class="form-group">
-                        <label for="password_certificado">Contraseña del Certificado <span class="text-danger">*</span></label>
+                        <label for="password_certificado">
+                            <i class="fas fa-lock text-warning"></i> Contraseña del Certificado Digital <span class="text-danger">*</span>
+                        </label>
                         <input type="password" id="password_certificado" name="password_certificado" class="form-control" 
-                               placeholder="Contraseña del certificado P12" required>
-                        <small class="form-text text-muted">Necesaria para firmar digitalmente el XML</small>
+                               placeholder="Ingrese la contraseña de su certificado P12" required>
+                        <small class="form-text text-info">
+                            <i class="fas fa-shield-alt"></i> Su certificado personal del declarante seleccionado.<br>
+                            <i class="fas fa-info-circle"></i> No se almacena - se usa solo para esta factura.
+                        </small>
                         <div class="invalid-feedback" id="password_certificado-error"></div>
                     </div>
                 </div>

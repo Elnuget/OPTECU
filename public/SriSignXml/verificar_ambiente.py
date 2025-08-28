@@ -12,75 +12,64 @@ from dotenv import dotenv_values
 def verificar_ambiente_sri():
     """
     Verificación completa del ambiente SRI
+    NOTA: Ya no depende de archivo .env - configuración hardcodeada por seguridad
     """
     resultado = {
-        'ambiente': 'DESCONOCIDO',
-        'es_pruebas': False,
-        'urls_validas': False,
+        'ambiente': 'PRUEBAS',
+        'es_pruebas': True,
+        'urls_validas': True,
         'errores': [],
-        'warnings': []
+        'warnings': [],
+        'configuracion_hardcodeada': True
     }
     
     try:
-        # 1. Verificar archivo .env
-        env_path = os.path.join(os.path.dirname(__file__), '.env')
-        if not os.path.exists(env_path):
-            resultado['errores'].append('Archivo .env no encontrado')
-            return resultado
-        
-        config = {**dotenv_values(env_path)}
-        
-        # 2. Verificar URLs
-        url_reception = config.get('URL_RECEPTION', '')
-        url_authorization = config.get('URL_AUTHORIZATION', '')
-        
-        if not url_reception or not url_authorization:
-            resultado['errores'].append('URLs de SRI no configuradas')
-            return resultado
-        
-        # 3. Validar que sean URLs de pruebas
-        urls_pruebas = [
-            'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl',
-            'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl'
-        ]
-        
-        if url_reception == urls_pruebas[0] and url_authorization == urls_pruebas[1]:
-            resultado['ambiente'] = 'PRUEBAS'
-            resultado['es_pruebas'] = True
-            resultado['urls_validas'] = True
-        elif 'celcer.sri.gob.ec' in url_reception and 'celcer.sri.gob.ec' in url_authorization:
-            resultado['ambiente'] = 'PRUEBAS'
-            resultado['es_pruebas'] = True
-            resultado['urls_validas'] = True
-            resultado['warnings'].append('URLs de pruebas válidas pero formato diferente')
-        elif 'cel.sri.gob.ec' in url_reception or 'cel.sri.gob.ec' in url_authorization:
-            resultado['ambiente'] = 'PRODUCCION'
+        # 1. Verificar script principal sri_processor.py
+        script_path = os.path.join(os.path.dirname(__file__), 'sri_processor.py')
+        if not os.path.exists(script_path):
+            resultado['errores'].append('Script principal sri_processor.py no encontrado')
             resultado['es_pruebas'] = False
-            resultado['urls_validas'] = False
+            return resultado
+        
+        # 2. Verificar contenido del script para URLs de pruebas
+        with open(script_path, 'r', encoding='utf-8') as f:
+            script_content = f.read()
+        
+        # 3. Validar que contenga URLs de pruebas
+        if 'celcer.sri.gob.ec' not in script_content:
+            resultado['errores'].append('URLs de pruebas no encontradas en script')
+            resultado['es_pruebas'] = False
+        
+        # 4. Verificar que NO contenga URLs de producción
+        if 'cel.sri.gob.ec' in script_content and 'celcer.sri.gob.ec' not in script_content.replace('cel.sri.gob.ec', ''):
             resultado['errores'].append('⚠️ PELIGRO: URLs de PRODUCCIÓN detectadas')
-        else:
-            resultado['ambiente'] = 'DESCONOCIDO'
             resultado['es_pruebas'] = False
-            resultado['urls_validas'] = False
-            resultado['errores'].append('URLs no reconocidas')
+            resultado['ambiente'] = 'PRODUCCION'
         
-        # 4. Verificar otros parámetros
-        ambiente = config.get('AMBIENTE', '1')
-        if ambiente != '1':
-            resultado['warnings'].append(f'Variable AMBIENTE configurada como {ambiente}, debería ser 1 para pruebas')
+        # 5. Verificar que el ambiente esté configurado como 1 (pruebas)
+        if "'AMBIENTE': '1'" not in script_content:
+            resultado['warnings'].append('Variable AMBIENTE no configurada explícitamente como 1')
         
-        # 5. Información adicional
+        # 6. Verificar que NO exista archivo .env (por seguridad)
+        env_path = os.path.join(os.path.dirname(__file__), '.env')
+        if os.path.exists(env_path):
+            resultado['warnings'].append('Archivo .env encontrado - debería eliminarse por seguridad')
+        else:
+            resultado['warnings'].append('✅ Archivo .env no existe (configuración más segura)')
+        
+        # 7. Información adicional
         resultado['configuracion'] = {
-            'url_reception': url_reception,
-            'url_authorization': url_authorization,
-            'ambiente': ambiente,
-            'tiene_password': bool(config.get('PASSWORD'))
+            'script_principal': script_path,
+            'archivo_env_existe': os.path.exists(env_path),
+            'configuracion_hardcodeada': True,
+            'urls_en_codigo': 'celcer.sri.gob.ec' in script_content
         }
         
         return resultado
         
     except Exception as e:
         resultado['errores'].append(f'Error verificando ambiente: {str(e)}')
+        resultado['es_pruebas'] = False
         return resultado
 
 def mostrar_reporte(resultado):
@@ -117,22 +106,23 @@ def mostrar_reporte(resultado):
     if 'configuracion' in resultado:
         config = resultado['configuracion']
         print("\n📋 CONFIGURACIÓN ACTUAL:")
-        print(f"   Recepción: {config['url_reception']}")
-        print(f"   Autorización: {config['url_authorization']}")
-        print(f"   Ambiente: {config['ambiente']}")
-        print(f"   Password configurado: {'Sí' if config['tiene_password'] else 'No'}")
+        print(f"   Script principal: {config.get('script_principal', 'N/A')}")
+        print(f"   Archivo .env existe: {'Sí' if config.get('archivo_env_existe') else 'No (más seguro)'}")
+        print(f"   Configuración hardcodeada: {'Sí' if config.get('configuracion_hardcodeada') else 'No'}")
+        print(f"   URLs en código: {'Sí' if config.get('urls_en_codigo') else 'No'}")
     
     print("\n" + "=" * 60)
     
     # Recomendaciones
     if not resultado['es_pruebas']:
         print("🔧 ACCIÓN REQUERIDA:")
-        print("   Actualizar .env con URLs de pruebas:")
-        print("   URL_RECEPTION=https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl")
-        print("   URL_AUTHORIZATION=https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl")
-        print("   AMBIENTE=1")
+        print("   Verificar configuración hardcodeada en sri_processor.py")
+        print("   Debe contener URLs: celcer.sri.gob.ec (no cel.sri.gob.ec)")
+        print("   AMBIENTE debe ser '1' para pruebas")
     else:
         print("✅ CONFIGURACIÓN CORRECTA PARA PRUEBAS")
+        print("✅ SIN ARCHIVO .ENV (MAYOR SEGURIDAD)")
+        print("✅ CONFIGURACIÓN HARDCODEADA EN CÓDIGO")
     
     print("=" * 60)
 
@@ -141,7 +131,9 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == '--json':
         # Salida JSON para scripts
         resultado = verificar_ambiente_sri()
-        print(json.dumps(resultado, ensure_ascii=False, indent=2))
+        # Usar print sin caracteres especiales para compatibilidad
+        output = json.dumps(resultado, ensure_ascii=True, indent=2)
+        print(output)
     else:
         # Salida legible para humanos
         resultado = verificar_ambiente_sri()

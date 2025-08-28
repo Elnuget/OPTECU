@@ -35,10 +35,14 @@ class SriPythonService
                 'invoice_data_keys' => array_keys($invoiceData)
             ]);
             
-            // Copiar certificado P12 del declarante al directorio del procesador
-            $certificatePath = $this->copiarCertificadoP12($declarante, $passwordCertificado);
+            // Usar certificado del declarante directamente (mayor seguridad)
+            $certificatePath = $declarante->ruta_certificado;
             
-            // Procesar con servicio local en lugar de API HTTP
+            if (!file_exists($certificatePath)) {
+                throw new \Exception('Certificado del declarante no encontrado: ' . $certificatePath);
+            }
+            
+            // Procesar con servicio local
             $resultado = $this->xmlSriService->procesarFacturaCompleta(
                 $invoiceData, 
                 $certificatePath, 
@@ -231,48 +235,6 @@ class SriPythonService
     }
     
     /**
-     * Copiar certificado P12 del declarante al directorio del API Python
-     */
-    private function copiarCertificadoP12($declarante, $passwordCertificado)
-    {
-        try {
-            // Ruta del certificado del declarante
-            $rutaCertificadoDeclarante = public_path('uploads/firmas/' . $declarante->firma);
-            
-            if (!file_exists($rutaCertificadoDeclarante)) {
-                throw new \Exception('Certificado del declarante no encontrado: ' . $rutaCertificadoDeclarante);
-            }
-            
-            // Ruta destino en el API Python
-            $rutaDestinoP12 = public_path('SriSignXml/app/signature.p12');
-            
-            // Copiar certificado
-            if (!copy($rutaCertificadoDeclarante, $rutaDestinoP12)) {
-                throw new \Exception('No se pudo copiar el certificado al directorio del API Python');
-            }
-            
-            // Crear archivo .env con la contraseña
-            $envContent = "URL_RECEPTION=https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl\n";
-            $envContent .= "URL_AUTHORIZATION=https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl\n";
-            $envContent .= "PASSWORD=" . $passwordCertificado . "\n";
-            
-            $rutaEnv = public_path('SriSignXml/.env');
-            file_put_contents($rutaEnv, $envContent);
-            
-            Log::info('Certificado P12 copiado exitosamente', [
-                'origen' => $rutaCertificadoDeclarante,
-                'destino' => $rutaDestinoP12
-            ]);
-
-            return $rutaDestinoP12;
-
-        } catch (\Exception $e) {
-            Log::error('Error copiando certificado P12', [
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
-        }
-    }    /**
      * Actualizar estado de factura según resultado del API Python
      */
     private function actualizarEstadoFactura($factura, $result)
@@ -459,27 +421,29 @@ class SriPythonService
     /**
      * Validar que estemos en ambiente de pruebas SRI
      * ⚠️ SEGURIDAD: Previene envío accidental a producción
+     * NOTA: Ya no depende de archivo .env - configuración hardcodeada
      */
     private function validarAmbientePruebas()
     {
-        // Verificar archivo .env del SRI
-        $envPath = public_path('SriSignXml/.env');
-        if (file_exists($envPath)) {
-            $envContent = file_get_contents($envPath);
+        // Verificar que la configuración Python esté en pruebas
+        $pythonScript = public_path('SriSignXml/sri_processor.py');
+        
+        if (file_exists($pythonScript)) {
+            $scriptContent = file_get_contents($pythonScript);
             
             // Verificar que las URLs sean de pruebas (celcer)
-            if (strpos($envContent, 'celcer.sri.gob.ec') === false) {
-                throw new \Exception('⚠️ PELIGRO: URLs no configuradas para ambiente de pruebas. Debe usar celcer.sri.gob.ec');
+            if (strpos($scriptContent, 'celcer.sri.gob.ec') === false) {
+                throw new \Exception('⚠️ PELIGRO: Script Python no configurado para ambiente de pruebas');
             }
             
             // Verificar que no contenga URLs de producción (cel)
-            if (strpos($envContent, '://cel.sri.gob.ec') !== false) {
-                throw new \Exception('⚠️ PELIGRO: Detectadas URLs de PRODUCCIÓN. Cambiar a celcer.sri.gob.ec para pruebas');
+            if (strpos($scriptContent, '://cel.sri.gob.ec') !== false) {
+                throw new \Exception('⚠️ PELIGRO: Detectadas URLs de PRODUCCIÓN en script Python');
             }
         }
         
         // Log de seguridad
-        Log::warning('✅ VALIDACIÓN AMBIENTE: Confirmado uso de webservices de PRUEBAS SRI');
+        Log::warning('✅ VALIDACIÓN AMBIENTE: Confirmado uso de webservices de PRUEBAS SRI (sin .env)');
     }
 
     /**

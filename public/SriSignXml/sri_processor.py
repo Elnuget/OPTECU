@@ -30,21 +30,22 @@ except ImportError as e:
     sys.exit(1)
 
 def load_config():
-    """Cargar configuración desde .env"""
-    config = {}
-    env_path = os.path.join(os.path.dirname(__file__), '.env')
-    if os.path.exists(env_path):
-        config = {**dotenv_values(env_path)}
+    """
+    Cargar configuración para ambiente de PRUEBAS SRI
+    ⚠️ CONFIGURACIÓN HARDCODEADA PARA SEGURIDAD Y AMBIENTE DE PRUEBAS
+    """
+    # Configuración fija para ambiente de pruebas - NO cambiar sin autorización
+    config = {
+        'URL_RECEPTION': 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl',
+        'URL_AUTHORIZATION': 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl',
+        'AMBIENTE': '1',  # 1 = Pruebas, 2 = Producción
+        'TIPO_EMISION': '1'  # 1 = Normal, 2 = Contingencia
+    }
     
     # ⚠️ VALIDACIÓN CRÍTICA: Asegurar ambiente de pruebas
     validar_ambiente_pruebas(config)
     
-    # Configuración por defecto para ambiente de pruebas
-    if not config.get('URL_RECEPTION'):
-        config['URL_RECEPTION'] = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl'
-    if not config.get('URL_AUTHORIZATION'):
-        config['URL_AUTHORIZATION'] = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl'
-    
+    print("✅ CONFIGURACIÓN: Ambiente de PRUEBAS SRI cargado (sin .env)")
     return config
 
 def validar_ambiente_pruebas(config):
@@ -62,9 +63,13 @@ def validar_ambiente_pruebas(config):
             # Verificar que sea ambiente de pruebas (celcer)
             if 'celcer.sri.gob.ec' not in url:
                 if 'cel.sri.gob.ec' in url:
-                    raise Exception('⚠️ PELIGRO: Detectada URL de PRODUCCIÓN. Cambiar a celcer.sri.gob.ec para pruebas')
+                    raise Exception('⚠️ PELIGRO: Detectada URL de PRODUCCIÓN. Sistema configurado solo para pruebas')
                 else:
-                    raise Exception('⚠️ PELIGRO: URL no reconocida. Debe usar celcer.sri.gob.ec para pruebas')
+                    raise Exception('⚠️ PELIGRO: URL no reconocida. Sistema configurado solo para pruebas')
+    
+    # Verificar ambiente
+    if config.get('AMBIENTE') != '1':
+        raise Exception('⚠️ PELIGRO: Ambiente no configurado para pruebas')
     
     print("✅ VALIDACIÓN: Confirmado ambiente de PRUEBAS SRI (celcer)")
     return True

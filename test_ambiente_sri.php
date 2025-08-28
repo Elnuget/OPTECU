@@ -22,29 +22,40 @@ $errores = [];
 $warnings = [];
 
 try {
-    // 1. Verificar archivo .env del SRI
-    echo "1. Verificando archivo .env...\n";
+    // 1. Verificar que NO exista archivo .env (mayor seguridad)
+    echo "1. Verificando ausencia de archivo .env (seguridad)...\n";
     $envPath = public_path('SriSignXml/.env');
     
-    if (!file_exists($envPath)) {
-        $errores[] = "Archivo .env no encontrado en: $envPath";
+    if (file_exists($envPath)) {
+        $warnings[] = "⚠️ Archivo .env encontrado - debería eliminarse por seguridad";
+        echo "⚠️ Archivo .env existe (menos seguro)\n";
     } else {
-        $envContent = file_get_contents($envPath);
+        echo "✅ Archivo .env NO existe (configuración más segura)\n";
+    }
+    
+    // 2. Verificar configuración hardcodeada en script Python
+    echo "\n2. Verificando configuración hardcodeada...\n";
+    $pythonScript = public_path('SriSignXml/sri_processor.py');
+    
+    if (!file_exists($pythonScript)) {
+        $errores[] = "Script sri_processor.py no encontrado";
+    } else {
+        $scriptContent = file_get_contents($pythonScript);
         
         // Verificar URLs de pruebas
-        if (strpos($envContent, 'celcer.sri.gob.ec') !== false) {
-            echo "✅ URLs configuradas para PRUEBAS (celcer)\n";
-        } elseif (strpos($envContent, 'cel.sri.gob.ec') !== false) {
-            $errores[] = "⚠️ PELIGRO: URLs configuradas para PRODUCCIÓN (cel)";
+        if (strpos($scriptContent, 'celcer.sri.gob.ec') !== false) {
+            echo "✅ URLs configuradas para PRUEBAS (celcer) en código\n";
+        } elseif (strpos($scriptContent, 'cel.sri.gob.ec') !== false) {
+            $errores[] = "⚠️ PELIGRO: URLs configuradas para PRODUCCIÓN (cel) en código";
         } else {
-            $warnings[] = "URLs no reconocidas en .env";
+            $warnings[] = "URLs no encontradas en script Python";
         }
         
-        // Verificar ambiente
-        if (strpos($envContent, 'AMBIENTE=1') !== false) {
-            echo "✅ Variable AMBIENTE configurada para pruebas (1)\n";
-        } elseif (strpos($envContent, 'AMBIENTE=2') !== false) {
-            $errores[] = "⚠️ PELIGRO: Variable AMBIENTE configurada para producción (2)";
+        // Verificar ambiente hardcodeado
+        if (strpos($scriptContent, "'AMBIENTE': '1'") !== false) {
+            echo "✅ Variable AMBIENTE configurada para pruebas (1) en código\n";
+        } elseif (strpos($scriptContent, "'AMBIENTE': '2'") !== false) {
+            $errores[] = "⚠️ PELIGRO: Variable AMBIENTE configurada para producción (2) en código";
         }
     }
     
@@ -95,20 +106,20 @@ try {
         $errores[] = "Error creando servicios: " . $e->getMessage();
     }
     
-    // 4. Verificar URLs específicas
-    echo "\n4. Verificando URLs específicas...\n";
+    // 4. Verificar URLs específicas en código
+    echo "\n4. Verificando URLs hardcodeadas en script...\n";
     $urlsEsperadas = [
         'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/RecepcionComprobantesOffline?wsdl',
         'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl'
     ];
     
-    if (file_exists($envPath)) {
-        $envContent = file_get_contents($envPath);
+    if (file_exists($pythonScript)) {
+        $scriptContent = file_get_contents($pythonScript);
         foreach ($urlsEsperadas as $url) {
-            if (strpos($envContent, $url) !== false) {
-                echo "✅ URL encontrada: " . substr($url, 0, 50) . "...\n";
+            if (strpos($scriptContent, $url) !== false) {
+                echo "✅ URL encontrada en código: " . substr($url, 0, 50) . "...\n";
             } else {
-                $warnings[] = "URL esperada no encontrada: " . substr($url, 0, 50) . "...";
+                $warnings[] = "URL esperada no encontrada en código: " . substr($url, 0, 50) . "...";
             }
         }
     }
@@ -121,8 +132,9 @@ try {
     if (empty($errores)) {
         echo "✅ ESTADO: AMBIENTE DE PRUEBAS CONFIRMADO\n";
         echo "✅ SEGURO: No hay riesgo de afectar producción\n";
-        echo "✅ URLs: Configuradas para celcer.sri.gob.ec\n";
+        echo "✅ URLs: Configuradas para celcer.sri.gob.ec en código\n";
         echo "✅ VALIDACIONES: Todas las verificaciones pasaron\n";
+        echo "✅ SEGURIDAD: Sin archivo .env - configuración hardcodeada\n";
     } else {
         echo "❌ ESTADO: ERRORES DETECTADOS\n";
         foreach ($errores as $error) {
