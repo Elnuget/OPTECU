@@ -33,13 +33,14 @@
     <div class="card-body">
         <!-- Formulario para crear/editar declarante -->
         <div class="card mb-3">
-            <div class="card-header bg-info text-white">
+            <div class="card-header bg-info text-white" style="cursor: pointer;" data-toggle="collapse" data-target="#formularioDeclarante" aria-expanded="false" aria-controls="formularioDeclarante">
                 <h6 class="card-title mb-0">
                     <i class="fas fa-plus-circle"></i> 
                     <span id="formTitle">Agregar Nuevo Declarante</span>
+                    <i class="fas fa-chevron-down float-right" id="chevronIcon"></i>
                 </h6>
             </div>
-            <div class="card-body">
+            <div class="card-body collapse" id="formularioDeclarante">
                 <form id="declaranteForm" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" id="declaranteId" name="id">
@@ -331,6 +332,23 @@
 
 @section('css')
 <style>
+/* Estilos para el formulario plegable */
+.card-header[data-toggle="collapse"] {
+    transition: all 0.3s ease;
+}
+
+.card-header[data-toggle="collapse"]:hover {
+    background-color: #17a2b8 !important;
+}
+
+#chevronIcon {
+    transition: transform 0.3s ease;
+}
+
+#chevronIcon.collapsed {
+    transform: rotate(-90deg);
+}
+
 /* Estilos para el modal de declarantes */
 #declarantesModal .modal-xl {
     max-width: 1200px;
@@ -393,6 +411,18 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Cargar declarantes al iniciar la página
     cargarDeclarantes();
+    
+    // Configurar el ícono chevron para el formulario plegable
+    $('#formularioDeclarante').on('show.bs.collapse', function () {
+        $('#chevronIcon').removeClass('collapsed');
+    });
+    
+    $('#formularioDeclarante').on('hide.bs.collapse', function () {
+        $('#chevronIcon').addClass('collapsed');
+    });
+    
+    // Establecer el estado inicial del chevron (colapsado)
+    $('#chevronIcon').addClass('collapsed');
     
     // Configurar formulario de declarante
     const declaranteForm = document.getElementById('declaranteForm');
@@ -759,6 +789,9 @@ function editarDeclarante(id) {
                 document.getElementById('submitButton').innerHTML = '<i class="fas fa-save"></i> Actualizar';
                 document.getElementById('cancelEditButton').style.display = 'inline-block';
                 
+                // Expandir el formulario si está colapsado
+                $('#formularioDeclarante').collapse('show');
+                
                 // Si tiene firma, mostrar info
                 if (declarante.firma) {
                     document.getElementById('firmaActualName').textContent = declarante.firma;
@@ -960,6 +993,9 @@ function resetearFormulario() {
     document.getElementById('cancelEditButton').style.display = 'none';
     document.getElementById('firmaActual').style.display = 'none';
     document.getElementById('firmaPreview').style.display = 'none';
+    
+    // Colapsar el formulario
+    $('#formularioDeclarante').collapse('hide');
     
     // Resetear el campo de archivo (no se resetea automáticamente)
     const firmaInput = document.getElementById('firma');
