@@ -11,16 +11,22 @@ use Carbon\Carbon;
 use App\Services\FirmaElectronicaService;
 use App\Services\Factura\FacturaListService;
 use App\Services\Factura\FacturaCalculationService;
+use App\Services\Factura\FirmaDigitalService;
 
 class FacturaController extends Controller
 {
     protected $facturaListService;
     protected $facturaCalculationService;
+    protected $firmaDigitalService;
 
-    public function __construct(FacturaListService $facturaListService, FacturaCalculationService $facturaCalculationService)
-    {
+    public function __construct(
+        FacturaListService $facturaListService, 
+        FacturaCalculationService $facturaCalculationService,
+        FirmaDigitalService $firmaDigitalService
+    ) {
         $this->facturaListService = $facturaListService;
         $this->facturaCalculationService = $facturaCalculationService;
+        $this->firmaDigitalService = $firmaDigitalService;
     }
     /**
      * Display a listing of the resource.
@@ -853,7 +859,7 @@ class FacturaController extends Controller
     }
 
     /**
-     * Firmar digitalmente y enviar factura al SRI
+     * Firmar digitalmente y enviar factura al SRI usando servicios Python
      *
      * @param  int  $id
      * @param  \Illuminate\Http\Request  $request
@@ -862,11 +868,8 @@ class FacturaController extends Controller
     public function firmarYEnviar($id, Request $request)
     {
         try {
-            // Log inicial
-            \Log::info('=== INICIO PROCESO FIRMA Y ENVÍO ===', [
+            \Log::info('=== INICIO PROCESO FIRMA Y ENVÍO CON PYTHON ===', [
                 'factura_id' => $id,
-                'request_data' => $request->except(['password_certificado']),
-                'ip' => $request->ip(),
                 'user_agent' => $request->userAgent()
             ]);
 
@@ -876,11 +879,6 @@ class FacturaController extends Controller
             ]);
 
             if ($validator->fails()) {
-                \Log::warning('Validación fallida en firmarYEnviar', [
-                    'factura_id' => $id,
-                    'errors' => $validator->errors()->toArray()
-                ]);
-
                 return response()->json([
                     'success' => false,
                     'message' => 'Datos de entrada inválidos',
@@ -889,315 +887,65 @@ class FacturaController extends Controller
             }
 
             // Obtener la factura
-            \Log::info('Buscando factura', ['factura_id' => $id]);
             $factura = Factura::with('declarante')->findOrFail($id);
             
             \Log::info('Factura encontrada', [
                 'factura_id' => $factura->id,
-                'declarante_id' => $factura->declarante_id,
-                'declarante_nombre' => $factura->declarante->nombre ?? 'N/A',
-                'xml_path' => $factura->xml,
                 'estado_actual' => $factura->estado ?? 'SIN_ESTADO'
             ]);
 
             // Verificar que existe el XML
             if (!$factura->xml) {
-                \Log::error('Factura sin XML', ['factura_id' => $id]);
                 return response()->json([
                     'success' => false,
                     'message' => 'La factura no tiene un XML generado'
                 ], 422);
             }
 
-            // Verificar que el declarante tiene certificado PEM
+            // Verificar que el declarante tiene certificado
             if (!isset($factura->declarante->firma) || !$factura->declarante->firma) {
-                \Log::error('Declarante sin certificado PEM', [
-                    'factura_id' => $id,
-                    'declarante_id' => $factura->declarante_id,
-                    'firma' => $factura->declarante->firma ?? 'NULL'
-                ]);
-
                 return response()->json([
                     'success' => false,
-                    'message' => 'El declarante no tiene un certificado digital configurado. Configure un certificado PEM válido en el campo firma antes de firmar.'
+                    'message' => 'El declarante no tiene un certificado digital configurado'
                 ], 422);
             }
 
-            // Leer el XML existente
-            $xmlPath = storage_path('app/public/' . $factura->xml);
-            \Log::info('Verificando archivo XML', [
-                'xml_path' => $xmlPath,
-                'file_exists' => file_exists($xmlPath),
-                'file_size' => file_exists($xmlPath) ? filesize($xmlPath) : 0
-            ]);
-
-            if (!file_exists($xmlPath)) {
-                \Log::error('Archivo XML no encontrado', [
-                    'factura_id' => $id,
-                    'xml_path' => $xmlPath
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se encontró el archivo XML de la factura'
-                ], 422);
-            }
-
-            $xmlContent = file_get_contents($xmlPath);
-            if (!$xmlContent) {
-                \Log::error('Error al leer XML', [
-                    'factura_id' => $id,
-                    'xml_path' => $xmlPath
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se pudo leer el contenido del archivo XML'
-                ], 422);
-            }
-
-            \Log::info('XML leído correctamente', [
-                'factura_id' => $id,
-                'xml_length' => strlen($xmlContent),
-                'xml_preview' => substr($xmlContent, 0, 200) . '...'
-            ]);
-
-            // Paso 1: Firmar el XML
-            \Log::info('Iniciando proceso de firma XML', ['factura_id' => $id]);
-            $xmlFirmado = $this->firmarXML($xmlContent, $factura->declarante, $request->password_certificado);
+            // Usar el servicio Python para firmar y enviar
+            $resultado = $this->firmaDigitalService->firmarYEnviarCompleto($factura, $request->password_certificado);
             
-            if (!$xmlFirmado) {
-                \Log::error('Error en proceso de firma', ['factura_id' => $id]);
+            if (!$resultado['success']) {
+                \Log::error('Error en proceso completo Python', [
+                    'factura_id' => $id,
+                    'error' => $resultado['error']
+                ]);
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error al firmar el XML. Verifique la contraseña del certificado.'
+                    'message' => $resultado['error']
                 ], 422);
             }
 
-            \Log::info('XML firmado exitosamente', [
+            \Log::info('=== FIN PROCESO FIRMA Y ENVÍO EXITOSO CON PYTHON ===', [
                 'factura_id' => $id,
-                'xml_firmado_length' => strlen($xmlFirmado)
+                'estado_final' => $resultado['factura']->estado
             ]);
-
-            // Guardar XML firmado
-            $xmlFirmadoPath = str_replace('.xml', '_firmado.xml', $xmlPath);
-            if (!file_put_contents($xmlFirmadoPath, $xmlFirmado)) {
-                \Log::error('Error al guardar XML firmado', [
-                    'factura_id' => $id,
-                    'xml_firmado_path' => $xmlFirmadoPath
-                ]);
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se pudo guardar el XML firmado'
-                ], 500);
-            }
-
-            \Log::info('XML firmado guardado', [
-                'factura_id' => $id,
-                'xml_firmado_path' => $xmlFirmadoPath,
-                'file_size' => filesize($xmlFirmadoPath)
-            ]);
-
-            // Actualizar estado de la factura después de la firma
-            $factura->estado = 'FIRMADA';
-            $factura->xml_firmado = str_replace(storage_path('app/public/'), '', $xmlFirmadoPath);
-            $factura->fecha_firma = now();
-            $factura->save();
-
-            \Log::info('Factura marcada como FIRMADA', [
-                'factura_id' => $id,
-                'xml_firmado_path' => $factura->xml_firmado
-            ]);
-
-            // Paso 2: Enviar al SRI
-            \Log::info('Iniciando envío al SRI', ['factura_id' => $id]);
-            $factura->fecha_envio_sri = now();
-            $factura->estado = 'ENVIADA';
-            $factura->save();
-
-            // Log para verificar contenido del XML antes de enviar
-            \Log::info('XML que se enviará al SRI', [
-                'factura_id' => $id,
-                'xml_tiene_infoAdicional' => strpos($xmlFirmado, '<infoAdicional>') !== false,
-                'xml_tiene_campoAdicional' => strpos($xmlFirmado, '<campoAdicional') !== false,
-                'xml_tiene_signature_ds' => strpos($xmlFirmado, '<ds:Signature') !== false,
-                'xml_tiene_signature_ns0' => strpos($xmlFirmado, '<ns0:Signature') !== false,
-                'xml_tiene_signature_value' => strpos($xmlFirmado, '<ds:SignatureValue>') !== false || strpos($xmlFirmado, '<ns0:SignatureValue>') !== false,
-                'xml_tiene_placeholder' => strpos($xmlFirmado, 'PEM_SIGNATURE_PLACEHOLDER') !== false,
-                'xml_preview_infoAdicional' => $this->extraerSeccionXML($xmlFirmado, 'infoAdicional'),
-                'xml_preview_signature' => substr($this->extraerSeccionXML($xmlFirmado, 'ds:SignatureValue') ?: $this->extraerSeccionXML($xmlFirmado, 'ns0:SignatureValue'), 0, 200) . '...'
-            ]);
-
-            $resultadoSRI = $this->enviarAlSRI($xmlFirmado);
-            
-            \Log::info('Resultado del SRI', [
-                'factura_id' => $id,
-                'resultado' => $resultadoSRI
-            ]);
-
-            if (!$resultadoSRI['success']) {
-                // Error al enviar al SRI
-                $factura->estado = 'DEVUELTA';
-                $factura->estado_sri = 'DEVUELTA';
-                
-                // Recopilar todos los detalles de error del SRI
-                $erroresDetallados = [];
-                if (isset($resultadoSRI['errores_detallados'])) {
-                    $erroresDetallados = $resultadoSRI['errores_detallados'];
-                } else {
-                    $erroresDetallados = $resultadoSRI['errors'] ?? [$resultadoSRI['message']];
-                }
-                
-                $factura->mensajes_sri = json_encode($erroresDetallados);
-                $factura->save();
-
-                \Log::error('Error al enviar al SRI', [
-                    'factura_id' => $id,
-                    'error_message' => $resultadoSRI['message'],
-                    'errors' => $resultadoSRI['errors'] ?? [],
-                    'errores_detallados' => $erroresDetallados
-                ]);
-
-                // Preparar mensaje de error más detallado para el usuario
-                $mensajeError = 'Error del SRI: ' . $resultadoSRI['message'];
-                if (!empty($erroresDetallados)) {
-                    $mensajeError .= "\n\nDetalles de los errores:";
-                    foreach ($erroresDetallados as $index => $error) {
-                        if (is_array($error)) {
-                            $mensajeError .= "\n" . ($index + 1) . ". " . ($error['mensaje'] ?? 'Error sin descripción');
-                            if (isset($error['informacionAdicional'])) {
-                                $mensajeError .= "\n   Información adicional: " . $error['informacionAdicional'];
-                            }
-                            if (isset($error['identificador'])) {
-                                $mensajeError .= "\n   Código: " . $error['identificador'];
-                            }
-                        } else {
-                            $mensajeError .= "\n" . ($index + 1) . ". " . $error;
-                        }
-                    }
-                }
-
-                return response()->json([
-                    'success' => false,
-                    'message' => $mensajeError,
-                    'errors' => $resultadoSRI['errors'] ?? [],
-                    'errores_detallados' => $erroresDetallados
-                ], 422);
-            }
-
-            // Actualizar estado según respuesta del SRI
-            try {
-                $estadoSRI = $resultadoSRI['estado'] ?? 'DESCONOCIDO';
-                
-                \Log::info('Procesando estado del SRI', [
-                    'factura_id' => $id,
-                    'estado_sri' => $estadoSRI,
-                    'resultado_completo' => $resultadoSRI
-                ]);
-                
-                if ($estadoSRI === 'RECIBIDA') {
-                    $factura->estado = 'RECIBIDA';
-                    $factura->estado_sri = 'RECIBIDA';
-                    $factura->save();
-                    
-                    \Log::info('Factura RECIBIDA por SRI, iniciando autorización automática', [
-                        'factura_id' => $id
-                    ]);
-                    
-                    // Autorización automática
-                    $claveAcceso = $this->extraerClaveAccesoDeXML($factura);
-                    if ($claveAcceso) {
-                        $resultadoAutorizacion = $this->solicitarAutorizacionSRI($claveAcceso);
-                        
-                        if ($resultadoAutorizacion['success'] && $resultadoAutorizacion['estado'] === 'AUTORIZADO') {
-                            $factura->estado = 'AUTORIZADA';
-                            $factura->estado_sri = 'AUTORIZADA';
-                            $factura->numero_autorizacion = $resultadoAutorizacion['numero_autorizacion'] ?? null;
-                            $factura->fecha_autorizacion = isset($resultadoAutorizacion['fecha_autorizacion']) && $resultadoAutorizacion['fecha_autorizacion'] ? 
-                                \Carbon\Carbon::parse($resultadoAutorizacion['fecha_autorizacion']) : now();
-                            
-                            \Log::info('Factura AUTORIZADA automáticamente', [
-                                'factura_id' => $id,
-                                'numero_autorizacion' => $factura->numero_autorizacion
-                            ]);
-                            
-                            // Enviar email al cliente con el XML autorizado
-                            $this->enviarEmailFacturaAutorizada($factura);
-                            
-                        } else {
-                            \Log::warning('Autorización automática falló', [
-                                'factura_id' => $id,
-                                'resultado' => $resultadoAutorizacion
-                            ]);
-                        }
-                    }
-                    
-                } elseif ($estadoSRI === 'AUTORIZADA') {
-                    $factura->estado = 'AUTORIZADA';
-                    $factura->estado_sri = 'AUTORIZADA';
-                    $factura->numero_autorizacion = $resultadoSRI['numero_autorizacion'] ?? null;
-                    $factura->fecha_autorizacion = isset($resultadoSRI['fecha_autorizacion']) && $resultadoSRI['fecha_autorizacion'] ? 
-                        \Carbon\Carbon::parse($resultadoSRI['fecha_autorizacion']) : now();
-                } else {
-                    $factura->estado = 'DEVUELTA';
-                    $factura->estado_sri = $estadoSRI;
-                    $factura->mensajes_sri = json_encode($resultadoSRI['errors'] ?? ['Estado desconocido: ' . $estadoSRI]);
-                }
-                
-                // Solo guardar numero_autorizacion y fecha_autorizacion si está AUTORIZADA
-                // NO guardar estos campos para estados RECIBIDA o DEVUELTA
-                
-                $factura->save();
-
-                \Log::info('Factura actualizada exitosamente', [
-                    'factura_id' => $id,
-                    'estado' => $factura->estado,
-                    'estado_sri' => $factura->estado_sri,
-                    'numero_autorizacion' => $factura->numero_autorizacion
-                ]);
-
-            } catch (\Exception $e) {
-                \Log::error('Error al procesar respuesta del SRI', [
-                    'factura_id' => $id,
-                    'error' => $e->getMessage(),
-                    'resultado_sri' => $resultadoSRI
-                ]);
-                
-                // Marcar como error de procesamiento
-                $factura->estado = 'ERROR_PROCESAMIENTO';
-                $factura->estado_sri = 'ERROR_PROCESAMIENTO';
-                $factura->mensajes_sri = json_encode(['Error al procesar respuesta: ' . $e->getMessage()]);
-                $factura->save();
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error al procesar respuesta del SRI: ' . $e->getMessage()
-                ], 500);
-            }
-
-            \Log::info('=== FIN PROCESO FIRMA Y ENVÍO EXITOSO ===', ['factura_id' => $id]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Factura firmada y enviada exitosamente al SRI',
                 'data' => [
-                    'estado' => $factura->estado,
-                    'estado_sri' => $factura->estado_sri,
-                    'numero_autorizacion' => $factura->numero_autorizacion ?? 'N/A',
-                    'fecha_autorizacion' => $factura->fecha_autorizacion ? $factura->fecha_autorizacion->format('d/m/Y H:i:s') : 'N/A',
-                    'fecha_firma' => $factura->fecha_firma ? $factura->fecha_firma->format('d/m/Y H:i:s') : 'N/A',
-                    'fecha_envio_sri' => $factura->fecha_envio_sri ? $factura->fecha_envio_sri->format('d/m/Y H:i:s') : 'N/A',
-                    'xml_firmado_path' => $factura->xml_firmado
+                    'estado' => $resultado['factura']->estado,
+                    'fecha_firma' => $resultado['factura']->fecha_firma ? $resultado['factura']->fecha_firma->format('d/m/Y H:i:s') : 'N/A',
+                    'fecha_envio_sri' => $resultado['factura']->fecha_envio_sri ? $resultado['factura']->fecha_envio_sri->format('d/m/Y H:i:s') : 'N/A',
+                    'xml_firmado_path' => $resultado['factura']->xml_firmado,
+                    'resultado_sri' => $resultado['resultado_envio']
                 ]
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('=== ERROR CRÍTICO EN FIRMA Y ENVÍO ===', [
+            \Log::error('=== ERROR CRÍTICO EN FIRMA Y ENVÍO CON PYTHON ===', [
                 'factura_id' => $id,
-                'error_message' => $e->getMessage(),
-                'error_file' => $e->getFile(),
-                'error_line' => $e->getLine(),
+                'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
