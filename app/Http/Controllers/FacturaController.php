@@ -51,11 +51,13 @@ class FacturaController extends Controller
         
         if ($resultado['success']) {
             return response()->json([
+                'success' => true,
                 'data' => $resultado['data']
             ]);
         }
         
         return response()->json([
+            'success' => false,
             'message' => $resultado['message']
         ], 500);
     }
