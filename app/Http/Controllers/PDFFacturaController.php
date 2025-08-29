@@ -137,10 +137,12 @@ class PDFFacturaController extends Controller
     private function extraerDatosComprador($xml)
     {
         $infoFactura = $xml->infoFactura ?? null;
+        $tipoIdentificacion = (string)($infoFactura->tipoIdentificacionComprador ?? '');
         
         return [
             'identificacion' => (string)($infoFactura->identificacionComprador ?? ''),
-            'tipo_identificacion' => (string)($infoFactura->tipoIdentificacionComprador ?? ''),
+            'tipo_identificacion' => $tipoIdentificacion,
+            'tipo_identificacion_descripcion' => $this->obtenerDescripcionTipoIdentificacion($tipoIdentificacion),
             'razon_social' => (string)($infoFactura->razonSocialComprador ?? ''),
             'direccion' => (string)($infoFactura->direccionComprador ?? ''),
             'email' => (string)($infoFactura->email ?? ''),
@@ -294,8 +296,10 @@ class PDFFacturaController extends Controller
         
         if (isset($xml->infoFactura->pagos) && isset($xml->infoFactura->pagos->pago)) {
             foreach ($xml->infoFactura->pagos->pago as $pago) {
+                $codigoPago = (string)($pago->formaPago ?? '');
                 $pagos[] = [
-                    'forma_pago' => (string)($pago->formaPago ?? ''),
+                    'forma_pago' => $codigoPago,
+                    'forma_pago_descripcion' => $this->obtenerDescripcionFormaPago($codigoPago),
                     'total' => (float)($pago->total ?? 0),
                     'plazo' => (string)($pago->plazo ?? ''),
                     'unidad_tiempo' => (string)($pago->unidadTiempo ?? '')
@@ -327,6 +331,41 @@ class PDFFacturaController extends Controller
         }
         
         return $impuestos;
+    }
+    
+    /**
+     * Obtener descripción de forma de pago según código SRI
+     */
+    private function obtenerDescripcionFormaPago($codigo)
+    {
+        $formasPago = [
+            '01' => 'SIN UTILIZACIÓN DEL SISTEMA FINANCIERO',
+            '15' => 'COMPENSACIÓN DE DEUDAS',
+            '16' => 'TARJETA DE DÉBITO',
+            '17' => 'DINERO ELECTRÓNICO',
+            '18' => 'TARJETA PREPAGO',
+            '19' => 'TARJETA DE CRÉDITO',
+            '20' => 'OTROS CON UTILIZACIÓN DEL SISTEMA FINANCIERO',
+            '21' => 'ENDOSO DE TÍTULOS'
+        ];
+        
+        return $formasPago[$codigo] ?? "Forma de pago código {$codigo}";
+    }
+    
+    /**
+     * Obtener descripción del tipo de identificación según código SRI
+     */
+    private function obtenerDescripcionTipoIdentificacion($codigo)
+    {
+        $tiposIdentificacion = [
+            '04' => 'RUC',
+            '05' => 'CÉDULA',
+            '06' => 'PASAPORTE',
+            '07' => 'VENTA A CONSUMIDOR FINAL',
+            '08' => 'IDENTIFICACIÓN DEL EXTERIOR'
+        ];
+        
+        return $tiposIdentificacion[$codigo] ?? "Tipo {$codigo}";
     }
     
     /**

@@ -337,6 +337,10 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 <div>
                     <div class="info-row">
+                        <span class="info-label">Tipo Identificación:</span>
+                        <span class="info-value">{{ $datosFactura['comprador']['tipo_identificacion_descripcion'] ?? 'N/A' }}</span>
+                    </div>
+                    <div class="info-row">
                         <span class="info-label">Identificación:</span>
                         <span class="info-value">{{ $datosFactura['comprador']['identificacion'] }}</span>
                     </div>
@@ -403,18 +407,15 @@
                 @if(!empty($datosFactura['pagos']))
                     @foreach($datosFactura['pagos'] as $pago)
                         <div class="info-row">
-                            <span class="info-label">
-                                @switch($pago['forma_pago'])
-                                    @case('01') Efectivo @break
-                                    @case('15') Transferencia @break
-                                    @case('16') Tarjeta Débito @break
-                                    @case('17') Tarjeta Crédito @break
-                                    @case('18') Cheque @break
-                                    @default Forma {{ $pago['forma_pago'] }}
-                                @endswitch
-                            </span>
+                            <span class="info-label">{{ $pago['forma_pago_descripcion'] }}:</span>
                             <span class="info-value">${{ number_format($pago['total'], 2) }}</span>
                         </div>
+                        @if(!empty($pago['plazo']))
+                            <div class="info-row" style="font-size: 9px; color: #666;">
+                                <span class="info-label">Plazo:</span>
+                                <span class="info-value">{{ $pago['plazo'] }} {{ $pago['unidad_tiempo'] }}</span>
+                            </div>
+                        @endif
                     @endforeach
                 @else
                     <p>Sin información</p>
