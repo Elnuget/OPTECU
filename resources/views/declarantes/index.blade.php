@@ -562,6 +562,17 @@ function renderizarDeclarantes(declarantes) {
                             <p class="mb-1"><strong>RUC:</strong> ${declarante.ruc || 'N/A'}</p>
                             <p class="mb-1"><strong>Establecimiento:</strong> ${declarante.establecimiento || 'N/A'}</p>
                             <p class="mb-1"><strong>Punto de Emisión:</strong> ${declarante.punto_emision || 'N/A'}</p>
+                            <p class="mb-1"><strong>Facturas Asociadas:</strong> 
+                                <span class="badge badge-info">${declarante.cantidad_facturas || 0}</span>
+                            </p>
+                            ${declarante.cantidad_facturas > 0 ? `
+                            <p class="mb-1"><strong>Total Facturado:</strong> 
+                                <span class="text-success font-weight-bold">$${parseFloat(declarante.total_facturado || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            </p>
+                            <p class="mb-1"><strong>IVA Total:</strong> 
+                                <span class="text-info font-weight-bold">$${parseFloat(declarante.iva_debito || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            </p>
+                            ` : ''}
                         </div>
                     </div>
                     <div class="mb-2">

@@ -401,4 +401,9 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
         'update' => 'detalles-sueldo.update',
         'destroy' => 'detalles-sueldo.destroy',
     ]);
+
+    // Rutas para Declarantes
+    Route::resource('declarantes', DeclaranteController::class);
+    Route::get('declarantes/{id}/facturas', [DeclaranteController::class, 'facturas'])->name('declarantes.facturas');
+    Route::post('declarantes/{id}/actualizar-password', [DeclaranteController::class, 'actualizarPassword'])->name('declarantes.actualizar-password');
 });
