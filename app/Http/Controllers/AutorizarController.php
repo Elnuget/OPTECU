@@ -347,15 +347,21 @@ class AutorizarController extends Controller
                 'updated_at' => now()
             ];
             
-            // Si está autorizada, actualizar datos adicionales
-            if ($datosAutorizacion['estado'] === 'AUTORIZADA') {
-                $updates['estado'] = 'AUTORIZADA';
+            // Si está autorizada, actualizar datos adicionales y estado principal
+            if ($datosAutorizacion['estado'] === 'AUTORIZADA' || $datosAutorizacion['estado'] === 'AUTORIZADO') {
+                $updates['estado'] = 'AUTORIZADA'; // Cambiar estado principal de la factura
                 $updates['numero_autorizacion'] = $datosAutorizacion['numeroAutorizacion'];
                 $updates['fecha_autorizacion'] = $datosAutorizacion['fechaAutorizacion'];
                 
                 // Guardar XML autorizado si está disponible
-                if ($datosAutorizacion['comprobante']) {
+                if (!empty($datosAutorizacion['comprobante'])) {
                     $updates['xml_autorizado'] = $datosAutorizacion['comprobante'];
+                    
+                    Log::info('XML autorizado guardado', [
+                        'factura_id' => $factura->id,
+                        'xml_length' => strlen($datosAutorizacion['comprobante']),
+                        'xml_preview' => substr($datosAutorizacion['comprobante'], 0, 200) . '...'
+                    ]);
                 }
             }
             
@@ -363,15 +369,19 @@ class AutorizarController extends Controller
             
             Log::info('Factura actualizada con datos de autorización', [
                 'factura_id' => $factura->id,
+                'estado_original' => $factura->estado,
+                'estado_nuevo' => $updates['estado'] ?? 'Sin cambio',
                 'estado_sri_original' => $datosAutorizacion['estado'],
                 'estado_sri_mapeado' => $estadoSriValido,
-                'numero_autorizacion' => $datosAutorizacion['numeroAutorizacion'] ?? 'N/A'
+                'numero_autorizacion' => $datosAutorizacion['numeroAutorizacion'] ?? 'N/A',
+                'xml_autorizado_guardado' => !empty($datosAutorizacion['comprobante'])
             ]);
             
         } catch (\Exception $e) {
             Log::error('Error al actualizar factura con autorización', [
                 'factura_id' => $factura->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             throw $e;

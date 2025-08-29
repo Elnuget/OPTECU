@@ -206,6 +206,68 @@
 </div>
 @endif
 
+<!-- XML Autorizado -->
+@if($factura->estado === 'AUTORIZADA' && $factura->xml_autorizado)
+<div class="row">
+    <div class="col-md-12">
+        <div class="card card-outline card-success">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-file-code"></i> XML Autorizado por el SRI
+                </h3>
+                <div class="card-tools">
+                    <button type="button" 
+                            class="btn btn-sm btn-success" 
+                            onclick="descargarXMLAutorizado()"
+                            title="Descargar XML autorizado">
+                        <i class="fas fa-download"></i> Descargar XML
+                    </button>
+                    <button type="button" 
+                            class="btn btn-sm btn-info" 
+                            onclick="copiarXMLAutorizado()"
+                            title="Copiar XML al portapapeles">
+                        <i class="fas fa-copy"></i> Copiar XML
+                    </button>
+                    <button class="btn btn-tool" type="button" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    <strong>Factura Autorizada:</strong> Este XML ha sido oficialmente autorizado por el SRI y contiene la firma digital válida.
+                </div>
+                
+                <div class="form-group">
+                    <label for="xml_autorizado_content">Contenido del XML Autorizado:</label>
+                    <textarea id="xml_autorizado_content" 
+                              class="form-control" 
+                              rows="15" 
+                              readonly 
+                              style="font-family: monospace; font-size: 12px;">{{ $factura->xml_autorizado }}</textarea>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Tamaño del XML:</strong> {{ number_format(strlen($factura->xml_autorizado)) }} caracteres
+                        </small>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            <i class="fas fa-certificate"></i> 
+                            <strong>Estado:</strong> Autorizado por SRI
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
 @stop
 
 @section('css')
@@ -376,6 +438,52 @@
                 console.error('Error al copiar: ', err);
                 alert('Error al copiar el número de autorización');
             });
+        }
+    }
+    
+    function descargarXMLAutorizado() {
+        const xmlContent = document.getElementById('xml_autorizado_content');
+        if (xmlContent && xmlContent.value) {
+            const blob = new Blob([xmlContent.value], { type: 'application/xml' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'factura_{{ $factura->id }}_autorizada_sri.xml';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            alert('XML autorizado descargado exitosamente');
+        } else {
+            alert('No hay XML autorizado disponible para descargar');
+        }
+    }
+    
+    function copiarXMLAutorizado() {
+        const xmlContent = document.getElementById('xml_autorizado_content');
+        if (xmlContent && xmlContent.value) {
+            navigator.clipboard.writeText(xmlContent.value).then(function() {
+                // Mostrar feedback visual en el botón
+                const boton = event.target.closest('button');
+                const iconoOriginal = boton.innerHTML;
+                boton.innerHTML = '<i class="fas fa-check text-success"></i> Copiado';
+                boton.classList.add('btn-success');
+                boton.classList.remove('btn-info');
+                
+                setTimeout(function() {
+                    boton.innerHTML = iconoOriginal;
+                    boton.classList.remove('btn-success');
+                    boton.classList.add('btn-info');
+                }, 2000);
+                
+                alert('XML autorizado copiado al portapapeles');
+            }).catch(function(err) {
+                console.error('Error al copiar XML: ', err);
+                alert('Error al copiar el XML autorizado');
+            });
+        } else {
+            alert('No hay XML autorizado disponible para copiar');
         }
     }
 </script>
