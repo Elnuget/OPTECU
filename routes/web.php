@@ -358,6 +358,7 @@ Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guard
     
     // Rutas para autorización de facturas
     Route::get('autorizar/{facturaId}', [App\Http\Controllers\AutorizarController::class, 'index'])->name('autorizar.index');
+    Route::post('autorizar/{facturaId}/consultar', [App\Http\Controllers\AutorizarController::class, 'consultarAutorizacion'])->name('autorizar.consultar');
     
     // Rutas para el controlador de Sueldos
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {

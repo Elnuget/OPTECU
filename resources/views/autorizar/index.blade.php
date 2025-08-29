@@ -3,6 +3,7 @@
 
 @section('content_header')
 <h1>Autorizar Factura #{{ $factura->id }}</h1>
+<meta name="csrf-token" content="{{ csrf_token() }}">
 @stop
 
 @section('content')
@@ -15,6 +16,14 @@
                     <i class="fas fa-certificate"></i> Información de Autorización
                 </h3>
                 <div class="card-tools">
+                    @if($factura->clave_acceso && in_array($factura->estado, ['FIRMADA', 'ENVIADA', 'RECIBIDA']))
+                        <button type="button" 
+                                class="btn btn-sm btn-warning mr-2" 
+                                onclick="autorizarFactura({{ $factura->id }})"
+                                id="btnAutorizar">
+                            <i class="fas fa-sync-alt"></i> Consultar Autorización SRI
+                        </button>
+                    @endif
                     <a href="{{ route('facturas.show', $factura->id) }}" class="btn btn-sm btn-secondary">
                         <i class="fas fa-arrow-left"></i> Volver a Factura
                     </a>
@@ -228,6 +237,94 @@
 
 @section('js')
 <script>
+    function autorizarFactura(facturaId) {
+        const btnAutorizar = document.getElementById('btnAutorizar');
+        const iconoOriginal = btnAutorizar.innerHTML;
+        
+        // Deshabilitar botón y mostrar spinner
+        btnAutorizar.disabled = true;
+        btnAutorizar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
+        
+        // Realizar petición AJAX
+        fetch(`/autorizar/${facturaId}/consultar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mostrar mensaje según el estado
+                if (data.data.estado === 'AUTORIZADA') {
+                    alert('¡Factura autorizada exitosamente!\n\nNúmero de autorización: ' + data.data.numeroAutorizacion);
+                    // Recargar la página para mostrar los nuevos datos
+                    window.location.reload();
+                } else if (data.data.estado === 'EN_PROCESO') {
+                    alert('La factura está en proceso de autorización. Intente consultar nuevamente en unos minutos.');
+                } else if (data.data.estado === 'DEVUELTA') {
+                    // Verificar si es un caso de "no encontrada" basándose en los mensajes
+                    let esNoEncontrada = false;
+                    if (data.data.mensajes && data.data.mensajes.length > 0) {
+                        esNoEncontrada = data.data.mensajes.some(mensaje => 
+                            mensaje.identificador === 'NO_ENCONTRADA'
+                        );
+                    }
+                    
+                    if (esNoEncontrada) {
+                        alert('No se encontró información de autorización para esta factura.\n\n' +
+                              'Posibles causas:\n' +
+                              '• La factura no ha sido enviada al SRI\n' +
+                              '• La clave de acceso no es válida\n' +
+                              '• El SRI aún no ha procesado la factura');
+                    } else {
+                        // Mostrar mensajes de error del SRI
+                        let mensajeCompleto = 'La factura fue devuelta por el SRI.\n\nEstado: ' + data.data.estado;
+                        
+                        if (data.data.mensajes && data.data.mensajes.length > 0) {
+                            mensajeCompleto += '\n\nMensajes del SRI:';
+                            data.data.mensajes.forEach((mensaje, index) => {
+                                mensajeCompleto += '\n' + (index + 1) + '. ' + mensaje.mensaje;
+                                if (mensaje.informacionAdicional) {
+                                    mensajeCompleto += '\n   Detalle: ' + mensaje.informacionAdicional;
+                                }
+                            });
+                        }
+                        
+                        alert(mensajeCompleto);
+                    }
+                } else {
+                    // Otros estados (NO_AUTORIZADA, etc.)
+                    let mensajeCompleto = 'La factura no ha sido autorizada.\n\nEstado: ' + data.data.estado;
+                    
+                    if (data.data.mensajes && data.data.mensajes.length > 0) {
+                        mensajeCompleto += '\n\nMensajes del SRI:';
+                        data.data.mensajes.forEach((mensaje, index) => {
+                            mensajeCompleto += '\n' + (index + 1) + '. ' + mensaje.mensaje;
+                            if (mensaje.informacionAdicional) {
+                                mensajeCompleto += '\n   Detalle: ' + mensaje.informacionAdicional;
+                            }
+                        });
+                    }
+                    
+                    alert(mensajeCompleto);
+                }
+            } else {
+                alert('Error al consultar autorización: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error de conexión al consultar la autorización. Por favor, intente nuevamente.');
+        })
+        .finally(() => {
+            // Restaurar botón
+            btnAutorizar.disabled = false;
+            btnAutorizar.innerHTML = iconoOriginal;
+        });
+    }
+    
     function copiarClaveAcceso() {
         const claveAcceso = document.getElementById('clave_acceso');
         if (claveAcceso && claveAcceso.value && claveAcceso.value !== 'No disponible') {

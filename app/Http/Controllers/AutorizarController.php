@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Factura;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Exception;
 
 class AutorizarController extends Controller
 {
@@ -41,5 +42,370 @@ class AutorizarController extends Controller
             return redirect()->route('facturas.index')
                 ->with('error', 'Error al acceder a la vista de autorización: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Consultar el estado de autorización de una factura en el SRI
+     */
+    public function consultarAutorizacion($facturaId)
+    {
+        try {
+            // Buscar la factura por ID
+            $factura = Factura::findOrFail($facturaId);
+            
+            // Verificar que la factura tiene clave de acceso
+            if (!$factura->clave_acceso) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La factura no tiene clave de acceso generada.'
+                ], 400);
+            }
+            
+            // Validar estado de la factura
+            if (!in_array($factura->estado, ['FIRMADA', 'ENVIADA', 'RECIBIDA'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La factura debe estar firmada y enviada para consultar su autorización.'
+                ], 400);
+            }
+            
+            Log::info('Iniciando consulta de autorización SRI', [
+                'factura_id' => $facturaId,
+                'clave_acceso' => $factura->clave_acceso,
+                'estado_actual' => $factura->estado
+            ]);
+            
+            // Validar ambiente de pruebas
+            $this->validarAmbientePruebas();
+            
+            // Consultar autorización en el SRI
+            $resultado = $this->consultarSriAutorizacion($factura->clave_acceso);
+            
+            // Actualizar datos de la factura si se obtuvo respuesta
+            if ($resultado['success']) {
+                $this->actualizarFacturaConAutorizacion($factura, $resultado['data']);
+            }
+            
+            return response()->json($resultado);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al consultar autorización SRI', [
+                'factura_id' => $facturaId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al consultar autorización: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Validar que estamos en ambiente de pruebas
+     */
+    private function validarAmbientePruebas()
+    {
+        $envPath = public_path('SriSignXml/.env');
+        
+        if (file_exists($envPath)) {
+            $envContent = file_get_contents($envPath);
+            
+            // Verificar que las URLs sean de pruebas (celcer)
+            if (strpos($envContent, 'cel.sri.gob.ec') !== false && 
+                strpos($envContent, 'celcer.sri.gob.ec') === false) {
+                throw new Exception('ADVERTENCIA: Se detectaron URLs de PRODUCCIÓN. Se requiere ambiente de PRUEBAS.');
+            }
+        }
+        
+        Log::info('Ambiente de pruebas validado correctamente');
+    }
+
+    /**
+     * Realizar consulta de autorización al SRI
+     */
+    private function consultarSriAutorizacion($claveAcceso)
+    {
+        try {
+            // URL del servicio de autorización (PRUEBAS)
+            $wsdlUrl = 'https://celcer.sri.gob.ec/comprobantes-electronicos-ws/AutorizacionComprobantesOffline?wsdl';
+            
+            Log::info('Consultando autorización SRI', [
+                'url' => $wsdlUrl,
+                'clave_acceso' => $claveAcceso
+            ]);
+            
+            // Crear cliente SOAP
+            $client = new \SoapClient($wsdlUrl, [
+                'trace' => true,
+                'exceptions' => true,
+                'cache_wsdl' => WSDL_CACHE_NONE,
+                'stream_context' => stream_context_create([
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true
+                    ]
+                ])
+            ]);
+            
+            // Parámetros de la consulta
+            $params = [
+                'claveAccesoComprobante' => $claveAcceso
+            ];
+            
+            // Realizar la consulta
+            $response = $client->autorizacionComprobante($params);
+            
+            Log::info('Respuesta SRI recibida', [
+                'response' => json_encode($response, JSON_PRETTY_PRINT)
+            ]);
+            
+            // Procesar respuesta
+            return $this->procesarRespuestaSri($response);
+            
+        } catch (\SoapFault $e) {
+            Log::error('Error SOAP al consultar SRI', [
+                'error' => $e->getMessage(),
+                'faultcode' => $e->faultcode ?? 'N/A',
+                'faultstring' => $e->faultstring ?? 'N/A',
+                'clave_acceso' => $claveAcceso
+            ]);
+            
+            // Determinar tipo de error SOAP
+            $errorMessage = 'Error de comunicación con el SRI';
+            
+            if (isset($e->faultcode)) {
+                switch ($e->faultcode) {
+                    case 'SOAP-ENV:Client':
+                        $errorMessage = 'Error en la petición: datos inválidos o formato incorrecto';
+                        break;
+                    case 'SOAP-ENV:Server':
+                        $errorMessage = 'Error en el servidor del SRI: servicio no disponible temporalmente';
+                        break;
+                    default:
+                        $errorMessage = 'Error SOAP: ' . ($e->faultstring ?? $e->getMessage());
+                }
+            }
+            
+            throw new Exception($errorMessage);
+            
+        } catch (\Exception $e) {
+            Log::error('Error general al consultar SRI', [
+                'error' => $e->getMessage(),
+                'clave_acceso' => $claveAcceso
+            ]);
+            
+            throw $e;
+        }
+    }
+
+    /**
+     * Procesar respuesta del SRI
+     */
+    private function procesarRespuestaSri($response)
+    {
+        try {
+            // Log de la respuesta completa para debugging
+            Log::info('Respuesta completa del SRI', [
+                'response' => json_encode($response, JSON_PRETTY_PRINT)
+            ]);
+            
+            $autorizaciones = $response->RespuestaAutorizacionComprobante ?? null;
+            
+            if (!$autorizaciones) {
+                throw new Exception('Respuesta inválida del SRI: no se encontraron autorizaciones');
+            }
+            
+            // Verificar si existe la propiedad autorizacion o autorizaciones
+            $autorizacion = null;
+            
+            if (isset($autorizaciones->autorizacion)) {
+                $autorizacion = is_array($autorizaciones->autorizacion) 
+                    ? $autorizaciones->autorizacion[0] 
+                    : $autorizaciones->autorizacion;
+            } elseif (isset($autorizaciones->autorizaciones)) {
+                $autorizacionesData = $autorizaciones->autorizaciones;
+                
+                // Si la respuesta tiene 'autorizaciones', verificar si tiene contenido
+                if (is_object($autorizacionesData) && property_exists($autorizacionesData, 'autorizacion')) {
+                    $autorizacionInterna = $autorizacionesData->autorizacion;
+                    $autorizacion = is_array($autorizacionInterna) ? $autorizacionInterna[0] : $autorizacionInterna;
+                } elseif (is_array($autorizacionesData) && count($autorizacionesData) > 0) {
+                    $autorizacion = $autorizacionesData[0];
+                }
+            } else {
+                // Si no encontramos autorizacion, veamos qué propiedades tiene
+                $propiedades = get_object_vars($autorizaciones);
+                Log::info('Propiedades disponibles en autorizaciones', [
+                    'propiedades' => array_keys($propiedades)
+                ]);
+                
+                throw new Exception('No se encontró información de autorización en la respuesta del SRI. Propiedades disponibles: ' . implode(', ', array_keys($propiedades)));
+            }
+            
+            if (!$autorizacion) {
+                throw new Exception('No se encontró información de autorización en la respuesta del SRI');
+            }
+            
+            // Extraer datos de la autorización
+            $estado = $autorizacion->estado ?? 'DESCONOCIDO';
+            $numeroAutorizacion = $autorizacion->numeroAutorizacion ?? null;
+            $fechaAutorizacion = $autorizacion->fechaAutorizacion ?? null;
+            $ambiente = $autorizacion->ambiente ?? null;
+            $comprobante = $autorizacion->comprobante ?? null;
+            
+            // Procesar mensajes
+            $mensajes = [];
+            if (isset($autorizacion->mensajes) && isset($autorizacion->mensajes->mensaje)) {
+                $mensajesSri = is_array($autorizacion->mensajes->mensaje) 
+                    ? $autorizacion->mensajes->mensaje 
+                    : [$autorizacion->mensajes->mensaje];
+                
+                foreach ($mensajesSri as $mensaje) {
+                    $mensajes[] = [
+                        'identificador' => $mensaje->identificador ?? null,
+                        'mensaje' => $mensaje->mensaje ?? 'Mensaje sin descripción',
+                        'informacionAdicional' => $mensaje->informacionAdicional ?? null,
+                        'tipo' => $mensaje->tipo ?? 'INFO'
+                    ];
+                }
+            }
+            
+            // Si no hay autorizaciones pero hay mensajes de error, extraerlos
+            if ($estado === 'DESCONOCIDO' && empty($mensajes)) {
+                // Buscar mensajes en otros lugares de la respuesta
+                if (isset($autorizaciones->mensajes)) {
+                    $mensajesGenerales = is_array($autorizaciones->mensajes) 
+                        ? $autorizaciones->mensajes 
+                        : [$autorizaciones->mensajes];
+                    
+                    foreach ($mensajesGenerales as $mensaje) {
+                        if (is_object($mensaje)) {
+                            $mensajes[] = [
+                                'identificador' => $mensaje->identificador ?? null,
+                                'mensaje' => $mensaje->mensaje ?? 'Error en procesamiento',
+                                'informacionAdicional' => $mensaje->informacionAdicional ?? null,
+                                'tipo' => $mensaje->tipo ?? 'ERROR'
+                            ];
+                        }
+                    }
+                }
+                
+                // Si aún no hay mensajes, indicar que no se encontró la factura
+                if (empty($mensajes)) {
+                    $mensajes[] = [
+                        'identificador' => 'NO_ENCONTRADA',
+                        'mensaje' => 'No se encontró información de autorización para esta clave de acceso',
+                        'informacionAdicional' => 'La factura puede no haber sido enviada al SRI o la clave de acceso no es válida',
+                        'tipo' => 'WARNING'
+                    ];
+                    // Usar estado válido del ENUM: DEVUELTA para casos donde no se encuentra
+                    $estado = 'DEVUELTA';
+                }
+            }
+            
+            $datosAutorizacion = [
+                'estado' => $estado,
+                'numeroAutorizacion' => $numeroAutorizacion,
+                'fechaAutorizacion' => $fechaAutorizacion,
+                'ambiente' => $ambiente,
+                'comprobante' => $comprobante,
+                'mensajes' => $mensajes
+            ];
+            
+            Log::info('Autorización procesada', $datosAutorizacion);
+            
+            return [
+                'success' => true,
+                'data' => $datosAutorizacion
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Error al procesar respuesta SRI', [
+                'error' => $e->getMessage(),
+                'response' => json_encode($response, JSON_PRETTY_PRINT)
+            ]);
+            
+            throw new Exception('Error al procesar respuesta del SRI: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Actualizar factura con datos de autorización
+     */
+    private function actualizarFacturaConAutorizacion($factura, $datosAutorizacion)
+    {
+        try {
+            // Mapear estados del SRI a estados válidos del ENUM
+            $estadoSriValido = $this->mapearEstadoSriAEnum($datosAutorizacion['estado']);
+            
+            $updates = [
+                'estado_sri' => $estadoSriValido,
+                'mensajes_sri' => json_encode($datosAutorizacion['mensajes']),
+                'updated_at' => now()
+            ];
+            
+            // Si está autorizada, actualizar datos adicionales
+            if ($datosAutorizacion['estado'] === 'AUTORIZADA') {
+                $updates['estado'] = 'AUTORIZADA';
+                $updates['numero_autorizacion'] = $datosAutorizacion['numeroAutorizacion'];
+                $updates['fecha_autorizacion'] = $datosAutorizacion['fechaAutorizacion'];
+                
+                // Guardar XML autorizado si está disponible
+                if ($datosAutorizacion['comprobante']) {
+                    $updates['xml_autorizado'] = $datosAutorizacion['comprobante'];
+                }
+            }
+            
+            $factura->update($updates);
+            
+            Log::info('Factura actualizada con datos de autorización', [
+                'factura_id' => $factura->id,
+                'estado_sri_original' => $datosAutorizacion['estado'],
+                'estado_sri_mapeado' => $estadoSriValido,
+                'numero_autorizacion' => $datosAutorizacion['numeroAutorizacion'] ?? 'N/A'
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar factura con autorización', [
+                'factura_id' => $factura->id,
+                'error' => $e->getMessage()
+            ]);
+            
+            throw $e;
+        }
+    }
+
+    /**
+     * Mapear estados del SRI a valores válidos del ENUM estado_sri
+     */
+    private function mapearEstadoSriAEnum($estadoSri)
+    {
+        // Valores válidos del ENUM: 'RECIBIDA', 'DEVUELTA', 'AUTORIZADA', 'NO_AUTORIZADA'
+        $mapeoEstados = [
+            'AUTORIZADA' => 'AUTORIZADA',
+            'AUTORIZADO' => 'AUTORIZADA',
+            'NO_AUTORIZADA' => 'NO_AUTORIZADA',
+            'NO_AUTORIZADO' => 'NO_AUTORIZADA',
+            'DEVUELTA' => 'DEVUELTA',
+            'DEVUELTO' => 'DEVUELTA',
+            'RECIBIDA' => 'RECIBIDA',
+            'RECIBIDO' => 'RECIBIDA',
+            'EN_PROCESO' => 'RECIBIDA', // Estado temporal se mapea a RECIBIDA
+            'PROCESANDO' => 'RECIBIDA',
+            'DESCONOCIDO' => 'DEVUELTA', // Estados desconocidos se mapean a DEVUELTA
+            'ERROR' => 'DEVUELTA'
+        ];
+        
+        $estadoMapeado = $mapeoEstados[$estadoSri] ?? 'DEVUELTA';
+        
+        Log::info('Mapeando estado SRI', [
+            'estado_original' => $estadoSri,
+            'estado_mapeado' => $estadoMapeado
+        ]);
+        
+        return $estadoMapeado;
     }
 }
