@@ -356,6 +356,9 @@ Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guard
     // Ruta para firmar con certificado del declarante (método PHP legacy)
     Route::post('facturas/{id}/firmar-con-certificado-declarante', [App\Http\Controllers\FacturaController::class, 'firmarConCertificadoDeclarante'])->name('facturas.firmar-con-certificado-declarante');
     
+    // Rutas para autorización de facturas
+    Route::get('autorizar/{facturaId}', [App\Http\Controllers\AutorizarController::class, 'index'])->name('autorizar.index');
+    
     // Rutas para el controlador de Sueldos
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Ruta para imprimir rol de pago (DEBE ir antes del resource)

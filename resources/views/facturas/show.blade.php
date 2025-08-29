@@ -202,27 +202,14 @@
                 @endphp
 
             @elseif(in_array($factura->estado, ['RECIBIDA', 'DEVUELTA']))
-                <button type="button" class="btn btn-sm btn-info" onclick="procesarAutorizacionDirecta({{ $factura->id }})">
-                    <i class="fas fa-check"></i> Solicitar Autorización
-                </button>
-                <button type="button" class="btn btn-sm btn-warning ml-2" onclick="verificarAutorizacion({{ $factura->id }})">
-                    <i class="fas fa-sync"></i> Verificar Estado
-                </button>
+                <a href="{{ route('autorizar.index', $factura->id) }}" class="btn btn-sm btn-warning">
+                    <i class="fas fa-certificate"></i> Autorizar
+                </a>
                 @if($factura->estado === 'DEVUELTA')
                     <span class="badge badge-warning ml-2">
-                        <i class="fas fa-exclamation-triangle"></i> Devuelta por SRI - Reintentando autorización
+                        <i class="fas fa-exclamation-triangle"></i> Devuelta por SRI - Requiere autorización
                     </span>
                 @endif
-                <div id="estado_autorizacion_proceso" style="display: none;" class="mt-2">
-                    <div class="alert alert-info">
-                        <i class="fas fa-spinner fa-spin"></i> Solicitando autorización al SRI...
-                    </div>
-                </div>
-                <div id="estado_verificacion_proceso" style="display: none;" class="mt-2">
-                    <div class="alert alert-info">
-                        <i class="fas fa-spinner fa-spin"></i> Verificando estado en el SRI...
-                    </div>
-                </div>
             @elseif($factura->estado === 'AUTORIZADA')
                 <span class="badge badge-success">
                     <i class="fas fa-check-circle"></i> Autorizada
