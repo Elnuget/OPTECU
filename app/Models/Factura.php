@@ -111,19 +111,19 @@ class Factura extends Model
 
     /**
      * Obtener el XML más apropiado según el estado de la factura
-     * Prioridad: XML Firmado > XML Autorizado > XML Original
-     * MODIFICADO: Siempre mostrar XML firmado cuando esté disponible
+     * Prioridad: XML Autorizado > XML Firmado > XML Original
+     * MODIFICADO: Mostrar XML autorizado cuando esté disponible
      */
     public function getXmlContent()
     {
-        // Prioridad 1: Si hay XML firmado, usar siempre (independientemente del estado)
-        if (!empty($this->xml_firmado)) {
-            return $this->xml_firmado;
+        // Prioridad 1: Si hay XML autorizado, usar siempre
+        if (!empty($this->xml_autorizado)) {
+            return $this->xml_autorizado;
         }
         
-        // Prioridad 2: Si está autorizada y hay XML autorizado
-        if ($this->estado === 'AUTORIZADA' && !empty($this->xml_autorizado)) {
-            return $this->xml_autorizado;
+        // Prioridad 2: Si hay XML firmado
+        if (!empty($this->xml_firmado)) {
+            return $this->xml_firmado;
         }
         
         // Prioridad 3: Por defecto, usar XML original
@@ -132,18 +132,18 @@ class Factura extends Model
 
     /**
      * Obtener el tipo de XML que se está mostrando
-     * MODIFICADO: Siempre mostrar tipo firmado cuando esté disponible
+     * MODIFICADO: Mostrar tipo autorizado cuando esté disponible
      */
     public function getXmlType()
     {
-        // Prioridad 1: Si hay XML firmado, mostrar como firmado (independientemente del estado)
-        if (!empty($this->xml_firmado)) {
-            return 'firmado';
+        // Prioridad 1: Si hay XML autorizado, mostrar como autorizado
+        if (!empty($this->xml_autorizado)) {
+            return 'autorizado';
         }
         
-        // Prioridad 2: Si está autorizada y hay XML autorizado
-        if ($this->estado === 'AUTORIZADA' && !empty($this->xml_autorizado)) {
-            return 'autorizado';
+        // Prioridad 2: Si hay XML firmado, mostrar como firmado
+        if (!empty($this->xml_firmado)) {
+            return 'firmado';
         }
         
         // Prioridad 3: Por defecto, original
