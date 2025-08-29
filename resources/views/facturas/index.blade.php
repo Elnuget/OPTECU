@@ -86,9 +86,7 @@
                             <th>ID</th>
                             <th>Fecha</th>
                             <th>Declarante</th>
-                            <th>Número</th>
-                            <th>Cliente</th>
-                            <th>Tipo</th>
+                            <th>Información</th>
                             <th>Estado</th>
                             <th class="text-right">Subtotal</th>
                             <th class="text-right">IVA</th>
@@ -273,6 +271,30 @@ function renderizarFacturas(facturas) {
         // Estado de la factura
         const estadoBadge = formatearEstadoFactura(factura.estado || 'CREADA');
         
+        // Información del pedido
+        const numeroPedido = factura.pedido ? (factura.pedido.numero_orden || 'N/A') : 'N/A';
+        const celularPedido = factura.pedido ? (factura.pedido.celular || 'N/A') : 'N/A';
+        const correoPedido = factura.pedido ? (factura.pedido.correo_electronico || 'N/A') : 'N/A';
+        const clientePedido = factura.pedido ? factura.pedido.cliente : 'N/A';
+        
+        // Columna de información combinada
+        const informacionCompleta = `
+            <div class="d-flex flex-column">
+                <div class="mb-1">
+                    <strong><i class="fas fa-user text-primary"></i> ${clientePedido}</strong>
+                </div>
+                <div class="mb-1">
+                    <small><i class="fas fa-hashtag text-info"></i> Pedido: <strong>${numeroPedido}</strong></small>
+                </div>
+                <div class="mb-1">
+                    <small><i class="fas fa-mobile-alt text-success"></i> ${celularPedido}</small>
+                </div>
+                <div>
+                    <small><i class="fas fa-envelope text-warning"></i> ${correoPedido}</small>
+                </div>
+            </div>
+        `;
+        
         // Acciones
         const showUrl = `${FACTURA_SHOW_URL}/${factura.id}`;
         const acciones = `
@@ -290,9 +312,7 @@ function renderizarFacturas(facturas) {
             <td><strong>${factura.id}</strong></td>
             <td>${formatearFecha(factura.created_at)}</td>
             <td>${factura.declarante ? factura.declarante.nombre : 'N/A'}</td>
-            <td>${factura.numero || 'Sin número'}</td>
-            <td>${factura.pedido ? factura.pedido.cliente : 'N/A'}</td>
-            <td>${tipoBadge}</td>
+            <td>${informacionCompleta}</td>
             <td>${estadoBadge}</td>
             <td class="text-right">$${numberFormat(monto)}</td>
             <td class="text-right">$${numberFormat(iva)}</td>
@@ -761,9 +781,7 @@ function formatearFecha(fechaStr) {
                                     <th>#</th>
                                     <th>Fecha</th>
                                     <th>Declarante</th>
-                                    <th>Orden</th>
-                                    <th>Cliente</th>
-                                    <th>Tipo</th>
+                                    <th>Información</th>
                                     <th>Base</th>
                                     <th>IVA</th>
                                     <th>Total</th>
@@ -1300,6 +1318,30 @@ function renderizarFacturas(facturas) {
             ? `<span class="badge badge-primary">Factura</span>`
             : `<span class="badge badge-info">Nota de venta</span>`;
         
+        // Información del pedido
+        const numeroPedido = factura.pedido ? (factura.pedido.numero_orden || 'N/A') : 'N/A';
+        const celularPedido = factura.pedido ? (factura.pedido.celular || 'N/A') : 'N/A';
+        const correoPedido = factura.pedido ? (factura.pedido.correo_electronico || 'N/A') : 'N/A';
+        const clientePedido = factura.pedido ? factura.pedido.cliente : 'N/A';
+        
+        // Columna de información combinada
+        const informacionCompleta = `
+            <div class="d-flex flex-column">
+                <div class="mb-1">
+                    <strong><i class="fas fa-user text-primary"></i> ${clientePedido}</strong>
+                </div>
+                <div class="mb-1">
+                    <small><i class="fas fa-hashtag text-info"></i> Pedido: <strong>${numeroPedido}</strong></small>
+                </div>
+                <div class="mb-1">
+                    <small><i class="fas fa-mobile-alt text-success"></i> ${celularPedido}</small>
+                </div>
+                <div>
+                    <small><i class="fas fa-envelope text-warning"></i> ${correoPedido}</small>
+                </div>
+            </div>
+        `;
+        
         // Acciones
         const acciones = `
             <div class="btn-group btn-group-sm" role="group">
@@ -1316,9 +1358,7 @@ function renderizarFacturas(facturas) {
             <td>${index + 1}</td>
             <td>${formatearFecha(factura.created_at)}</td>
             <td>${factura.declarante ? factura.declarante.nombre : 'N/A'}</td>
-            <td>${factura.pedido ? factura.pedido.orden : 'N/A'}</td>
-            <td>${factura.pedido ? factura.pedido.nombre_cliente : 'N/A'}</td>
-            <td>${tipoBadge}</td>
+            <td>${informacionCompleta}</td>
             <td class="text-right">$${numberFormat(monto)}</td>
             <td class="text-right">$${numberFormat(iva)}</td>
             <td class="text-right">$${numberFormat(total)}</td>
