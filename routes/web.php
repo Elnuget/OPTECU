@@ -373,6 +373,9 @@ Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Ruta para firmar con certificado del declarante (método PHP legacy)
     Route::post('facturas/{id}/firmar-con-certificado-declarante', [App\Http\Controllers\FacturaController::class, 'firmarConCertificadoDeclarante'])->name('facturas.firmar-con-certificado-declarante');
     
+    // Ruta para enviar PDF por email
+    Route::post('facturas/enviar-email', [App\Http\Controllers\FacturaController::class, 'enviarEmail'])->name('facturas.enviar-email');
+    
     // Rutas para autorización de facturas
     Route::get('autorizar/{facturaId}', [App\Http\Controllers\AutorizarController::class, 'index'])->name('autorizar.index');
     Route::post('autorizar/{facturaId}/consultar', [App\Http\Controllers\AutorizarController::class, 'consultarAutorizacion'])->name('autorizar.consultar');

@@ -4349,4 +4349,133 @@ class FacturaController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Enviar PDF de factura por email
+     */
+    public function enviarEmail(Request $request)
+    {
+        try {
+            \Log::info('=== INICIO ENVÍO EMAIL PDF FACTURA ===', [
+                'factura_id' => $request->factura_id,
+                'email' => $request->email,
+                'user_id' => auth()->id()
+            ]);
+
+            // Validar entrada
+            $validator = Validator::make($request->all(), [
+                'factura_id' => 'required|integer|exists:facturas,id',
+                'email' => 'required|email',
+                'pdf_url' => 'nullable|string'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Datos inválidos: ' . $validator->errors()->first(),
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Obtener la factura
+            $factura = Factura::with(['pedido', 'declarante'])->find($request->factura_id);
+            
+            if (!$factura) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Factura no encontrada'
+                ], 404);
+            }
+
+            // Verificar que tenga un pedido asociado
+            if (!$factura->pedido) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La factura no tiene un pedido asociado'
+                ], 400);
+            }
+
+            // Email del destinatario
+            $emailDestinatario = $request->email;
+            
+            // Verificar que el email coincida con el del pedido (opcional - para seguridad)
+            if ($factura->pedido->correo_electronico && 
+                strtolower($emailDestinatario) !== strtolower($factura->pedido->correo_electronico)) {
+                \Log::warning('Email de destino no coincide con el del pedido', [
+                    'email_destino' => $emailDestinatario,
+                    'email_pedido' => $factura->pedido->correo_electronico
+                ]);
+            }
+
+            // Generar URL del PDF
+            $pdfUrl = route('facturas.pdf', $factura->id);
+            
+            \Log::info('Enviando email con PDF de factura', [
+                'factura_id' => $factura->id,
+                'email_destinatario' => $emailDestinatario,
+                'pdf_url' => $pdfUrl,
+                'cliente' => $factura->pedido->cliente ?? 'N/A',
+                'numero_orden' => $factura->pedido->numero_orden ?? 'N/A'
+            ]);
+
+            // Datos para el email
+            $datosEmail = [
+                'factura' => $factura,
+                'pedido' => $factura->pedido,
+                'declarante' => $factura->declarante,
+                'pdf_url' => $pdfUrl,
+                'numero_factura' => $factura->id,
+                'cliente_nombre' => $factura->pedido->cliente ?? 'Cliente',
+                'total_factura' => number_format(($factura->monto ?? 0) + ($factura->iva ?? 0), 2)
+            ];
+
+            // Enviar el email
+            try {
+                \Mail::send('emails.factura_pdf', $datosEmail, function ($message) use ($emailDestinatario, $factura) {
+                    $message->to($emailDestinatario)
+                            ->subject('Factura #' . $factura->id . ' - ' . ($factura->declarante->nombre ?? 'OPTECU'))
+                            ->from(config('mail.from.address'), config('mail.from.name'));
+                });
+
+                \Log::info('Email enviado exitosamente', [
+                    'factura_id' => $factura->id,
+                    'email_destinatario' => $emailDestinatario
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'PDF de factura enviado correctamente a ' . $emailDestinatario,
+                    'data' => [
+                        'factura_id' => $factura->id,
+                        'email' => $emailDestinatario,
+                        'pdf_url' => $pdfUrl
+                    ]
+                ]);
+
+            } catch (\Exception $emailError) {
+                \Log::error('Error al enviar email', [
+                    'error' => $emailError->getMessage(),
+                    'factura_id' => $factura->id,
+                    'email_destinatario' => $emailDestinatario
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error al enviar el email: ' . $emailError->getMessage()
+                ], 500);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Error general en envío de email PDF', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }

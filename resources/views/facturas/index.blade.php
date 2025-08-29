@@ -1,6 +1,11 @@
 @extends('adminlte::page')
 @section('title', 'Facturas')
 
+@section('plugins.head')
+<!-- Meta tag para CSRF -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+@stop
+
 @section('content_header')
 <h1>Facturas</h1>
 <p>Listado de facturas emitidas</p>
@@ -294,11 +299,31 @@ function renderizarFacturas(facturas) {
         
         // Acciones
         const showUrl = `${FACTURA_SHOW_URL}/${factura.id}`;
+        const pdfUrl = `${FACTURA_SHOW_URL}/${factura.id}/pdf`;
+        const emailPedido = factura.pedido ? (factura.pedido.correo_electronico || '') : '';
+        
         const acciones = `
             <div class="btn-group btn-group-sm" role="group">
-                <a href="${showUrl}" class="btn btn-info" title="Ver de la factura #${factura.id}">
+                <a href="${showUrl}" class="btn btn-info" title="Ver detalle de la factura #${factura.id}">
                     <i class="fas fa-eye"></i> Ver
                 </a>
+                <a href="${pdfUrl}" target="_blank" class="btn btn-secondary" title="Ver PDF de la factura #${factura.id}">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </a>
+                ${emailPedido ? `
+                <button type="button" class="btn btn-success btn-enviar-email" 
+                        data-id="${factura.id}" 
+                        data-email="${emailPedido}" 
+                        data-pdf-url="${pdfUrl}"
+                        title="Enviar PDF por email a ${emailPedido}">
+                    <i class="fas fa-envelope"></i> Email
+                </button>
+                ` : `
+                <button type="button" class="btn btn-secondary" disabled 
+                        title="No hay correo asociado al pedido">
+                    <i class="fas fa-envelope-open"></i> Sin Email
+                </button>
+                `}
                 <button type="button" class="btn btn-danger btn-eliminar" data-id="${factura.id}" title="Eliminar factura #${factura.id}">
                     <i class="fas fa-trash"></i>
                 </button>
@@ -326,6 +351,16 @@ function renderizarFacturas(facturas) {
         btn.addEventListener('click', function() {
             const id = this.dataset.id;
             confirmarEliminar(id);
+        });
+    });
+    
+    // Agregar eventos a los botones de enviar email
+    document.querySelectorAll('.btn-enviar-email').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const email = this.dataset.email;
+            const pdfUrl = this.dataset.pdfUrl;
+            enviarFacturaPorEmail(id, email, pdfUrl);
         });
     });
 }
@@ -360,6 +395,127 @@ function confirmarEliminar(id) {
     if (confirm('¿Estás seguro de que deseas eliminar esta factura?')) {
         eliminarFactura(id);
     }
+}
+
+// Función para enviar factura por email
+function enviarFacturaPorEmail(facturaId, email, pdfUrl) {
+    // Verificar que SweetAlert esté disponible, sino usar confirm nativo
+    const confirmar = typeof Swal !== 'undefined' 
+        ? () => Swal.fire({
+            title: 'Confirmar envío',
+            text: `¿Desea enviar el PDF de la factura #${facturaId} al correo ${email}?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, enviar',
+            cancelButtonText: 'Cancelar'
+        })
+        : () => Promise.resolve({ isConfirmed: confirm(`¿Desea enviar el PDF de la factura #${facturaId} al correo ${email}?`) });
+    
+    confirmar().then((result) => {
+        if (!result.isConfirmed) return;
+        
+        // Encontrar el botón y mostrar indicador de carga
+        const btnElement = document.querySelector(`[data-id="${facturaId}"].btn-enviar-email`);
+        if (!btnElement) {
+            console.error('No se encontró el botón de enviar email');
+            return;
+        }
+        
+        const originalHtml = btnElement.innerHTML;
+        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+        btnElement.disabled = true;
+        
+        // Preparar datos para envío
+        const formData = new FormData();
+        formData.append('factura_id', facturaId);
+        formData.append('email', email);
+        formData.append('pdf_url', pdfUrl);
+        
+        // Realizar petición
+        fetch('{{ route("facturas.enviar-email") }}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Éxito
+                const mensaje = `✅ PDF de la factura #${facturaId} enviado correctamente a ${email}`;
+                
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Enviado correctamente',
+                        text: mensaje,
+                        icon: 'success',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(mensaje);
+                }
+                
+                // Cambiar temporalmente el icono a éxito
+                btnElement.innerHTML = '<i class="fas fa-check"></i> Enviado';
+                btnElement.classList.remove('btn-success');
+                btnElement.classList.add('btn-info');
+                
+                // Restaurar después de 3 segundos
+                setTimeout(() => {
+                    btnElement.innerHTML = originalHtml;
+                    btnElement.classList.remove('btn-info');
+                    btnElement.classList.add('btn-success');
+                    btnElement.disabled = false;
+                }, 3000);
+                
+            } else {
+                // Error del servidor
+                const mensajeError = data.message || 'Error desconocido al enviar el email';
+                
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Error al enviar',
+                        text: mensajeError,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                } else {
+                    alert(`❌ ${mensajeError}`);
+                }
+                
+                btnElement.innerHTML = originalHtml;
+                btnElement.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error al enviar email:', error);
+            
+            const mensajeError = 'Error de conexión al enviar el email. Verifique su conexión a internet.';
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Error de conexión',
+                    text: mensajeError,
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            } else {
+                alert(`❌ ${mensajeError}`);
+            }
+            
+            btnElement.innerHTML = originalHtml;
+            btnElement.disabled = false;
+        });
+    });
 }
 
 // Función para eliminar factura
@@ -821,6 +977,51 @@ function formatearFecha(fechaStr) {
 /* Estilos para la tabla de facturas */
 #facturasTable {
     width: 100%;
+}
+
+/* Estilos para botones de acción de facturas */
+.btn-group-sm .btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.btn-enviar-email:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.btn-enviar-email .fas {
+    margin-right: 2px;
+}
+
+/* Animación para spinner */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.fa-spinner.fa-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Mejoras visuales para botones */
+.btn-group .btn {
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-top-left-radius: 0.25rem;
+    border-bottom-left-radius: 0.25rem;
+}
+
+.btn-group .btn:last-child {
+    border-top-right-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+}
+
+/* Tooltip personalizado */
+.btn[title]:hover {
+    position: relative;
 }
 </style>
 @stop
