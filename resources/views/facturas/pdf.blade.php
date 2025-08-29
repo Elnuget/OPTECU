@@ -34,9 +34,19 @@
         
         .header-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr;
+            grid-template-columns: 150px 2fr 1fr;
             gap: 20px;
             align-items: start;
+        }
+        
+        .logo-section {
+            text-align: center;
+        }
+        
+        .logo-section img {
+            max-width: 120px;
+            max-height: 120px;
+            object-fit: contain;
         }
         
         .company-info h1 {
@@ -275,6 +285,12 @@
         <!-- Encabezado de la factura -->
         <div class="header">
             <div class="header-grid">
+                <!-- Logo de AdminLTE -->
+                <div class="logo-section">
+                    <img src="{{ asset('AdminLTELogo.png') }}" alt="Logo OPTECU" />
+                    <p style="font-size: 8px; margin-top: 5px; color: #666;">Sistema OPTECU</p>
+                </div>
+                
                 <div class="company-info">
                     <h1>{{ $datosFactura['emisor']['razon_social'] ?? ($factura->declarante->nombre ?? 'EMPRESA') }}</h1>
                     @if(!empty($datosFactura['emisor']['nombre_comercial']))
@@ -408,10 +424,24 @@
             <!-- Totales -->
             <div>
                 <table class="totals-table">
+                    @if(!empty($datosFactura['totales']['subtotal_15']) && $datosFactura['totales']['subtotal_15'] > 0)
                     <tr>
-                        <td>SUBTOTAL:</td>
-                        <td>${{ number_format($datosFactura['totales']['total_sin_impuestos'] ?? $factura->monto ?? 0, 2) }}</td>
+                        <td>SUBTOTAL 15%:</td>
+                        <td>${{ number_format($datosFactura['totales']['subtotal_15'], 2) }}</td>
                     </tr>
+                    @endif
+                    @if(!empty($datosFactura['totales']['subtotal_0']) && $datosFactura['totales']['subtotal_0'] > 0)
+                    <tr>
+                        <td>SUBTOTAL 0%:</td>
+                        <td>${{ number_format($datosFactura['totales']['subtotal_0'], 2) }}</td>
+                    </tr>
+                    @endif
+                    @if(!empty($datosFactura['totales']['subtotal_sin_impuesto']) && $datosFactura['totales']['subtotal_sin_impuesto'] > 0)
+                    <tr>
+                        <td>SUBTOTAL SIN IMPUESTO:</td>
+                        <td>${{ number_format($datosFactura['totales']['subtotal_sin_impuesto'], 2) }}</td>
+                    </tr>
+                    @endif
                     @if(!empty($datosFactura['totales']['total_descuento']) && $datosFactura['totales']['total_descuento'] > 0)
                     <tr>
                         <td>DESCUENTO:</td>
@@ -423,7 +453,13 @@
                         <tr>
                             <td>
                                 @if($impuesto['codigo'] == '2')
-                                    IVA {{ number_format($impuesto['tarifa'], 0) }}%:
+                                    @if($impuesto['codigo_porcentaje'] == '4')
+                                        IVA 15%:
+                                    @elseif($impuesto['codigo_porcentaje'] == '0')
+                                        IVA 0%:
+                                    @else
+                                        IVA {{ number_format($impuesto['tarifa'], 0) }}%:
+                                    @endif
                                 @else
                                     IMPUESTO ({{ $impuesto['codigo'] }}):
                                 @endif
