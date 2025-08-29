@@ -4,6 +4,8 @@
 @section('plugins.head')
 <!-- Meta tag para CSRF -->
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<!-- Font Awesome para iconos de WhatsApp -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 @stop
 
 @section('content_header')
@@ -278,7 +280,8 @@ function renderizarFacturas(facturas) {
         
         // Información del pedido
         const numeroPedido = factura.pedido ? (factura.pedido.numero_orden || 'N/A') : 'N/A';
-        const celularPedido = factura.pedido ? (factura.pedido.celular || 'N/A') : 'N/A';
+        const celularPedidoDisplay = factura.pedido ? (factura.pedido.celular || 'N/A') : 'N/A';
+        const celularPedido = factura.pedido ? (factura.pedido.celular || '') : '';
         const correoPedido = factura.pedido ? (factura.pedido.correo_electronico || 'N/A') : 'N/A';
         const clientePedido = factura.pedido ? factura.pedido.cliente : 'N/A';
         
@@ -289,7 +292,7 @@ function renderizarFacturas(facturas) {
                     <strong><i class="fas fa-user text-primary"></i> ${clientePedido}</strong>
                 </div>
                 <div class="mb-1">
-                    <small><i class="fas fa-mobile-alt text-success"></i> ${celularPedido}</small>
+                    <small><i class="fas fa-mobile-alt text-success"></i> ${celularPedidoDisplay}</small>
                 </div>
                 <div>
                     <small><i class="fas fa-envelope text-warning"></i> ${correoPedido}</small>
@@ -301,6 +304,9 @@ function renderizarFacturas(facturas) {
         const showUrl = `${FACTURA_SHOW_URL}/${factura.id}`;
         const pdfUrl = `${FACTURA_SHOW_URL}/${factura.id}/pdf`;
         const emailPedido = factura.pedido ? (factura.pedido.correo_electronico || '') : '';
+        
+        // Limpiar número de WhatsApp (quitar espacios, guiones, etc.) - usar celularPedido ya declarado arriba
+        const whatsappNumber = celularPedido.replace(/[^\d]/g, '');
         
         const acciones = `
             <div class="btn-group btn-group-sm" role="group">
@@ -322,6 +328,21 @@ function renderizarFacturas(facturas) {
                 <button type="button" class="btn btn-secondary" disabled 
                         title="No hay correo asociado al pedido">
                     <i class="fas fa-envelope-open"></i> Sin Email
+                </button>
+                `}
+                ${whatsappNumber ? `
+                <button type="button" class="btn btn-warning btn-enviar-whatsapp" 
+                        data-id="${factura.id}" 
+                        data-numero="${whatsappNumber}" 
+                        data-pdf-url="${pdfUrl}"
+                        data-cliente="${factura.pedido ? factura.pedido.cliente : 'Cliente'}"
+                        title="Enviar enlace por WhatsApp a ${celularPedidoDisplay}">
+                    <i class="fab fa-whatsapp"></i> WhatsApp
+                </button>
+                ` : `
+                <button type="button" class="btn btn-secondary" disabled 
+                        title="No hay número de WhatsApp asociado al pedido">
+                    <i class="fab fa-whatsapp"></i> Sin WhatsApp
                 </button>
                 `}
                 <button type="button" class="btn btn-danger btn-eliminar" data-id="${factura.id}" title="Eliminar factura #${factura.id}">
@@ -361,6 +382,17 @@ function renderizarFacturas(facturas) {
             const email = this.dataset.email;
             const pdfUrl = this.dataset.pdfUrl;
             enviarFacturaPorEmail(id, email, pdfUrl);
+        });
+    });
+    
+    // Agregar eventos a los botones de WhatsApp
+    document.querySelectorAll('.btn-enviar-whatsapp').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const numero = this.dataset.numero;
+            const pdfUrl = this.dataset.pdfUrl;
+            const cliente = this.dataset.cliente;
+            enviarFacturaPorWhatsApp(id, numero, pdfUrl, cliente);
         });
     });
 }
@@ -516,6 +548,219 @@ function enviarFacturaPorEmail(facturaId, email, pdfUrl) {
             btnElement.disabled = false;
         });
     });
+}
+
+// Función para enviar factura por WhatsApp
+function enviarFacturaPorWhatsApp(facturaId, numero, pdfUrl, cliente) {
+    // Limpiar número (quitar espacios, guiones, paréntesis, etc.)
+    let numeroLimpio = numero.replace(/[^\d+]/g, '');
+    
+    // Si el número empieza con 0, quitarlo (común en Ecuador)
+    if (numeroLimpio.startsWith('0')) {
+        numeroLimpio = numeroLimpio.substring(1);
+    }
+    
+    // Si no tiene código de país, agregar código de Ecuador (+593)
+    if (!numeroLimpio.startsWith('+') && !numeroLimpio.startsWith('593')) {
+        numeroLimpio = '593' + numeroLimpio;
+    }
+    
+    // Quitar el + si existe
+    numeroLimpio = numeroLimpio.replace('+', '');
+    
+    // Validar que el número tenga al menos 10 dígitos
+    if (!numeroLimpio || numeroLimpio.length < 10) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Número inválido',
+                text: `El número de WhatsApp "${numero}" no es válido. Debe tener al menos 10 dígitos.`,
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        } else {
+            alert(`❌ El número de WhatsApp "${numero}" no es válido`);
+        }
+        return;
+    }
+    
+    // Formatear número para mostrar
+    const numeroFormateado = numeroLimpio.startsWith('593') 
+        ? `+${numeroLimpio.substring(0,3)} ${numeroLimpio.substring(3,5)} ${numeroLimpio.substring(5,8)} ${numeroLimpio.substring(8)}`
+        : `+${numeroLimpio}`;
+    
+    // Preparar el mensaje de WhatsApp
+    const nombreCliente = cliente || 'Cliente';
+    const nombreEmpresa = '{{ config("app.name", "OPTECU") }}';
+    const fechaActual = new Date().toLocaleDateString('es-ES');
+
+    const mensaje = `¡Hola ${nombreCliente}! 👋
+
+📄 Su factura #${facturaId} de ${nombreEmpresa} está lista.
+
+📅 Fecha: ${fechaActual}
+🔗 Enlace directo: ${pdfUrl}
+
+📋 Puede ver, descargar e imprimir su factura desde el enlace.
+
+¡Gracias por confiar en nosotros! 🙏
+
+---
+💼 ${nombreEmpresa} - Sistema de Facturación Electrónica
+📱 Este es un mensaje automático.`;
+
+    // Mostrar modal de confirmación con el mensaje completo
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: `¿Enviar factura #${facturaId} por WhatsApp?`,
+            html: `
+                <div style="text-align: left; margin-bottom: 15px;">
+                    <strong>📱 Número de destino:</strong> ${numeroFormateado}<br>
+                    <strong>👤 Cliente:</strong> ${cliente || 'N/A'}
+                </div>
+                <div class="mensaje-whatsapp">
+${mensaje}
+                </div>
+                <div style="font-size: 12px; color: #6c757d; margin-top: 10px;">
+                    <i class="fas fa-info-circle"></i> Al confirmar, se abrirá WhatsApp con este mensaje pre-llenado.
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#25d366',
+            cancelButtonColor: '#d33',
+            confirmButtonText: '<i class="fab fa-whatsapp"></i> Sí, enviar por WhatsApp',
+            cancelButtonText: 'Cancelar',
+            width: '600px',
+            customClass: {
+                popup: 'swal-wide'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                enviarMensajeWhatsApp();
+            }
+        });
+    } else {
+        // Fallback sin Swal
+        if (confirm(`¿Desea enviar el enlace de la factura #${facturaId} por WhatsApp al número ${numeroFormateado}?\n\nMensaje:\n${mensaje}`)) {
+            enviarMensajeWhatsApp();
+        }
+    }
+
+    // Función interna para enviar el mensaje
+    function enviarMensajeWhatsApp() {
+        // Construir URL de WhatsApp
+        const mensajeCodificado = encodeURIComponent(mensaje);
+        const whatsappUrl = `https://wa.me/${numeroLimpio}?text=${mensajeCodificado}`;
+
+        // Abrir WhatsApp en nueva ventana
+        try {
+            window.open(whatsappUrl, '_blank');
+
+            // Feedback visual de éxito
+            const btnElement = document.querySelector(`[data-id="${facturaId}"].btn-enviar-whatsapp`);
+            if (btnElement) {
+                const originalHtml = btnElement.innerHTML;
+                const originalClass = btnElement.className;
+
+                // Cambiar temporalmente a éxito
+                btnElement.innerHTML = '<i class="fas fa-check"></i> Enviado';
+                btnElement.className = btnElement.className.replace('btn-warning', 'btn-success');
+
+                // Mostrar mensaje de éxito
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'WhatsApp abierto',
+                        text: `Se abrió WhatsApp para enviar la factura #${facturaId} al número ${numero}`,
+                        icon: 'success',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    alert(`✅ WhatsApp abierto para enviar factura #${facturaId}`);
+                }
+
+                // Restaurar después de 3 segundos
+                setTimeout(() => {
+                    btnElement.innerHTML = originalHtml;
+                    btnElement.className = originalClass;
+                }, 3000);
+            }
+
+        } catch (error) {
+            console.error('Error al abrir WhatsApp:', error);
+
+            // Ofrecer alternativa de copiar enlace
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Error al abrir WhatsApp',
+                    html: `No se pudo abrir WhatsApp automáticamente.<br><br>¿Desea copiar el enlace de la factura al portapapeles?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#007bff',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: '<i class="fas fa-copy"></i> Copiar enlace',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        copiarAlPortapapeles(pdfUrl).then(() => {
+                            Swal.fire({
+                                title: 'Enlace copiado',
+                                text: 'El enlace de la factura se ha copiado al portapapeles. Puede pegarlo en WhatsApp manualmente.',
+                                icon: 'success',
+                                timer: 3000,
+                                showConfirmButton: false
+                            });
+                        }).catch(() => {
+                            Swal.fire({
+                                title: 'Enlace de la factura',
+                                html: `<p>No se pudo copiar automáticamente. Copie este enlace:</p><br><input type="text" value="${pdfUrl}" readonly style="width: 100%; padding: 5px; border: 1px solid #ddd;" onclick="this.select()">`,
+                                icon: 'info',
+                                confirmButtonText: 'OK'
+                            });
+                        });
+                    }
+                });
+            } else {
+                const copiarEnlace = confirm('No se pudo abrir WhatsApp. ¿Desea copiar el enlace de la factura?');
+                if (copiarEnlace) {
+                    copiarAlPortapapeles(pdfUrl).then(() => {
+                        alert('✅ Enlace copiado al portapapeles');
+                    }).catch(() => {
+                        prompt('Copie este enlace:', pdfUrl);
+                    });
+                }
+            }
+        }
+    }
+}
+
+// Función auxiliar para copiar texto al portapapeles
+function copiarAlPortapapeles(texto) {
+    if (navigator.clipboard && window.isSecureContext) {
+        // Usar API moderna del portapapeles
+        return navigator.clipboard.writeText(texto);
+    } else {
+        // Fallback para navegadores más antiguos
+        return new Promise((resolve, reject) => {
+            const textArea = document.createElement('textarea');
+            textArea.value = texto;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                textArea.remove();
+                resolve();
+            } catch (error) {
+                textArea.remove();
+                reject(error);
+            }
+        });
+    }
 }
 
 // Función para eliminar factura
@@ -939,7 +1184,7 @@ function formatearFecha(fechaStr) {
                                     <th>IVA</th>
                                     <th>Total</th>
                                     <th>XML</th>
-                                    <th width="110">Acciones</th>
+                                    <th width="150">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="facturasTableBody">
@@ -994,6 +1239,28 @@ function formatearFecha(fechaStr) {
     margin-right: 2px;
 }
 
+/* Estilos para botón WhatsApp */
+.btn-enviar-whatsapp {
+    background-color: #25d366 !important;
+    border-color: #25d366 !important;
+    color: white !important;
+}
+
+.btn-enviar-whatsapp:hover {
+    background-color: #1da851 !important;
+    border-color: #1da851 !important;
+    color: white !important;
+}
+
+.btn-enviar-whatsapp:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.btn-enviar-whatsapp .fab {
+    margin-right: 2px;
+}
+
 /* Animación para spinner */
 @keyframes spin {
     0% { transform: rotate(0deg); }
@@ -1023,678 +1290,84 @@ function formatearFecha(fechaStr) {
 .btn[title]:hover {
     position: relative;
 }
+
+/* Responsive para botones en pantallas pequeñas */
+@media (max-width: 768px) {
+    .btn-group-sm .btn {
+        font-size: 0.65rem;
+        padding: 0.2rem 0.3rem;
+    }
+    
+    .btn-group-sm .btn .fas,
+    .btn-group-sm .btn .fab {
+        margin-right: 1px;
+        font-size: 0.8rem;
+    }
+    
+    /* Ocultar texto en móviles, solo mostrar iconos */
+    .btn-group-sm .btn {
+        white-space: nowrap;
+        overflow: hidden;
+    }
+}
+
+/* Mejora visual para el grupo de botones */
+.btn-group-sm {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-group-sm .btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-group-sm .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Estilos para el modal de WhatsApp */
+.swal-wide {
+    width: 90% !important;
+    max-width: 700px !important;
+}
+
+.swal2-html-container {
+    text-align: left !important;
+}
+
+.swal2-html-container strong {
+    color: #495057;
+}
+
+.swal2-html-container .mensaje-whatsapp {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #495057;
+    white-space: pre-line;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Estilos responsive para móviles */
+@media (max-width: 768px) {
+    .swal-wide {
+        width: 95% !important;
+        max-width: none !important;
+    }
+    
+    .swal2-html-container .mensaje-whatsapp {
+        font-size: 12px;
+        padding: 10px;
+        max-height: 200px;
+    }
+}
 </style>
 @stop
 
-@section('js')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Cargar pedidos pendientes
-    cargarPedidosPendientes();
-    
-    // Cargar declarantes
-    cargarDeclarantes();
-    
-    // Cargar facturas
-    cargarFacturas();
-    
-    // Eventos
-    document.getElementById('pedidoSelect').addEventListener('change', function() {
-        const pedidoId = this.value;
-        if (pedidoId) {
-            cargarDetallesPedido(pedidoId);
-        } else {
-            ocultarDetallesPedido();
-        }
-    });
-    
-    // Formulario de factura
-    document.getElementById('crearFacturaForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        crearFactura();
-    });
-    
-    // Botón cancelar
-    document.getElementById('cancelarFacturaBtn').addEventListener('click', function() {
-        resetearFormulario();
-    });
-    
-    // Botones de filtro
-    document.getElementById('btnFiltrar').addEventListener('click', function() {
-        cargarFacturas();
-    });
-    
-    document.getElementById('btnLimpiarFiltros').addEventListener('click', function() {
-        document.getElementById('filtroDeclarante').value = '';
-        document.getElementById('filtroTipoDocumento').value = '';
-        document.getElementById('filtroFechaDesde').value = '';
-        document.getElementById('filtroFechaHasta').value = '';
-        cargarFacturas();
-    });
-});
 
-// Función para cargar pedidos pendientes
-function cargarPedidosPendientes() {
-    fetch('/admin/pedidos/pendientes-facturar')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const pedidos = data.pedidos;
-                const select = document.getElementById('pedidoSelect');
-                
-                // Limpiar select
-                select.innerHTML = '<option value="">Seleccione un pedido...</option>';
-                
-                // Agregar opciones
-                pedidos.forEach(pedido => {
-                    const option = document.createElement('option');
-                    option.value = pedido.id;
-                    option.textContent = `Orden #${pedido.orden} - ${pedido.nombre_cliente} - $${numberFormat(pedido.total)}`;
-                    select.appendChild(option);
-                });
-                
-                // Mensaje si no hay pedidos
-                if (pedidos.length === 0) {
-                    const option = document.createElement('option');
-                    option.disabled = true;
-                    option.textContent = 'No hay pedidos pendientes de facturar';
-                    select.appendChild(option);
-                }
-            } else {
-                Swal.fire({
-                    title: 'Error',
-                    text: data.message || 'Error al cargar pedidos pendientes',
-                    icon: 'error',
-                    confirmButtonText: 'OK'
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            Swal.fire({
-                title: 'Error',
-                text: 'Error de conexión',
-                icon: 'error',
-                confirmButtonText: 'OK'
-            });
-        });
-}
-
-// Función para cargar declarantes
-function cargarDeclarantes() {
-    fetch('/admin/declarantes/listar')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const declarantes = data.declarantes;
-                const selectFactura = document.getElementById('declaranteSelect');
-                const selectFiltro = document.getElementById('filtroDeclarante');
-                
-                // Limpiar selects
-                selectFactura.innerHTML = '<option value="">Seleccione un declarante...</option>';
-                selectFiltro.innerHTML = '<option value="">Todos los declarantes</option>';
-                
-                // Agregar opciones
-                declarantes.forEach(declarante => {
-                    // Para el select de factura
-                    const optionFactura = document.createElement('option');
-                    optionFactura.value = declarante.id;
-                    optionFactura.textContent = `${declarante.nombre} (${declarante.ruc})`;
-                    selectFactura.appendChild(optionFactura);
-                    
-                    // Para el select de filtro
-                    const optionFiltro = document.createElement('option');
-                    optionFiltro.value = declarante.id;
-                    optionFiltro.textContent = `${declarante.nombre} (${declarante.ruc})`;
-                    selectFiltro.appendChild(optionFiltro);
-                });
-            }
-        })
-        .catch(error => console.error('Error:', error));
-}
-
-// Función para cargar detalles de un pedido
-function cargarDetallesPedido(pedidoId) {
-    // Mostrar indicador de carga
-    document.getElementById('detallesLoading').style.display = 'block';
-    document.getElementById('infoPedidoCard').style.display = 'none';
-    document.getElementById('detallesProductos').style.display = 'none';
-    document.getElementById('datosFacturaCard').style.display = 'none';
-    
-    // Hacer petición
-    fetch(`/admin/pedidos/${pedidoId}/detalles`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const pedido = data.pedido;
-                const inventarios = data.inventarios || [];
-                const lunas = data.lunas || [];
-                
-                // Actualizar campo oculto con el ID del pedido
-                document.getElementById('factPedidoId').value = pedidoId;
-                
-                // Actualizar información del pedido
-                document.getElementById('factCliente').textContent = pedido.nombre_cliente;
-                document.getElementById('factTotal').textContent = numberFormat(pedido.total);
-                document.getElementById('factFecha').textContent = formatearFecha(pedido.created_at);
-                
-                // Inicializar totales
-                let totalBase = 0;
-                let totalIva = 0;
-                
-                // Procesar inventarios (armazones y accesorios)
-                if (inventarios.length > 0) {
-                    const tbody = document.getElementById('tablaInventarios');
-                    tbody.innerHTML = '';
-                    
-                    let subtotalBaseInventarios = 0;
-                    let subtotalIvaInventarios = 0;
-                    
-                    inventarios.forEach(item => {
-                        // Calcular valores
-                        const precioBase = parseFloat(item.precio);
-                        const descuento = parseFloat(item.descuento || 0);
-                        const precioFinal = precioBase - descuento;
-                        const base = precioFinal / 1.12; // Asumiendo IVA del 12%
-                        const iva = precioFinal - base;
-                        
-                        // Actualizar subtotales
-                        subtotalBaseInventarios += base;
-                        subtotalIvaInventarios += iva;
-                        
-                        // Crear fila
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${item.codigo}</td>
-                            <td class="text-right">$${numberFormat(precioBase)}</td>
-                            <td class="text-right">$${numberFormat(descuento)}</td>
-                            <td class="text-right">$${numberFormat(precioFinal)}</td>
-                            <td class="text-right">$${numberFormat(base)}</td>
-                            <td class="text-right">$${numberFormat(iva)}</td>
-                        `;
-                        
-                        tbody.appendChild(row);
-                    });
-                    
-                    // Actualizar subtotales
-                    document.getElementById('subtotalBaseInventarios').textContent = '$' + numberFormat(subtotalBaseInventarios);
-                    document.getElementById('subtotalIvaInventarios').textContent = '$' + numberFormat(subtotalIvaInventarios);
-                    document.getElementById('cardInventarios').style.display = 'block';
-                    
-                    // Agregar a los totales generales
-                    totalBase += subtotalBaseInventarios;
-                    totalIva += subtotalIvaInventarios;
-                } else {
-                    document.getElementById('cardInventarios').style.display = 'none';
-                }
-                
-                // Procesar lunas
-                if (lunas.length > 0) {
-                    const tbody = document.getElementById('tablaLunas');
-                    tbody.innerHTML = '';
-                    
-                    let subtotalBaseLunas = 0;
-                    let subtotalIvaLunas = 0;
-                    
-                    lunas.forEach(luna => {
-                        // Calcular valores
-                        const precio = parseFloat(luna.precio);
-                        const descuento = parseFloat(luna.descuento || 0);
-                        const precioFinal = precio - descuento;
-                        const base = precioFinal / 1.12; // Asumiendo IVA del 12%
-                        const iva = precioFinal - base;
-                        
-                        // Actualizar subtotales
-                        subtotalBaseLunas += base;
-                        subtotalIvaLunas += iva;
-                        
-                        // Crear fila
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${luna.medida || 'N/A'}</td>
-                            <td>${luna.tipo || 'N/A'}</td>
-                            <td>${luna.material || 'N/A'}</td>
-                            <td class="text-right">$${numberFormat(precio)}</td>
-                            <td class="text-right">$${numberFormat(descuento)}</td>
-                            <td class="text-right">$${numberFormat(precioFinal)}</td>
-                            <td class="text-right">$${numberFormat(base)}</td>
-                            <td class="text-right">$${numberFormat(iva)}</td>
-                        `;
-                        
-                        tbody.appendChild(row);
-                    });
-                    
-                    // Actualizar subtotales
-                    document.getElementById('subtotalBaseLunas').textContent = '$' + numberFormat(subtotalBaseLunas);
-                    document.getElementById('subtotalIvaLunas').textContent = '$' + numberFormat(subtotalIvaLunas);
-                    document.getElementById('cardLunas').style.display = 'block';
-                    
-                    // Agregar a los totales generales
-                    totalBase += subtotalBaseLunas;
-                    totalIva += subtotalIvaLunas;
-                } else {
-                    document.getElementById('cardLunas').style.display = 'none';
-                }
-                
-                // Actualizar totales
-                document.getElementById('totalBaseCalculado').textContent = '$' + numberFormat(totalBase);
-                document.getElementById('totalIvaCalculado').textContent = '$' + numberFormat(totalIva);
-                document.getElementById('montoTotalCalculado').textContent = '$' + numberFormat(totalBase + totalIva);
-                
-                // Actualizar campos del formulario
-                document.getElementById('montoFactura').value = totalBase.toFixed(2);
-                document.getElementById('ivaFactura').value = totalIva.toFixed(2);
-                
-                // Mostrar secciones
-                document.getElementById('infoPedidoCard').style.display = 'block';
-                document.getElementById('detallesProductos').style.display = 'block';
-                document.getElementById('datosFacturaCard').style.display = 'block';
-            } else {
-                Swal.fire({
-                    title: 'Error',
-                    text: data.message || 'Error al cargar detalles del pedido',
-                    icon: 'error',
-                    confirmButtonText: 'OK'
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            Swal.fire({
-                title: 'Error',
-                text: 'Error de conexión',
-                icon: 'error',
-                confirmButtonText: 'OK'
-            });
-        })
-        .finally(() => {
-            document.getElementById('detallesLoading').style.display = 'none';
-        });
-}
-
-// Función para ocultar detalles del pedido
-function ocultarDetallesPedido() {
-    document.getElementById('infoPedidoCard').style.display = 'none';
-    document.getElementById('detallesProductos').style.display = 'none';
-    document.getElementById('datosFacturaCard').style.display = 'none';
-}
-
-// Función para crear factura
-function crearFactura() {
-    // Validar formulario
-    const pedidoId = document.getElementById('factPedidoId').value;
-    const declaranteId = document.getElementById('declaranteSelect').value;
-    const tipoFactura = document.getElementById('tipoFactura').value;
-    
-    if (!pedidoId) {
-        Swal.fire({
-            title: 'Error',
-            text: 'Debe seleccionar un pedido',
-            icon: 'error',
-            confirmButtonText: 'OK'
-        });
-        return;
-    }
-    
-    if (!declaranteId) {
-        Swal.fire({
-            title: 'Error',
-            text: 'Debe seleccionar un declarante',
-            icon: 'error',
-            confirmButtonText: 'OK'
-        });
-        document.getElementById('declaranteSelect').classList.add('is-invalid');
-        return;
-    }
-    
-    if (!tipoFactura) {
-        Swal.fire({
-            title: 'Error',
-            text: 'Debe seleccionar un tipo de documento',
-            icon: 'error',
-            confirmButtonText: 'OK'
-        });
-        document.getElementById('tipoFactura').classList.add('is-invalid');
-        return;
-    }
-    
-    // Obtener datos del formulario
-    const formData = new FormData(document.getElementById('crearFacturaForm'));
-    
-    // Mostrar indicador de carga
-    Swal.fire({
-        title: 'Procesando',
-        text: 'Creando factura...',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
-    
-    // Enviar petición
-    fetch('/admin/facturas/crear', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            Swal.fire({
-                title: 'Éxito',
-                text: data.message || 'Factura creada correctamente',
-                icon: 'success',
-                confirmButtonText: 'OK'
-            });
-            
-            // Resetear formulario
-            resetearFormulario();
-            
-            // Actualizar listados
-            cargarPedidosPendientes();
-            cargarFacturas();
-        } else {
-            Swal.fire({
-                title: 'Error',
-                text: data.message || 'Error al crear factura',
-                icon: 'error',
-                confirmButtonText: 'OK'
-            });
-            
-            // Mostrar errores específicos
-            if (data.errors) {
-                Object.keys(data.errors).forEach(key => {
-                    const input = document.getElementById(key);
-                    if (input) {
-                        input.classList.add('is-invalid');
-                        const feedback = input.nextElementSibling;
-                        if (feedback && feedback.classList.contains('invalid-feedback')) {
-                            feedback.textContent = data.errors[key][0];
-                        }
-                    }
-                });
-            }
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-            title: 'Error',
-            text: 'Error de conexión',
-            icon: 'error',
-            confirmButtonText: 'OK'
-        });
-    });
-}
-
-// Función para cargar facturas
-function cargarFacturas() {
-    // Obtener valores de filtros
-    const declaranteId = document.getElementById('filtroDeclarante').value;
-    const tipoDocumento = document.getElementById('filtroTipoDocumento').value;
-    const fechaDesde = document.getElementById('filtroFechaDesde').value;
-    const fechaHasta = document.getElementById('filtroFechaHasta').value;
-    
-    // Construir URL con parámetros
-    let url = '/admin/facturas/listar';
-    const params = new URLSearchParams();
-    
-    if (declaranteId) params.append('declarante_id', declaranteId);
-    if (tipoDocumento) params.append('tipo', tipoDocumento);
-    if (fechaDesde) params.append('fecha_desde', fechaDesde);
-    if (fechaHasta) params.append('fecha_hasta', fechaHasta);
-    
-    if (params.toString()) {
-        url += '?' + params.toString();
-    }
-    
-    // Mostrar indicador de carga
-    document.getElementById('facturasLoading').style.display = 'block';
-    document.getElementById('facturasContent').style.display = 'none';
-    document.getElementById('facturasError').style.display = 'none';
-    document.getElementById('noFacturasMessage').style.display = 'none';
-    document.getElementById('totalesFacturasResumen').style.display = 'none';
-    
-    // Hacer petición
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const facturas = data.facturas;
-                
-                if (facturas.length > 0) {
-                    // Renderizar facturas
-                    renderizarFacturas(facturas);
-                    
-                    // Mostrar tabla
-                    document.getElementById('facturasContent').style.display = 'block';
-                    
-                    // Calcular totales
-                    calcularTotalesFacturas(facturas);
-                } else {
-                    // Mostrar mensaje de no facturas
-                    document.getElementById('noFacturasMessage').style.display = 'block';
-                }
-            } else {
-                // Mostrar error
-                document.getElementById('errorFacturasMessage').textContent = data.message || 'Error al cargar facturas';
-                document.getElementById('facturasError').style.display = 'block';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            document.getElementById('errorFacturasMessage').textContent = 'Error de conexión';
-            document.getElementById('facturasError').style.display = 'block';
-        })
-        .finally(() => {
-            document.getElementById('facturasLoading').style.display = 'none';
-        });
-}
-
-// Función para renderizar facturas en la tabla
-function renderizarFacturas(facturas) {
-    const tbody = document.getElementById('facturasTableBody');
-    tbody.innerHTML = '';
-    
-    facturas.forEach((factura, index) => {
-        const row = document.createElement('tr');
-        
-        // Formatear valores
-        const monto = parseFloat(factura.monto);
-        const iva = parseFloat(factura.iva);
-        const total = monto + iva;
-        
-        // XML badge
-        const xmlBadge = factura.xml 
-            ? `<span class="badge badge-success"><i class="fas fa-check"></i> Sí</span>`
-            : `<span class="badge badge-secondary"><i class="fas fa-times"></i> No</span>`;
-        
-        // Tipo de documento
-        const tipoBadge = factura.tipo === 'factura'
-            ? `<span class="badge badge-primary">Factura</span>`
-            : `<span class="badge badge-info">Nota de venta</span>`;
-        
-        // Información del pedido
-        const numeroPedido = factura.pedido ? (factura.pedido.numero_orden || 'N/A') : 'N/A';
-        const celularPedido = factura.pedido ? (factura.pedido.celular || 'N/A') : 'N/A';
-        const correoPedido = factura.pedido ? (factura.pedido.correo_electronico || 'N/A') : 'N/A';
-        const clientePedido = factura.pedido ? factura.pedido.cliente : 'N/A';
-        
-        // Columna de información combinada
-        const informacionCompleta = `
-            <div class="d-flex flex-column">
-                <div class="mb-1">
-                    <strong><i class="fas fa-user text-primary"></i> ${clientePedido}</strong>
-                </div>
-                <div class="mb-1">
-                    <small><i class="fas fa-mobile-alt text-success"></i> ${celularPedido}</small>
-                </div>
-                <div>
-                    <small><i class="fas fa-envelope text-warning"></i> ${correoPedido}</small>
-                </div>
-            </div>
-        `;
-        
-        // Acciones
-        const acciones = `
-            <div class="btn-group btn-group-sm" role="group">
-                <button type="button" class="btn btn-info btn-ver" data-id="${factura.id}" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button type="button" class="btn btn-danger btn-eliminar" data-id="${factura.id}" title="Eliminar">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-        `;
-        
-        row.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${formatearFecha(factura.created_at)}</td>
-            <td>${factura.declarante ? factura.declarante.nombre : 'N/A'}</td>
-            <td>${informacionCompleta}</td>
-            <td class="text-right">$${numberFormat(monto)}</td>
-            <td class="text-right">$${numberFormat(iva)}</td>
-            <td class="text-right">$${numberFormat(total)}</td>
-            <td class="text-center">${xmlBadge}</td>
-            <td>${acciones}</td>
-        `;
-        
-        tbody.appendChild(row);
-    });
-    
-    // Agregar eventos a los botones
-    document.querySelectorAll('.btn-ver').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.dataset.id;
-            verDetalleFactura(id);
-        });
-    });
-    
-    document.querySelectorAll('.btn-eliminar').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.dataset.id;
-            eliminarFactura(id);
-        });
-    });
-}
-
-// Función para calcular totales de facturas
-function calcularTotalesFacturas(facturas) {
-    let totalBase = 0;
-    let totalIva = 0;
-    let totalFacturado = 0;
-    
-    facturas.forEach(factura => {
-        totalBase += parseFloat(factura.monto);
-        totalIva += parseFloat(factura.iva);
-        totalFacturado += parseFloat(factura.monto) + parseFloat(factura.iva);
-    });
-    
-    // Actualizar elementos HTML
-    document.getElementById('totalBaseFacturasResumen').textContent = '$' + numberFormat(totalBase.toFixed(2));
-    document.getElementById('totalDebitoFiscalResumen').textContent = '$' + numberFormat(totalIva.toFixed(2));
-    document.getElementById('totalFacturadoFacturasResumen').textContent = '$' + numberFormat(totalFacturado.toFixed(2));
-    document.getElementById('cantidadTotalFacturasResumen').textContent = facturas.length;
-    
-    // Mostrar resumen
-    document.getElementById('totalesFacturasResumen').style.display = 'block';
-}
-
-// Función para ver detalle de una factura
-function verDetalleFactura(id) {
-    // Implementar según necesidades
-    alert('Función para ver detalle de la factura ' + id);
-}
-
-// Función para eliminar una factura
-function eliminarFactura(id) {
-    // Confirmar eliminación
-    Swal.fire({
-        title: '¿Está seguro?',
-        text: 'Esta acción no se puede deshacer.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Realizar petición
-            fetch(`/admin/facturas/eliminar/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire({
-                        title: 'Eliminada',
-                        text: data.message || 'Factura eliminada correctamente',
-                        icon: 'success',
-                        confirmButtonText: 'OK'
-                    });
-                    
-                    // Recargar facturas y pedidos
-                    cargarFacturas();
-                    cargarPedidosPendientes();
-                } else {
-                    Swal.fire({
-                        title: 'Error',
-                        text: data.message || 'Error al eliminar la factura',
-                        icon: 'error',
-                        confirmButtonText: 'OK'
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({
-                    title: 'Error',
-                    text: 'Error de conexión',
-                    icon: 'error',
-                    confirmButtonText: 'OK'
-                });
-            });
-        }
-    });
-}
-
-// Función para resetear el formulario de crear factura
-function resetearFormulario() {
-    document.getElementById('crearFacturaForm').reset();
-    document.getElementById('pedidoSelect').selectedIndex = 0;
-    ocultarDetallesPedido();
-    
-    // Limpiar clases de validación
-    document.querySelectorAll('.is-invalid').forEach(el => {
-        el.classList.remove('is-invalid');
-    });
-}
-
-// Función de utilidad para formatear números
-function numberFormat(number) {
-    return parseFloat(number).toLocaleString('es-ES', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-}
-
-// Función de utilidad para formatear fechas
-function formatearFecha(fechaStr) {
-    if (!fechaStr) return 'N/A';
-    const fecha = new Date(fechaStr);
-    return fecha.toLocaleString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-</script>
-@stop
