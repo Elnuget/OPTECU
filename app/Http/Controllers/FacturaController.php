@@ -247,36 +247,38 @@ class FacturaController extends Controller
                 ];
             }
             
-            // Armazón/Accesorios - 15% IVA
+            // Armazón/Accesorios - 15% IVA (incluido en el precio)
             if ($request->has('incluir_armazon') && $request->precio_armazon > 0) {
-                $precioArmazon = floatval($request->precio_armazon);
-                $ivaArmazon = $precioArmazon * 0.15;
-                $subtotal += $precioArmazon;
+                $precioArmazonConIva = floatval($request->precio_armazon);
+                $precioArmazonSinIva = $precioArmazonConIva / 1.15; // Extraer el IVA
+                $ivaArmazon = $precioArmazonSinIva * 0.15;
+                $subtotal += $precioArmazonSinIva;
                 $iva += $ivaArmazon;
                 $elementos[] = [
                     'codigo' => 'ARM001',
                     'descripcion' => 'Armazón/Accesorios',
                     'cantidad' => 1,
-                    'precio_unitario' => $precioArmazon,
-                    'subtotal' => $precioArmazon,
+                    'precio_unitario' => $precioArmazonSinIva,
+                    'subtotal' => $precioArmazonSinIva,
                     'codigo_porcentaje' => '4', // 15% IVA
                     'tarifa' => '15',
                     'valor_impuesto' => $ivaArmazon
                 ];
             }
             
-            // Luna - 15% IVA
+            // Luna - 15% IVA (incluido en el precio)
             if ($request->has('incluir_luna') && $request->precio_luna > 0) {
-                $precioLuna = floatval($request->precio_luna);
-                $ivaLuna = $precioLuna * 0.15;
-                $subtotal += $precioLuna;
+                $precioLunaConIva = floatval($request->precio_luna);
+                $precioLunaSinIva = $precioLunaConIva / 1.15; // Extraer el IVA
+                $ivaLuna = $precioLunaSinIva * 0.15;
+                $subtotal += $precioLunaSinIva;
                 $iva += $ivaLuna;
                 $elementos[] = [
                     'codigo' => 'LUN001',
                     'descripcion' => 'Cristalería',
                     'cantidad' => 1,
-                    'precio_unitario' => $precioLuna,
-                    'subtotal' => $precioLuna,
+                    'precio_unitario' => $precioLunaSinIva,
+                    'subtotal' => $precioLunaSinIva,
                     'codigo_porcentaje' => '4', // 15% IVA
                     'tarifa' => '15',
                     'valor_impuesto' => $ivaLuna
@@ -531,36 +533,38 @@ class FacturaController extends Controller
                 ];
             }
             
-            // Armazón/Accesorios - 15% IVA
+            // Armazón/Accesorios - 15% IVA (incluido en el precio)
             if ($request->has('incluir_armazon') && $request->precio_armazon > 0) {
-                $precioArmazon = floatval($request->precio_armazon);
-                $ivaArmazon = $precioArmazon * 0.15;
-                $subtotal += $precioArmazon;
+                $precioArmazonConIva = floatval($request->precio_armazon);
+                $precioArmazonSinIva = $precioArmazonConIva / 1.15; // Extraer el IVA
+                $ivaArmazon = $precioArmazonSinIva * 0.15;
+                $subtotal += $precioArmazonSinIva;
                 $iva += $ivaArmazon;
                 $elementos[] = [
                     'codigo' => 'ARM001',
                     'descripcion' => 'Armazon/Accesorios',
                     'cantidad' => 1,
-                    'precio_unitario' => $precioArmazon,
-                    'subtotal' => $precioArmazon,
+                    'precio_unitario' => $precioArmazonSinIva,
+                    'subtotal' => $precioArmazonSinIva,
                     'codigo_porcentaje' => '4', // 15% IVA
                     'tarifa' => '15',
                     'valor_impuesto' => $ivaArmazon
                 ];
             }
             
-            // Luna - 15% IVA
+            // Luna - 15% IVA (incluido en el precio)
             if ($request->has('incluir_luna') && $request->precio_luna > 0) {
-                $precioLuna = floatval($request->precio_luna);
-                $ivaLuna = $precioLuna * 0.15;
-                $subtotal += $precioLuna;
+                $precioLunaConIva = floatval($request->precio_luna);
+                $precioLunaSinIva = $precioLunaConIva / 1.15; // Extraer el IVA
+                $ivaLuna = $precioLunaSinIva * 0.15;
+                $subtotal += $precioLunaSinIva;
                 $iva += $ivaLuna;
                 $elementos[] = [
                     'codigo' => 'LUN001',
                     'descripcion' => 'Cristaleria',
                     'cantidad' => 1,
-                    'precio_unitario' => $precioLuna,
-                    'subtotal' => $precioLuna,
+                    'precio_unitario' => $precioLunaSinIva,
+                    'subtotal' => $precioLunaSinIva,
                     'codigo_porcentaje' => '4', // 15% IVA
                     'tarifa' => '15',
                     'valor_impuesto' => $ivaLuna
