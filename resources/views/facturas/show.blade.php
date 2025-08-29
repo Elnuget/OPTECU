@@ -220,6 +220,10 @@
                 </span>
             @endif
             
+            <a href="{{ route('facturas.pdf', $factura->id) }}" class="btn btn-sm btn-danger" target="_blank">
+                <i class="fas fa-file-pdf"></i> PDF
+            </a>
+            
             <a href="{{ route('facturas.index') }}" class="btn btn-sm btn-secondary">
                 <i class="fas fa-arrow-left"></i> Volver
             </a>

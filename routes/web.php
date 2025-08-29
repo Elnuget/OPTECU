@@ -32,6 +32,21 @@ use App\Http\Controllers\DetalleSueldoController;
 |
 */
 
+// Rutas públicas para PDF de facturas (sin autenticación)
+Route::get('facturas/{id}/pdf', [App\Http\Controllers\PDFFacturaController::class, 'show'])->name('facturas.pdf');
+Route::get('facturas/{id}/pdf/download', [App\Http\Controllers\PDFFacturaController::class, 'download'])->name('facturas.pdf.download');
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
+|
+*/
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -328,6 +343,8 @@ Route::get('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'califi
 Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guardarCalificacionPublica'])
     ->name('pedidos.guardar-calificacion-publica');
 
+// Rutas protegidas para Facturas (requieren autenticación)
+Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     // Rutas para Facturas
     Route::get('facturas', [App\Http\Controllers\FacturaController::class, 'index'])->name('facturas.index');
     Route::get('facturas/create', [App\Http\Controllers\FacturaController::class, 'create'])->name('facturas.create');
@@ -359,6 +376,7 @@ Route::post('/pedidos/{id}/calificar/{token}', [PedidosController::class, 'guard
     // Rutas para autorización de facturas
     Route::get('autorizar/{facturaId}', [App\Http\Controllers\AutorizarController::class, 'index'])->name('autorizar.index');
     Route::post('autorizar/{facturaId}/consultar', [App\Http\Controllers\AutorizarController::class, 'consultarAutorizacion'])->name('autorizar.consultar');
+});
     
     // Rutas para el controlador de Sueldos
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
