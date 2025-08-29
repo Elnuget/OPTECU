@@ -277,8 +277,8 @@ function renderizarFacturas(facturas) {
         const showUrl = `${FACTURA_SHOW_URL}/${factura.id}`;
         const acciones = `
             <div class="btn-group btn-group-sm" role="group">
-                <a href="${showUrl}" class="btn btn-info" title="Ver XML de la factura #${factura.id}">
-                    <i class="fas fa-eye"></i> Ver XML
+                <a href="${showUrl}" class="btn btn-info" title="Ver de la factura #${factura.id}">
+                    <i class="fas fa-eye"></i> Ver
                 </a>
                 <button type="button" class="btn btn-danger btn-eliminar" data-id="${factura.id}" title="Eliminar factura #${factura.id}">
                     <i class="fas fa-trash"></i>
