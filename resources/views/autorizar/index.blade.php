@@ -321,8 +321,8 @@
                 // Mostrar mensaje según el estado
                 if (data.data.estado === 'AUTORIZADA') {
                     alert('¡Factura autorizada exitosamente!\n\nNúmero de autorización: ' + data.data.numeroAutorizacion);
-                    // Recargar la página para mostrar los nuevos datos
-                    window.location.reload();
+                    // Redirigir al index de facturas
+                    window.location.href = '{{ route("facturas.index") }}';
                 } else if (data.data.estado === 'EN_PROCESO') {
                     alert('La factura está en proceso de autorización. Intente consultar nuevamente en unos minutos.');
                 } else if (data.data.estado === 'DEVUELTA') {
