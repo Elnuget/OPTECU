@@ -100,19 +100,27 @@ class FacturaController extends Controller
     {
         $declarantes = Declarante::all();
         $mediosPago = \App\Models\mediosdepago::all();
-        
+
+        // Calcular métricas de facturación para cada declarante
+        foreach ($declarantes as $declarante) {
+            $facturas = \App\Models\Factura::where('declarante_id', $declarante->id)->get();
+            $declarante->total_facturado = $facturas->sum('monto') + $facturas->sum('iva');
+            $declarante->iva_total = $facturas->sum('iva');
+            $declarante->cantidad_facturas = $facturas->count();
+        }
+
         // Crear array con información de contraseñas guardadas para JavaScript
         $declarantesPasswords = [];
         foreach ($declarantes as $declarante) {
             $declarantesPasswords[$declarante->id] = !empty($declarante->password_certificado);
         }
-        
+
         // Verificar si viene un pedido_id en la solicitud
         $pedido = null;
         if ($request->has('pedido_id')) {
             $pedido = \App\Models\Pedido::with(['pagos.mediodepago'])->find($request->pedido_id);
         }
-        
+
         return view('facturas.create', compact('declarantes', 'pedido', 'mediosPago', 'declarantesPasswords'));
     }
 

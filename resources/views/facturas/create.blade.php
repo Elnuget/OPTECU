@@ -160,7 +160,16 @@
                         <select id="declarante_id" name="declarante_id" class="form-control" required>
                             <option value="">Seleccione un declarante</option>
                             @foreach ($declarantes as $declarante)
-                                <option value="{{ $declarante->id }}">{{ $declarante->nombre }} ({{ $declarante->ruc }})</option>
+                                <option value="{{ $declarante->id }}">
+                                    {{ $declarante->nombre }} ({{ $declarante->ruc }})
+                                    @if($declarante->cantidad_facturas > 0)
+                                        - Facturas: {{ $declarante->cantidad_facturas }}
+                                        - Total: ${{ number_format($declarante->total_facturado, 2) }}
+                                        - IVA: ${{ number_format($declarante->iva_total, 2) }}
+                                    @else
+                                        - Sin facturas
+                                    @endif
+                                </option>
                             @endforeach
                         </select>
                         <div class="invalid-feedback" id="declarante_id-error"></div>
