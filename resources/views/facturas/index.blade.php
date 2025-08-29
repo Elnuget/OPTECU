@@ -284,9 +284,6 @@ function renderizarFacturas(facturas) {
                     <strong><i class="fas fa-user text-primary"></i> ${clientePedido}</strong>
                 </div>
                 <div class="mb-1">
-                    <small><i class="fas fa-hashtag text-info"></i> Pedido: <strong>${numeroPedido}</strong></small>
-                </div>
-                <div class="mb-1">
                     <small><i class="fas fa-mobile-alt text-success"></i> ${celularPedido}</small>
                 </div>
                 <div>
@@ -1329,9 +1326,6 @@ function renderizarFacturas(facturas) {
             <div class="d-flex flex-column">
                 <div class="mb-1">
                     <strong><i class="fas fa-user text-primary"></i> ${clientePedido}</strong>
-                </div>
-                <div class="mb-1">
-                    <small><i class="fas fa-hashtag text-info"></i> Pedido: <strong>${numeroPedido}</strong></small>
                 </div>
                 <div class="mb-1">
                     <small><i class="fas fa-mobile-alt text-success"></i> ${celularPedido}</small>
