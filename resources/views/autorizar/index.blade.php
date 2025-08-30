@@ -465,6 +465,8 @@
                     </div>
                 </div>
             `;
+            // Agregar mensajes del SRI siempre
+            contenido += generarMensajesSRI(data.mensajes);
             mostrarBotonFactura = true;
             debeRedirigir = true;
             
@@ -478,6 +480,8 @@
                     <p><strong>Recomendación:</strong> Intente consultar nuevamente en unos minutos.</p>
                 </div>
             `;
+            // Agregar mensajes del SRI siempre
+            contenido += generarMensajesSRI(data.mensajes);
             
         } else if (estado === 'DEVUELTA') {
             // Verificar si es un caso de "no encontrada"
@@ -513,8 +517,9 @@
                         <p><strong>Estado:</strong> ${estado}</p>
                     </div>
                 `;
-                contenido += generarMensajesSRI(data.mensajes);
             }
+            // Agregar mensajes del SRI siempre
+            contenido += generarMensajesSRI(data.mensajes);
             
         } else {
             // Otros estados (NO_AUTORIZADA, etc.)
@@ -527,31 +532,50 @@
                     <p><strong>Estado:</strong> ${estado}</p>
                 </div>
             `;
+            // Agregar mensajes del SRI siempre
             contenido += generarMensajesSRI(data.mensajes);
+        }
+        
+        // Agregar información adicional del SRI si está disponible
+        if (data.ambiente || data.comprobante) {
+            contenido += '<hr><div class="mt-3"><h6>Información Adicional del SRI:</h6>';
+            if (data.ambiente) {
+                contenido += `<p><strong>Ambiente:</strong> ${data.ambiente === '1' ? 'PRUEBAS' : 'PRODUCCIÓN'}</p>`;
+            }
+            if (data.comprobante && data.comprobante.length > 0) {
+                contenido += `<p><strong>XML Autorizado:</strong> Disponible (${data.comprobante.length} caracteres)</p>`;
+            }
+            contenido += '</div>';
         }
         
         mostrarModalResultado(tipoModal, titulo, contenido, mostrarBotonFactura);
     }
     
     function generarMensajesSRI(mensajes) {
+        let html = '<div class="mt-3"><h6><i class="fas fa-comments"></i> Respuesta del SRI:</h6>';
+        
         if (!mensajes || mensajes.length === 0) {
-            return '';
-        }
-        
-        let html = '<div class="mt-3"><h6>Mensajes del SRI:</h6>';
-        
-        mensajes.forEach((mensaje, index) => {
-            const tipoClase = mensaje.tipo === 'ERROR' ? 'error' : 
-                             mensaje.tipo === 'WARNING' ? 'warning' : 'info';
-            
             html += `
-                <div class="mensaje-sri ${tipoClase}">
-                    <strong>${index + 1}. ${mensaje.mensaje || 'Mensaje sin descripción'}</strong>
-                    ${mensaje.identificador ? `<br><small><strong>Código:</strong> ${mensaje.identificador}</small>` : ''}
-                    ${mensaje.informacionAdicional ? `<br><small><strong>Detalle:</strong> ${mensaje.informacionAdicional}</small>` : ''}
+                <div class="mensaje-sri info">
+                    <strong>Sin mensajes específicos del SRI</strong>
+                    <br><small>El SRI procesó la consulta pero no devolvió mensajes adicionales.</small>
                 </div>
             `;
-        });
+        } else {
+            mensajes.forEach((mensaje, index) => {
+                const tipoClase = mensaje.tipo === 'ERROR' ? 'error' : 
+                                 mensaje.tipo === 'WARNING' ? 'warning' : 'info';
+                
+                html += `
+                    <div class="mensaje-sri ${tipoClase}">
+                        <strong>${index + 1}. ${mensaje.mensaje || 'Mensaje sin descripción'}</strong>
+                        ${mensaje.identificador ? `<br><small><strong>Código:</strong> ${mensaje.identificador}</small>` : ''}
+                        ${mensaje.informacionAdicional ? `<br><small><strong>Detalle:</strong> ${mensaje.informacionAdicional}</small>` : ''}
+                        ${mensaje.tipo ? `<br><small><strong>Tipo:</strong> <span class="badge badge-${tipoClase === 'error' ? 'danger' : (tipoClase === 'warning' ? 'warning' : 'info')}">${mensaje.tipo}</span></small>` : ''}
+                    </div>
+                `;
+            });
+        }
         
         html += '</div>';
         return html;
