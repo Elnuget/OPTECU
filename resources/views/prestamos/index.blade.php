@@ -758,6 +758,7 @@
                     const cuotasTotal = cuotasBD;
                     const cuotasPagadas = pagosDetallados.length;
                     const cuotasPendientes = Math.max(0, cuotasTotal - cuotasPagadas);
+                    const valorCuota = cuotasTotal > 0 ? originalValor / cuotasTotal : 0;
 
                     let cuotasHtml = '';
                     if (cuotasTotal > 0) {
@@ -766,6 +767,7 @@
                                 <span class="badge badge-primary">TOTAL: ${cuotasTotal}</span>
                                 <span class="badge badge-success mt-1">PAGADAS: ${cuotasPagadas}</span>
                                 <span class="badge badge-warning mt-1">PENDIENTES: ${cuotasPendientes}</span>
+                                <span class="badge badge-info mt-1">VALOR CUOTA: ${formatCurrency(valorCuota)}</span>
                             </div>
                         `;
                     } else {
