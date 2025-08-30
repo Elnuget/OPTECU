@@ -435,52 +435,31 @@
                         <td>SUBTOTAL 0%:</td>
                         <td>${{ number_format($datosFactura['totales']['subtotal_0'] ?? 0, 2) }}</td>
                     </tr>
-                    {{-- Siempre mostrar SUBTOTAL SIN IMPUESTO --}}
+                    {{-- SUBTOTAL SIN IMPUESTO = SUBTOTAL 15% + SUBTOTAL 0% --}}
                     <tr>
                         <td>SUBTOTAL SIN IMPUESTO:</td>
                         <td>${{ number_format($datosFactura['totales']['subtotal_sin_impuesto'] ?? 0, 2) }}</td>
                     </tr>
-                    {{-- Siempre mostrar DESCUENTO --}}
+                    {{-- Mostrar IVA total calculado --}}
                     <tr>
-                        <td>DESCUENTO:</td>
-                        <td>${{ number_format($datosFactura['totales']['total_descuento'] ?? 0, 2) }}</td>
-                    </tr>
-                    {{-- Mostrar IVA según la información disponible --}}
-                    @if(!empty($datosFactura['impuestos']))
-                        @foreach($datosFactura['impuestos'] as $impuesto)
-                        <tr>
-                            <td>
-                                @if($impuesto['codigo'] == '2')
-                                    @if($impuesto['codigo_porcentaje'] == '4')
-                                        IVA 15%:
-                                    @elseif($impuesto['codigo_porcentaje'] == '0')
-                                        IVA 0%:
-                                    @else
-                                        IVA {{ number_format($impuesto['tarifa'], 0) }}%:
-                                    @endif
-                                @else
-                                    IMPUESTO ({{ $impuesto['codigo'] }}):
-                                @endif
-                            </td>
-                            <td>${{ number_format($impuesto['valor'], 2) }}</td>
-                        </tr>
-                        @endforeach
-                    @else
-                        <tr>
-                            <td>IVA 15%:</td>
-                            <td>${{ number_format($factura->iva ?? 0, 2) }}</td>
-                        </tr>
-                    @endif
-                    {{-- Siempre mostrar PROPINA --}}
-                    <tr>
-                        <td>PROPINA:</td>
-                        <td>${{ number_format($datosFactura['totales']['propina'] ?? 0, 2) }}</td>
+                        <td>IVA 15%:</td>
+                        <td>${{ number_format($datosFactura['totales']['iva_total'] ?? $factura->iva ?? 0, 2) }}</td>
                     </tr>
                     <tr class="total-final">
                         <td>TOTAL:</td>
                         <td>${{ number_format($datosFactura['totales']['importe_total'] ?? $factura->total ?? 0, 2) }}</td>
                     </tr>
                 </table>
+                
+                {{-- Información de debug solo para desarrollo --}}
+                @if(config('app.debug') && isset($datosFactura['totales']['total_calculado']))
+                <small style="color: #666; font-size: 8px;">
+                    Calculado: ${{ number_format($datosFactura['totales']['total_calculado'], 2) }}
+                    @if(abs($datosFactura['totales']['total_calculado'] - ($datosFactura['totales']['importe_total'] ?? 0)) > 0.01)
+                        <span style="color: red;">(Diferencia detectada)</span>
+                    @endif
+                </small>
+                @endif
             </div>
         </div>
 

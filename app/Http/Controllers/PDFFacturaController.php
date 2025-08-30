@@ -204,19 +204,55 @@ class PDFFacturaController extends Controller
     {
         $infoFactura = $xml->infoFactura ?? null;
         
-        // Calcular subtotales por tipo de IVA
+        // Calcular subtotales por tipo de IVA desde los detalles
         $subtotales = $this->calcularSubtotalesPorIVA($xml);
+        
+        // Valores directos del XML
+        $totalDescuento = (float)($infoFactura->totalDescuento ?? 0);
+        $propina = (float)($infoFactura->propina ?? 0);
+        $importeTotal = (float)($infoFactura->importeTotal ?? 0);
+        
+        // SUBTOTAL SIN IMPUESTO = SUBTOTAL 15% + SUBTOTAL 0%
+        $subtotalSinImpuesto = $subtotales['subtotal_15'] + $subtotales['subtotal_0'];
+        
+        // Extraer valor del IVA desde totalConImpuestos
+        $valorIVA = $this->extraerValorIVATotal($xml);
         
         return [
             'total_sin_impuestos' => (float)($infoFactura->totalSinImpuestos ?? 0),
-            'total_descuento' => (float)($infoFactura->totalDescuento ?? 0),
-            'importe_total' => (float)($infoFactura->importeTotal ?? 0),
+            'total_descuento' => $totalDescuento,
+            'importe_total' => $importeTotal,
             'moneda' => (string)($infoFactura->moneda ?? 'DOLAR'),
-            'propina' => (float)($infoFactura->propina ?? 0),
+            'propina' => $propina,
             'subtotal_15' => $subtotales['subtotal_15'],
             'subtotal_0' => $subtotales['subtotal_0'],
-            'subtotal_sin_impuesto' => $subtotales['subtotal_sin_impuesto']
+            'subtotal_sin_impuesto' => $subtotalSinImpuesto,
+            'iva_total' => $valorIVA,
+            // Validación: TOTAL = SUBTOTAL SIN IMPUESTO + IVA - DESCUENTO + PROPINA
+            'total_calculado' => $subtotalSinImpuesto + $valorIVA - $totalDescuento + $propina
         ];
+    }
+    
+    /**
+     * Extraer el valor total del IVA desde totalConImpuestos
+     */
+    private function extraerValorIVATotal($xml)
+    {
+        $valorIVATotal = 0;
+        
+        if (isset($xml->infoFactura->totalConImpuestos) && isset($xml->infoFactura->totalConImpuestos->totalImpuesto)) {
+            foreach ($xml->infoFactura->totalConImpuestos->totalImpuesto as $impuesto) {
+                $codigo = (string)($impuesto->codigo ?? '');
+                $valor = (float)($impuesto->valor ?? 0);
+                
+                // Código 2 = IVA
+                if ($codigo == '2') {
+                    $valorIVATotal += $valor;
+                }
+            }
+        }
+        
+        return $valorIVATotal;
     }
     
     /**
@@ -226,7 +262,6 @@ class PDFFacturaController extends Controller
     {
         $subtotal_15 = 0;
         $subtotal_0 = 0;
-        $subtotal_sin_impuesto = 0;
         
         if (isset($xml->detalles) && isset($xml->detalles->detalle)) {
             foreach ($xml->detalles->detalle as $detalle) {
@@ -234,34 +269,44 @@ class PDFFacturaController extends Controller
                 
                 // Revisar los impuestos del detalle para determinar el tipo de IVA
                 if (isset($detalle->impuestos) && isset($detalle->impuestos->impuesto)) {
+                    $tieneIVA15 = false;
+                    $tieneIVA0 = false;
+                    
                     foreach ($detalle->impuestos->impuesto as $impuesto) {
+                        $codigo = (string)($impuesto->codigo ?? '');
                         $codigoPorcentaje = (string)($impuesto->codigoPorcentaje ?? '');
                         $tarifa = (float)($impuesto->tarifa ?? 0);
                         
-                        // Código porcentaje 4 = IVA 15%
-                        if ($codigoPorcentaje == '4' || $tarifa == 15) {
-                            $subtotal_15 += $precioTotalSinImpuesto;
-                        }
-                        // Código porcentaje 0 = IVA 0%
-                        elseif ($codigoPorcentaje == '0' || $tarifa == 0) {
-                            $subtotal_0 += $precioTotalSinImpuesto;
-                        }
-                        // Otros casos (sin impuesto)
-                        else {
-                            $subtotal_sin_impuesto += $precioTotalSinImpuesto;
+                        // Solo considerar impuestos de IVA (código 2)
+                        if ($codigo == '2') {
+                            // Código porcentaje 4 = IVA 15% (o tarifa 15)
+                            if ($codigoPorcentaje == '4' || $tarifa == 15) {
+                                $tieneIVA15 = true;
+                            }
+                            // Código porcentaje 0 = IVA 0% (o tarifa 0)
+                            elseif ($codigoPorcentaje == '0' || $tarifa == 0) {
+                                $tieneIVA0 = true;
+                            }
                         }
                     }
+                    
+                    // Asignar el precio total sin impuesto al subtotal correspondiente
+                    if ($tieneIVA15) {
+                        $subtotal_15 += $precioTotalSinImpuesto;
+                    } elseif ($tieneIVA0) {
+                        $subtotal_0 += $precioTotalSinImpuesto;
+                    }
+                    // Si no tiene IVA definido, no se suma a ningún subtotal
                 } else {
-                    // Si no tiene impuestos definidos, asumir sin impuesto
-                    $subtotal_sin_impuesto += $precioTotalSinImpuesto;
+                    // Si no tiene impuestos definidos, considerar como IVA 0%
+                    $subtotal_0 += $precioTotalSinImpuesto;
                 }
             }
         }
         
         return [
             'subtotal_15' => $subtotal_15,
-            'subtotal_0' => $subtotal_0,
-            'subtotal_sin_impuesto' => $subtotal_sin_impuesto
+            'subtotal_0' => $subtotal_0
         ];
     }
     
