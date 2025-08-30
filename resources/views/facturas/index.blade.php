@@ -8,6 +8,9 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 @stop
 
+@section('plugins.Sweetalert2')
+@stop
+
 @section('content_header')
 <h1>Facturas</h1>
 <p>Listado de facturas emitidas</p>
@@ -149,9 +152,38 @@
 @stop
 
 @section('js')
+<!-- SweetAlert2 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 <script>
 // Variables globales
 const FACTURA_SHOW_URL = "{{ url('facturas') }}";
+
+// Función global para confirmar eliminación (disponible desde HTML)
+window.confirmarEliminar = function(id) {
+    console.log('Confirmar eliminar ID:', id);
+    
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: '¿Eliminar factura?',
+            text: `¿Estás seguro de que deseas eliminar la factura #${id}?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                eliminarFactura(id);
+            }
+        });
+    } else {
+        if (confirm(`¿Estás seguro de que deseas eliminar la factura #${id}?`)) {
+            eliminarFactura(id);
+        }
+    }
+};
 
 document.addEventListener('DOMContentLoaded', function() {
     // Cargar facturas al cargar la página
@@ -345,7 +377,9 @@ function renderizarFacturas(facturas) {
                     <i class="fab fa-whatsapp"></i> Sin WhatsApp
                 </button>
                 `}
-                <button type="button" class="btn btn-danger btn-eliminar" data-id="${factura.id}" title="Eliminar factura #${factura.id}">
+                <button type="button" class="btn btn-danger btn-eliminar" 
+                        onclick="confirmarEliminar(${factura.id})" 
+                        title="Eliminar factura #${factura.id}">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -365,14 +399,6 @@ function renderizarFacturas(facturas) {
         `;
         
         tbody.appendChild(row);
-    });
-    
-    // Agregar eventos a los botones de eliminar
-    document.querySelectorAll('.btn-eliminar').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const id = this.dataset.id;
-            confirmarEliminar(id);
-        });
     });
     
     // Agregar eventos a los botones de enviar email
@@ -420,13 +446,6 @@ function calcularTotalesFacturas(facturas) {
     
     // Mostrar sección de totales
     document.getElementById('totalesFacturasResumen').style.display = 'block';
-}
-
-// Función para confirmar eliminación
-function confirmarEliminar(id) {
-    if (confirm('¿Estás seguro de que deseas eliminar esta factura?')) {
-        eliminarFactura(id);
-    }
 }
 
 // Función para enviar factura por email
@@ -765,6 +784,16 @@ function copiarAlPortapapeles(texto) {
 
 // Función para eliminar factura
 function eliminarFactura(id) {
+    // Encontrar el botón de eliminar para mostrar indicador de carga
+    const btnElement = document.querySelector(`[data-id="${id}"].btn-eliminar`);
+    let originalHtml = '';
+    
+    if (btnElement) {
+        originalHtml = btnElement.innerHTML;
+        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btnElement.disabled = true;
+    }
+    
     fetch('{{ url("facturas") }}/' + id, {
         method: 'DELETE',
         headers: {
@@ -772,18 +801,77 @@ function eliminarFactura(id) {
             'X-CSRF-TOKEN': '{{ csrf_token() }}'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            alert('Factura eliminada correctamente');
-            cargarFacturas(); // Recargar facturas
+            // Éxito - mostrar mensaje y recargar
+            const mensaje = data.message || 'Factura eliminada correctamente';
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: '¡Eliminada!',
+                    text: mensaje,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                alert(`✅ ${mensaje}`);
+            }
+            
+            // Recargar facturas después de un breve delay
+            setTimeout(() => {
+                cargarFacturas();
+            }, 500);
+            
         } else {
-            alert(data.message || 'Error al eliminar la factura');
+            // Error del servidor
+            const mensajeError = data.message || 'Error al eliminar la factura';
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Error al eliminar',
+                    text: mensajeError,
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            } else {
+                alert(`❌ ${mensajeError}`);
+            }
+            
+            // Restaurar botón
+            if (btnElement) {
+                btnElement.innerHTML = originalHtml;
+                btnElement.disabled = false;
+            }
         }
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('Error de conexión');
+        console.error('Error al eliminar factura:', error);
+        
+        const mensajeError = 'Error de conexión al eliminar la factura. Verifique su conexión a internet.';
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Error de conexión',
+                text: mensajeError,
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        } else {
+            alert(`❌ ${mensajeError}`);
+        }
+        
+        // Restaurar botón
+        if (btnElement) {
+            btnElement.innerHTML = originalHtml;
+            btnElement.disabled = false;
+        }
     });
 }
 
@@ -1258,6 +1346,30 @@ function formatearFecha(fechaStr) {
 }
 
 .btn-enviar-whatsapp .fab {
+    margin-right: 2px;
+}
+
+/* Estilos para botón eliminar */
+.btn-eliminar {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: white !important;
+}
+
+.btn-eliminar:hover {
+    background-color: #c82333 !important;
+    border-color: #bd2130 !important;
+    color: white !important;
+}
+
+.btn-eliminar:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+.btn-eliminar .fas {
     margin-right: 2px;
 }
 

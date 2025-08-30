@@ -1275,23 +1275,73 @@ class FacturaController extends Controller
     public function destroy($id)
     {
         try {
+            \Log::info('Iniciando eliminación de factura', ['factura_id' => $id]);
+            
             $factura = Factura::findOrFail($id);
             
-            // Verificar si la factura tiene pedidos asociados
-            if ($factura->pedido) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No se puede eliminar la factura porque tiene pedidos asociados.'
-                ], 422);
+            // Permitir eliminar cualquier tipo de factura sin restricciones de estado
+            // Log del estado actual para información
+            \Log::info('Eliminando factura', [
+                'factura_id' => $id,
+                'estado' => $factura->estado,
+                'estado_sri' => $factura->estado_sri ?? 'N/A'
+            ]);
+            
+            // Verificar si la factura tiene pedidos asociados (solo para información)
+            $tienePedido = $factura->pedido_id ? true : false;
+            
+            // Obtener información adicional para el log
+            $infoFactura = [
+                'id' => $factura->id,
+                'declarante_id' => $factura->declarante_id,
+                'pedido_id' => $factura->pedido_id,
+                'estado' => $factura->estado,
+                'monto' => $factura->monto,
+                'iva' => $factura->iva,
+                'created_at' => $factura->created_at
+            ];
+            
+            // Eliminar archivos XML relacionados si existen
+            if ($factura->xml && $factura->xml !== 'temp') {
+                $rutaXML = storage_path('app/facturas/xml/' . $factura->id . '.xml');
+                if (file_exists($rutaXML)) {
+                    unlink($rutaXML);
+                    \Log::info('Archivo XML eliminado', ['ruta' => $rutaXML]);
+                }
             }
             
+            // Eliminar la factura
             $factura->delete();
+            
+            \Log::info('Factura eliminada exitosamente', $infoFactura);
             
             return response()->json([
                 'success' => true,
-                'message' => 'Factura eliminada correctamente'
+                'message' => 'Factura eliminada correctamente',
+                'data' => [
+                    'factura_id' => $id,
+                    'tenia_pedido' => $tienePedido
+                ]
             ]);
+            
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error('Factura no encontrada para eliminar', [
+                'factura_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Factura no encontrada'
+            ], 404);
+            
         } catch (\Exception $e) {
+            \Log::error('Error al eliminar factura', [
+                'factura_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error al eliminar factura: ' . $e->getMessage()
