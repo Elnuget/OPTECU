@@ -446,7 +446,7 @@
         const estado = data.estado;
         let tipoModal, titulo, contenido, mostrarBotonFactura = false;
         
-        if (estado === 'AUTORIZADA') {
+        if (estado === 'AUTORIZADA' || estado === 'AUTORIZADO') {
             tipoModal = 'success';
             titulo = '¡Factura Autorizada Exitosamente!';
             contenido = `
@@ -454,17 +454,29 @@
                     <h6><i class="fas fa-check-circle"></i> Autorización Completada</h6>
                     <p>La factura ha sido oficialmente autorizada por el SRI.</p>
                 </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <strong>Número de Autorización:</strong><br>
-                        <code>${data.numeroAutorizacion || 'N/A'}</code>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>Fecha de Autorización:</strong><br>
-                        ${data.fechaAutorizacion || 'N/A'}
-                    </div>
-                </div>
             `;
+            
+            // Mostrar información de autorización si está disponible
+            if (data.numeroAutorizacion || data.fechaAutorizacion) {
+                contenido += `
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-certificate"></i> Datos de Autorización</h6>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <strong>Número de Autorización:</strong><br>
+                                <code class="small">${data.numeroAutorizacion || 'No disponible'}</code>
+                            </div>
+                            ${data.fechaAutorizacion ? `
+                            <div class="col-md-12 mt-2">
+                                <strong>Fecha de Autorización:</strong><br>
+                                <span class="text-muted">${data.fechaAutorizacion}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
             // Agregar mensajes del SRI siempre
             contenido += generarMensajesSRI(data.mensajes);
             mostrarBotonFactura = true;
@@ -536,17 +548,39 @@
             contenido += generarMensajesSRI(data.mensajes);
         }
         
-        // Agregar información adicional del SRI si está disponible
-        if (data.ambiente || data.comprobante) {
-            contenido += '<hr><div class="mt-3"><h6>Información Adicional del SRI:</h6>';
-            if (data.ambiente) {
-                contenido += `<p><strong>Ambiente:</strong> ${data.ambiente === '1' ? 'PRUEBAS' : 'PRODUCCIÓN'}</p>`;
-            }
-            if (data.comprobante && data.comprobante.length > 0) {
-                contenido += `<p><strong>XML Autorizado:</strong> Disponible (${data.comprobante.length} caracteres)</p>`;
-            }
-            contenido += '</div>';
+        // Agregar información técnica del SRI siempre que esté disponible
+        contenido += '<hr><div class="mt-3"><h6><i class="fas fa-server"></i> Información Técnica del SRI:</h6>';
+        
+        // Información del ambiente
+        if (data.ambiente) {
+            // Usar ambiente_texto si está disponible, sino procesar el ambiente original
+            const ambienteTexto = data.ambiente_texto || 
+                                 (data.ambiente === '1' || data.ambiente === 1 || data.ambiente === 'PRUEBAS' ? 'PRUEBAS' : 
+                                  data.ambiente === '2' || data.ambiente === 2 || data.ambiente === 'PRODUCCION' ? 'PRODUCCIÓN' : 
+                                  data.ambiente);
+            const ambienteColor = (ambienteTexto === 'PRUEBAS') ? 'warning' : 'success';
+            contenido += `<p><strong>Ambiente:</strong> <span class="badge badge-${ambienteColor}">${ambienteTexto}</span></p>`;
+        } else {
+            contenido += `<p><strong>Ambiente:</strong> <span class="badge badge-secondary">No especificado</span></p>`;
         }
+        
+        // Número de autorización
+        if (data.numeroAutorizacion) {
+            contenido += `<p><strong>Número de Autorización:</strong> <code>${data.numeroAutorizacion}</code></p>`;
+        }
+        
+        // Fecha de autorización
+        if (data.fechaAutorizacion) {
+            contenido += `<p><strong>Fecha de Autorización:</strong> ${data.fechaAutorizacion}</p>`;
+        }
+        
+        // XML del comprobante
+        if (data.comprobante && data.comprobante.length > 0) {
+            const tamanoKB = (data.comprobante.length / 1024).toFixed(2);
+            contenido += `<p><strong>XML Autorizado:</strong> <span class="badge badge-info">Disponible (${tamanoKB} KB)</span></p>`;
+        }
+        
+        contenido += '</div>';
         
         mostrarModalResultado(tipoModal, titulo, contenido, mostrarBotonFactura);
     }
@@ -557,21 +591,25 @@
         if (!mensajes || mensajes.length === 0) {
             html += `
                 <div class="mensaje-sri info">
-                    <strong>Sin mensajes específicos del SRI</strong>
-                    <br><small>El SRI procesó la consulta pero no devolvió mensajes adicionales.</small>
+                    <span class="badge badge-info">INFO</span>
+                    <strong>Consulta procesada correctamente</strong>
+                    <br><small>El SRI procesó la consulta exitosamente. No se encontraron mensajes adicionales.</small>
                 </div>
             `;
         } else {
             mensajes.forEach((mensaje, index) => {
-                const tipoClase = mensaje.tipo === 'ERROR' ? 'error' : 
-                                 mensaje.tipo === 'WARNING' ? 'warning' : 'info';
+                const tipo = mensaje.tipo || 'INFO';
+                const tipoClase = tipo === 'ERROR' ? 'error' : 
+                                 tipo === 'WARNING' ? 'warning' : 'info';
+                const badgeClase = tipo === 'ERROR' ? 'danger' : 
+                                  tipo === 'WARNING' ? 'warning' : 'info';
                 
                 html += `
                     <div class="mensaje-sri ${tipoClase}">
+                        <span class="badge badge-${badgeClase}">${tipo}</span>
                         <strong>${index + 1}. ${mensaje.mensaje || 'Mensaje sin descripción'}</strong>
                         ${mensaje.identificador ? `<br><small><strong>Código:</strong> ${mensaje.identificador}</small>` : ''}
                         ${mensaje.informacionAdicional ? `<br><small><strong>Detalle:</strong> ${mensaje.informacionAdicional}</small>` : ''}
-                        ${mensaje.tipo ? `<br><small><strong>Tipo:</strong> <span class="badge badge-${tipoClase === 'error' ? 'danger' : (tipoClase === 'warning' ? 'warning' : 'info')}">${mensaje.tipo}</span></small>` : ''}
                     </div>
                 `;
             });

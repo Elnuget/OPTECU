@@ -248,6 +248,18 @@ class AutorizarController extends Controller
             $ambiente = $autorizacion->ambiente ?? null;
             $comprobante = $autorizacion->comprobante ?? null;
             
+            // Log específico para facturas ya autorizadas
+            if ($estado === 'AUTORIZADA' || $estado === 'AUTORIZADO') {
+                Log::info('Factura ya autorizada detectada', [
+                    'estado' => $estado,
+                    'numeroAutorizacion' => $numeroAutorizacion,
+                    'fechaAutorizacion' => $fechaAutorizacion,
+                    'ambiente_original' => $ambiente,
+                    'ambiente_procesado' => $ambiente === '1' ? 'PRUEBAS' : ($ambiente === '2' ? 'PRODUCCION' : $ambiente),
+                    'tiene_comprobante' => !empty($comprobante)
+                ]);
+            }
+            
             // Procesar mensajes
             $mensajes = [];
             if (isset($autorizacion->mensajes) && isset($autorizacion->mensajes->mensaje)) {
@@ -263,6 +275,16 @@ class AutorizarController extends Controller
                         'tipo' => $mensaje->tipo ?? 'INFO'
                     ];
                 }
+            }
+            
+            // Para facturas ya autorizadas, agregar mensaje informativo si no hay mensajes
+            if (($estado === 'AUTORIZADA' || $estado === 'AUTORIZADO') && empty($mensajes)) {
+                $mensajes[] = [
+                    'identificador' => 'AUTORIZADA_PREVIAMENTE',
+                    'mensaje' => 'Factura autorizada correctamente por el SRI',
+                    'informacionAdicional' => 'La factura se encuentra en estado autorizado en el sistema del SRI',
+                    'tipo' => 'INFO'
+                ];
             }
             
             // Si no hay autorizaciones pero hay mensajes de error, extraerlos
@@ -302,12 +324,22 @@ class AutorizarController extends Controller
                 'estado' => $estado,
                 'numeroAutorizacion' => $numeroAutorizacion,
                 'fechaAutorizacion' => $fechaAutorizacion,
-                'ambiente' => $ambiente,
+                'ambiente' => $ambiente, // Mantener el valor original del SRI
+                'ambiente_texto' => $ambiente === '1' ? 'PRUEBAS' : ($ambiente === '2' ? 'PRODUCCION' : $ambiente), // Versión legible
                 'comprobante' => $comprobante,
                 'mensajes' => $mensajes
             ];
             
-            Log::info('Autorización procesada', $datosAutorizacion);
+            // Log detallado para debugging
+            Log::info('Autorización procesada con datos completos', [
+                'estado' => $estado,
+                'numeroAutorizacion' => $numeroAutorizacion ? 'Presente' : 'Ausente',
+                'fechaAutorizacion' => $fechaAutorizacion ? 'Presente' : 'Ausente',
+                'ambiente_original' => $ambiente,
+                'ambiente_texto' => $ambiente === '1' ? 'PRUEBAS' : ($ambiente === '2' ? 'PRODUCCION' : $ambiente),
+                'comprobante_length' => $comprobante ? strlen($comprobante) : 0,
+                'mensajes_count' => count($mensajes)
+            ]);
             
             return [
                 'success' => true,
