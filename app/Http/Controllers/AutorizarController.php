@@ -61,14 +61,6 @@ class AutorizarController extends Controller
                 ], 400);
             }
             
-            // Validar estado de la factura
-            if (!in_array($factura->estado, ['FIRMADA', 'ENVIADA', 'RECIBIDA'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'La factura debe estar firmada y enviada para consultar su autorización.'
-                ], 400);
-            }
-            
             Log::info('Iniciando consulta de autorización SRI', [
                 'factura_id' => $facturaId,
                 'clave_acceso' => $factura->clave_acceso,
