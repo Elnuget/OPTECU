@@ -270,6 +270,33 @@
 </div>
 @endif
 
+<!-- Modal para mostrar resultados de autorización -->
+<div class="modal fade" id="modalResultadoAutorizacion" tabindex="-1" role="dialog" aria-labelledby="modalResultadoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header" id="modalHeader">
+                <h5 class="modal-title" id="modalResultadoLabel">
+                    <i class="fas fa-info-circle"></i> Resultado de Autorización SRI
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="modalResultadoBody">
+                <!-- El contenido se llenará dinámicamente -->
+            </div>
+            <div class="modal-footer" id="modalFooter">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="btnCerrarModal">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+                <button type="button" class="btn btn-primary" id="btnVerFactura" style="display: none;" onclick="irAFactura()">
+                    <i class="fas fa-eye"></i> Ver Factura
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @stop
 
 @section('css')
@@ -296,11 +323,71 @@
         border-color: #6c757d;
         color: #fff;
     }
+    
+    /* Estilos para el modal de resultado */
+    .modal-header.modal-success {
+        background-color: #28a745;
+        color: white;
+        border-bottom: 1px solid #1e7e34;
+    }
+    
+    .modal-header.modal-warning {
+        background-color: #ffc107;
+        color: #212529;
+        border-bottom: 1px solid #e0a800;
+    }
+    
+    .modal-header.modal-danger {
+        background-color: #dc3545;
+        color: white;
+        border-bottom: 1px solid #bd2130;
+    }
+    
+    .modal-header.modal-info {
+        background-color: #17a2b8;
+        color: white;
+        border-bottom: 1px solid #117a8b;
+    }
+    
+    .modal-header .close {
+        color: inherit;
+        opacity: 0.8;
+    }
+    
+    .modal-header .close:hover {
+        opacity: 1;
+    }
+    
+    .mensaje-sri {
+        padding: 10px;
+        margin: 5px 0;
+        border-left: 4px solid #007bff;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
+    
+    .mensaje-sri.error {
+        border-left-color: #dc3545;
+        background-color: #f8d7da;
+    }
+    
+    .mensaje-sri.warning {
+        border-left-color: #ffc107;
+        background-color: #fff3cd;
+    }
+    
+    .mensaje-sri.info {
+        border-left-color: #17a2b8;
+        background-color: #d1ecf1;
+    }
 </style>
 @stop
 
 @section('js')
 <script>
+    let facturaIdGlobal = {{ $factura->id }};
+    let debeRedirigir = false;
+
     function autorizarFactura(facturaId) {
         const btnAutorizar = document.getElementById('btnAutorizar');
         const iconoOriginal = btnAutorizar.innerHTML;
@@ -308,11 +395,14 @@
         // Verificar si hay clave de acceso
         const claveAcceso = document.getElementById('clave_acceso').value;
         if (!claveAcceso || claveAcceso === 'No disponible') {
-            alert('La factura no tiene clave de acceso generada.\n\n' +
-                  'Para consultar la autorización en el SRI, la factura debe:\n' +
-                  '• Estar firmada digitalmente\n' +
-                  '• Tener una clave de acceso válida\n' +
-                  '• Haber sido enviada al SRI');
+            mostrarModalResultado('warning', 'Clave de Acceso Requerida', 
+                '<p>La factura no tiene clave de acceso generada.</p>' +
+                '<p>Para consultar la autorización en el SRI, la factura debe:</p>' +
+                '<ul>' +
+                '<li>Estar firmada digitalmente</li>' +
+                '<li>Tener una clave de acceso válida</li>' +
+                '<li>Haber sido enviada al SRI</li>' +
+                '</ul>', false);
             return;
         }
         
@@ -331,67 +421,19 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Mostrar mensaje según el estado
-                if (data.data.estado === 'AUTORIZADA') {
-                    alert('¡Factura autorizada exitosamente!\n\nNúmero de autorización: ' + data.data.numeroAutorizacion);
-                    // Redirigir al index de facturas
-                    window.location.href = '{{ route("facturas.index") }}';
-                } else if (data.data.estado === 'EN_PROCESO') {
-                    alert('La factura está en proceso de autorización. Intente consultar nuevamente en unos minutos.');
-                } else if (data.data.estado === 'DEVUELTA') {
-                    // Verificar si es un caso de "no encontrada" basándose en los mensajes
-                    let esNoEncontrada = false;
-                    if (data.data.mensajes && data.data.mensajes.length > 0) {
-                        esNoEncontrada = data.data.mensajes.some(mensaje => 
-                            mensaje.identificador === 'NO_ENCONTRADA'
-                        );
-                    }
-                    
-                    if (esNoEncontrada) {
-                        alert('No se encontró información de autorización para esta factura.\n\n' +
-                              'Posibles causas:\n' +
-                              '• La factura no ha sido enviada al SRI\n' +
-                              '• La clave de acceso no es válida\n' +
-                              '• El SRI aún no ha procesado la factura');
-                    } else {
-                        // Mostrar mensajes de error del SRI
-                        let mensajeCompleto = 'La factura fue devuelta por el SRI.\n\nEstado: ' + data.data.estado;
-                        
-                        if (data.data.mensajes && data.data.mensajes.length > 0) {
-                            mensajeCompleto += '\n\nMensajes del SRI:';
-                            data.data.mensajes.forEach((mensaje, index) => {
-                                mensajeCompleto += '\n' + (index + 1) + '. ' + mensaje.mensaje;
-                                if (mensaje.informacionAdicional) {
-                                    mensajeCompleto += '\n   Detalle: ' + mensaje.informacionAdicional;
-                                }
-                            });
-                        }
-                        
-                        alert(mensajeCompleto);
-                    }
-                } else {
-                    // Otros estados (NO_AUTORIZADA, etc.)
-                    let mensajeCompleto = 'La factura no ha sido autorizada.\n\nEstado: ' + data.data.estado;
-                    
-                    if (data.data.mensajes && data.data.mensajes.length > 0) {
-                        mensajeCompleto += '\n\nMensajes del SRI:';
-                        data.data.mensajes.forEach((mensaje, index) => {
-                            mensajeCompleto += '\n' + (index + 1) + '. ' + mensaje.mensaje;
-                            if (mensaje.informacionAdicional) {
-                                mensajeCompleto += '\n   Detalle: ' + mensaje.informacionAdicional;
-                            }
-                        });
-                    }
-                    
-                    alert(mensajeCompleto);
-                }
+                procesarResultadoAutorizacion(data.data);
             } else {
-                alert('Error al consultar autorización: ' + data.message);
+                mostrarModalResultado('danger', 'Error en Consulta', 
+                    `<p><strong>Error al consultar autorización:</strong></p>
+                     <p>${data.message}</p>`, false);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error de conexión al consultar la autorización. Por favor, intente nuevamente.');
+            mostrarModalResultado('danger', 'Error de Conexión', 
+                `<p><strong>Error de conexión al consultar la autorización.</strong></p>
+                 <p>Por favor, intente nuevamente.</p>
+                 <small class="text-muted">Detalle técnico: ${error.message}</small>`, false);
         })
         .finally(() => {
             // Restaurar botón
@@ -399,6 +441,167 @@
             btnAutorizar.innerHTML = iconoOriginal;
         });
     }
+    
+    function procesarResultadoAutorizacion(data) {
+        const estado = data.estado;
+        let tipoModal, titulo, contenido, mostrarBotonFactura = false;
+        
+        if (estado === 'AUTORIZADA') {
+            tipoModal = 'success';
+            titulo = '¡Factura Autorizada Exitosamente!';
+            contenido = `
+                <div class="alert alert-success">
+                    <h6><i class="fas fa-check-circle"></i> Autorización Completada</h6>
+                    <p>La factura ha sido oficialmente autorizada por el SRI.</p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Número de Autorización:</strong><br>
+                        <code>${data.numeroAutorizacion || 'N/A'}</code>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Fecha de Autorización:</strong><br>
+                        ${data.fechaAutorizacion || 'N/A'}
+                    </div>
+                </div>
+            `;
+            mostrarBotonFactura = true;
+            debeRedirigir = true;
+            
+        } else if (estado === 'EN_PROCESO') {
+            tipoModal = 'info';
+            titulo = 'Factura en Proceso';
+            contenido = `
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-clock"></i> Procesando</h6>
+                    <p>La factura está en proceso de autorización por parte del SRI.</p>
+                    <p><strong>Recomendación:</strong> Intente consultar nuevamente en unos minutos.</p>
+                </div>
+            `;
+            
+        } else if (estado === 'DEVUELTA') {
+            // Verificar si es un caso de "no encontrada"
+            let esNoEncontrada = false;
+            if (data.mensajes && data.mensajes.length > 0) {
+                esNoEncontrada = data.mensajes.some(mensaje => 
+                    mensaje.identificador === 'NO_ENCONTRADA'
+                );
+            }
+            
+            if (esNoEncontrada) {
+                tipoModal = 'warning';
+                titulo = 'Factura No Encontrada';
+                contenido = `
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> No se encontró información</h6>
+                        <p>No se encontró información de autorización para esta factura en el SRI.</p>
+                    </div>
+                    <p><strong>Posibles causas:</strong></p>
+                    <ul>
+                        <li>La factura no ha sido enviada al SRI</li>
+                        <li>La clave de acceso no es válida</li>
+                        <li>El SRI aún no ha procesado la factura</li>
+                    </ul>
+                `;
+            } else {
+                tipoModal = 'danger';
+                titulo = 'Factura Devuelta por SRI';
+                contenido = `
+                    <div class="alert alert-danger">
+                        <h6><i class="fas fa-times-circle"></i> Factura Devuelta</h6>
+                        <p>La factura fue devuelta por el SRI.</p>
+                        <p><strong>Estado:</strong> ${estado}</p>
+                    </div>
+                `;
+                contenido += generarMensajesSRI(data.mensajes);
+            }
+            
+        } else {
+            // Otros estados (NO_AUTORIZADA, etc.)
+            tipoModal = 'danger';
+            titulo = 'Factura No Autorizada';
+            contenido = `
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-ban"></i> No Autorizada</h6>
+                    <p>La factura no ha sido autorizada por el SRI.</p>
+                    <p><strong>Estado:</strong> ${estado}</p>
+                </div>
+            `;
+            contenido += generarMensajesSRI(data.mensajes);
+        }
+        
+        mostrarModalResultado(tipoModal, titulo, contenido, mostrarBotonFactura);
+    }
+    
+    function generarMensajesSRI(mensajes) {
+        if (!mensajes || mensajes.length === 0) {
+            return '';
+        }
+        
+        let html = '<div class="mt-3"><h6>Mensajes del SRI:</h6>';
+        
+        mensajes.forEach((mensaje, index) => {
+            const tipoClase = mensaje.tipo === 'ERROR' ? 'error' : 
+                             mensaje.tipo === 'WARNING' ? 'warning' : 'info';
+            
+            html += `
+                <div class="mensaje-sri ${tipoClase}">
+                    <strong>${index + 1}. ${mensaje.mensaje || 'Mensaje sin descripción'}</strong>
+                    ${mensaje.identificador ? `<br><small><strong>Código:</strong> ${mensaje.identificador}</small>` : ''}
+                    ${mensaje.informacionAdicional ? `<br><small><strong>Detalle:</strong> ${mensaje.informacionAdicional}</small>` : ''}
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        return html;
+    }
+    
+    function mostrarModalResultado(tipo, titulo, contenido, mostrarBotonFactura) {
+        // Configurar header del modal
+        const modalHeader = document.getElementById('modalHeader');
+        const modalLabel = document.getElementById('modalResultadoLabel');
+        const modalBody = document.getElementById('modalResultadoBody');
+        const btnVerFactura = document.getElementById('btnVerFactura');
+        
+        // Limpiar clases previas
+        modalHeader.className = 'modal-header modal-' + tipo;
+        
+        // Configurar título con icono apropiado
+        let icono = '';
+        switch(tipo) {
+            case 'success': icono = 'fas fa-check-circle'; break;
+            case 'warning': icono = 'fas fa-exclamation-triangle'; break;
+            case 'danger': icono = 'fas fa-times-circle'; break;
+            case 'info': icono = 'fas fa-info-circle'; break;
+        }
+        
+        modalLabel.innerHTML = `<i class="${icono}"></i> ${titulo}`;
+        modalBody.innerHTML = contenido;
+        
+        // Mostrar/ocultar botón de ver factura
+        if (mostrarBotonFactura) {
+            btnVerFactura.style.display = 'inline-block';
+        } else {
+            btnVerFactura.style.display = 'none';
+        }
+        
+        // Mostrar modal
+        $('#modalResultadoAutorizacion').modal('show');
+    }
+    
+    function irAFactura() {
+        window.location.href = '{{ route("facturas.show", $factura->id) }}';
+    }
+    
+    // Manejar el cierre del modal
+    $('#modalResultadoAutorizacion').on('hidden.bs.modal', function () {
+        if (debeRedirigir) {
+            setTimeout(() => {
+                window.location.href = '{{ route("facturas.show", $factura->id) }}';
+            }, 500);
+        }
+    });
     
     function copiarClaveAcceso() {
         const claveAcceso = document.getElementById('clave_acceso');
@@ -418,13 +621,16 @@
                 }, 1500);
                 
                 // Mostrar toast o alerta
-                alert('Clave de acceso copiada al portapapeles');
+                mostrarModalResultado('success', 'Copiado', 
+                    '<p>Clave de acceso copiada al portapapeles exitosamente.</p>', false);
             }).catch(function(err) {
                 console.error('Error al copiar: ', err);
-                alert('Error al copiar la clave de acceso');
+                mostrarModalResultado('danger', 'Error', 
+                    '<p>Error al copiar la clave de acceso.</p>', false);
             });
         } else {
-            alert('No hay clave de acceso disponible para copiar');
+            mostrarModalResultado('warning', 'Sin Datos', 
+                '<p>No hay clave de acceso disponible para copiar.</p>', false);
         }
     }
     
@@ -445,11 +651,13 @@
                     boton.classList.add('btn-outline-secondary');
                 }, 1500);
                 
-                // Mostrar toast o alerta
-                alert('Número de autorización copiado al portapapeles');
+                // Mostrar confirmación en modal
+                mostrarModalResultado('success', 'Copiado', 
+                    '<p>Número de autorización copiado al portapapeles exitosamente.</p>', false);
             }).catch(function(err) {
                 console.error('Error al copiar: ', err);
-                alert('Error al copiar el número de autorización');
+                mostrarModalResultado('danger', 'Error', 
+                    '<p>Error al copiar el número de autorización.</p>', false);
             });
         }
     }
@@ -467,9 +675,11 @@
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
             
-            alert('XML autorizado descargado exitosamente');
+            mostrarModalResultado('success', 'Descarga Completada', 
+                '<p>XML autorizado descargado exitosamente.</p>', false);
         } else {
-            alert('No hay XML autorizado disponible para descargar');
+            mostrarModalResultado('warning', 'Sin Datos', 
+                '<p>No hay XML autorizado disponible para descargar.</p>', false);
         }
     }
     
@@ -490,13 +700,16 @@
                     boton.classList.add('btn-info');
                 }, 2000);
                 
-                alert('XML autorizado copiado al portapapeles');
+                mostrarModalResultado('success', 'Copiado', 
+                    '<p>XML autorizado copiado al portapapeles exitosamente.</p>', false);
             }).catch(function(err) {
                 console.error('Error al copiar XML: ', err);
-                alert('Error al copiar el XML autorizado');
+                mostrarModalResultado('danger', 'Error', 
+                    '<p>Error al copiar el XML autorizado.</p>', false);
             });
         } else {
-            alert('No hay XML autorizado disponible para copiar');
+            mostrarModalResultado('warning', 'Sin Datos', 
+                '<p>No hay XML autorizado disponible para copiar.</p>', false);
         }
     }
 </script>

@@ -425,30 +425,27 @@
             <!-- Totales -->
             <div>
                 <table class="totals-table">
-                    @if(!empty($datosFactura['totales']['subtotal_15']) && $datosFactura['totales']['subtotal_15'] > 0)
+                    {{-- Siempre mostrar SUBTOTAL 15% --}}
                     <tr>
                         <td>SUBTOTAL 15%:</td>
-                        <td>${{ number_format($datosFactura['totales']['subtotal_15'], 2) }}</td>
+                        <td>${{ number_format($datosFactura['totales']['subtotal_15'] ?? 0, 2) }}</td>
                     </tr>
-                    @endif
-                    @if(!empty($datosFactura['totales']['subtotal_0']) && $datosFactura['totales']['subtotal_0'] > 0)
+                    {{-- Siempre mostrar SUBTOTAL 0% --}}
                     <tr>
                         <td>SUBTOTAL 0%:</td>
-                        <td>${{ number_format($datosFactura['totales']['subtotal_0'], 2) }}</td>
+                        <td>${{ number_format($datosFactura['totales']['subtotal_0'] ?? 0, 2) }}</td>
                     </tr>
-                    @endif
-                    @if(!empty($datosFactura['totales']['subtotal_sin_impuesto']) && $datosFactura['totales']['subtotal_sin_impuesto'] > 0)
+                    {{-- Siempre mostrar SUBTOTAL SIN IMPUESTO --}}
                     <tr>
                         <td>SUBTOTAL SIN IMPUESTO:</td>
-                        <td>${{ number_format($datosFactura['totales']['subtotal_sin_impuesto'], 2) }}</td>
+                        <td>${{ number_format($datosFactura['totales']['subtotal_sin_impuesto'] ?? 0, 2) }}</td>
                     </tr>
-                    @endif
-                    @if(!empty($datosFactura['totales']['total_descuento']) && $datosFactura['totales']['total_descuento'] > 0)
+                    {{-- Siempre mostrar DESCUENTO --}}
                     <tr>
                         <td>DESCUENTO:</td>
-                        <td>${{ number_format($datosFactura['totales']['total_descuento'], 2) }}</td>
+                        <td>${{ number_format($datosFactura['totales']['total_descuento'] ?? 0, 2) }}</td>
                     </tr>
-                    @endif
+                    {{-- Mostrar IVA según la información disponible --}}
                     @if(!empty($datosFactura['impuestos']))
                         @foreach($datosFactura['impuestos'] as $impuesto)
                         <tr>
@@ -470,16 +467,15 @@
                         @endforeach
                     @else
                         <tr>
-                            <td>IVA:</td>
+                            <td>IVA 15%:</td>
                             <td>${{ number_format($factura->iva ?? 0, 2) }}</td>
                         </tr>
                     @endif
-                    @if(!empty($datosFactura['totales']['propina']) && $datosFactura['totales']['propina'] > 0)
+                    {{-- Siempre mostrar PROPINA --}}
                     <tr>
                         <td>PROPINA:</td>
-                        <td>${{ number_format($datosFactura['totales']['propina'], 2) }}</td>
+                        <td>${{ number_format($datosFactura['totales']['propina'] ?? 0, 2) }}</td>
                     </tr>
-                    @endif
                     <tr class="total-final">
                         <td>TOTAL:</td>
                         <td>${{ number_format($datosFactura['totales']['importe_total'] ?? $factura->total ?? 0, 2) }}</td>
