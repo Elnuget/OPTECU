@@ -16,14 +16,16 @@
                     <i class="fas fa-certificate"></i> Información de Autorización
                 </h3>
                 <div class="card-tools">
-                    @if($factura->clave_acceso && in_array($factura->estado, ['FIRMADA', 'ENVIADA', 'RECIBIDA']))
-                        <button type="button" 
-                                class="btn btn-sm btn-warning mr-2" 
-                                onclick="autorizarFactura({{ $factura->id }})"
-                                id="btnAutorizar">
-                            <i class="fas fa-sync-alt"></i> Consultar Autorización SRI
-                        </button>
-                    @endif
+                    {{-- Mostrar botón de consultar autorización siempre --}}
+                    <button type="button" 
+                            class="btn btn-sm btn-warning mr-2" 
+                            onclick="autorizarFactura({{ $factura->id }})"
+                            id="btnAutorizar"
+                            @if(!$factura->clave_acceso)
+                                title="La factura no tiene clave de acceso generada aún"
+                            @endif>
+                        <i class="fas fa-sync-alt"></i> Consultar Autorización SRI
+                    </button>
                     <a href="{{ route('facturas.show', $factura->id) }}" class="btn btn-sm btn-secondary">
                         <i class="fas fa-arrow-left"></i> Volver a Factura
                     </a>
@@ -302,6 +304,17 @@
     function autorizarFactura(facturaId) {
         const btnAutorizar = document.getElementById('btnAutorizar');
         const iconoOriginal = btnAutorizar.innerHTML;
+        
+        // Verificar si hay clave de acceso
+        const claveAcceso = document.getElementById('clave_acceso').value;
+        if (!claveAcceso || claveAcceso === 'No disponible') {
+            alert('La factura no tiene clave de acceso generada.\n\n' +
+                  'Para consultar la autorización en el SRI, la factura debe:\n' +
+                  '• Estar firmada digitalmente\n' +
+                  '• Tener una clave de acceso válida\n' +
+                  '• Haber sido enviada al SRI');
+            return;
+        }
         
         // Deshabilitar botón y mostrar spinner
         btnAutorizar.disabled = true;
