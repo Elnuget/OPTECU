@@ -363,6 +363,32 @@ class AutorizarController extends Controller
                         'xml_preview' => substr($datosAutorizacion['comprobante'], 0, 200) . '...'
                     ]);
                 }
+                
+                // Actualizar el campo 'fact' del pedido relacionado a 'facturado'
+                if ($factura->pedido_id) {
+                    $pedido = \App\Models\Pedido::find($factura->pedido_id);
+                    if ($pedido) {
+                        $estadoAnteriorPedido = $pedido->fact;
+                        $pedido->fact = 'facturado';
+                        $pedido->save();
+                        
+                        Log::info('Estado del pedido actualizado a facturado', [
+                            'factura_id' => $factura->id,
+                            'pedido_id' => $pedido->id,
+                            'estado_anterior' => $estadoAnteriorPedido,
+                            'estado_nuevo' => 'facturado'
+                        ]);
+                    } else {
+                        Log::warning('No se encontró el pedido asociado a la factura autorizada', [
+                            'factura_id' => $factura->id,
+                            'pedido_id' => $factura->pedido_id
+                        ]);
+                    }
+                } else {
+                    Log::info('La factura autorizada no tiene pedido asociado', [
+                        'factura_id' => $factura->id
+                    ]);
+                }
             }
             
             $factura->update($updates);

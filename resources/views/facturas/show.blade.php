@@ -179,43 +179,22 @@
         <div class="card-tools">
             {{-- Botones de Copiar y Descargar removidos por solicitud del usuario --}}
             
-            {{-- Mostrar botones según el estado --}}
-            @if(in_array($factura->estado, ['CREADA', 'FIRMADA']))
-                @php
-                    $tieneArchivo = $factura->declarante && !empty($factura->declarante->firma);
-                    $rutaArchivo = $tieneArchivo ? public_path('uploads/firmas/' . $factura->declarante->firma) : '';
-                    $existeArchivo = $tieneArchivo && file_exists($rutaArchivo);
-                    $extension = $tieneArchivo ? strtolower(pathinfo($factura->declarante->firma, PATHINFO_EXTENSION)) : '';
-                    $esExtensionValida = in_array($extension, ['p12', 'pfx']);
-                    $tieneCertificadoP12 = $existeArchivo && $esExtensionValida;
-                    
-                    // Información de depuración
-                    $debug = [
-                        'tiene_archivo' => $tieneArchivo,
-                        'ruta_archivo' => $rutaArchivo,
-                        'existe_archivo' => $existeArchivo ? 'SÍ' : 'NO',
-                        'extension' => $extension,
-                        'es_extension_valida' => $esExtensionValida ? 'SÍ' : 'NO',
-                        'tiene_certificado_p12_vista' => $tieneCertificadoP12 ? 'SÍ' : 'NO',
-                        'tiene_certificado_p12_modelo' => $factura->declarante && $factura->declarante->tiene_certificado_p12 ? 'SÍ' : 'NO',
-                    ];
-                @endphp
-
-            @elseif(in_array($factura->estado, ['RECIBIDA', 'DEVUELTA']))
-                <a href="{{ route('autorizar.index', $factura->id) }}" class="btn btn-sm btn-warning">
-                    <i class="fas fa-certificate"></i> Autorizar
-                </a>
-                @if($factura->estado === 'DEVUELTA')
-                    <span class="badge badge-warning ml-2">
-                        <i class="fas fa-exclamation-triangle"></i> Devuelta por SRI - Requiere autorización
-                    </span>
-                @endif
+            {{-- Mostrar botón de autorizar siempre --}}
+            <a href="{{ route('autorizar.index', $factura->id) }}" class="btn btn-sm btn-warning">
+                <i class="fas fa-certificate"></i> Autorizar
+            </a>
+            
+            {{-- Mostrar badges informativos según el estado --}}
+            @if($factura->estado === 'DEVUELTA')
+                <span class="badge badge-warning ml-2">
+                    <i class="fas fa-exclamation-triangle"></i> Devuelta por SRI - Requiere autorización
+                </span>
             @elseif($factura->estado === 'AUTORIZADA')
-                <span class="badge badge-success">
+                <span class="badge badge-success ml-2">
                     <i class="fas fa-check-circle"></i> Autorizada
                 </span>
             @elseif($factura->estado === 'NO_AUTORIZADA')
-                <span class="badge badge-dark">
+                <span class="badge badge-dark ml-2">
                     <i class="fas fa-ban"></i> No Autorizada por el SRI
                 </span>
             @endif
