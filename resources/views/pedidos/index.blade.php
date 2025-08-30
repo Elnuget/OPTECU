@@ -180,6 +180,7 @@
                                     data-pedido-id="{{ $pedido->id }}"
                                     data-celular="{{ ltrim($pedido->celular, '0') }}"
                                     data-cliente="{{ $pedido->cliente }}"
+                                    data-paciente="{{ $pedido->paciente }}"
                                     data-estado-actual="{{ trim($pedido->encuesta) }}"
                                     title="{{ trim($pedido->encuesta) === 'enviado' ? 'Volver a enviar mensaje y encuesta' : 'Enviar mensaje y encuesta' }}">
                                     <i class="fab fa-whatsapp"></i>
@@ -821,7 +822,7 @@
             var button = $(this);
             var pedidoId = button.data('pedido-id');
             var celular = button.data('celular');
-            var cliente = button.data('cliente');
+            var paciente = button.data('paciente');
             var estadoActual = button.data('estado-actual');
 
             // Primero obtener la URL de la encuesta y actualizar estado
@@ -833,8 +834,8 @@
                 },
                 success: function(response) {
                     if (response.success) {
-                        // Construir mensaje con saludo personalizado al cliente
-                        var mensajeSaludo = "Estimado(a) paciente " + cliente + ",";
+                        // Construir mensaje con saludo personalizado al paciente
+                        var mensajeSaludo = "Estimado(a) paciente " + paciente + ",";
                         var mensajeLentes = "Le informamos que sus lentes recetados ya están listos para ser recogidos en ESCLERÓPTICA 👀👁. Puede pasar a retirarlos cuando le sea más conveniente. ¡Lo esperamos pronto! Muchas gracias por confiar en nosotros. 🤓👓😊";
                         
                         // Verificar si hay URL de encuesta en la respuesta
